@@ -63,19 +63,76 @@ if ($conn->connect_error) {
 
 				$_SESSION['role'] = $role;
 				$_SESSION["msg"] = "Account was succesfully created. Please Log In";
-				header("location: website1/website1/login.php");
+				header("location: login.php");
 				exit();
 			}
 		} 
         catch (Exception $e) {
             $conn->rollback();
             $_SESSION["error"] = $e->getMessage();
-            header("location: website1/signup.php");
+            header("location: signup.php");
             exit();
         }
 		finally{
 			$stmt->close();
 	    	$conn->close();
+		}
+	}//End Registration Block
+
+    if(isset($_POST['signin'])) {
+		$email = $_POST['email'];
+		$pass = $_POST['password'];
+
+		if(empty($email) || empty($pass)) {
+			$_SESSION['msg'] = "Login Credentials should not be empty!";
+		 	header("location: admin_dashboard.php");
+			exit();
+		}
+
+		try {
+			$stmt = $conn->prepare("SELECT `uid`, `email`, `password`, `first_name`, `last_name`, `role` FROM `users` WHERE `email` = ?");
+			$stmt->bind_param("s", $email);
+			$stmt->execute();
+			$result = $stmt->get_result();
+
+			if($result->num_rows > 0) {
+				$user = $result->fetch_assoc();
+
+				if (password_verify($pass, $user['password'])) {
+
+					$_SESSION['user'] = $user['user_id'];
+					$_SESSION['name'] = $user['last_name'].', '.$user['first_name'];
+					$_SESSION['email'] = $user['email'];
+					setcookie('role', $user['role'], 0);
+					
+					$conn->close();
+					header("location: admin_dashboard.php");
+					exit();
+
+				}
+				$_SESSION['msg'] = "Invalid Login Credentials, Please Try Again";
+				header("location: login.php");
+				exit();
+			} else {
+				$_SESSION['msg'] = "No Account Found";
+				header("location: login.php");
+				exit();
+			}
+		} 
+		catch(mysqli_sql_exception $e) {
+			$_SESSION['msg'] = "Something went wrong. Please try again later.";
+		 	header("location: login.php");
+			exit();
+		}
+		catch(Exception $e) {
+			$_SESSION['msg'] = "Unknown error occured, Please contact System Administrator!";
+		 	header("location: login.php");
+			exit();
+		}
+		finally {
+			if ($conn) {
+        		$conn->close();
+    		}
 		}
 	}
 ?>

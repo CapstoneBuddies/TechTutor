@@ -47,11 +47,16 @@
     </div>
   </header>
 
-  
+  <form action="db.php" method="post">
   <main class="main">
     <!-- Hero Section -->
     <section id="hero" class="hero section">
     <div class="login-container">
+    <?php
+    if (isset($_SESSION["msg"])) {
+        echo '<div><p>' . $_SESSION["msg"] . '</p></div>';
+    }
+    ?>
         <div class="login-box" data-aos="fade-up">
             <div class="login-left">
                 <img src="assets/img/login_image.png" alt="" data-aos="fade-up" data-aos-delay="200">
@@ -71,14 +76,14 @@
                         <input type="checkbox" id="remember" name="remember">
                         <label for="remember">Remember me</label>
                     </div>
-                    <button type="submit" class="login-btn">Login</button>
-                    <p class="terms">By logging in, you agree to our <a href="#">Terms & Conditions</a></p>
+                    <button type="submit" class="login-btn" name="signin">Login</button>
                 </form>
             </div>
         </div>
     </div>
     </section><!-- /Hero Section -->
   </main>
+  </form>
   <!-- Scroll Top -->
 <a href="#" id="scroll-top" class="scroll-top d-flex align-items-center justify-content-center"><i class="bi bi-arrow-up-short"></i></a>
 
