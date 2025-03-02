@@ -1,0 +1,9 @@
+# ENV file
+/backends/.env
+
+# Logs
+/logs/*
+!/logs/.gitkeep
+
+#old files
+/old_files/*

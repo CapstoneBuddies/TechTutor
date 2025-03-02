@@ -1,0 +1,25 @@
+RewriteEngine On
+
+#Route /login to pages/login.php
+RewriteRule ^login$ pages/login.php [L]
+
+#Route /register to pages/signup.php
+RewriteRule ^register$ pages/signup.php [L]
+
+#Route logics to route.php
+RewriteRule ^user-login$ backends/route.php [L]
+RewriteRule ^user-register$ backends/route.php [L]
+RewriteRule ^user-logout$ backends/route.php [L]
+
+
+# Redirect /dashboard to student_dashboard.php if role=TechKids
+RewriteCond %{HTTP_COOKIE} role=TECHKIDS(;|$)
+RewriteRule ^dashboard$ pages/techkid_dashboard.php [L]
+
+# Redirect /dashboard to tutor_dashboard.php if role=TechGuru
+RewriteCond %{HTTP_COOKIE} role=TECHGURUR(;|$)
+RewriteRule ^dashboard$ pages/techguru_dashboard.php [L]
+
+# Redirect /dashboard to admin_dashboard.php if role=Admin
+RewriteCond %{HTTP_COOKIE} role=ADMIN(;|$)
+RewriteRule ^dashboard$ pages/admin_dashboard.php [L]

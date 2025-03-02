@@ -8,8 +8,20 @@ CREATE TABLE IF NOT EXISTS `users` (
 	`status` BOOLEAN NOT NULL DEFAULT TRUE,
 	`role` ENUM('TECHGURU', 'TECHKIDS', 'ADMIN') NOT NULL,
 	`profile_picture` VARCHAR(255),
-	`created_on` TIMESTAMP,
-    `remember_token` VARCHAR(64) DEFAULT NULL 
+    `remember_token` VARCHAR(64) DEFAULT NULL, 
+	`created_on` TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    `last_login` TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+);
+
+CREATE TABLE IF NOT EXISTS `login_tokens` (
+    `token_id` INT PRIMARY KEY AUTO_INCREMENT,
+    `user_id` INT NOT NULL,
+    `token` VARCHAR(64) NOT NULL,
+    `expiration_date` DATETIME NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`uid`) 
+    ON DELETE CASCADE,
+    UNIQUE (`user_id`,`token`)
 );
 
 CREATE TABLE IF NOT EXISTS `course` (
@@ -109,3 +121,4 @@ CREATE INDEX idx_meetin_name ON meetings(meeting_name);
 CREATE INDEX idx_file_uuid ON file_management(file_uuid);
 CREATE INDEX idx_notif_header ON notifcation(notif_type, notif_title);
 CREATE INDEX idx_reference_number ON transactions(reference_number);
+CREATE INDEX idx_token ON login_tokens (token);

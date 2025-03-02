@@ -1,3 +1,7 @@
+<?php 
+  require_once 'backends/config.php';
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -32,7 +36,6 @@
 
   <header id="header" class="header d-flex align-items-center fixed-top">
     <div class="container-fluid container-xl position-relative d-flex align-items-center">
-
       <a href="index.php" class="logo d-flex align-items-center me-auto">
         <img src="assets/img/stand_alone_logo.png" alt="">
         <img src="assets/img/TechTutor_text.png" alt="">
@@ -43,11 +46,12 @@
           <li><a href="index.php" class="active">Home<br></a></li>
           <li><a href="#about">About</a></li>
           <li><a href="#contact">Contact</a></li>
+
+        <a id="login" class="btn-getstarted flex-md-shrink-0" href="login">Sign In</a>
         </ul>
         <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
       </nav>
 
-      <a class="btn-getstarted flex-md-shrink-0" href="login.php">Sign In</a>
     </div>
   </header>
 
@@ -55,7 +59,6 @@
 
     <!-- Hero Section -->
     <section id="hero" class="hero section">
-
       <div class="container">
         <div class="row gy-4">
           <div class="col-lg-6 order-2 order-lg-1 d-flex flex-column justify-content-center">
@@ -176,7 +179,7 @@
                   <div class="error-message"></div>
                   <div class="sent-message">Your message has been sent. Thank you!</div>
 
-                  <button type="submit">Send Message</button>
+                  <button type="submit" id="send-concern">Send Message</button>
                 </div>
 
               </div>
