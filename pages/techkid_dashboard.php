@@ -1,10 +1,15 @@
+<?php 
+    require_once '../backends/config.php';
+    session_start();
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
-  <title>TechTutor Educator Dashboard</title>
+  <title>TechTutor | Dashboard</title>
   <meta name="description" content="">
   <meta name="keywords" content="">
 
@@ -33,7 +38,7 @@
 <header id="header" class="header d-flex align-items-center fixed-top">
     <div class="container-fluid container-xl position-relative d-flex align-items-center">
 
-      <a href="index.php" class="logo d-flex align-items-center me-auto">
+      <a href="home" class="logo d-flex align-items-center me-auto">
         <img src="assets/img/stand_alone_logo.png" alt="">
         <img src="assets/img/TechTutor_text.png" alt="">
       </a>
@@ -41,12 +46,12 @@
       <nav id="navmenu" class="navmenu">
         <ul>
           <li class="nav-item dropdown">
-            <a href="#" class="nav-link dropdown-toggle" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <img src="avatar.jpg" alt="User Avatar" class="avatar-icon">
+            <a href="#" class="nav-link dropdown-toggle main-avatar" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <img src=<?php echo $_SESSION['profile']; ?> alt="User Avatar" class="avatar-icon">
             </a>
             <ul class="dropdown-menu" aria-labelledby="userDropdown">
-              <li><a class="dropdown-item" href="#">John Centh</a></li>
-              <li><a class="dropdown-item" href="#">Profile</a></li>
+              <li><span class="dropdown-item user-item"><?php echo $_SESSION['name']; ?></span></li>
+              <li><a class="dropdown-item" href="dashboard/profile">Profile</a></li>
               <li><a class="dropdown-item" href="#">Settings</a></li>
               <li><hr class="dropdown-divider"></li>
               <li><a class="dropdown-item" href="user-logout">Log Out</a></li>
@@ -72,7 +77,7 @@
           <div class="main-content">
             <div class="left-panel">
               <div class="user-info rounded-box">
-                <img src="avatar.jpg" alt="Educator Avatar" class="avatar">
+                <img src=<?php echo $_SESSION['profile']; ?> alt="Educator Avatar" class="avatar">
                 <div class="user-details">
                   <h2>Welcome, Educator!</h2>
                   <p>Manage your classes and materials here.</p>
@@ -96,7 +101,7 @@
                 <h2>Classes</h2>
                 <div class="module-grid">
                   <div class="module" onclick="showClassDetails('Python Programming', 'Learn the basics of Python programming.', 120, '5 hours', 'Beginner');" style="cursor: pointer;">
-                    <img src="module1.jpg" alt="Class 1">
+                    <img src=<?php echo CLASS_IMG.'Python.png'; ?> alt="Class 1">
                     <h3>Python Programming</h3>
                     <p>Manage class content and settings.</p>
                     <div class="module-details">

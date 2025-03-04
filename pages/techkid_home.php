@@ -33,7 +33,7 @@
 <header id="header" class="header d-flex align-items-center fixed-top">
     <div class="container-fluid container-xl position-relative d-flex align-items-center">
 
-      <a href="index.php" class="logo d-flex align-items-center me-auto">
+      <a href="home" class="logo d-flex align-items-center me-auto">
         <!-- Uncomment the line below if you also wish to use an image logo -->
         <img src="assets/img/stand_alone_logo.png" alt="">
         <img src="assets/img/TechTutor_text.png" alt="">
@@ -47,7 +47,7 @@
             </a>
             <ul class="dropdown-menu" aria-labelledby="userDropdown">
               <li><a class="dropdown-item" href="#">John Centh</a></li>
-              <li><a class="dropdown-item" href="techkid_home.php">Home</a></li>
+              <li><a class="dropdown-item" href="techkid_home.php">home</a></li>
               <li><a class="dropdown-item" href="#">Profile</a></li>
               <li><a class="dropdown-item" href="#">Settings</a></li>
               <li><hr class="dropdown-divider"></li>

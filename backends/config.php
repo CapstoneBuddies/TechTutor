@@ -1,7 +1,6 @@
 <?php  
 	// File system root path (optional, useful for includes or file uploads)
 	define('ROOT_PATH', realpath(__DIR__ . '/..'));
-	
 
 	require_once ROOT_PATH.'/assets/vendor/autoload.php';
 
@@ -11,9 +10,16 @@
 	$dotenv->load();
 
 	// Base URL configuration
-	define('CSS', '/assets/css/');
-	define('JS', '/assets/js/');
-	define('IMG', '/assets/images/');
+	if($_SERVER['HTTP_HOST'] == 'localhost') {
+	define('BASE', '/capstone/');
+	}
+	else {
+	define('BASE', '/');
+	}
+	define('CSS', 'assets/css/');
+	define('JS', 'assets/js/');
+	define('USER_IMG', 'assets/img/users/');
+	define('CLASS_IMG', 'assets/img/class/');
 
 	// Define LOG_PATH based on fixed ROOT_PATH
 	define('LOG_PATH', ROOT_PATH . '/logs/');
@@ -62,7 +68,7 @@
 			$token = $_COOKIE['remember_me'];
 
 			// Retrieve and verify current token
-		    $stmt = $conn->prepare("SELECT uid, role, first_name, last_name, email FROM users WHERE uid = (SELECT user_id FROM login_tokens WHERE token = ?)");
+		    $stmt = $conn->prepare("SELECT uid, role, first_name, last_name, email, profile_picture FROM users WHERE uid = (SELECT user_id FROM login_tokens WHERE token = ?)");
 		    $stmt->bind_param("s",$token);
 		    $stmt->execute();
 			$result = $stmt->get_result();
@@ -74,12 +80,12 @@
 				$_SESSION['name'] = $user['last_name'].', '.$user['first_name'];
 				$_SESSION['email'] = $user['email'];
 				$_SESSION['role'] = $user['role'];
+				$_SESSION['profile'] = USER_IMG.$user['profile_picture'];
 		    }	
 		} catch (Exception $e) {
 			log_error("Remember Me: ".$e->getMessage(),'error.log');
 		}
 	}
-
 
 	function log_error($message, $destination) {
 		 $file_path = LOG_PATH . $destination;
@@ -89,8 +95,7 @@
 	        touch($file_path);  // Create the file if it does not exist
 	        chmod($file_path, 0666);  // Make the file writable by PHP (optional, for permission issues)
 	    }
-
-    	error_log("\n" . $message, 3, $file_path);
+    	error_log($message."\n", 3, $file_path);
 	}
 	
 ?>

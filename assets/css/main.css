@@ -1943,3 +1943,17 @@ section,
 .modal-body {
   font-size: 16px;
 }
+
+
+/*My Modifications*/
+
+.main-avatar .avatar-icon {
+  width: 4em;
+  height: 4em;
+  border-radius: 50%;
+  position: relative;
+}
+.dropdown-item .user {
+  pointer-events: none; 
+  opacity: 0.6;
+}

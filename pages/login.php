@@ -8,7 +8,7 @@
 <head>
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
-  <title>TechTutor</title>
+  <title>TechTutor | Login</title>
   <meta name="description" content="">
   <meta name="keywords" content="">
 
@@ -64,8 +64,8 @@
                 <?php
                     if (isset($_SESSION["msg"])) {
                         echo '<div><p>' . $_SESSION["msg"] . '</p></div>';
-                        unset($_SESSION["msg"]);
                     }
+                    unset($_SESSION["msg"]);
                 ?>
                 <h2 >Sign In</h2>
                 <form action="user-login" method="POST">

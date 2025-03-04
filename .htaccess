@@ -1,5 +1,13 @@
 RewriteEngine On
 
+#RewriteBase /
+
+#Route to homepage
+RewriteRule ^home$ index.php [L]
+
+#Route to homepage
+RewriteRule ^(.*)/home$ backends/route.php [L]
+
 #Route /login to pages/login.php
 RewriteRule ^login$ pages/login.php [L]
 
@@ -12,14 +20,17 @@ RewriteRule ^user-register$ backends/route.php [L]
 RewriteRule ^user-logout$ backends/route.php [L]
 
 
-# Redirect /dashboard to student_dashboard.php if role=TechKids
+# Redirect user to student pages if role=TechKids
 RewriteCond %{HTTP_COOKIE} role=TECHKIDS(;|$)
 RewriteRule ^dashboard$ pages/techkid_dashboard.php [L]
+RewriteRule ^dashboard/profile$ pages/techkid_profile.php [L]
 
-# Redirect /dashboard to tutor_dashboard.php if role=TechGuru
-RewriteCond %{HTTP_COOKIE} role=TECHGURUR(;|$)
+# Redirect user to tutor pages if role=TechGuru
+RewriteCond %{HTTP_COOKIE} role=TECHGURU(;|$)
 RewriteRule ^dashboard$ pages/techguru_dashboard.php [L]
+RewriteRule ^profile$ pages/techguru_profile.php [L]
 
-# Redirect /dashboard to admin_dashboard.php if role=Admin
+# Redirect user to admin pages if role=Admin
 RewriteCond %{HTTP_COOKIE} role=ADMIN(;|$)
 RewriteRule ^dashboard$ pages/admin_dashboard.php [L]
+RewriteRule ^profile$ pages/admin_profile.php [L]

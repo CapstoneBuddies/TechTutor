@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
-  <title>TechTutor Admin Dashboard</title>
+  <title>TechTutor | Dashboard</title>
   <meta name="description" content="">
   <meta name="keywords" content="">
 
@@ -33,7 +33,7 @@
 <header id="header" class="header d-flex align-items-center fixed-top">
     <div class="container-fluid container-xl position-relative d-flex align-items-center">
 
-      <a href="index.php" class="logo d-flex align-items-center me-auto">
+      <a href="home" class="logo d-flex align-items-center me-auto">
         <img src="assets/img/stand_alone_logo.png" alt="">
         <img src="assets/img/TechTutor_text.png" alt="">
       </a>
@@ -42,10 +42,10 @@
         <ul>
           <li class="nav-item dropdown">
             <a href="#" class="nav-link dropdown-toggle" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <img src="avatar.jpg" alt="User Avatar" class="avatar-icon">
+              <img src=<?php echo $_SESSION['profile']; ?> alt="User Avatar" class="avatar-icon">
             </a>
             <ul class="dropdown-menu" aria-labelledby="userDropdown">
-              <li><a class="dropdown-item" href="#">John Centh</a></li>
+              <li><span class="dropdown-item user-item"><?php echo $_SESSION['name']; ?></span></li>
               <li><a class="dropdown-item" href="#">Profile</a></li>
               <li><a class="dropdown-item" href="#">Settings</a></li>
               <li><hr class="dropdown-divider"></li>

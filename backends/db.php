@@ -1,7 +1,7 @@
 <?php
 	include_once 'config.php';
 
-	$conn = new mysqli(DB_HOST, DB_USER, "", DB_NAME, DB_PORT);
+	$conn = new mysqli(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT);
 
 	if ($conn->connect_error) {
 	    die("Connection failed: " . $conn->connect_error);
@@ -20,16 +20,20 @@
 			try {
 				// Cleansing inputted data
 				if(empty($email) || empty($fname) || empty($lname) ){
-					throw new Exception("Please fill in all the required fields.");
+					$_SESSION['msg'] = "Please fill in all the required fields.";
+					throw new Exception("Empty Fields");
 				}
 				if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-					throw new Exception("Invalid email format.");
+					$_SESSION['msg'] = "Invalid email format.";
+					throw new Exception("Invalid Email");
 				}
 				if(strlen($pass) < 8) {
-					throw new Exception("Password length does not match!");
+					$_SESSION['msg'] = "Password length does not match!";
+					throw new Exception("Password complexity failed(length)");
 				}
-				if (!preg_match("/^[A-Za-z0-9-_!]{8,12}$/", $pass)) {
-					throw new Exception("Password must be at least 8 characters long and contain a mix of letters, numbers, and special characters.");
+				if (!preg_match("/^(?=(.*[A-Z]))(?=(.*[a-z]))(?=(.*\d))(?=(.*[*-_!]))[A-Za-z\d*-_!]{8,16}$/", $pass)) {
+					$_SESSION['msg'] = "Password must be 8-16 characters long and contain a mix of letters, numbers, and special characters.";
+					throw new Exception("Password complexity failed(uniqueness)");
 				}
 
 				$conn -> begin_transaction();
@@ -40,13 +44,15 @@
 				$stmt->execute();
 				$result = $stmt->get_result();
 				if ($result->num_rows > 0) {
-					throw new Exception("The email address is already registered.");
+					$_SESSION['msg'] = "The email address is already registered.";
+					throw new Exception("User already exist");
 				}
 
 				$password = password_hash($pass, PASSWORD_DEFAULT);
 
 				if ($password === false) {
-					throw new Exception("We encountered an issue while creating your account. Please try again.");
+					$_SESSION['msg'] = "We encountered an issue while creating your account. Please try again.";
+					throw new Exception("Hashing Error!");
 				}
 
 				// Adding Details to the User Table
@@ -58,7 +64,7 @@
 					$conn->commit();
 
 					$_SESSION['role'] = $role;
-					$_SESSION["msg"] = "Account was succesfully 2d. Please Log In";
+					$_SESSION["msg"] = "Account was succesfully created, Please Log In";
 					header("location: login");
 					exit();
 				}
@@ -67,19 +73,19 @@
 				log_error(date("Y-m-d H:i:s") . " SQL Error: " . $e->getMessage(), 'database_error.log');
 
 				$_SESSION['msg'] = "Something went wrong. Please try again later.";
-			 	header("location: " . ROOT_PATH . 'login');
+			 	header("location: login");
 				exit();
 			}
 			catch(Exception $e) {
-				$conn->rollback();
 				log_error($e->getMessage(), 'error.log');
 				
 				if(!isset($_SESSION['msg']))
 					$_SESSION['msg'] = "Unexpected Error Occured. Please contact System Administrator.";
-				header("location: /register");
+				header("location: register");
 				exit();
 			}
 			finally{
+				$conn->rollback();
 				$stmt->close();
 				$conn->close();
 			}
@@ -99,7 +105,7 @@
 			}
 
 			try {
-				$stmt = $conn->prepare("SELECT `uid`, `email`, `password`, `first_name`, `last_name`, `role` FROM `users` WHERE `email` = ?");
+				$stmt = $conn->prepare("SELECT `uid`, `email`, `password`, `first_name`, `last_name`, `role`, `profile_picture` FROM `users` WHERE `email` = ?");
 				$stmt->bind_param("s", $email);
 				$stmt->execute();
 				$result = $stmt->get_result();
@@ -111,8 +117,9 @@
 						
 						// Set session information
 						$_SESSION['user'] = $user['uid'];
-						$_SESSION['name'] = $user['last_name'].', '.$user['first_name'];
+						$_SESSION['name'] = $user['last_name'].' '.$user['last_name'];
 						$_SESSION['email'] = $user['email'];
+						$_SESSION['profile'] = USER_IMG.$user['profile_picture'];
 						setcookie('role', $user['role'], time() + (24 * 60 * 60), "/", "", true, true);
 
 						//Check if remember was passed
@@ -190,4 +197,62 @@
 			exit();
 		}
 	}//End of logout block	
+
+	function add_class() {
+		global $conn;
+		if (isset($_COOKIE['role']) && in_array($_COOKIE['role'], ['TECHGURU', 'ADMIN'])) {
+			if(isset($_POST['add-class'])) {
+				$subject = $_POST['subject'];
+				$class_name = $_POST['class-name'];
+				$class_dec = $_POST['class-desc'];
+				$tutor = $_SESSION['user'];
+				$start = $_POST['start-date'];
+				$end = $_POST['end-date'];
+				$limit = $_POST['limit'];
+				$free = $_POST['free'];
+				$price = $_POST['price'];
+				$pic = $_POST['thumbnail'];
+
+				try {
+					// Cleaning of Data
+					if(empty($subject) || empty($class_name) || empty($class_dec) || empty($tutor) || empty($start) || empty($end) ){
+						$_SESSION['msg'] = "Please fill in all the required fields.";
+						throw new Exception("Empty Fields");
+					}
+
+					$conn -> begin_transaction();
+					$stmt = $conn->prepare("INSERT INTO class(subject_id, class_name, class_desc, tutor_id, start_date, end_date, class_size, is_free, price, thumbnail) VALUES(??????????)");
+					$stmt->bind_param("ississiids", $subject,$class_name,$class_dec,$tutor,$start,$end,$limit,$free,$price,$pic);
+					
+					if($stmt->execute()) {
+						$conn->commit();
+						$_SESSION["msg"] = "Class Information was successfully added.";
+						header("location: dashboard");
+						exit();
+					}
+
+				}
+				catch(mysqli_sql_exception $e) {
+					log_error(date("Y-m-d H:i:s") . " SQL Error: " . $e->getMessage(), 'database_error.log');
+
+					$_SESSION['msg'] = "Something went wrong. Please try again later.";
+				 	header("location: login");
+					exit();
+				}
+				catch(Exception $e) {
+					log_error($e->getMessage(), 'error.log');
+					header("location: dashboard");
+					exit();
+				}
+				finally {
+					$conn->rollback();
+					$stmt->close();
+					$conn->close();
+				}
+			}
+		}
+		$_SESSION['msg'] = "Invalid action";
+		header("location: dashboard");
+		exit();
+	}
 ?>

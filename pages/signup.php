@@ -9,7 +9,7 @@
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TechTutor</title>
+  <title>TechTutor | Create An Account</title>
   <meta name="description" content="">
   <meta name="keywords" content="">
 
@@ -65,6 +65,12 @@
             </div>
             <div class="signup-right">
                 <h2>Let’s Get Started</h2>
+                <?php
+                    if (isset($_SESSION["msg"])) {
+                        echo '<div><p>' . $_SESSION["msg"] . '</p></div>';
+                    }
+                    unset($_SESSION["msg"]);
+                ?>
                 <form action="user-register" method="post">
                     <div class="input-group">
                         <label for="role">I am a...</label>

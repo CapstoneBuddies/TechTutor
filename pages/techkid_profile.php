@@ -1,10 +1,15 @@
+<?php 
+  require_once '../backends/config.php';
+  session_start();
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
-  <title>Update TechKid Profile</title>
+  <title>Update User Profile</title>
   <meta name="description" content="">
   <meta name="keywords" content="">
 
@@ -25,15 +30,15 @@
   <link href="assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
 
   <!-- Main CSS File -->
-  <link href="assets/css/main.css" rel="stylesheet">
+  <link href="<?php echo BASE.CSS ; ?>main.css" rel="stylesheet">
 </head>
 
 <body>
 
 <header id="header" class="header d-flex align-items-center fixed-top">
     <div class="container-fluid container-xl position-relative d-flex align-items-center">
-
-      <a href="index.php" class="logo d-flex align-items-center me-auto">
+      <?php echo ROOT_PATH; ?>
+      <a href="home" class="logo d-flex align-items-center me-auto">
         <img src="assets/img/stand_alone_logo.png" alt="">
         <img src="assets/img/TechTutor_text.png" alt="">
       </a>
@@ -46,7 +51,7 @@
             </a>
             <ul class="dropdown-menu" aria-labelledby="userDropdown">
               <li><a class="dropdown-item" href="#">John Centh</a></li>
-              <li><a class="dropdown-item" href="techkid_home.php">Home</a></li>
+              <li><a class="dropdown-item" href="techkid_home.php">home</a></li>
               <li><a class="dropdown-item" href="#">Profile</a></li>
               <li><a class="dropdown-item" href="#">Settings</a></li>
               <li><hr class="dropdown-divider"></li>

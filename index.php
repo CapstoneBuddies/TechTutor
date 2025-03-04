@@ -36,18 +36,17 @@
 
   <header id="header" class="header d-flex align-items-center fixed-top">
     <div class="container-fluid container-xl position-relative d-flex align-items-center">
-      <a href="index.php" class="logo d-flex align-items-center me-auto">
+      <a href="home" class="logo d-flex align-items-center me-auto">
         <img src="assets/img/stand_alone_logo.png" alt="">
         <img src="assets/img/TechTutor_text.png" alt="">
       </a>
 
       <nav id="navmenu" class="navmenu">
         <ul>
-          <li><a href="index.php" class="active">Home<br></a></li>
+          <li><a href="home" class="active">Home<br></a></li>
           <li><a href="#about">About</a></li>
           <li><a href="#contact">Contact</a></li>
-
-        <a id="login" class="btn-getstarted flex-md-shrink-0" href="login">Sign In</a>
+          <a id="login" class="btn-getstarted flex-md-shrink-0 signin" href="login">Sign In</a>
         </ul>
         <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
       </nav>
@@ -89,7 +88,7 @@
               <h2>Join TechTutor today and gain access to top-notch educational resources and personalized tutoring.</h2>
               <p></p>
               <div class="text-center text-lg-start">
-                <a href="signup.php" class="btn-read-more d-inline-flex align-items-center justify-content-center align-self-center">
+                <a href="register" class="btn-read-more d-inline-flex align-items-center justify-content-center align-self-center">
                   <span>Get Started</span>
                   <i class="bi bi-arrow-right"></i>
                 </a>
@@ -155,7 +154,7 @@
           </div>
 
           <div class="col-lg-6">
-            <form action="forms/contact.php" method="post" class="php-email-form" data-aos="fade-up" data-aos-delay="200">
+            <form action="" method="post" class="php-email-form" data-aos="fade-up" data-aos-delay="200">
               <div class="row gy-4">
 
                 <div class="col-md-6">

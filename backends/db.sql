@@ -6,8 +6,9 @@ CREATE TABLE IF NOT EXISTS `users` (
 	`password` VARCHAR(255) NOT NULL,
 	`is_verified` BOOLEAN NOT NULL DEFAULT FALSE,
 	`status` BOOLEAN NOT NULL DEFAULT TRUE,
+    `bio` TEXT,
 	`role` ENUM('TECHGURU', 'TECHKIDS', 'ADMIN') NOT NULL,
-	`profile_picture` VARCHAR(255),
+	`profile_picture` VARCHAR(255) DEFAULT 'default.jpg',
     `remember_token` VARCHAR(64) DEFAULT NULL, 
 	`created_on` TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
     `last_login` TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
