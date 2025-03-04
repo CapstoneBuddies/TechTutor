@@ -70,6 +70,7 @@
 				}
 			}
 			catch(mysqli_sql_exception $e) {
+				$conn->rollback();
 				log_error(date("Y-m-d H:i:s") . " SQL Error: " . $e->getMessage(), 'database_error.log');
 
 				$_SESSION['msg'] = "Something went wrong. Please try again later.";
@@ -77,6 +78,7 @@
 				exit();
 			}
 			catch(Exception $e) {
+				$conn->rollback();
 				log_error($e->getMessage(), 'error.log');
 				
 				if(!isset($_SESSION['msg']))
@@ -85,7 +87,6 @@
 				exit();
 			}
 			finally{
-				$conn->rollback();
 				$stmt->close();
 				$conn->close();
 			}
@@ -117,7 +118,8 @@
 						
 						// Set session information
 						$_SESSION['user'] = $user['uid'];
-						$_SESSION['name'] = $user['last_name'].' '.$user['last_name'];
+						$_SESSION['name'] = $user['first_name'].' '.$user['last_name'];
+						$_SESSION['first-name'] = $user['first_name']
 						$_SESSION['email'] = $user['email'];
 						$_SESSION['profile'] = USER_IMG.$user['profile_picture'];
 						setcookie('role', $user['role'], time() + (24 * 60 * 60), "/", "", true, true);
@@ -172,26 +174,51 @@
 				exit();
 			}
 			finally {
-				if ($conn) {
-					$conn->close();
-				}
+				$stmt->close();
+				$conn->close();
 			}
 		}
 	}//End of login block
 
 	function logout() {
+		global $conn;
 		if(isset($_SESSION['user'])) {
 			if(isset($_COOKIE['role'])) {
 				unset($_COOKIE['role']);
 				setcookie('role','',time() - 3600, '/');
 			}
 			if(isset($_COOKIE['remember_me'])) {
+				$token = $_COOKIE['remember_me']; //get cookie value
+
+				// Remove cookie from the client-side
 				unset($_COOKIE['remember_me']);
 				setcookie('remember_me','',time() - 3600, '/');
+
+				// Remove token from the server-side
+				try{
+					$conn -> begin_transaction();
+					$stmt = $conn->prepare("DELETE FROM `login_tokens` WHERE `token` = ?");
+					$stmt->bind_param("s", $token);
+					if($stmt->execute()) {
+						$conn->commit();
+					}
+					else {
+						$conn->rollback();
+					}	
+				}
+				catch (Exception $e) {
+					$conn->rollback();
+					echo "Failed to delete token: " . $e->getMessage();
+				}
+				finally {
+					$stmt->close();
+					$conn->close();
+				}
 			}
 			session_unset();
 			session_destroy();
 
+			// Redirect after processing logout logic
 			$_SESSION['msg'] = "You have successfully logout";
 			header("location: login");
 			exit();
@@ -254,5 +281,18 @@
 		$_SESSION['msg'] = "Invalid action";
 		header("location: dashboard");
 		exit();
+	}
+
+	function getStudents() {
+		global $conn;
+
+		$stmt = $conn->prepare("SELECT * FROM ?");
+		$stmt->bind_param("s",$table);
+		$stmt->execute();
+		$result = $stmt->get_result();
+
+		if($result->num_rows > 0) {
+			$data = $result->fetch_assoc();
+		}
 	}
 ?>

@@ -9,7 +9,6 @@ CREATE TABLE IF NOT EXISTS `users` (
     `bio` TEXT,
 	`role` ENUM('TECHGURU', 'TECHKIDS', 'ADMIN') NOT NULL,
 	`profile_picture` VARCHAR(255) DEFAULT 'default.jpg',
-    `remember_token` VARCHAR(64) DEFAULT NULL, 
 	`created_on` TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
     `last_login` TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
 );
@@ -53,6 +52,13 @@ CREATE TABLE IF NOT EXISTS `class` (
     `thumbnail` VARCHAR(255),
     FOREIGN KEY (subject_id) REFERENCES subject(subject_id),
     FOREIGN KEY (tutor_id) REFERENCES users(uid)
+);
+
+CREATE TABLE IF NOT EXISTS `class_assignment` (
+    `class_id` INT NOT NULL,
+    `student_id` INT NOT NULL,
+    FOREIGN KEY (class_id) REFERENCES class(class_id),
+    FOREIGN KEY (student_id) REFERENCES users(uid)
 );
 
 CREATE TABLE IF NOT EXISTS `meetings` (
@@ -123,3 +129,8 @@ CREATE INDEX idx_file_uuid ON file_management(file_uuid);
 CREATE INDEX idx_notif_header ON notifcation(notif_type, notif_title);
 CREATE INDEX idx_reference_number ON transactions(reference_number);
 CREATE INDEX idx_token ON login_tokens (token);
+
+
+-- Adding Information
+INSERT INTO `course`(`course_name`) VALUES('Computer Programming'), ('Computer Networking'), ('Graphics Design');
+INSERT INTO `subject`(`course_id`,`subject_name`) VALUES (1,'Python Programming'), (2,'Networking'), (3,'UI/UX Designing');

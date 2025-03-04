@@ -1,3 +1,7 @@
+<?php 
+    require_once '../backends/config.php';
+    session_start();
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -41,12 +45,12 @@
       <nav id="navmenu" class="navmenu">
         <ul>
           <li class="nav-item dropdown">
-            <a href="#" class="nav-link dropdown-toggle" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <a href="#" class="nav-link dropdown-toggle main-avatar" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               <img src=<?php echo $_SESSION['profile']; ?> alt="User Avatar" class="avatar-icon">
             </a>
             <ul class="dropdown-menu" aria-labelledby="userDropdown">
               <li><span class="dropdown-item user-item"><?php echo $_SESSION['name']; ?></span></li>
-              <li><a class="dropdown-item" href="#">Profile</a></li>
+              <li><a class="dropdown-item" href="dashboard/profile">Profile</a></li>
               <li><a class="dropdown-item" href="#">Settings</a></li>
               <li><hr class="dropdown-divider"></li>
               <li><a class="dropdown-item" href="user-logout">Log Out</a></li>

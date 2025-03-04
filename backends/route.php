@@ -1,6 +1,11 @@
 <?php 
 	include "db.php";
 
+	if($_SERVER['REQUEST_METHOD'] == 'GET' && empty($_SERVER['QUERY_STRING'])) {
+		// $_SESSION['msg'] = "Invalid Action";
+		header("location: login");
+		exit();
+	}
 	$request_uri =  $_SERVER['REQUEST_URI'];
 	$parts = explode("/", $request_uri);
 	$len = count($parts);

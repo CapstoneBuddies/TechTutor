@@ -48,45 +48,10 @@
 	ini_set('log_errors', 1);
 	ini_set('display_errors', 0);
 
-	$timeout_duration = 3600;
-	$current_page = basename($_SERVER['PHP_SELF']);
-
 	if (session_status() == PHP_SESSION_NONE) {
     	session_start();
 	}
-
-	// Check if user is already logged in
-	if (isset($_SESSION['user']) && ($current_page == 'login.php' || $current_page == 'signup.php') ) {
-	    header("location: dashboard");
-	    exit();
-	}
-
-	// Check if user is not logged on but was set to autologin
-	if(!isset($_SESSION['user']) && isset($_COOKIE['remember_me'])) {
-		try {
-			$conn = new mysqli(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT);
-			$token = $_COOKIE['remember_me'];
-
-			// Retrieve and verify current token
-		    $stmt = $conn->prepare("SELECT uid, role, first_name, last_name, email, profile_picture FROM users WHERE uid = (SELECT user_id FROM login_tokens WHERE token = ?)");
-		    $stmt->bind_param("s",$token);
-		    $stmt->execute();
-			$result = $stmt->get_result();
-			$user = $result->fetch_assoc();
-
-		    if ($user) {
-		    	// set session information
-		        $_SESSION['user'] = $user['uid'];
-				$_SESSION['name'] = $user['last_name'].', '.$user['first_name'];
-				$_SESSION['email'] = $user['email'];
-				$_SESSION['role'] = $user['role'];
-				$_SESSION['profile'] = USER_IMG.$user['profile_picture'];
-		    }	
-		} catch (Exception $e) {
-			log_error("Remember Me: ".$e->getMessage(),'error.log');
-		}
-	}
-
+	
 	function log_error($message, $destination) {
 		 $file_path = LOG_PATH . $destination;
 
@@ -97,5 +62,4 @@
 	    }
     	error_log($message."\n", 3, $file_path);
 	}
-	
 ?>
