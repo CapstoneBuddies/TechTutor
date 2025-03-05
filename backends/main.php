@@ -1,7 +1,7 @@
 <?php 
 	require_once 'db.php';
+	session_start();
 
-	$timeout_duration = 3600;
 	$current_page = basename($_SERVER['PHP_SELF']);
 	
 	// Check if user is already logged in
@@ -50,4 +50,24 @@
 		header("location: ".BASE."dashboard");
 		exit();
 	}
+
+	function sendVerificationCode($email, $userId) {
+		$mail = getMailerInstance();
+		try {
+			$mail->addAddress($email);
+			$mail->Subject = "Your Verification Code";
+	        $mail->Body = "Your verification code is: <b>$code</b>. It will expire in 3 minutes.";
+	        $mail->send();
+	        return true;
+	    } catch (Exception $e) {
+	        return "Mailer Error: " . $mail->ErrorInfo;
+	    }
+	}
+
+	// /verify
+	function verify() {
+
+	}
+
+
 ?>

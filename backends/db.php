@@ -368,6 +368,22 @@
     	}
 	    return $token;
 	}
+	function generateVerificationCode($user_id){
+	    global $conn;
+	    // Generate a random 6-digit code
+	    $code = rand(100000, 999999);
+	    $expiresAt = date('Y-m-d H:i:s', strtotime('+3 minutes')); // Expires in 10 minutes
+
+		// Save the code and expiration in the database
+	    $stmt = $conn->prepare("UPDATE login_tokens SET verification_code = ?, expiration_date = ? WHERE uid = ?");
+	    $stmt->bind_param("ssi", $code, $expiresAt, $userId);
+	    $stmt->execute();
+	    if (!$stmt->execute()) {
+	        log_error($stmt->error, 'database_error.log');
+    	}
+	    $stmt->close();
+	}
+
 	function verifyEmailToken($token) {
 		global $conn;
 
@@ -393,7 +409,6 @@
 					return "Email verified successfully! You can now log in.";
 				}
 			}
-
 			return "Invalid or expired token.";
 		} catch (Exception $e) {
 			return "Error verifying email: " . $e->getMessage();

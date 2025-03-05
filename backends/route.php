@@ -1,6 +1,7 @@
 <?php 
 	include "db.php";
 	session_start();
+	
 	$request_uri =  trim($_SERVER['REQUEST_URI'], "/");
 	$page = basename($request_uri);
 

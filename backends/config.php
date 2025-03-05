@@ -52,6 +52,19 @@
 	ini_set('log_errors', 1);
 	ini_set('display_errors', 0);
 
+	// Initializing PHPMailer
+	$mail = new PHPMailer(true);
+	$mail->isSMTP();
+	$mail->Host = MAIL_HOST;
+	$mail->SMTPAuth = true;
+	$mail->Username = MAIL_USER;
+	$mail->Password = MAIL_PASS;
+	$mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+	$mail->Port = MAIL_PORT;
+	$mail->setFrom(MAIL_USER, MAIL_HOST);
+	$mail->isHTML(true);
+
+	// SET
 	if (session_status() == PHP_SESSION_NONE) {
     	session_start();
 	}
@@ -67,23 +80,19 @@
     	error_log($message."\n", 3, $file_path);
 	}
 
-	// Sending of verification
-	function sendVerificationEmail($email, $token) {
+	// provide a clone for mailing instance
+	function getMailerInstance() {
+	    global $mail;
+	    return clone $mail; // Returns a fresh copy of $mail
+	}
+
+	// Sending of Email Verification
+	function sendVerificationEmail(PHPMailer $mail, $email, $token) {
 		$verification_link = "https://".$_SERVER['SERVER_NAME']."/verify?token=$token";
-		$mail = new PHPMailer(true);
+		$mail = getMailerInstance();
+
 		try {
-			$mail->isSMTP();
-			$mail->Host = MAIL_HOST; // Replace with your SMTP server
-			$mail->SMTPAuth = true;
-			$mail->Username = MAIL_USER; // Your SMTP username
-			$mail->Password = MAIL_PASS; // Your SMTP password
-			$mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-			$mail->Port = MAIL_PORT;
-
-			$mail->setFrom(MAIL_USER, MAIL_HOST);
 			$mail->addAddress($email);
-
-			$mail->isHTML(true);
 			$mail->Subject = "Verify Your Email";
 			$mail->Body = "Click the link below to verify your email:<br><a href='$verification_link'>$verification_link</a>";
 
