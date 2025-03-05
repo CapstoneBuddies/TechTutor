@@ -10,13 +10,14 @@ CREATE TABLE IF NOT EXISTS `users` (
 	`role` ENUM('TECHGURU', 'TECHKIDS', 'ADMIN') NOT NULL,
 	`profile_picture` VARCHAR(255) DEFAULT 'default.jpg',
 	`created_on` TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
-    `last_login` TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+    `last_login` TIMESTAMP NULL
 );
 
 CREATE TABLE IF NOT EXISTS `login_tokens` (
     `token_id` INT PRIMARY KEY AUTO_INCREMENT,
     `user_id` INT NOT NULL,
     `token` VARCHAR(64) NOT NULL,
+    `type` ENUM('remember_me', 'email_verification') NOT NULL,
     `expiration_date` DATETIME NOT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`user_id`) REFERENCES `users`(`uid`) 
@@ -134,3 +135,10 @@ CREATE INDEX idx_token ON login_tokens (token);
 -- Adding Information
 INSERT INTO `course`(`course_name`) VALUES('Computer Programming'), ('Computer Networking'), ('Graphics Design');
 INSERT INTO `subject`(`course_id`,`subject_name`) VALUES (1,'Python Programming'), (2,'Networking'), (3,'UI/UX Designing');
+
+-- Adding Sample User logins (default password is Abc123!!)
+INSERT INTO `users`(`email`,`first_name`,`last_name`,`password`,`role`) VALUES 
+('tutor@test.com','Test','Tutor','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','TECHGURU'),
+('student@test.com','Test','Student','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','TECHKIDS'),
+('admin@test.com','Test','Admin','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','ADMIN');
+

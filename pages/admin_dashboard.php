@@ -1,6 +1,8 @@
 <?php 
     require_once '../backends/config.php';
+    require_once '../backends/db.php';
     session_start();
+    getUsers();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -70,10 +72,38 @@
           <div class="col-md-8">
             <div class="card">
               <div class="card-header">
-                <h2>Total Active Students</h2>
+                <h2>Total Users</h2>
               </div>
               <div class="card-body">
                 <!-- Add content for Total Active Students here -->
+                <table class="user-table">
+                  <tr>
+                    <th class="table-header">First Name</th>
+                    <th class="table-header">Last Name</th>
+                    <th class="table-header">Email</th>
+                    <th class="table-header">Account Status</th>
+                    <th class="table-header">Role</th>
+                    <th class="table-header">Last Login</th>
+                  </tr>
+                  <?php
+                    if (!empty($_SESSION['users'])) {
+                      foreach ($_SESSION['users'] as $user) {
+                        if((bool)$user['status']) {
+                          echo "<tr>
+                          <td class='user-data'>{$user['first_name']}</td>
+                          <td class='user-data'>{$user['last_name']}</td>
+                          <td class='user-data'>{$user['email']}</td>
+                          <td class='user-data'>" . ($user['is_verified'] ? "Verified" : "Unverified") . "</td>
+                          <td class='user-data'>{$user['role']}</td>
+                          <td class='user-data'>{$user['last_login']}</td>
+                          </tr>";
+                        }
+                      }
+                    } else {
+                      echo "<tr><td colspan='6'>No active users found.</td></tr>";
+                    }
+                  ?>
+                </table>
               </div>
             </div>
             <div class="card mt-4">

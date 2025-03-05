@@ -62,10 +62,19 @@
 				if($stmt->execute()) {
 
 					$conn->commit();
+					$stmt = $conn->prepare("SELECT uid FROM `users` WHERE `email` = ?");
+					$stmt->bind_param("s", $email);
+					$stmt->execute();
+					$result = $stmt->get_result()->fetch_assoc();
 
-					$_SESSION['role'] = $role;
+					if ($result) { // Ensure a user was found before proceeding
+    					$user_id = $result['uid'];
+						// Sending of verification
+						$token = generateVerificationToken($user_id);
+						sendVerificationEmail($email, $token);
+    				}
 					$_SESSION["msg"] = "Account was succesfully created, Please Log In";
-					header("location: login");
+					header("location: ".BASE."login");
 					exit();
 				}
 			}
@@ -74,7 +83,7 @@
 				log_error(date("Y-m-d H:i:s") . " SQL Error: " . $e->getMessage(), 'database_error.log');
 
 				$_SESSION['msg'] = "Something went wrong. Please try again later.";
-			 	header("location: login");
+			 	header("location: ".BASE."login");
 				exit();
 			}
 			catch(Exception $e) {
@@ -83,13 +92,17 @@
 				
 				if(!isset($_SESSION['msg']))
 					$_SESSION['msg'] = "Unexpected Error Occured. Please contact System Administrator.";
-				header("location: register");
+				header("location: ".BASE."register");
 				exit();
 			}
 			finally{
 				$stmt->close();
 				$conn->close();
 			}
+		}
+		else {
+			$_SESSION['msg'] = "Invalid Action";
+			header("location: ".BASE."login");
 		}
 	}//End Registration Block
 
@@ -101,37 +114,43 @@
 
 			if(empty($email) || empty($pass)) {
 				$_SESSION['msg'] = "Login Credentials should not be empty!";
-				header("location: login");
+				header("location: ".BASE."login");
 				exit();
 			}
 
 			try {
-				$stmt = $conn->prepare("SELECT `uid`, `email`, `password`, `first_name`, `last_name`, `role`, `profile_picture` FROM `users` WHERE `email` = ?");
+				$stmt = $conn->prepare("SELECT `uid`, `email`, `password`, `first_name`, `last_name`, `role`, `profile_picture`, `is_verified` FROM `users` WHERE `email` = ?");
 				$stmt->bind_param("s", $email);
 				$stmt->execute();
 				$result = $stmt->get_result();
 
 				if($result->num_rows > 0) {
 					$user = $result->fetch_assoc();
-
 					if (password_verify($pass, $user['password'])) {
-						
+						$_SESSION['email'] = $user['email'];
+						// Check if user is verified
+						if($user['is_verified'] == 0) {
+							// route to verify.php
+							$_SESSION['msg'] = "Your account is not verified. Please check your email for a verification link.";
+							header("Location: verify");
+    						exit();
+						}
 						// Set session information
 						$_SESSION['user'] = $user['uid'];
-						$_SESSION['name'] = $user['first_name'].' '.$user['last_name'];
-						$_SESSION['first-name'] = $user['first_name']
 						$_SESSION['email'] = $user['email'];
+						$_SESSION['name'] = $user['first_name'].' '.$user['last_name'];
+						$_SESSION['first-name'] = $user['first_name'];
 						$_SESSION['profile'] = USER_IMG.$user['profile_picture'];
 						setcookie('role', $user['role'], time() + (24 * 60 * 60), "/", "", true, true);
 
 						//Check if remember was passed
 						if(isset($_POST['remember']) && $_POST['remember'] == 'on') {
 							$token = bin2hex(random_bytes(16));
-							setcookie('remember_me', $token, time() + (7 * 24 * 60 * 60), "/", "", true, true);
+							setcookie('remember_me', $token, time() + (7 * 24 * 60 * 60), BASE, "", true, true);
 
-							$hashed_token = hash('sha256', $token);
+							$hashed_token = password_hash($token, PASSWORD_BCRYPT);
 
-							$stmt = $conn->prepare("INSERT INTO login_tokens (user_id, token, expiration_date) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY))");
+							$stmt = $conn->prepare("INSERT INTO login_tokens (user_id, token, expiration_date, type) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), 'remember_me')");
 							$stmt->bind_param("is",$user['uid'], $hashed_token);
 							
 							if(!$stmt->execute()) {
@@ -148,35 +167,39 @@
 
 						// Redirect to user dashboard
 						$conn->close();
-						header("location: dashboard");
+						header("location: ".BASE."dashboard");
 						exit();
 
 					}
 					$_SESSION['msg'] = "Invalid Login Credentials, Please Try Again";
-					header("location: login");
+					header("location: ".BASE."login");
 					exit();
 				} else {
 					$_SESSION['msg'] = "No Account Found";
-					header("location: login");
+					header("location: ".BASE."login");
 					exit();
 				}
 			}
 			catch(mysqli_sql_exception $e) {
 				log_error(date("Y-m-d H:i:s") . " SQL Error: " . $e->getMessage(), 'database_error.log');
 				$_SESSION['msg'] = "Something went wrong. Please try again later.";
-				header("location: login");
+				header("location: ".BASE."login");
 				exit();
 			}
 			catch(Exception $e) {
 				log_error(date("Y-m-d H:i:s") . " SQL Error: " . $e->getMessage(), 'error.log');
 				$_SESSION['msg'] = "Unknown error occured, Please contact System Administrator!";
-				header("location: login");
+				header("location: ".BASE."login");
 				exit();
 			}
 			finally {
 				$stmt->close();
 				$conn->close();
 			}
+		}
+		else {
+			$_SESSION['msg'] = "Invalid Action";
+			header("location: ".BASE."login");
 		}
 	}//End of login block
 
@@ -197,21 +220,27 @@
 				// Remove token from the server-side
 				try{
 					$conn -> begin_transaction();
-					$stmt = $conn->prepare("DELETE FROM `login_tokens` WHERE `token` = ?");
-					$stmt->bind_param("s", $token);
-					if($stmt->execute()) {
-						$conn->commit();
+
+					$token_id = rememberTokenVerifier($token);
+
+					if(isset($token_id)) {
+						$stmt = $conn->prepare("DELETE FROM `login_tokens` WHERE `token_id` = ?");
+						$stmt->bind_param("i", $token_id);
+						if($stmt->execute()) {
+							$conn->commit();
+						}
+						else {
+							$conn->rollback();
+							throw new Exception("Error Encountered during deletion");
+						}
 					}
-					else {
-						$conn->rollback();
-					}	
 				}
 				catch (Exception $e) {
 					$conn->rollback();
-					echo "Failed to delete token: " . $e->getMessage();
+					log_error(date("Y-m-d H:i:s") . " SQL Error: " . $e->getMessage(), 'database_error.log');
 				}
 				finally {
-					$stmt->close();
+					if (isset($stmt)) $stmt->close();
 					$conn->close();
 				}
 			}
@@ -220,8 +249,12 @@
 
 			// Redirect after processing logout logic
 			$_SESSION['msg'] = "You have successfully logout";
-			header("location: login");
+			header("location: ".BASE."login");
 			exit();
+		}
+		else {
+			$_SESSION['msg'] = "Invalid Action";
+			header("location: ".BASE."login");	
 		}
 	}//End of logout block	
 
@@ -254,7 +287,7 @@
 					if($stmt->execute()) {
 						$conn->commit();
 						$_SESSION["msg"] = "Class Information was successfully added.";
-						header("location: dashboard");
+						header("location: ".BASE." dashboard");
 						exit();
 					}
 
@@ -263,12 +296,12 @@
 					log_error(date("Y-m-d H:i:s") . " SQL Error: " . $e->getMessage(), 'database_error.log');
 
 					$_SESSION['msg'] = "Something went wrong. Please try again later.";
-				 	header("location: login");
+				 	header("location: ".BASE."login");
 					exit();
 				}
 				catch(Exception $e) {
 					log_error($e->getMessage(), 'error.log');
-					header("location: dashboard");
+					header("location: ".BASE."dashboard");
 					exit();
 				}
 				finally {
@@ -279,20 +312,91 @@
 			}
 		}
 		$_SESSION['msg'] = "Invalid action";
-		header("location: dashboard");
+		header("location: ".BASE."dashboard");
 		exit();
-	}
+	}//End of add_class function
 
-	function getStudents() {
+	function getUsers() {
 		global $conn;
 
-		$stmt = $conn->prepare("SELECT * FROM ?");
-		$stmt->bind_param("s",$table);
+		$stmt = $conn->prepare("SELECT `first_name`,`last_name`,`email`,`is_verified`,`role`,`last_login`, `status` FROM `users`");
 		$stmt->execute();
 		$result = $stmt->get_result();
 
 		if($result->num_rows > 0) {
-			$data = $result->fetch_assoc();
+			$data = $result->fetch_all(MYSQLI_ASSOC);
+
+			$_SESSION['users'] = $data;
+		}
+	}//End of getUsers table
+
+	
+	/* UTILITIES */
+
+	function rememberTokenVerifier($hashed_token) {
+		global $conn;
+		try {
+			$stmt = $conn->prepare("SELECT token_id, token FROM login_tokens WHERE type = 'remember_me' AND expiration_date > NOW()");
+		    $stmt->execute();
+		    $result = $stmt->get_result();
+
+			while($row = $result->fetch_assoc()) { 
+				if (password_verify($hashed_token, $row['token'])) { 
+					return $row['token_id'];
+				}
+			}
+			throw new Exception("Token not Exist");
+		}
+		catch(Exception $e) {
+			log_error(date("Y-m-d H:i:s") . " SQL Error: " . $e->getMessage(), 'database_error.log');
+			return null;
+		}
+	}
+	function generateVerificationToken($user_id) {
+	    global $conn;
+	    $token = bin2hex(random_bytes(32)); // Generate token
+	    $hashed_token = password_hash($token, PASSWORD_DEFAULT); // Hash token
+	    $expires_at = date("Y-m-d H:i:s", strtotime("+1 hour")); // Token expires in 1 hour
+
+	    // Insert the verification token
+	    $stmt = $conn->prepare("INSERT INTO login_tokens (user_id, type, token, expiration_date) VALUES (?, 'email_verification', ?, ?)");
+	    $stmt->bind_param("iss", $user_id, $hashed_token, $expires_at);
+	    $stmt->execute();
+	    if (!$stmt->execute()) {
+	        log_error($stmt->error, 'database_error.log');
+	        return null;
+    	}
+	    return $token;
+	}
+	function verifyEmailToken($token) {
+		global $conn;
+
+		try {
+			$stmt = $conn->prepare("SELECT user_id, token FROM login_tokens WHERE type = 'email_verification' AND expiration_date > NOW()");
+			$stmt->execute();
+			$result = $stmt->get_result();
+
+			while ($row = $result->fetch_assoc()) {
+				if (password_verify($token, $row['token'])) {
+					$user_id = $row['user_id'];
+
+					// Update user verification status
+					$update_stmt = $conn->prepare("UPDATE users SET is_verified = 1 WHERE uid = ?");
+					$update_stmt->bind_param("i", $user_id);
+					$update_stmt->execute();
+
+					// Delete the verification token from `login_tokens`
+					$delete_stmt = $conn->prepare("DELETE FROM login_tokens WHERE user_id = ? AND type = 'email_verification'");
+					$delete_stmt->bind_param("i", $user_id);
+					$delete_stmt->execute();
+
+					return "Email verified successfully! You can now log in.";
+				}
+			}
+
+			return "Invalid or expired token.";
+		} catch (Exception $e) {
+			return "Error verifying email: " . $e->getMessage();
 		}
 	}
 ?>

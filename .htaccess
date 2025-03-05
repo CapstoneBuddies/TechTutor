@@ -2,11 +2,15 @@ RewriteEngine On
 
 #RewriteBase /
 
-#Route to homepage
-RewriteRule ^home$ index.php [L]
+# Remove trailing slashes except for root "/"
+RewriteCond %{REQUEST_URI} ^(.+)/$ [NC]
+RewriteRule ^(.+)/$ %1 [R=301,L]
 
 #Route to homepage
-RewriteRule ^(.*)/home$ backends/route.php [L]
+#RewriteRule ^home$ index.php [L]
+
+#Route to homepage
+RewriteRule ^(.*)/?home$ backends/route.php [L]
 
 #Route /login to pages/login.php
 RewriteRule ^login$ pages/login.php [L]
@@ -15,9 +19,9 @@ RewriteRule ^login$ pages/login.php [L]
 RewriteRule ^register$ pages/signup.php [L]
 
 #Route logics to route.php
-RewriteRule ^user-login$ backends/route.php [L]
-RewriteRule ^user-register$ backends/route.php [L]
-RewriteRule ^user-logout$ backends/route.php [L]
+RewriteRule ^(.*)/?user-login$ backends/route.php [L]
+RewriteRule ^(.*)/?user-register$ backends/route.php [L]
+RewriteRule ^(.*)/?user-logout$ backends/route.php [L]
 
 
 # Redirect user to student pages if role=TechKids

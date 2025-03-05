@@ -1,3 +1,8 @@
+<?php 
+    require_once '../backends/config.php';
+    require_once '../backends/main.php';
+    session_start();
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -43,7 +48,7 @@
         <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
       </nav>
 
-      <a class="btn-getstarted flex-md-shrink-0" href="login.php">Sign In</a>
+      <a class="btn-getstarted flex-md-shrink-0" href="login">Sign In</a>
     </div>
   </header>
   
@@ -54,7 +59,7 @@
         <div class="verify-box">
             <div class="verification-right">
                 <h2>Check Your Email For A Code</h2>
-                <p>Please enter the verification code sent to your email address <strong>techtutors137@gmail.com</strong></p>
+                <p>Please enter the verification code sent to your email address <strong><?php echo $_SESSION['email']; ?></strong></p>
                 <form action="verify_code.php" method="POST">
                     <div class="code-inputs">
                         <input type="number" maxlength="1" name="code[]" required inputmode="numeric" pattern="\d{1}" autocomplete="one-time-code">

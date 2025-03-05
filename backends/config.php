@@ -5,6 +5,10 @@
 	require_once ROOT_PATH.'/assets/vendor/autoload.php';
 
 	use Dotenv\Dotenv;
+	use PHPMailer\PHPMailer\PHPMailer;
+	use PHPMailer\PHPMailer\Exception;
+	use PHPMailer\PHPMailer\SMTP;
+
 
 	$dotenv = Dotenv::createImmutable(__DIR__);
 	$dotenv->load();
@@ -61,5 +65,32 @@
 	        chmod($file_path, 0666);  // Make the file writable by PHP (optional, for permission issues)
 	    }
     	error_log($message."\n", 3, $file_path);
+	}
+
+	// Sending of verification
+	function sendVerificationEmail($email, $token) {
+		$verification_link = "https://".$_SERVER['SERVER_NAME']."/verify?token=$token";
+		$mail = new PHPMailer(true);
+		try {
+			$mail->isSMTP();
+			$mail->Host = MAIL_HOST; // Replace with your SMTP server
+			$mail->SMTPAuth = true;
+			$mail->Username = MAIL_USER; // Your SMTP username
+			$mail->Password = MAIL_PASS; // Your SMTP password
+			$mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+			$mail->Port = MAIL_PORT;
+
+			$mail->setFrom(MAIL_USER, MAIL_HOST);
+			$mail->addAddress($email);
+
+			$mail->isHTML(true);
+			$mail->Subject = "Verify Your Email";
+			$mail->Body = "Click the link below to verify your email:<br><a href='$verification_link'>$verification_link</a>";
+
+			$mail->send();
+			return true;
+		} catch (Exception $e) {
+			return "Mailer Error: " . $mail->ErrorInfo;
+		}
 	}
 ?>

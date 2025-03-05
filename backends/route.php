@@ -1,27 +1,27 @@
 <?php 
 	include "db.php";
+	session_start();
+	$request_uri =  trim($_SERVER['REQUEST_URI'], "/");
+	$page = basename($request_uri);
 
-	if($_SERVER['REQUEST_METHOD'] == 'GET' && empty($_SERVER['QUERY_STRING'])) {
-		// $_SESSION['msg'] = "Invalid Action";
-		header("location: login");
+	$excluded_page = ['user-login','user-register','home'];
+
+	if(isset($_SESSION['user']) && in_array($page,$excluded_page)) {
+		header("location: ".BASE."dashboard");
 		exit();
 	}
-	$request_uri =  $_SERVER['REQUEST_URI'];
-	$parts = explode("/", $request_uri);
-	$len = count($parts);
-	$extracted_text = isset($parts[$len-1]) ? $parts[$len-1] : '';
 
-	if($extracted_text == 'user-login') {
+	if($page == 'user-login') {
 		login();
 	}
-	else if($extracted_text == 'user-register') {
+	else if($page == 'user-register') {
 		register();
 	}
-	elseif ($extracted_text == 'user-logout') {
+	elseif ($page == 'user-logout') {
 		logout();
 	}
 
-	elseif ($extracted_text == 'home') {
+	elseif ($page == 'home') {
 		header("location: ".BASE);
 	}
 ?>
