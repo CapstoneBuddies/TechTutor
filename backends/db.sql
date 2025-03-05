@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS `login_tokens` (
     `token` VARCHAR(64) NOT NULL,
     `verification_code` VARCHAR(6) NULL,
     `type` ENUM('remember_me', 'email_verification') NOT NULL,
-    `expiration_date` DATETIME NOT NULL,
+    `remember_expiration_date` DATETIME NOT NULL,
+    `verification_expiration_date` DATETIME NOT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`user_id`) REFERENCES `users`(`uid`) 
     ON DELETE CASCADE,

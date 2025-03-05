@@ -1,15 +1,17 @@
 <?php 
-	require_once 'db.php';
+	include_once 'db.php';
 	session_start();
+	use PHPMailer\PHPMailer\PHPMailer;
+	use PHPMailer\PHPMailer\Exception;
 
 	$current_page = basename($_SERVER['PHP_SELF']);
-	
+	$excluded_page = ['index.php', 'login.php', 'signup.php'];
 	// Check if user is already logged in
-	if (isset($_SESSION['user']) && isset($_COOKIE['role']) && in_array($current_page, ['index.php', 'login.php', 'signup.php'])) {
+	if (isset($_SESSION['user']) && isset($_COOKIE['role']) && in_array($current_page, $excluded_page)) {
 	    header("location: ".BASE."dashboard");
 	    exit();
 	}
-	if (isset($_SESSION['user']) && !isset($_COOKIE['role'])) {
+	if (isset($_SESSION['user']) && !isset($_COOKIE['role']) && !isset($_SESSION['status']) ) {
 	    header("location: ".BASE."user-logout");
 	}
 
@@ -51,8 +53,7 @@
 		exit();
 	}
 
-	function sendVerificationCode($email, $userId) {
-		$mail = getMailerInstance();
+	function sendVerificationCode(PHPMailer $mail, $email, $code) {
 		try {
 			$mail->addAddress($email);
 			$mail->Subject = "Your Verification Code";
@@ -60,13 +61,31 @@
 	        $mail->send();
 	        return true;
 	    } catch (Exception $e) {
-	        return "Mailer Error: " . $mail->ErrorInfo;
+	    	$_SESSION['msg'] = "An error occured, Please try again later!";
+	        log_error("Mailer Error: " . $mail->ErrorInfo,'error.log');
 	    }
 	}
 
 	// /verify
 	function verify() {
+		global $conn;
+		if (isset($_GET['token'])) {
+			$success = verifyEmailToken($_GET['token']);
+			if($success) {
+				header("location: login");
+				exit();
+			}
+		}
+		$id = $_SESSION['user'];
+		$email = $_SESSION['email'];
 
+		if(checkVCodeStatus($id)) {}
+		else {
+			$_SESSION['msg'] = "A new code has been sent!";
+			$mail = getMailerInstance();
+			$code = generateVerificationCode($id);
+			sendVerificationCode($mail, $email, $code);
+		}
 	}
 
 

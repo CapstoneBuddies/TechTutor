@@ -1,5 +1,5 @@
 <?php 
-	include "db.php";
+	include "main.php";
 	session_start();
 	
 	$request_uri =  trim($_SERVER['REQUEST_URI'], "/");
@@ -21,7 +21,9 @@
 	elseif ($page == 'user-logout') {
 		logout();
 	}
-
+	elseif ($page == 'verify_code') {
+		verifyCode();
+	}
 	elseif ($page == 'home') {
 		header("location: ".BASE);
 	}

@@ -18,10 +18,14 @@ RewriteRule ^login$ pages/login.php [L]
 #Route /register to pages/signup.php
 RewriteRule ^register$ pages/signup.php [L]
 
+#Route /verify to pages/verify.php
+RewriteRule ^verify$ pages/verify.php [L]
+
 #Route logics to route.php
 RewriteRule ^(.*)/?user-login$ backends/route.php [L]
 RewriteRule ^(.*)/?user-register$ backends/route.php [L]
 RewriteRule ^(.*)/?user-logout$ backends/route.php [L]
+RewriteRule ^(.*)/?verify_code$ backends/route.php [L]
 
 
 # Redirect user to student pages if role=TechKids

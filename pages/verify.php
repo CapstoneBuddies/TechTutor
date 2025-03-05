@@ -2,6 +2,7 @@
     require_once '../backends/config.php';
     require_once '../backends/main.php';
     session_start();
+    verify();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -60,7 +61,7 @@
             <div class="verification-right">
                 <h2>Check Your Email For A Code</h2>
                 <p>Please enter the verification code sent to your email address <strong><?php echo $_SESSION['email']; ?></strong></p>
-                <form action="verify_code.php" method="POST">
+                <form action="verify_code" method="POST">
                     <div class="code-inputs">
                         <input type="number" maxlength="1" name="code[]" required inputmode="numeric" pattern="\d{1}" autocomplete="one-time-code">
                         <input type="number" maxlength="1" name="code[]" required inputmode="numeric" pattern="\d{1}" autocomplete="one-time-code">
@@ -70,7 +71,7 @@
                         <input type="number" maxlength="1" name="code[]" required inputmode="numeric" pattern="\d{1}" autocomplete="one-time-code">
                     </div>
                     <button type="submit" class="verify-btn">Verify</button>
-                    <p class="resend">Can't find the email? <a href="resend_code.php">Click here</a> to resend.</p>
+                    <p class="resend">Can't find the email? <a href="verify">Click here</a> to resend.</p>
                 </form>
             </div>
         </div>

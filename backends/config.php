@@ -43,6 +43,9 @@
 	define('SMTP_PASSWORD',$_ENV['MAIL_PASS']);
 	define('SMTP_PORT',$_ENV['MAIL_PORT']);
 
+	define('SMTP_USER_2',$_ENV['MAIL_USER_2']);
+	define('SMTP_PASSWORD_2',$_ENV['MAIL_PASS_2']);
+
 	// Set Default time to Philippines
 	date_default_timezone_set('Asia/Manila');
 
@@ -55,20 +58,25 @@
 	// Initializing PHPMailer
 	$mail = new PHPMailer(true);
 	$mail->isSMTP();
-	$mail->Host = MAIL_HOST;
+	$mail->Host = SMTP_HOST;
 	$mail->SMTPAuth = true;
-	$mail->Username = MAIL_USER;
-	$mail->Password = MAIL_PASS;
-	$mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-	$mail->Port = MAIL_PORT;
-	$mail->setFrom(MAIL_USER, MAIL_HOST);
+	$mail->Username = SMTP_USER;
+	$mail->Password = SMTP_PASSWORD;
+	$mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+	$mail->Port = SMTP_PORT;
+	$mail->setFrom(SMTP_USER, SMTP_HOST);
 	$mail->isHTML(true);
 
-	// SET
+
+
+	// SET Session
 	if (session_status() == PHP_SESSION_NONE) {
     	session_start();
 	}
 	
+	//Check if 
+
+	/* IMPORTANT FUNCTIONS */
 	function log_error($message, $destination) {
 		 $file_path = LOG_PATH . $destination;
 
@@ -85,11 +93,23 @@
 	    global $mail;
 	    return clone $mail; // Returns a fresh copy of $mail
 	}
+	function getSecondaryMailInstance() {
+	    $mail = new PHPMailer(true);
+		$mail->isSMTP();										 
+		$mail->Host	 = SMTP_HOST;				 
+		$mail->SMTPAuth = true;							 
+		$mail->Username = SMTP_USER_2;				 
+		$mail->Password = SMTP_PASSWORD_2;					 
+		$mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;							 
+		$mail->Port	 = SMTP_PORT; 
+		$mail->setFrom(SMTP_USER_2, SMTP_HOST);
+		$mail->isHTML(true);
+	    return $mail;
+	}
 
 	// Sending of Email Verification
 	function sendVerificationEmail(PHPMailer $mail, $email, $token) {
-		$verification_link = "https://".$_SERVER['SERVER_NAME']."/verify?token=$token";
-		$mail = getMailerInstance();
+		$verification_link = "https://".$_SERVER['SERVER_NAME']."capstone/verify?token=".urlencode($token);
 
 		try {
 			$mail->addAddress($email);
@@ -99,7 +119,7 @@
 			$mail->send();
 			return true;
 		} catch (Exception $e) {
-			return "Mailer Error: " . $mail->ErrorInfo;
+			log_error("Mailer Error: " . $mail->ErrorInfo,'error.log');
 		}
 	}
 ?>
