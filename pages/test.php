@@ -1,3 +1,4 @@
+<?php require '../backends/config.php';?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -150,7 +151,7 @@ footer {
                     <p>Nice to see you, John Centh!</p>
                     <div class="progress">
                         <p>You have 2,525 points</p>
-                        <p>Earn 2 more badges and 475 more points to reach Explorer rank.</p>
+                        <p><?php echo SMTP_PASSWORD; ?></p>
                     </div>
                 </div>
             </aside>

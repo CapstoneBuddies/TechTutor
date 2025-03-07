@@ -14,7 +14,7 @@
 	$dotenv->load();
 
 	// Base URL configuration
-	if($_SERVER['HTTP_HOST'] == 'localhost') {
+	if(strpos($_SERVER['HTTP_HOST'], 'localhost') !== false) {
 	define('BASE', '/capstone/');
 	}
 	else {
@@ -108,18 +108,27 @@
 	}
 
 	// Sending of Email Verification
-	function sendVerificationEmail(PHPMailer $mail, $email, $token) {
+	function sendVerificationEmail(PHPMailer $mail, $email, $token, $name) {
 		$verification_link = "https://".$_SERVER['SERVER_NAME']."/verify?token=".urlencode($token);
 
 		try {
 			$mail->addAddress($email);
-			$mail->Subject = "Verify Your Email";
-			$mail->Body = "Click the link below to verify your email:<br><a href='$verification_link'>$verification_link</a>";
+			$mail->Subject = "Verify Your Email Address";
+			$mail->Body = "
+				<p>Hello, '$name'</p>
+				<p>Thank you for registering with us! To complete the registration process and activate your account, please verify your email address by clicking the link below:</p>
+				<p><a href='$verification_link' style='color: #4CAF50;'>Verify Your Email</a></p>
+				<p>If you did not create an account with us, please ignore this email. Your email address will not be used for any other purpose.</p>
+				<p>If you encounter any issues or have questions, feel free to contact our support team.</p>
+				<p>Best regards,<br>Techtutor</p>
+				<p><i>This is an automated message. Please do not reply.</i></p>
+			";
 
 			$mail->send();
 			return true;
 		} catch (Exception $e) {
-			log_error("Mailer Error: " . $mail->ErrorInfo,'error.log');
+			log_error("Mailer Error: " . $mail->ErrorInfo,'mail.log');
+			return false;
 		}
 	}
 ?>
