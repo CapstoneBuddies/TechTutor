@@ -139,8 +139,8 @@ INSERT INTO `course`(`course_name`) VALUES('Computer Programming'), ('Computer N
 INSERT INTO `subject`(`course_id`,`subject_name`) VALUES (1,'Python Programming'), (2,'Networking'), (3,'UI/UX Designing');
 
 -- Adding Sample User logins (default password is Abc123!!)
-INSERT INTO `users`(`email`,`first_name`,`last_name`,`password`,`role`) VALUES 
-('tutor@test.com','Test','Tutor','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','TECHGURU'),
-('student@test.com','Test','Student','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','TECHKIDS'),
-('admin@test.com','Test','Admin','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','ADMIN');
+INSERT INTO `users`(`email`,`first_name`,`last_name`,`password`,`role`,`is_verified`) VALUES 
+('tutor@test.com','Test','Tutor','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','TECHGURU',1),
+('student@test.com','Test','Student','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','TECHKIDS',1),
+('admin@test.com','Test','Admin','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','ADMIN',1);
 

@@ -85,7 +85,7 @@
 	        touch($file_path);  // Create the file if it does not exist
 	        chmod($file_path, 0666);  // Make the file writable by PHP (optional, for permission issues)
 	    }
-    	error_log($message."\n", 3, $file_path);
+    	error_log(date("Y-m-d H:i:s")." ".$message."\n", 3, $file_path);
 	}
 
 	// provide a clone for mailing instance
@@ -109,7 +109,7 @@
 
 	// Sending of Email Verification
 	function sendVerificationEmail(PHPMailer $mail, $email, $token) {
-		$verification_link = "https://".$_SERVER['SERVER_NAME']."capstone/verify?token=".urlencode($token);
+		$verification_link = "https://".$_SERVER['SERVER_NAME']."/verify?token=".urlencode($token);
 
 		try {
 			$mail->addAddress($email);

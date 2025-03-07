@@ -80,7 +80,7 @@
 			}
 			catch(mysqli_sql_exception $e) {
 				$conn->rollback();
-				log_error(date("Y-m-d H:i:s") . "Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database_error.log');
+				log_error("Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database_error.log');
 
 				$_SESSION['msg'] = "Something went wrong. Please try again later.";
 			 	header("location: ".BASE."register");
@@ -184,13 +184,13 @@
 				}
 			}
 			catch(mysqli_sql_exception $e) {
-				log_error(date("Y-m-d H:i:s")."Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database_error.log');
+				log_error("Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database_error.log');
 				$_SESSION['msg'] = "Something went wrong. Please try again later.";
 				header("location: ".BASE."login");
 				exit();
 			}
 			catch(Exception $e) {
-				log_error(date("Y-m-d H:i:s")." Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'error.log');
+				log_error(" Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'error.log');
 				$_SESSION['msg'] = "Unknown error occured, Please contact System Administrator!";
 				header("location: ".BASE."login");
 				exit();
@@ -241,7 +241,7 @@
 				}
 				catch (Exception $e) {
 					$conn->rollback();
-					log_error(date("Y-m-d H:i:s")." Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database_error.log');
+					log_error(" Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database_error.log');
 				}
 				finally {
 					if (isset($stmt)) $stmt->close();
@@ -297,7 +297,7 @@
 
 				}
 				catch(mysqli_sql_exception $e) {
-					log_error(date("Y-m-d H:i:s") ." Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database_error.log');
+					log_error(" Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database_error.log');
 
 					$_SESSION['msg'] = "Something went wrong. Please try again later.";
 				 	header("location: ".BASE."login");
@@ -352,7 +352,7 @@
 			throw new Exception("Token not Exist");
 		}
 		catch(Exception $e) {
-			log_error(date("Y-m-d H:i:s") ." Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database_error.log');
+			log_error("Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database_error.log');
 			return null;
 		}
 	}
@@ -427,7 +427,7 @@
 			$_SESSION['msg'] = "Invalid or expired token.";
 			return false;
 		} catch (Exception $e) {
-			log_error(date("Y-m-d H:i:s")." Error verifying email: " . $e->getMessage());
+			log_error("Error verifying email: " . $e->getMessage());
 			$_SESSION['msg'] = "An error occured, Please try again later";
 			return false;
 		}
