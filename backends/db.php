@@ -14,18 +14,23 @@
 			$fname = $_POST['first-name'];
 			$lname = $_POST['last-name'];
 			$pass = $_POST['password'];
+			$cpass = $_POST['confirm-password'];
 			$role = $_POST['role'];
 			$profile = 'default.jpg';
 
 			try {
 				// Cleansing inputted data
-				if(empty($email) || empty($fname) || empty($lname) ){
+				if(empty($email) || empty($fname) || empty($lname) || empty($pass) || empty($cpass)){
 					$_SESSION['msg'] = "Please fill in all the required fields.";
 					throw new Exception("Empty Fields");
 				}
 				if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 					$_SESSION['msg'] = "Invalid email format.";
 					throw new Exception("Invalid Email");
+				}
+				if($pass !== $cpass) {
+					$_SESSION['msg'] = "Password does not match.";
+					throw new Exception("Mismatch Password");
 				}
 				if(strlen($pass) < 8) {
 					$_SESSION['msg'] = "Password length does not match!";
@@ -56,8 +61,8 @@
 				}
 
 				// Adding Details to the User Table
-				$stmt = $conn->prepare("INSERT INTO `users`(`password`,`first_name`,`last_name`,`email`,`role`) VALUES(?,?,?,?,?)");
-				$stmt->bind_param("sssss", $password, $fname, $lname, $email, $role);
+				$stmt = $conn->prepare("INSERT INTO `users`(`password`,`email`,`role`) VALUES(?,?,?,?,?)");
+				$stmt->bind_param("sss", $password, $email, $role);
 
 				if($stmt->execute()) {
 					$conn->commit();
@@ -68,10 +73,14 @@
 
 					if ($result) { // Ensure a user was found before proceeding
     					$user_id = $result['uid'];
-    					$mail = getMailerInstance();
-						// Sending of verification
-						$token = generateVerificationToken($user_id);
-						sendVerificationEmail($mail, $email, $token);
+    					$stmt = $conn->prepare("INSERT INTO `user_details`(`user_id`,`first_name`,`last_name`) VALUES(?,?,?)");
+    					$stmt->bind_param("iss", $user_id, $fname, $lname);
+    					if($stmt->execute()) {
+    						$mail = getMailerInstance();
+							// Sending of verification
+							$token = generateVerificationToken($user_id);
+							sendVerificationEmail($mail, $email, $token, $fname);
+    					}
     				}
 					$_SESSION["msg"] = "Account was succesfully created, Please Log In";
 					header("location: ".BASE."login");
@@ -80,7 +89,7 @@
 			}
 			catch(mysqli_sql_exception $e) {
 				$conn->rollback();
-				log_error(date("Y-m-d H:i:s") . "Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database_error.log');
+				log_error("Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database_error.log');
 
 				$_SESSION['msg'] = "Something went wrong. Please try again later.";
 			 	header("location: ".BASE."register");
@@ -119,7 +128,7 @@
 			}
 
 			try {
-				$stmt = $conn->prepare("SELECT `uid`, `email`, `password`, `first_name`, `last_name`, `role`, `profile_picture`, `is_verified` FROM `users` WHERE `email` = ?");
+				$stmt = $conn->prepare("SELECT u.`uid`, u.`email`, u.`password`, ud.`first_name`, ud.`last_name`, u.`role`, ud.`profile_picture`, u.`is_verified` FROM `users` u LEFT JOIN `user_details` ud ON u.`uid` = ud.`user_id` WHERE `email` = ?");
 				$stmt->bind_param("s", $email);
 				$stmt->execute();
 				$result = $stmt->get_result();
@@ -184,13 +193,13 @@
 				}
 			}
 			catch(mysqli_sql_exception $e) {
-				log_error(date("Y-m-d H:i:s")."Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database_error.log');
+				log_error("Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database_error.log');
 				$_SESSION['msg'] = "Something went wrong. Please try again later.";
 				header("location: ".BASE."login");
 				exit();
 			}
 			catch(Exception $e) {
-				log_error(date("Y-m-d H:i:s")." Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'error.log');
+				log_error(" Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'error.log');
 				$_SESSION['msg'] = "Unknown error occured, Please contact System Administrator!";
 				header("location: ".BASE."login");
 				exit();
@@ -241,7 +250,7 @@
 				}
 				catch (Exception $e) {
 					$conn->rollback();
-					log_error(date("Y-m-d H:i:s")." Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database_error.log');
+					log_error(" Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database_error.log');
 				}
 				finally {
 					if (isset($stmt)) $stmt->close();
@@ -297,7 +306,7 @@
 
 				}
 				catch(mysqli_sql_exception $e) {
-					log_error(date("Y-m-d H:i:s") ." Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database_error.log');
+					log_error(" Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database_error.log');
 
 					$_SESSION['msg'] = "Something went wrong. Please try again later.";
 				 	header("location: ".BASE."login");
@@ -320,10 +329,14 @@
 		exit();
 	}//End of add_class function
 
-	function getUsers() {
+
+	/* UTILITIES */
+
+	function getUserByRole($role) {
 		global $conn;
 
-		$stmt = $conn->prepare("SELECT `first_name`,`last_name`,`email`,`is_verified`,`role`,`last_login`, `status` FROM `users`");
+		$stmt = $conn->prepare("SELECT CONCAT(`u`.`first_name`, ' ', `u`.`last_name`) AS `Name`, `u`.`email` AS `Email`, `co`.`course_name` AS `Course`, CONCAT(`cl`.`start_date`, ' = ', `cl`.`end_date`) AS `Schedule`, `cl`.`tutor_id` AS `Tutor`, `cl`.`is_active` AS `Active` FROM `users` `u` LEFT JOIN `class_assignment` `ca` ON `u`.`uid` = `ca`.`student_id` LEFT JOIN `class` `cl` ON `ca`.`class_id` = `cl`.`class_id` OR `u`.`uid` = `cl`.`tutor_id` LEFT JOIN `subject` `sub` ON `cl`.`subject_id` = `sub`.`subject_id` LEFT JOIN `course` `co` ON `sub`.`course_id` = `co`.`course_id` WHERE `u`.`role` = ?;");
+		$stmt->bind_param("?",$role);
 		$stmt->execute();
 		$result = $stmt->get_result();
 
@@ -333,14 +346,124 @@
 			$_SESSION['users'] = $data;
 		}
 	}//End of getUsers table
+	getUserData() {
+		global $conn;
+
+		$stmt = $conn->prepare("SELECT `first_name`, `last_name`, `profile_picture`, `address`, `contact_number` FROM `user_details` WHERE user_id = ?");
+		$stmt->bind_param("i", $user);
+		$stmt->execute();
+		$result = $stmt->get_result();
+
+		// Since there should only be one row, we can directly fetch the result
+		if ($result->num_rows === 1) {
+			// Fetch and return the associative array with the user details
+			return $result->fetch_assoc();
+		} 
+		else {
+			// If no user is found or more than 1 (shouldn't happen with unique user_id), return null
+			return null;
+		}
+	}
+
+	function updateUserData() {
+		global $conn;
+
+		if (!isset($_SESSION['user'])) { // Fix: Negate condition
+		$_SESSION['msg'] = "An error occurred, Please login";
+		header("Location: login");
+		exit();
+		}
+		$user = $_SESSION['user'];
+
+		try {
+			$conn->begin_transaction(); // Start transaction
+
+			if (isset($_POST['change-password'])) {
+				$curpass = $_POST['current-password'];
+				$pass = $_POST['new-password'];
+				$cpass = $_POST['confirm-new-password'];
+
+				$stmt = $conn->prepare("SELECT password FROM users WHERE uid = ?");
+				$stmt->bind_param("i", $user);
+				$stmt->execute();
+				$result = $stmt->get_result();
+
+				if ($row = $result->fetch_assoc()) {
+					if (!password_verify($curpass, $row['password'])) {
+						$_SESSION['msg'] = "Current password is incorrect.";
+						throw new Exception("Incorrect current password");
+					}
+				} 
+				else {
+					$_SESSION['msg'] = "User not found.";
+					throw new Exception("User ID not found in database");
+				}
+
+				if ($pass !== $cpass) {
+					$_SESSION['msg'] = "Password does not match.";
+					throw new Exception("Mismatch Password");
+				}
+				if (strlen($pass) < 8) {
+					$_SESSION['msg'] = "Password must be at least 8 characters long.";
+					throw new Exception("Password too short");
+				}
+				if (!preg_match("/^(?=(.*[A-Z]))(?=(.*[a-z]))(?=(.*\d))(?=(.*[*-_!]))[A-Za-z\d*-_!]{8,16}$/", $pass)) {
+					$_SESSION['msg'] = "Password must be 8-16 characters long and contain a mix of letters, numbers, and special characters.";
+					throw new Exception("Password complexity failed(uniqueness)");
+				}
+
+				$password = password_hash($pass, PASSWORD_DEFAULT);
+				if (!$password) {
+					$_SESSION['msg'] = "We encountered an issue while updating your password. Please try again.";
+					throw new Exception("Hashing Error!");
+				}
+
+				$stmt = $conn->prepare("UPDATE users SET password = ? WHERE uid = ?");
+				$stmt->bind_param("si", $password, $user);
+				if (!$stmt->execute()) {
+					throw new Exception("Error processing password update");
+				}
+
+				$conn->commit(); // Commit transaction
+			}
+
+			if (isset($_POST['change-profile'])) {
+				$fname = $_POST['first-name'];
+				$lname = $_POST['last-name'];
+				$address = $_POST['address'];
+				$contact_num = $_POST['contact-number'];
+				$filename = ""; //get filename from input type="file"
+
+				$stmt = $conn->prepare("UPDATE user_details SET `first_name` = ?, `last_name` = ?, `address` = ?, `contact_number` = ?, `profile_picture` = ? WHERE user_id = ?");
+				$stmt->bind_param("sssssi",$fname, $lname, $address, $contact_num, $filename, $user);
+				if (!$stmt->execute()) {
+					throw new Exception("Error processing profile information update");
+				}
+				$conn->commit(); // Commit transaction
+			}
+		}
+		catch (Exception $e) {
+			$conn->rollback(); // Rollback on error
+			log_error($e->getMessage(), 'database_error.log');
+		}
+		finally {
+			if (isset($stmt)) {
+				$stmt->close();
+			}
+			$conn->close();
+			header("Location: dashboard/profile");
+			exit();
+		}
+	}
+
+
 
 	
-	/* UTILITIES */
-
+	/* EXTRAS */
 	function rememberTokenVerifier($hashed_token) {
 		global $conn;
 		try {
-			$stmt = $conn->prepare("SELECT token_id, token FROM login_tokens WHERE type = 'remember_me' AND expiration_date > NOW()");
+			$stmt = $conn->prepare("SELECT token_id, token FROM login_tokens WHERE type = 'remember_me' AND remember_expiration_date > NOW()");
 		    $stmt->execute();
 		    $result = $stmt->get_result();
 
@@ -352,7 +475,7 @@
 			throw new Exception("Token not Exist");
 		}
 		catch(Exception $e) {
-			log_error(date("Y-m-d H:i:s") ." Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database_error.log');
+			log_error("Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database_error.log');
 			return null;
 		}
 	}
@@ -380,7 +503,6 @@
 		// Save the code and expiration in the database
 	    $stmt = $conn->prepare("UPDATE login_tokens SET verification_code = ?, verification_expiration_date	= ? WHERE user_id = ?");
 	    $stmt->bind_param("ssi", $code, $expiresAt, $userId);
-	    $stmt->execute();
 	    if (!$stmt->execute()) {
 	        log_error($stmt->error, 'database_error.log');
     	}
@@ -402,7 +524,7 @@
 		global $conn;
 
 		try {
-			$stmt = $conn->prepare("SELECT user_id, token FROM login_tokens WHERE type = 'email_verification' AND expiration_date > NOW()");
+			$stmt = $conn->prepare("SELECT user_id, token FROM login_tokens WHERE type = 'email_verification' AND verification_expiration_date > NOW()");
 			$stmt->execute();
 			$result = $stmt->get_result();
 
@@ -427,7 +549,7 @@
 			$_SESSION['msg'] = "Invalid or expired token.";
 			return false;
 		} catch (Exception $e) {
-			log_error(date("Y-m-d H:i:s")." Error verifying email: " . $e->getMessage());
+			log_error("Error verifying email: " . $e->getMessage(),'mail.log');
 			$_SESSION['msg'] = "An error occured, Please try again later";
 			return false;
 		}

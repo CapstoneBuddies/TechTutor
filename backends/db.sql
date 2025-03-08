@@ -1,16 +1,22 @@
 CREATE TABLE IF NOT EXISTS `users` (
 	`uid` INT PRIMARY KEY AUTO_INCREMENT,
 	`email` VARCHAR(255) UNIQUE NOT NULL,
-	`first_name` VARCHAR(255) NOT NULL,
-	`last_name` VARCHAR(255) NOT NULL,
 	`password` VARCHAR(255) NOT NULL,
 	`is_verified` BOOLEAN NOT NULL DEFAULT FALSE,
 	`status` BOOLEAN NOT NULL DEFAULT TRUE,
-    `bio` TEXT,
-	`role` ENUM('TECHGURU', 'TECHKIDS', 'ADMIN') NOT NULL,
-	`profile_picture` VARCHAR(255) DEFAULT 'default.jpg',
+	`role` ENUM('TECHGURU', 'TECHKID', 'ADMIN') NOT NULL,
 	`created_on` TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
     `last_login` TIMESTAMP NULL
+);
+
+CREATE TABLE IF NOT EXISTS `user_details` (
+    `user_id` INT UNIQUE,
+    `first_name` VARCHAR(255) NOT NULL,
+    `last_name` VARCHAR(255) NOT NULL,
+    `profile_picture` VARCHAR(255) DEFAULT 'default.jpg',
+    `address` TEXT NULL,
+    `contact_number` VARCHAR(16) NULL,
+    FOREIGN KEY (user_id) REFERENCES users(uid)
 );
 
 CREATE TABLE IF NOT EXISTS `login_tokens` (
@@ -46,8 +52,8 @@ CREATE TABLE IF NOT EXISTS `class` (
     `class_name` VARCHAR(255) NOT NULL,
     `class_desc` TEXT NOT NULL,
     `tutor_id` INT NOT NULL,
-    `start_date` DATE NOT NULL,
-    `end_date` DATE NOT NULL,
+    `start_date` DATETIME NOT NULL,
+    `end_date` DATETIME NOT NULL,
     `class_size` INT NULL,
     `is_active` BOOLEAN NOT NULL DEFAULT TRUE,
     `is_free` BOOLEAN NOT NULL DEFAULT TRUE,
@@ -122,9 +128,9 @@ CREATE TABLE IF NOT EXISTS `transactions` (
     FOREIGN KEY (user_id) REFERENCES users(uid)
 );
 
---Indexing
+-- Indexing
 CREATE INDEX idx_status ON users(status);
-CREATE INDEX idx_first_name_last_name ON users(first_name, last_name);
+CREATE INDEX idx_first_name_last_name ON user_details(first_name, last_name);
 CREATE INDEX idx_class_name ON class(class_name);
 CREATE INDEX idx_meeting_uid ON meetings(meeting_uid);
 CREATE INDEX idx_meetin_name ON meetings(meeting_name);
@@ -139,8 +145,10 @@ INSERT INTO `course`(`course_name`) VALUES('Computer Programming'), ('Computer N
 INSERT INTO `subject`(`course_id`,`subject_name`) VALUES (1,'Python Programming'), (2,'Networking'), (3,'UI/UX Designing');
 
 -- Adding Sample User logins (default password is Abc123!!)
-INSERT INTO `users`(`email`,`first_name`,`last_name`,`password`,`role`) VALUES 
-('tutor@test.com','Test','Tutor','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','TECHGURU'),
-('student@test.com','Test','Student','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','TECHKIDS'),
-('admin@test.com','Test','Admin','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','ADMIN');
+INSERT INTO `users`(`email`,`password`,`role`,`is_verified`) VALUES 
+('tutor@test.com','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','TECHGURU',1),
+('student@test.com','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','TECHKIDS',1),
+('admin@test.com','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','ADMIN',1);
 
+INSERT INTO `user_details`(`user_id`,`first_name`,`last_name`) VALUES 
+(1,'Test','Tutor'), (2,'Test','Student'), (3,'Test','Admin');
