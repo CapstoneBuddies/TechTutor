@@ -1,7 +1,6 @@
 <?php 
     require_once '../backends/config.php';
     require_once '../backends/main.php';
-    session_start();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -52,7 +51,6 @@
     </div>
   </header>
 
-  <form action="user-login" method="post">
   <main class="main">
     <!-- Hero Section -->
     <section id="hero" class="hero section">
@@ -64,11 +62,11 @@
             <div class="login-right">
                 <?php
                     if (isset($_SESSION["msg"])) {
-                        echo '<div><p>' . $_SESSION["msg"] . '</p></div>';
+                        echo '<div class="alert alert-warning"><p>' . $_SESSION["msg"] . '</p></div>';
                     }
                     unset($_SESSION["msg"]);
                 ?>
-                <h2 >Sign In</h2>
+                <h2>Sign In</h2>
                 <form action="user-login" method="POST">
                     <div class="input-group">
                         <label for="email">Email</label>
@@ -82,14 +80,14 @@
                         <input type="checkbox" id="remember" name="remember">
                         <label for="remember">Remember me</label>
                     </div>
-                    <button type="submit" class="login-btn" name="signin">Login</button>
+                    <button type="submit" class="login-btn" name="signin" value="1">Login</button>
                 </form>
             </div>
         </div>
     </div>
     </section><!-- /Hero Section -->
   </main>
-  </form>
+
   <!-- Scroll Top -->
 <a href="#" id="scroll-top" class="scroll-top d-flex align-items-center justify-content-center"><i class="bi bi-arrow-up-short"></i></a>
 

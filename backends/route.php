@@ -1,30 +1,23 @@
 <?php 
-	include "main.php";
-	session_start();
-	
-	$request_uri =  trim($_SERVER['REQUEST_URI'], "/");
-	$page = basename($request_uri);
+	require_once "config.php";
+	require_once "main.php";
 
-	$excluded_page = ['user-login','user-register','home'];
-
-	if(isset($_SESSION['user']) && in_array($page,$excluded_page)) {
-		header("location: ".BASE."dashboard");
-		exit();
-	}
-
-	if($page == 'user-login') {
+	if($link == 'user-login') {
 		login();
 	}
-	else if($page == 'user-register') {
+	else if($link == 'user-register') {
 		register();
 	}
-	elseif ($page == 'user-logout') {
+	elseif ($link == 'user-logout') {
 		logout();
 	}
-	elseif ($page == 'verify_code') {
+	elseif ($link == 'user-profile-update') {
+		updateProfile();
+	}
+	elseif ($link == 'verify_code') {
 		verifyCode();
 	}
-	elseif ($page == 'home') {
+	elseif ($link == 'home') {
 		header("location: ".BASE);
 	}
 ?>

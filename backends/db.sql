@@ -147,7 +147,7 @@ INSERT INTO `subject`(`course_id`,`subject_name`) VALUES (1,'Python Programming'
 -- Adding Sample User logins (default password is Abc123!!)
 INSERT INTO `users`(`email`,`password`,`role`,`is_verified`) VALUES 
 ('tutor@test.com','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','TECHGURU',1),
-('student@test.com','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','TECHKIDS',1),
+('student@test.com','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','TECHKID',1),
 ('admin@test.com','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','ADMIN',1);
 
 INSERT INTO `user_details`(`user_id`,`first_name`,`last_name`) VALUES 

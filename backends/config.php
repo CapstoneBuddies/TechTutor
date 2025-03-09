@@ -1,4 +1,9 @@
 <?php  
+	// Initialize session at the very beginning
+	if (session_status() == PHP_SESSION_NONE) {
+		session_start();
+	}
+
 	// File system root path (optional, useful for includes or file uploads)
 	define('ROOT_PATH', realpath(__DIR__ . '/..'));
 
@@ -9,21 +14,21 @@
 	use PHPMailer\PHPMailer\Exception;
 	use PHPMailer\PHPMailer\SMTP;
 
-
 	$dotenv = Dotenv::createImmutable(__DIR__);
 	$dotenv->load();
 
 	// Base URL configuration
 	if(strpos($_SERVER['HTTP_HOST'], 'localhost') !== false) {
-	define('BASE', '/capstone/');
+		define('BASE', '/capstone/');
+	} else {
+		define('BASE', '/');
 	}
-	else {
-	define('BASE', '/');
-	}
-	define('CSS', 'assets/css/');
-	define('JS', 'assets/js/');
-	define('USER_IMG', 'assets/img/users/');
-	define('CLASS_IMG', 'assets/img/class/');
+
+	define('CSS', BASE.'assets/css/');
+	define('JS', BASE.'assets/js/');
+	define('IMG', BASE.'assets/img/');
+	define('USER_IMG', BASE.'assets/img/users/');
+	define('CLASS_IMG', BASE.'assets/img/class/');
 
 	// Define LOG_PATH based on fixed ROOT_PATH
 	define('LOG_PATH', ROOT_PATH . '/logs/');
@@ -68,13 +73,6 @@
 	$mail->isHTML(true);
 
 
-
-	// SET Session
-	if (session_status() == PHP_SESSION_NONE) {
-    	session_start();
-	}
-	
-	//Check if 
 
 	/* IMPORTANT FUNCTIONS */
 	function log_error($message, $destination) {

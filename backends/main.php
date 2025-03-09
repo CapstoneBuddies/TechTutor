@@ -1,22 +1,44 @@
 <?php 
-	include_once 'db.php';
-	session_start();
+	require_once 'config.php';
+	require_once 'db.php';
 	use PHPMailer\PHPMailer\PHPMailer;
 	use PHPMailer\PHPMailer\Exception;
 
-	$current_page = basename($_SERVER['PHP_SELF']);
-	$excluded_page = ['index.php', 'login.php', 'signup.php'];
-	// Check if user is already logged in
-	if (isset($_SESSION['user']) && isset($_COOKIE['role']) && in_array($current_page, $excluded_page)) {
+	$request_uri =  trim($_SERVER['REQUEST_URI'], "/");
+	
+	$link = basename($request_uri);
+	$page = basename($_SERVER['PHP_SELF']);
+	$excluded_page = ['index.php', 'login.php', 'signup.php', 'verify.php', 'route.php'];
+	$excluded_link = ['user-login','user-register','home'];
+	$logged_excluded_page = ['dashboard','profile','settings'];
+
+	// Check if user is logged but trying to access unauthorized link
+	if(isset($_SESSION['user']) && in_array($page,$excluded_link)) {
+		header("location: ".BASE."dashboard");
+		exit();
+	}
+
+	// Check if user is logged in but trying to access login pages
+	if (isset($_SESSION['user']) && isset($_SESSION['role']) && in_array($page, $excluded_page) && $link !== 'user-logout') {
 	    header("location: ".BASE."dashboard");
 	    exit();
 	}
-	if (isset($_SESSION['user']) && !isset($_COOKIE['role']) && !isset($_SESSION['status']) ) {
-	    header("location: ".BASE."user-logout");
+
+	// Clean up role cookie if no session exists
+	if(isset($_COOKIE['role']) && !isset($_SESSION['user'])) {
+		setcookie('role','',time() - 3600, '/');
+	}
+
+	// Check if user is not logged in but trying to access protected pages
+	if (!isset($_SESSION['user']) && in_array($link, $logged_excluded_page)) {
+		error_log("was accessed this");
+	    $_SESSION['msg'] = "Please log in to access this page.";
+	    header("location: ".BASE."login");
+	    exit();
 	}
 
 	// Check if user is not logged on but was set to autologin
-	if(isset($_COOKIE['remember_me'])) {
+	if(!isset($_SESSION['user']) && isset($_COOKIE['remember_me'])) {
 		try { 
 			global $conn;
 			$token = $_COOKIE['remember_me'];
@@ -25,17 +47,28 @@
 
 			if (isset($token_id)) { 
 				// Token matched, retrieve user details
-				$user_stmt = $conn->prepare("SELECT u.`uid`, u.`role`, ud.`first_name`, ud.`last_name`, u.`email`, ud.`profile_picture` FROM users u JOIN user_details ud ON ud.`user_id` = u.`uid` WHERE uid = (SELECT user_id FROM login_tokens WHERE token_id = ?)");
+				$user_stmt = $conn->prepare("SELECT u.`uid`, u.`role`, ud.`first_name`, ud.`last_name`, u.`email`, ud.`profile_picture`, u.`is_verified` FROM users u JOIN user_details ud ON ud.`user_id` = u.`uid` WHERE uid = (SELECT user_id FROM login_tokens WHERE token_id = ?)");
 				$user_stmt->bind_param("i", $token_id);
 				$user_stmt->execute();
 				$user = $user_stmt->get_result()->fetch_assoc();
 				if ($user) {
+					// Check if user is verified
+					if($user['is_verified'] == 0) {
+						$_SESSION['user'] = $user['uid'];
+						$_SESSION['email'] = $user['email'];
+						$_SESSION['status'] = $user['is_verified'];
+						$_SESSION['msg'] = "Your account is not verified. Please check your email for a verification link.";
+						header("Location: verify");
+						exit();
+					}
+
 					// set session information
 					$_SESSION['user'] = $user['uid'];
 					$_SESSION['name'] = $user['first_name'].' '.$user['last_name'];
 					$_SESSION['first-name'] = $user['first_name'];
 					$_SESSION['last-name'] = $user['last_name'];
 					$_SESSION['email'] = $user['email'];
+					$_SESSION['role'] = $user['role'];
 					$_SESSION['profile'] = USER_IMG.$user['profile_picture'];
 					setcookie('role', $user['role'], time() + (24 * 60 * 60), "/", "", true, true);
 				}
@@ -51,6 +84,25 @@
 		}
 		header("location: ".BASE."dashboard");
 		exit();
+	}
+
+	/**
+	 * Normalizes numeric status (1/0) to 'active' or 'inactive'
+	 * @param mixed $status The status from database (1 for active, 0 for inactive)
+	 * @return string Normalized status ('active' or 'inactive')
+	 */
+	function normalizeStatus($status) {
+	    return $status == 1 ? 'active' : 'inactive';
+	}
+
+	/**
+	 * Gets the CSS class for status badges
+	 * @param mixed $status The status from database (1 for active, 0 for inactive)
+	 * @return string CSS class for the status badge
+	 */
+	function getStatusBadgeClass($status) {
+	    $normalizedStatus = normalizeStatus($status);
+	    return 'status-badge status-' . $normalizedStatus;
 	}
 
 	function sendVerificationCode(PHPMailer $mail, $email, $code) {

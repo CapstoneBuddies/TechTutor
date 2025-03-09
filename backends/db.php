@@ -61,7 +61,7 @@
 				}
 
 				// Adding Details to the User Table
-				$stmt = $conn->prepare("INSERT INTO `users`(`password`,`email`,`role`) VALUES(?,?,?,?,?)");
+				$stmt = $conn->prepare("INSERT INTO `users`(`password`,`email`,`role`) VALUES(?,?,?)");
 				$stmt->bind_param("sss", $password, $email, $role);
 
 				if($stmt->execute()) {
@@ -117,104 +117,93 @@
 
 	function login() {
 		global $conn;
-		if(isset($_POST['signin'])) {
-			$email = $_POST['email'];
-			$pass = $_POST['password'];
+		$response = array('success' => false, 'message' => '');
 
-			if(empty($email) || empty($pass)) {
-				$_SESSION['msg'] = "Login Credentials should not be empty!";
-				header("location: ".BASE."login");
-				exit();
-			}
+		if(isset($_POST['email']) && isset($_POST['password'])) {
+			$email = mysqli_real_escape_string($conn, $_POST['email']);
+			$pass = mysqli_real_escape_string($conn, $_POST['password']);
 
-			try {
-				$stmt = $conn->prepare("SELECT u.`uid`, u.`email`, u.`password`, ud.`first_name`, ud.`last_name`, u.`role`, ud.`profile_picture`, u.`is_verified` FROM `users` u LEFT JOIN `user_details` ud ON u.`uid` = ud.`user_id` WHERE `email` = ?");
-				$stmt->bind_param("s", $email);
-				$stmt->execute();
-				$result = $stmt->get_result();
+			// Check if email exists
+			$query = "SELECT u.*, ud.first_name, ud.last_name, ud.profile_picture, ud.address, ud.contact_number 
+					FROM users u 
+					LEFT JOIN user_details ud ON u.uid = ud.user_id 
+					WHERE u.email = ?";
+			$stmt = $conn->prepare($query);
+			$stmt->bind_param("s", $email);
+			$stmt->execute();
+			$result = $stmt->get_result();
 
-				if($result->num_rows > 0) {
-					$user = $result->fetch_assoc();
-					if (password_verify($pass, $user['password'])) {
-						// Initialize verification status checking
-						$_SESSION['user'] = $user['uid'];
-						$_SESSION['email'] = $user['email'];
+			if($result->num_rows > 0) {
+				$user = $result->fetch_assoc();
 
-						// Check if user is verified
-						if($user['is_verified'] == 0) {
-							// route to verify.php
-							$_SESSION['status'] = $user['is_verified'];
-							$_SESSION['msg'] = "Your account is not verified. Please check your email for a verification link.";
-							header("Location: verify");
-    						exit();
-						}
-						// Set session and cookie information
-						$_SESSION['name'] = $user['first_name'].' '.$user['last_name'];
-						$_SESSION['first-name'] = $user['first_name'];
-						$_SESSION['profile'] = USER_IMG.$user['profile_picture'];
-						$_SESSION['email'] = $user['email'];
-						setcookie('role', $user['role'], time() + (24 * 60 * 60), "/", "", true, true);
-
-						//Check if remember was passed
-						if(isset($_POST['remember']) && $_POST['remember'] == 'on') {
-							$token = bin2hex(random_bytes(16));
-							setcookie('remember_me', $token, time() + (7 * 24 * 60 * 60), BASE, "", true, true);
-
-							$hashed_token = password_hash($token, PASSWORD_BCRYPT);
-
-							$stmt = $conn->prepare("INSERT INTO login_tokens (user_id, token, remember_expiration_date, type) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), 'remember_me')");
-							$stmt->bind_param("is",$user['uid'], $hashed_token);
-							
-							if(!$stmt->execute()) {
-								log_error($stmt->error, 'database_error.log');
-							}
-						}
-
-						// Update Last Login column
-						$stmt = $conn->prepare("UPDATE users SET last_login = NOW() WHERE uid = ?");
-						$stmt->bind_param("i",$user['uid']);
-						if(!$stmt->execute()) {
-								log_error($stmt->error, 'database_error.log');
-						}
-
-						// Redirect to user dashboard
-						$conn->close();
-						header("location: ".BASE."dashboard");
+				// Verify password
+				if(password_verify($pass, $user['password'])) {
+					// Check if user is verified
+					if($user['is_verified'] == 0) {
+						$_SESSION['msg'] = "Your account is not verified. Please check your email for a verification link.";
+						header("Location: verify");
 						exit();
-
 					}
-					$_SESSION['msg'] = "Invalid Login Credentials, Please Try Again";
-					header("location: ".BASE."login");
+
+					// Check if user is active
+					if($user['status'] == 0) {
+						$_SESSION['msg'] = "Your account has been deactivated. Please contact support.";
+						header("Location: login");
+						exit();
+					}
+
+					if(isset($_POST['remember']) && $_POST['remember'] == 'on') {
+						$token = bin2hex(random_bytes(16));
+						setcookie('remember_me', $token, time() + (7 * 24 * 60 * 60), BASE, "", true, true);
+
+						$hashed_token = password_hash($token, PASSWORD_BCRYPT);
+
+						$stmt = $conn->prepare("INSERT INTO login_tokens (user_id, token, remember_expiration_date, type) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), 'remember_me')");
+						$stmt->bind_param("is",$user['uid'], $hashed_token);
+						
+						if(!$stmt->execute()) {
+							log_error($stmt->error, 'database_error.log');
+						}
+					}
+					
+					// Set session variables
+					$_SESSION['user'] = $user['uid'];
+					$_SESSION['email'] = $user['email'];
+					$_SESSION['role'] = $user['role'];
+					$_SESSION['first_name'] = $user['first_name'];
+					$_SESSION['last_name'] = $user['last_name'];
+					$_SESSION['name'] = $user['first_name'] . ' ' . $user['last_name'];
+					$_SESSION['address'] = $user['address'];
+					$_SESSION['phone'] = $user['contact_number'];
+					$_SESSION['profile'] = USER_IMG . ($user['profile_picture'] ?? 'default.jpg');
+					setcookie('role', $user['role'], time() + (3 * 60 * 60), "/", "", true, true);
+					
+					// Update last login
+					$updateQuery = "UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE uid = ?";
+					$updateStmt = $conn->prepare($updateQuery);
+					$updateStmt->bind_param("i", $user['uid']);
+					$updateStmt->execute();
+					$updateStmt->close();
+
+					header("Location: dashboard");
 					exit();
 				} else {
-					$_SESSION['msg'] = "No Account Found";
-					header("location: ".BASE."login");
+					$_SESSION['msg'] = "Invalid password";
+					header("Location: login");
 					exit();
 				}
-			}
-			catch(mysqli_sql_exception $e) {
-				log_error("Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database_error.log');
-				$_SESSION['msg'] = "Something went wrong. Please try again later.";
-				header("location: ".BASE."login");
+			} else {
+				$_SESSION['msg'] = "Email not found";
+				header("Location: login");
 				exit();
 			}
-			catch(Exception $e) {
-				log_error(" Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'error.log');
-				$_SESSION['msg'] = "Unknown error occured, Please contact System Administrator!";
-				header("location: ".BASE."login");
-				exit();
-			}
-			finally {
-				$stmt->close();
-				$conn->close();
-			}
-		}
-		else {
-			$_SESSION['msg'] = "Invalid Action";
-			header("location: ".BASE."login");
+			$stmt->close();
+		} else {
+			$_SESSION['msg'] = "Please fill in all fields";
+			header("Location: login");
 			exit();
 		}
-	}//End of login block
+	}//
 
 	function logout() {
 		global $conn;
@@ -270,6 +259,98 @@
 			header("location: ".BASE."login");	
 		}
 	}//End of logout block	
+	function updateProfile() {
+		global $conn;
+        $response = array('success' => false, 'message' => '');
+
+        if (!isset($_SESSION['user'])) {
+            $response['message'] = 'Not authorized';
+            echo json_encode($response);
+            exit();
+        }
+
+        if (!isset($_POST['firstName']) || !isset($_POST['lastName'])) {
+            $response['message'] = 'Required fields are missing';
+            echo json_encode($response);
+            exit();
+        }
+
+        $userId = $_SESSION['user'];
+        $firstName = trim($_POST['firstName']);
+        $lastName = trim($_POST['lastName']);
+        $address = isset($_POST['address']) ? trim($_POST['address']) : '';
+        $countryCode = isset($_POST['countryCode']) ? trim($_POST['countryCode']) : '+63';
+        $phone = isset($_POST['phone']) ? trim($_POST['phone']) : '';
+
+        // Validate first name and last name
+        if (strlen($firstName) < 2 || strlen($firstName) > 50) {
+            $response['message'] = 'First name must be between 2 and 50 characters';
+            echo json_encode($response);
+            exit();
+        }
+
+        if (strlen($lastName) < 2 || strlen($lastName) > 50) {
+            $response['message'] = 'Last name must be between 2 and 50 characters';
+            echo json_encode($response);
+            exit();
+        }
+
+        // Validate phone number if provided
+        if (!empty($phone)) {
+            // Remove any existing hyphens for validation
+            $cleanPhone = str_replace('-', '', $phone);
+            
+            // Check if it's exactly 10 digits
+            if (!preg_match('/^[0-9]{10}$/', $cleanPhone)) {
+                $response['message'] = 'Phone number must be exactly 10 digits';
+                echo json_encode($response);
+                exit();
+            }
+
+            // Check if country code is valid (starts with + and has 1-3 digits)
+            if (!preg_match('/^\+[0-9]{1,3}$/', $countryCode)) {
+                $response['message'] = 'Invalid country code';
+                echo json_encode($response);
+                exit();
+            }
+
+            // Format phone number with hyphens and country code
+            $phone = $countryCode . substr($cleanPhone, 0, 3) . '-' . 
+                    substr($cleanPhone, 3, 3) . '-' . 
+                    substr($cleanPhone, 6);
+        }
+
+        // Validate address if provided
+        if (!empty($address) && strlen($address) > 100) {
+            $response['message'] = 'Address must not exceed 100 characters';
+            echo json_encode($response);
+            exit();
+        }
+
+        // Update user details
+        $query = "UPDATE user_details SET first_name = ?, last_name = ?, address = ?, contact_number = ? WHERE user_id = ?";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("ssssi", $firstName, $lastName, $address, $phone, $userId);
+
+        if ($stmt->execute()) {
+            // Update session variables
+            $_SESSION['first_name'] = $firstName;
+            $_SESSION['last_name'] = $lastName;
+            $_SESSION['name'] = $firstName . ' ' . $lastName;
+            $_SESSION['address'] = $address;
+            $_SESSION['phone'] = $phone;
+
+            $response['success'] = true;
+            $response['message'] = 'Profile updated successfully';
+        } else {
+            error_log("Profile update failed: " . $stmt->error);
+            $response['message'] = 'Failed to update profile: ' . $stmt->error;
+        }
+
+        $stmt->close();
+        echo json_encode($response);
+        exit();
+    }//
 
 	function add_class() {
 		global $conn;
@@ -294,7 +375,7 @@
 					}
 
 					$conn -> begin_transaction();
-					$stmt = $conn->prepare("INSERT INTO class(subject_id, class_name, class_desc, tutor_id, start_date, end_date, class_size, is_free, price, thumbnail) VALUES(??????????)");
+					$stmt = $conn->prepare("INSERT INTO class(subject_id, class_name, class_desc, tutor_id, start_date, end_date, class_size, is_free, price, thumbnail) VALUES(?,?,?,?,?,?,?,?,?,?)");
 					$stmt->bind_param("ississiids", $subject,$class_name,$class_dec,$tutor,$start,$end,$limit,$free,$price,$pic);
 					
 					if($stmt->execute()) {
@@ -332,21 +413,72 @@
 
 	/* UTILITIES */
 
-	function getUserByRole($role) {
+	function getUserByRole($role, $page = 1, $limit = 8) {
+	    global $conn;
+	    
+	    // Calculate the offset
+	    $offset = ($page - 1) * $limit;
+
+	    $stmt = $conn->prepare("SELECT 
+			    `u`.`uid`, `ud`.`first_name`, `ud`.`last_name`, `u`.`email`, `co`.`course_name` AS `course`, CONCAT(`cl`.`start_date`, ' = ', `cl`.`end_date`) AS `schedule`, `u`.`status`,`u`.`last_login`
+			FROM 
+			    `users` `u`
+			INNER JOIN
+			    `user_details` `ud` ON `u`.`uid` = `ud`.`user_id`
+			LEFT JOIN 
+			    `class_assignment` `ca` ON `u`.`uid` = `ca`.`student_id`
+			LEFT JOIN 
+			    `class` `cl` ON `ca`.`class_id` = `cl`.`class_id` OR `u`.`uid` = `cl`.`tutor_id`
+			LEFT JOIN 
+			    `subject` `sub` ON `cl`.`subject_id` = `sub`.`subject_id`
+			LEFT JOIN 
+			    `course` `co` ON `sub`.`course_id` = `co`.`course_id`
+			WHERE 
+			    `u`.`role` = ? 
+	        LIMIT ? OFFSET ?");
+
+	    $stmt->bind_param("sii", $role, $limit, $offset);
+	    $stmt->execute();
+	    $result = $stmt->get_result();
+
+	    if ($result->num_rows > 0) {
+	        return $result->fetch_all(MYSQLI_ASSOC);
+	    } else {
+	        return [];
+	    }
+	}//End of getUsersByRole table
+	function getItemCountByTable($table,$role = null) {
+		$valid_tables = ['users', 'course', 'transactions'];
 		global $conn;
 
-		$stmt = $conn->prepare("SELECT CONCAT(`u`.`first_name`, ' ', `u`.`last_name`) AS `Name`, `u`.`email` AS `Email`, `co`.`course_name` AS `Course`, CONCAT(`cl`.`start_date`, ' = ', `cl`.`end_date`) AS `Schedule`, `cl`.`tutor_id` AS `Tutor`, `cl`.`is_active` AS `Active` FROM `users` `u` LEFT JOIN `class_assignment` `ca` ON `u`.`uid` = `ca`.`student_id` LEFT JOIN `class` `cl` ON `ca`.`class_id` = `cl`.`class_id` OR `u`.`uid` = `cl`.`tutor_id` LEFT JOIN `subject` `sub` ON `cl`.`subject_id` = `sub`.`subject_id` LEFT JOIN `course` `co` ON `sub`.`course_id` = `co`.`course_id` WHERE `u`.`role` = ?;");
-		$stmt->bind_param("?",$role);
-		$stmt->execute();
-		$result = $stmt->get_result();
+		if(in_array($table, $valid_tables)) {
+			if($table == 'course' || $table == 'transactions') {
+			    $stmt = $conn->prepare("SELECT COUNT(*) FROM `$table`");
+			    $stmt->execute();
+			    $result = $stmt->get_result();
 
-		if($result->num_rows > 0) {
-			$data = $result->fetch_all(MYSQLI_ASSOC);
+			    return $result->fetch_row()[0];
+			}
+			if($table == 'users') {
+				if(isset($role)) {
+					$stmt = $conn->prepare("SELECT COUNT(*) FROM `$table` WHERE `role` = ?");
+					$stmt->bind_param("s",$role);
+				    $stmt->execute();
+				    $result = $stmt->get_result();
 
-			$_SESSION['users'] = $data;
+				    return $result->fetch_row()[0];
+				}
+				$stmt = $conn->prepare("SELECT COUNT(*) FROM `$table`");
+			    $stmt->execute();
+			    $result = $stmt->get_result();
+
+			    return $result->fetch_row()[0];
+			}
 		}
-	}//End of getUsers table
-	getUserData() {
+		return null;
+	}
+
+	function getUserData() {
 		global $conn;
 
 		$stmt = $conn->prepare("SELECT `first_name`, `last_name`, `profile_picture`, `address`, `contact_number` FROM `user_details` WHERE user_id = ?");
@@ -578,6 +710,7 @@
 					$_SESSION['first-name'] = $user['first_name'];
 					$_SESSION['profile'] = USER_IMG.$user['profile_picture'];
 					$_SESSION['email'] = $user['email'];
+					$_SESSION['role'] = $user['role'];  
 					setcookie('role', $user['role'], time() + (24 * 60 * 60), "/", "", true, true);
 
 	                $_SESSION['msg'] = "Account Verification has been successful!";

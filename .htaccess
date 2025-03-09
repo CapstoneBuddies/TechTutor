@@ -7,9 +7,6 @@ RewriteCond %{REQUEST_URI} ^(.+)/$ [NC]
 RewriteRule ^(.+)/$ %1 [R=301,L]
 
 #Route to homepage
-#RewriteRule ^home$ index.php [L]
-
-#Route to homepage
 RewriteRule ^(.*)/?home$ backends/route.php [L]
 
 #Route /login to pages/login.php
@@ -26,19 +23,26 @@ RewriteRule ^(.*)/?user-login$ backends/route.php [L]
 RewriteRule ^(.*)/?user-register$ backends/route.php [L]
 RewriteRule ^(.*)/?user-logout$ backends/route.php [L]
 RewriteRule ^(.*)/?verify_code$ backends/route.php [L]
+RewriteRule ^dashboard/profile$ pages/profile.php [L]
+RewriteRule ^dashboard/settings$ pages/settings.php [L]
 
 
 # Redirect user to student pages if role=TechKids
 RewriteCond %{HTTP_COOKIE} role=TECHKIDS(;|$)
 RewriteRule ^dashboard$ pages/techkid_dashboard.php [L]
-RewriteRule ^dashboard/profile$ pages/techkid_profile.php [L]
 
 # Redirect user to tutor pages if role=TechGuru
 RewriteCond %{HTTP_COOKIE} role=TECHGURU(;|$)
 RewriteRule ^dashboard$ pages/techguru_dashboard.php [L]
-RewriteRule ^profile$ pages/techguru_profile.php [L]
 
 # Redirect user to admin pages if role=Admin
 RewriteCond %{HTTP_COOKIE} role=ADMIN(;|$)
-RewriteRule ^dashboard$ pages/admin_dashboard.php [L]
-RewriteRule ^profile$ pages/admin_profile.php [L]
+RewriteRule ^dashboard$ pages/admin/main_dashboard.php [L]
+RewriteRule ^dashboard/TechKids$ pages/admin/main_view-techkids.php [L]
+RewriteRule ^dashboard/TechGurus$ pages/admin/main_view-techguru.php [L]
+RewriteRule ^dashboard/transactions$ pages/admin/main_view-transactions.php [L]
+RewriteRule ^dashboard/notifications$ pages/admin/main_view-notifications.php [L]
+RewriteRule ^dashboard/courses$ pages/admin/main_view-course.php [L]
+
+
+

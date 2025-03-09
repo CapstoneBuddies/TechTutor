@@ -1,8 +1,6 @@
 <?php 
-    require_once '../backends/config.php';
-    require_once '../backends/db.php';
-    session_start();
-    getUsers();
+    require_once '../../backends/config.php';
+    require_once ROOT_PATH . '/backends/main.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
