@@ -1,6 +1,6 @@
 <?php 
-    require_once '../backends/config.php';
-    session_start();
+    require_once '../../backends/config.php';
+    require_once ROOT_PATH . '/backends/main.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -13,56 +13,60 @@
   <meta name="keywords" content="">
 
   <!-- Favicons -->
-  <link href="assets/img/stand_alone_logo.png" rel="icon">
-  <link href="assets/img/apple-touch-icon.png" rel="apple-touch-icon">
+  <link href="<?php echo IMG; ?>stand_alone_logo.png" rel="icon">
+  <link href="<?php echo IMG; ?>apple-touch-icon.png" rel="apple-touch-icon">
 
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com" rel="preconnect">
   <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700;900&family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
   <!-- Vendor CSS Files -->
-  <link href="assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-  <link href="assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-  <link href="assets/vendor/aos/aos.css" rel="stylesheet">
-  <link href="assets/vendor/glightbox/css/glightbox.min.css" rel="stylesheet">
-  <link href="assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
+  <link href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <link href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
+  <link href="<?php echo BASE; ?>assets/vendor/aos/aos.css" rel="stylesheet">
+  <link href="<?php echo BASE; ?>assets/vendor/glightbox/css/glightbox.min.css" rel="stylesheet">
+  <link href="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
 
   <!-- Main CSS File -->
-  <link href="assets/css/main.css" rel="stylesheet">
+  <link href="<?php echo BASE; ?>assets/css/main.css" rel="stylesheet">
 </head>
 
 <body class="index-page">
 
-<header id="header" class="header d-flex align-items-center fixed-top">
-    <div class="container-fluid container-xl position-relative d-flex align-items-center">
+<header id="header" class="header d-flex align-items-center fixed-top" style="padding: 0 20px;">
+  <div class="container-fluid container-xl position-relative d-flex align-items-center">
 
-      <a href="home" class="logo d-flex align-items-center me-auto">
-        <!-- Uncomment the line below if you also wish to use an image logo -->
-        <img src="assets/img/stand_alone_logo.png" alt="">
-        <img src="assets/img/TechTutor_text.png" alt="">
+    <a href="home" class="logo d-flex align-items-center me-auto">
+    <img src="<?php echo IMG; ?>stand_alone_logo.png" alt="">
+    <img src="<?php echo IMG; ?>TechTutor_text.png" alt="">
+    </a>
+
+    <nav id="navmenu" class="navmenu">
+    <ul class="d-flex align-items-center">
+      <li class="nav-item">
+      <a href="#" class="nav-link">
+        <i class="bi bi-bell"></i>
       </a>
+      </li>
+      <li class="nav-item dropdown">
+      <a href="#" class="nav-link dropdown-toggle main-avatar" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <img src="assets/img/users/default.jpg" alt="User Avatar" class="avatar-icon">
+      </a>
+      <ul class="dropdown-menu" aria-labelledby="userDropdown">
+        <li><span class="dropdown-item user-item"><?php echo $_SESSION['name']; ?></span></li>
+        <li><a class="dropdown-item" href="profile">Profile</a></li>
+        <li><a class="dropdown-item" href="settings">Settings</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="user-logout">Log Out</a></li>
+      </ul>
+      </li>
+    </ul>
+    <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
+    </nav>
 
-      <nav id="navmenu" class="navmenu">
-        <ul>
-          <li class="nav-item dropdown">
-            <a href="#" class="nav-link dropdown-toggle main-avatar" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <img src=<?php echo $_SESSION['profile']; ?> alt="User Avatar" class="avatar-icon">
-            </a>
-            <ul class="dropdown-menu" aria-labelledby="userDropdown">
-              <li><span class="dropdown-item user-item"><?php echo $_SESSION['name']; ?></span></li>
-              <li><a class="dropdown-item" href="dashboard/profile">Profile</a></li>
-              <li><a class="dropdown-item" href="#">Settings</a></li>
-              <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item" href="user-logout">Log Out</a></li>
-            </ul>
-          </li>
-        </ul>
-        <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
-      </nav>
-
-    </div>
-  </header>
+  </div>
+</header>
 
   <main class="main">
     <!-- Banner Section -->
@@ -79,7 +83,7 @@
               <div class="user-info rounded-box">
                 <img src="avatar.jpg" alt="User Avatar" class="avatar">
                 <div class="user-details">
-                  <h2>Keep it going, <?php echo $_SESSION['first-name']; ?>!</h2><br>
+                  <h2>Keep it going, <?php echo $_SESSION['first_name']; ?>!</h2><br>
                   <p>You have 2,525 points</p>
                   <p>Earn 2 more badges and 475 more points to reach Explorer rank.</p>
                 </div>

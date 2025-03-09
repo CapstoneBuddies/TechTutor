@@ -326,16 +326,18 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" onclick="deleteAccount()">Delete Account</button>
+                    <button type="button" class="btn btn-danger" onclick="if (confirm('Are you sure you want to deactivate your account? This action cannot be undone.')) { deleteAccount(); }">
+                        Delete Account
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- JavaScript Section -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/aos/aos.js"></script>
-    <script src="<?php echo BASE; ?>assets/vendor/jquery/jquery.min.js"></script>
     <script>
         $(document).ready(function() {
             // Initialize any components
@@ -350,129 +352,109 @@
             });
         }
 
-        function changePassword() {
-            const currentPassword = document.getElementById('currentPassword').value;
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            
-            // Validate passwords
-            if (!currentPassword || !newPassword || !confirmPassword) {
-                showAlert('error', 'All fields are required');
-                return;
-            }
-            
-            if (newPassword !== confirmPassword) {
-                showAlert('error', 'New passwords do not match');
-                return;
-            }
-            
-            // Password strength validation
-            if (newPassword.length < 8) {
-                showAlert('error', 'Password must be at least 8 characters long');
-                return;
-            }
-            
-            // Create form data
-            const formData = new FormData();
-            formData.append('current_password', currentPassword);
-            formData.append('new_password', newPassword);
-            formData.append('confirm_password', confirmPassword);
-            
-            // Show loading state
-            const saveButton = document.querySelector('#changePasswordModal .btn-primary');
-            const originalText = saveButton.innerHTML;
-            saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
-            saveButton.disabled = true;
-            
-            // Send AJAX request
-            $.ajax({
-                url: '<?php echo BASE; ?>backends/change_password.php',
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(response) {
-                    try {
-                        const result = JSON.parse(response);
-                        if (result.status === 'success') {
-                            showAlert('success', result.message || 'Password changed successfully');
-                            // Close modal and reset form
-                            $('#changePasswordModal').modal('hide');
-                            document.getElementById('changePasswordForm').reset();
-                        } else {
-                            showAlert('error', result.message || 'Failed to change password');
-                        }
-                    } catch (e) {
-                        showAlert('error', 'Invalid server response');
-                        console.error('Error parsing response:', e);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    showAlert('error', 'Server error: ' + error);
-                    console.error('Error changing password:', error);
-                },
-                complete: function() {
-                    // Reset button state
-                    saveButton.innerHTML = originalText;
-                    saveButton.disabled = false;
-                }
-            });
-        }
-        
         function deleteAccount() {
             const password = document.getElementById('deleteConfirmPassword').value;
+            const deleteModal = document.getElementById('deleteAccountModal');
+            const deleteButton = document.querySelector('#deleteAccountModal .btn-danger');
             
             if (!password) {
                 showAlert('error', 'Please enter your password to confirm');
                 return;
             }
             
-            if (!confirm('Are you absolutely sure you want to delete your account? This action cannot be undone.')) {
-                return;
-            }
-            
-            // Create form data
-            const formData = new FormData();
-            formData.append('password', password);
-            
             // Show loading state
-            const deleteButton = document.querySelector('#deleteAccountModal .btn-danger');
-            const originalText = deleteButton.innerHTML;
             deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
             deleteButton.disabled = true;
             
             // Send AJAX request
             $.ajax({
-                url: '<?php echo BASE; ?>backends/delete_account.php',
+                url: '<?php echo BASE; ?>user-deactivate',
                 type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
+                data: { password: password },
+                dataType: 'json',
                 success: function(response) {
-                    try {
-                        const result = JSON.parse(response);
-                        if (result.status === 'success') {
-                            showAlert('success', result.message || 'Account deleted successfully');
-                            // Redirect to login page after a short delay
-                            setTimeout(function() {
-                                window.location.href = '<?php echo BASE; ?>login';
-                            }, 2000);
-                        } else {
-                            showAlert('error', result.message || 'Failed to delete account');
-                        }
-                    } catch (e) {
-                        showAlert('error', 'Invalid server response');
-                        console.error('Error parsing response:', e);
+                    if (response.status === 'success') {
+                        bootstrap.Modal.getInstance(deleteModal).hide();
+                        showAlert('success', 'Account deleted successfully');
+                        setTimeout(function() {
+                            window.location.href = '<?php echo BASE; ?>login';
+                        }, 1000);
+                    } else {
+                        showAlert('error', response.message || 'Failed to delete account');
+                        deleteButton.innerHTML = 'Delete Account';
+                        deleteButton.disabled = false;
                     }
                 },
-                error: function(xhr, status, error) {
-                    showAlert('error', 'Server error: ' + error);
-                    console.error('Error deleting account:', error);
-                },
-                complete: function() {
-                    // Reset button state
-                    deleteButton.innerHTML = originalText;
+                error: function(xhr) {
+                    showAlert('error', 'Connection error. Please try again.');
+                    deleteButton.innerHTML = 'Delete Account';
                     deleteButton.disabled = false;
+                }
+            });
+        }
+
+        function changePassword() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const changeModal = document.getElementById('changePasswordModal');
+            const saveButton = document.querySelector('#changePasswordModal .btn-primary');
+            
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                alert('Please fill in all password fields');
+                document.getElementById('currentPassword').value = '';
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmPassword').value = '';
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                alert('New passwords do not match');
+                document.getElementById('currentPassword').value = '';
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmPassword').value = '';
+                return;
+            }
+            
+            if (newPassword.length < 8) {
+                alert('Password must be at least 8 characters');
+                document.getElementById('currentPassword').value = '';
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmPassword').value = '';
+                return;
+            }
+            
+            // Show loading state
+            saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+            saveButton.disabled = true;
+            
+            // Send AJAX request
+            $.ajax({
+                url: '<?php echo BASE; ?>user-change-password',
+                type: 'POST',
+                data: {
+                    current_password: currentPassword,
+                    new_password: newPassword,
+                    confirm_password: confirmPassword
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        alert('Password was changed successfully! Please log back in.');
+                        window.location.href = '<?php echo BASE; ?>user-logout';
+                    } else {
+                        alert(response.message || 'Failed to change password');
+                        document.getElementById('currentPassword').value = '';
+                        document.getElementById('newPassword').value = '';
+                        document.getElementById('confirmPassword').value = '';
+                    }
+                    saveButton.innerHTML = 'Save Changes';
+                    saveButton.disabled = false;
+                },
+                error: function(xhr) {
+                    alert('Connection error. Please try again.');
+                    saveButton.innerHTML = 'Save Changes';
+                    saveButton.disabled = false;
                 }
             });
         }

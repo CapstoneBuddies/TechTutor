@@ -38,12 +38,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $_SESSION['address'] = $address;
         $_SESSION['phone'] = $phone;
         
-        header("Location: ../pages/profile.php");
+        header("Location: dashboard/profile");
     } else {
-        echo "Error updating profile.";
+        $_SESSION['msg'] = "Error updating profile.";
     }
     $stmt->close();
 } else {
-    header("Location: ../pages/profile.php");
+    header("Location: dashboard/profile");
 }
 ?>

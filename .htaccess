@@ -23,17 +23,20 @@ RewriteRule ^(.*)/?user-login$ backends/route.php [L]
 RewriteRule ^(.*)/?user-register$ backends/route.php [L]
 RewriteRule ^(.*)/?user-logout$ backends/route.php [L]
 RewriteRule ^(.*)/?verify_code$ backends/route.php [L]
+RewriteRule ^(.*)/?user-profile-update$ backends/route.php [L,QSA]
+RewriteRule ^(.*)/?user-deactivate$ backends/route.php [L]
+RewriteRule ^(.*)/?user-change-password$ backends/route.php [L]
 RewriteRule ^dashboard/profile$ pages/profile.php [L]
 RewriteRule ^dashboard/settings$ pages/settings.php [L]
 
 
 # Redirect user to student pages if role=TechKids
-RewriteCond %{HTTP_COOKIE} role=TECHKIDS(;|$)
-RewriteRule ^dashboard$ pages/techkid_dashboard.php [L]
+RewriteCond %{HTTP_COOKIE} role=TECHKID(;|$)
+RewriteRule ^dashboard$ pages/techkid/techkid_dashboard.php [L]
 
 # Redirect user to tutor pages if role=TechGuru
 RewriteCond %{HTTP_COOKIE} role=TECHGURU(;|$)
-RewriteRule ^dashboard$ pages/techguru_dashboard.php [L]
+RewriteRule ^dashboard$ pages/techguru/techguru_dashboard.php [L]
 
 # Redirect user to admin pages if role=Admin
 RewriteCond %{HTTP_COOKIE} role=ADMIN(;|$)

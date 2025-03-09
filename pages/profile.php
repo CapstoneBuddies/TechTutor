@@ -180,7 +180,6 @@
                             <img src="<?php echo $_SESSION['profile']; ?>" alt="Profile Picture" class="profile-picture">
                         </div>
                         <div class="col-md-8">
-                            <form id="profileForm" action="<?php echo BASE; ?>backends/update_profile.php" method="POST">
                                 <div class="mb-3">
                                     <label class="form-label">Email Address</label>
                                     <input type="email" class="form-control" name="email" value="<?php echo $_SESSION['email']; ?>" readonly>
@@ -218,7 +217,6 @@
                                     <div class="invalid-feedback">Please enter a valid phone number in XXX-XXX-XXXX format</div>
                                     <small class="form-text text-muted">Format: Country Code + XXX-XXX-XXXX (e.g., +63 912-345-6789)</small>
                                 </div>
-                            </form>
                         </div>
                     </div>
                 </div>
@@ -399,20 +397,25 @@
                 removeBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Removing...';
                 removeBtn.disabled = true;
                 
-                fetch('<?php echo BASE; ?>backends/remove_profile_picture.php', {
+                const formData = new FormData();
+                formData.append('removeProfilePicture', 'true');
+                
+                fetch('<?php echo BASE; ?>user-profile-update', {
                     method: 'POST',
-                    body: new FormData()
+                    body: formData
                 })
                 .then(response => response.json())
                 .then(data => {
                     if(data.success) {
-                        const defaultImage = '<?php echo IMG; ?>users/default.jpg';
+                        const defaultImage = '<?php echo BASE; ?>assets/img/users/default.jpg';
                         document.querySelector('.profile-picture').src = defaultImage;
                         document.querySelector('.profile-picture-modal').src = defaultImage;
                         document.querySelector('.avatar-icon').src = defaultImage;
                         document.getElementById('imagePreview').style.display = 'none';
                         hasProfileChanges = false;
                         showToast('success', 'Profile picture removed successfully');
+                        // Close the modal after successful removal
+                        updateModal.hide();
                     } else {
                         showToast('error', data.message || 'Failed to remove profile picture');
                     }
