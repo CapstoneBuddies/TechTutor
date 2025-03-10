@@ -192,6 +192,174 @@ body {
   margin-right: 0.5rem;
 }
 
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+  body {
+    overflow-y: auto;
+  }
+
+  .verify-container {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .verify-left {
+    width: 100%;
+    min-height: 40vh;
+    padding: 2rem 1rem;
+  }
+
+  .verify-right {
+    width: 100%;
+    padding: 2rem 1.5rem;
+  }
+
+  .logo {
+    top: 1rem;
+    left: 1rem;
+    width: 50px;
+    height: 50px;
+  }
+
+  .logo img {
+    width: 30px;
+  }
+
+  .verification-title {
+    text-align: center;
+    padding: 0 1rem;
+  }
+
+  .verification-title h1 {
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+  }
+
+  .verification-content {
+    padding: 0 1rem;
+  }
+
+  .verification-content h2 {
+    font-size: 1.5rem;
+  }
+
+  .verification-content p {
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .email-icon {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 1rem;
+  }
+
+  .code-inputs {
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .code-inputs input {
+    width: 2.8rem;
+    height: 2.8rem;
+    font-size: 1.2rem;
+  }
+
+  .btn-confirm,
+  .btn-resend {
+    max-width: 100%;
+    margin-bottom: 1rem;
+  }
+
+  .log-in-link {
+    position: relative;
+    bottom: 0;
+    left: 0;
+    margin-top: 1rem;
+    justify-content: center;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .verify-left {
+    min-height: 35vh;
+    padding: 1.5rem 1rem;
+  }
+
+  .verification-title h1 {
+    font-size: 1.5rem;
+  }
+
+  .verification-content h2 {
+    font-size: 1.3rem;
+  }
+
+  .verification-content p {
+    font-size: 0.85rem;
+  }
+
+  .code-inputs {
+    gap: 0.4rem;
+  }
+
+  .code-inputs input {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1.1rem;
+  }
+
+  .code-timer {
+    font-size: 0.8rem;
+  }
+
+  .btn-confirm,
+  .btn-resend {
+    padding: 0.6rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Tablet-specific adjustments */
+@media screen and (min-width: 769px) and (max-width: 1024px) {
+  .verify-left {
+    width: 45%;
+    padding: 2rem;
+  }
+
+  .verify-right {
+    width: 55%;
+    padding: 2rem;
+  }
+
+  .verification-title {
+    max-width: 100%;
+  }
+
+  .verification-title h1 {
+    font-size: 2rem;
+  }
+
+  .verification-content {
+    max-width: 400px;
+  }
+
+  .logo {
+    width: 60px;
+    height: 60px;
+  }
+
+  .logo img {
+    width: 35px;
+  }
+
+  .code-inputs input {
+    width: 3rem;
+    height: 3rem;
+    font-size: 1.3rem;
+  }
+}
+
 /* Responsive styles */
 @media (max-width: 992px) {
   .verify-container {

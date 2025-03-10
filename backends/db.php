@@ -585,7 +585,7 @@
 	    $offset = ($page - 1) * $limit;
 
 	    $stmt = $conn->prepare("SELECT 
-			    `u`.`uid`, `ud`.`first_name`, `ud`.`last_name`, `u`.`email`, `co`.`course_name` AS `course`, CONCAT(`cl`.`start_date`, ' = ', `cl`.`end_date`) AS `schedule`, `u`.`status`,`u`.`last_login`, `cl`.`tutor_id` AS guru
+			    `u`.`uid`, `ud`.*, `u`.`email`, `co`.`course_name` AS `course`, CONCAT(`cl`.`start_date`, ' = ', `cl`.`end_date`) AS `schedule`, `cl`.`tutor_id` AS guru, `u`.`status`,`u`.`last_login`
 			FROM 
 			    `users` `u`
 			INNER JOIN

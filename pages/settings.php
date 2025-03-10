@@ -28,7 +28,7 @@
     <link href="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
 
     <!-- Main CSS File -->
-    <link href="<?php echo CSS; ?>main.css" rel="stylesheet">
+    <link href="<?php echo BASE; ?>assets/css/dashboard.css" rel="stylesheet">
 </head>
 
 <body class="index-page">
@@ -335,7 +335,7 @@
     </div>
 
     <!-- JavaScript Section -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="<?php echo BASE; ?>assets/vendor/jquery/jquery.min.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/aos/aos.js"></script>
     <script>

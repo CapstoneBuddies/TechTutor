@@ -23,241 +23,156 @@
 ?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="utf-8">
-  <meta content="width=device-width, initial-scale=1.0" name="viewport">
-  <title>TechTutor | Dashboard</title>
-  <meta name="description" content="">
-  <meta name="keywords" content="">
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>TechTutor | Admin Dashboard</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
 
-  <!-- Favicons -->
-  <link href="<?php echo IMG; ?>stand_alone_logo.png" rel="icon">
-  <link href="<?php echo IMG; ?>apple-touch-icon.png" rel="apple-touch-icon">
+    <!-- Favicons -->
+    <link href="<?php echo IMG; ?>stand_alone_logo.png" rel="icon">
+    <link href="<?php echo IMG; ?>apple-touch-icon.png" rel="apple-touch-icon">
 
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com" rel="preconnect">
-  <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700;900&family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect">
+    <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700;900&family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <!-- Vendor CSS Files -->
-  <link href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-  <link href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-  <link href="<?php echo BASE; ?>assets/vendor/aos/aos.css" rel="stylesheet">
-  <link href="<?php echo BASE; ?>assets/vendor/glightbox/css/glightbox.min.css" rel="stylesheet">
-  <link href="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
+    <!-- Vendor CSS Files -->
+    <link href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
+    <link href="<?php echo BASE; ?>assets/vendor/aos/aos.css" rel="stylesheet">
+    <link href="<?php echo BASE; ?>assets/vendor/glightbox/css/glightbox.min.css" rel="stylesheet">
+    <link href="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
 
-  <!-- Main CSS File -->
-  <link href="<?php echo BASE; ?>assets/css/main.css" rel="stylesheet">
+    <!-- Main CSS Files -->
+    <link href="<?php echo CSS; ?>dashboard.css" rel="stylesheet">
+    <style>
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                position: fixed;
+                z-index: 1000;
+                transition: transform 0.3s ease-in-out;
+            }
+            
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+            
+            .toggle-sidebar {
+                display: block !important;
+            }
+            
+            .dashboard-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .table-responsive {
+                overflow-x: auto;
+            }
+        }
+
+        .toggle-sidebar {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1001;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #333;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .view-all-btn {
+            padding: 0.5rem 1rem;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background-color 0.3s;
+        }
+
+        .view-all-btn:hover {
+            background-color: #45a049;
+            color: white;
+        }
+
+        .dashboard-section {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            color: #333;
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .table-container {
+            margin-top: 1rem;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-inactive {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+    </style>
 </head>
 
-<body class="index-page">
+<body>
+    <?php include ROOT_PATH . '/components/header.php'; ?>
 
-<header id="header" class="header d-flex align-items-center fixed-top" style="padding: 0 20px;">
-  <div class="container-fluid container-xl position-relative d-flex align-items-center">
+    <button class="toggle-sidebar">
+        <i class="bi bi-list"></i>
+    </button>
 
-    <a href="home" class="logo d-flex align-items-center me-auto">
-    <img src="<?php echo IMG; ?>stand_alone_logo.png" alt="">
-    <img src="<?php echo IMG; ?>TechTutor_text.png" alt="">
-    </a>
-
-    <nav id="navmenu" class="navmenu">
-    <ul class="d-flex align-items-center">
-      <li class="nav-item">
-      <a href="#" class="nav-link">
-        <i class="bi bi-bell"></i>
-      </a>
-      </li>
-      <li class="nav-item dropdown">
-      <a href="#" class="nav-link dropdown-toggle main-avatar" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-        <img src=<?php echo $_SESSION['profile']; ?> alt="User Avatar" class="avatar-icon">
-      </a>
-      <ul class="dropdown-menu" aria-labelledby="userDropdown">
-        <li><span class="dropdown-item user-item"><?php echo $_SESSION['name']; ?></span></li>
-        <li><a class="dropdown-item" href="dashboard/profile">Profile</a></li>
-        <li><a class="dropdown-item" href="dashboard/settings">Settings</a></li>
-        <li><hr class="dropdown-divider"></li>
-        <li><a class="dropdown-item" href="user-logout">Log Out</a></li>
-      </ul>
-      </li>
-    </ul>
-    <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
-    </nav>
-
-  </div>
-</header>
-<br><br><br><br><br>
-
-<div class="container-fluid">
-    <div class="row">
-        <!-- Sidebar -->
-        <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
-            <div class="position-sticky">
-                <!-- User Profile Section -->
-                <div class="text-center py-4">
-                    <img src="<?php echo $_SESSION['profile']; ?>" alt="User Avatar" class="rounded-circle profile" width="80" height="80">
-                    <h5 class="mt-2" style="font-size: 20px;"><?php echo $_SESSION['name']; ?></h5>
-                    <span style="font-size: 16px;">Admin</span>
-                </div>
-
-                <!-- Sidebar Menu -->
-                <ul class="nav flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center px-3 py-2 rounded active" href="dashboard">
-                            <i class="bi bi-house-door"></i>
-                            <span class="ms-2">Dashboard</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center px-3 py-2 rounded" href="dashboard/TechGurus">
-                            <i class="bi bi-people"></i>
-                            <span class="ms-2">TechGurus</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center px-3 py-2 rounded" href="dashboard/TechKids">
-                            <i class="bi bi-person"></i>
-                            <span class="ms-2">TechKids</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center px-3 py-2 rounded" href="dashboard/course">
-                            <i class="bi bi-book"></i>
-                            <span class="ms-2">Courses</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center px-3 py-2 rounded" href="dashboard/notifications">
-                            <i class="bi bi-bell"></i>
-                            <span class="ms-2">Notification</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center px-3 py-2 rounded" href="dashboard/transactions">
-                            <i class="bi bi-wallet2"></i>
-                            <span class="ms-2">Transactions</span>
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </nav>
-
-        <!-- Main Content -->
-        <main class="col-md-9 ms-sm-auto col-lg-10 px-4">
-            <!-- Tables Section -->
-            <div class="row mt-4">
-                <!-- TechKids Table -->
-                <div class="col-md-6 mb-4">
-                    <h5 class="mb-3 table-title">TechKids</h5>
-                    <div class="table-container">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Email</th>
-                                        <th>Course</th>
-                                        <th>Schedule</th>
-                                        <th>Guru</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($techkids as $user): ?>
-                                    <tr>
-                                        <td><?php echo $user['first_name'] . ' ' . $user['last_name']; ?></td>
-                                        <td><?php echo $user['email']; ?></td>
-                                        <td><?php echo $user['course']; ?></td>
-                                        <td><?php echo $user['schedule']; ?></td>
-                                        <td><?php echo $user['guru']; ?></td>
-                                        <td><span class="<?php echo getStatusBadgeClass($user['status']); ?>"><?php echo ucfirst(normalizeStatus($user['status'])); ?></span></td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <div>Showing <?php echo count($techkids); ?> of <?php echo $techkidCount; ?></div>
-                            <div class="pagination">
-                                <?php if ($techkids_page > 1): ?>
-                                    <a href="?tkpage=<?php echo $techkids_page - 1; ?>" class="text-decoration-none">
-                                        <span>Previous</span>
-                                    </a>
-                                <?php endif; ?>
-                                
-                                <?php for ($i = 1; $i <= $techkids_total_pages; $i++): ?>
-                                    <a href="?tkpage=<?php echo $i; ?>" class="text-decoration-none">
-                                        <span class="px-2 <?php echo $i === $techkids_page ? 'active' : ''; ?>"><?php echo $i; ?></span>
-                                    </a>
-                                <?php endfor; ?>
-                                
-                                <?php if ($techkids_page < $techkids_total_pages): ?>
-                                    <a href="?tkpage=<?php echo $techkids_page + 1; ?>" class="text-decoration-none">
-                                        <span>Next</span>
-                                    </a>
-                                <?php endif; ?>
-                            </div>
-                            <a href="dashboard/TechKids" class="view-all-btn">View All TechKids</a>
-                        </div>
+    <div class="dashboard-content">
+        <div class="container-fluid">
+            <div class="row">
+                <main class="col-12">
+                    <!-- Welcome Section -->
+                    <div class="welcome-section dashboard-section">
+                        <h1>Welcome, <?php echo explode(' ', $_SESSION['name'])[0]; ?>!</h1>
+                        <p>Here's what's happening in your platform today.</p>
                     </div>
-                </div>
 
-                <!-- TechGurus Table -->
-                <div class="col-md-6 mb-4">
-                    <h5 class="mb-3 table-title">TechGurus</h5>
-                    <div class="table-container">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Email</th>
-                                        <th>Course</th>
-                                        <th>Schedule</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($techgurus as $guru): ?>
-                                    <tr>
-                                        <td><?php echo $guru['first_name'] . ' ' . $guru['last_name']; ?></td>
-                                        <td><?php echo $guru['email']; ?></td>
-                                        <td><?php echo $guru['course']; ?></td>
-                                        <td><?php echo $guru['schedule']; ?></td>
-                                        <td><span class="<?php echo getStatusBadgeClass($guru['status']); ?>"><?php echo ucfirst(normalizeStatus($guru['status'])); ?></span></td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <div>Showing <?php echo count($techgurus); ?> of <?php echo $techguruCount; ?></div>
-                            <div class="pagination">
-                                <?php if ($techgurus_page > 1): ?>
-                                    <a href="?tgpage=<?php echo $techgurus_page - 1; ?>" class="text-decoration-none">
-                                        <span>Previous</span>
-                                    </a>
-                                <?php endif; ?>
-                                
-                                <?php for ($i = 1; $i <= $techgurus_total_pages; $i++): ?>
-                                    <a href="?tgpage=<?php echo $i; ?>" class="text-decoration-none">
-                                        <span class="px-2 <?php echo $i === $techgurus_page ? 'active' : ''; ?>"><?php echo $i; ?></span>
-                                    </a>
-                                <?php endfor; ?>
-                                
-                                <?php if ($techgurus_page < $techgurus_total_pages): ?>
-                                    <a href="?tgpage=<?php echo $techgurus_page + 1; ?>" class="text-decoration-none">
-                                        <span>Next</span>
-                                    </a>
-                                <?php endif; ?>
-                            </div>
-                            <a href="dashboard/TechGurus" class="view-all-btn">View All TechGurus</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Statistics Cards -->
+                    <!-- Statistics Cards -->
             <div class="row mt-4">
                 <div class="col-md-3 mb-4">
                     <div class="card">
@@ -321,81 +236,125 @@
                 </div>
             </div>
 
-            <!-- Transactions Table -->
-            <div class="row mt-4">
-                <div class="col-12">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5>Transactions</h5>
-                        <div class="search-box">
-                            <input type="text" class="form-control" placeholder="Search">
+                    <!-- TechGurus Section -->
+                    <div class="dashboard-section">
+                        <div class="table-header">
+                            <h2 class="section-title">Recent TechGurus</h2>
+                            <a href="<?php echo BASE; ?>dashboard/TechGurus" class="view-all-btn">
+                                <i class="bi bi-eye"></i>
+                                View All
+                            </a>
+                        </div>
+                        <div class="table-container table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 200px;">Name</th>
+                                        <th>Email</th>
+                                        <th>Subject</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($techgurus as $user): ?>
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <img src="<?php echo USER_IMG . $user['profile_picture']; ?>" alt="Avatar" class="rounded-circle me-2" style="width: 32px; height: 32px;">
+                                                <span><?php echo $user['first_name'] . ' ' . $user['last_name']; ?></span>
+                                            </div>
+                                        </td>
+                                        <td><?php echo $user['email']; ?></td>
+                                        <td>Computer Programming</td>
+                                        <td><span class="status-badge status-active">Active</span></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary">View</button>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                    <th>Amount</th>
-                                    <th>File Record</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php
-                                    if (isset($_SESSION['transactions'])) {
-                                    foreach ($_SESSION['transactions'] as $transaction): 
-                                ?>
-                                <tr>
-                                    <td><?php echo date('M d, Y', strtotime($transaction['date'])); ?></td>
-                                    <td><?php echo $transaction['name']; ?></td>
-                                    <td><?php echo $transaction['email']; ?></td>
-                                    <td>₱<?php echo number_format($transaction['amount'], 2); ?></td>
-                                    <td><?php echo $transaction['file_record']; ?></td>
-                                    <td><span class="<?php echo getStatusBadgeClass($transaction['status']); ?>"><?php echo ucfirst(normalizeStatus($transaction['status'])); ?></span></td>
-                                    <td>
-                                        <div class="d-flex gap-2">
-                                            <button class="btn btn-sm btn-primary" title="View"><i class="bi bi-eye"></i></button>
-                                            <button class="btn btn-sm btn-success" title="Approve"><i class="bi bi-check"></i></button>
-                                            <button class="btn btn-sm btn-danger" title="Reject"><i class="bi bi-x"></i></button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <?php endforeach; }
-                                    else {
-                                        echo "<tr><td colspan='7' class='text-center'>No transactions available</td></tr>";
-                                    } ?>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mt-3">
-                        <div>Showing 12 of 30</div>
-                        <div class="pagination">
-                            <span>Previous</span>
-                            <span class="px-2">1</span>
-                            <span>Next</span>
+
+                    <!-- TechKids Section -->
+                    <div class="dashboard-section">
+                        <div class="table-header">
+                            <h2 class="section-title">Recent TechKids</h2>
+                            <a href="<?php echo BASE; ?>dashboard/TechKids" class="view-all-btn">
+                                <i class="bi bi-eye"></i>
+                                View All
+                            </a>
                         </div>
-                        <button class="btn btn-primary">View All</button>
+                        <div class="table-container table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Enrolled Courses</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($techkids as $user): ?>
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <img src="<?php echo USER_IMG.$user['profile_picture']; ?>" alt="Avatar" class="rounded-circle me-2" style="width: 32px; height: 32px;">
+                                                <span><?php echo $user['first_name']." ".$user['last_name']; ?></span>
+                                            </div>
+                                        </td>
+                                        <td><?php echo $user['email']; ?></td>
+                                        <td>3 Courses</td>
+                                        <td><span class="status-badge status-active">Active</span></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary">View</button>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
+                </main>
             </div>
-        </main>
+        </div>
     </div>
-</div>
 
-<!-- Vendor JS Files -->
-<script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-<script src="<?php echo BASE; ?>assets/vendor/php-email-form/validate.js"></script>
-<script src="<?php echo BASE; ?>assets/vendor/aos/aos.js"></script>
-<script src="<?php echo BASE; ?>assets/vendor/glightbox/js/glightbox.min.js"></script>
-<script src="<?php echo BASE; ?>assets/vendor/purecounter/purecounter_vanilla.js"></script>
-<script src="<?php echo BASE; ?>assets/vendor/imagesloaded/imagesloaded.pkgd.min.js"></script>
-<script src="<?php echo BASE; ?>assets/vendor/isotope-layout/isotope.pkgd.min.js"></script>
-<script src="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.js"></script>
+    <!-- JavaScript Section -->
+    <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="<?php echo BASE; ?>assets/vendor/aos/aos.js"></script>
+    <script src="<?php echo BASE; ?>assets/vendor/glightbox/js/glightbox.min.js"></script>
+    <script src="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleBtn = document.querySelector('.toggle-sidebar');
+            const sidebar = document.querySelector('.sidebar');
+            const mainContent = document.querySelector('.dashboard-content');
 
-<!-- Main JS File -->
-<script src="<?php echo BASE; ?>assets/js/main.js"></script>
+            toggleBtn.addEventListener('click', function() {
+                sidebar.classList.toggle('active');
+            });
+
+            // Close sidebar when clicking outside
+            document.addEventListener('click', function(event) {
+                const isClickInside = sidebar.contains(event.target) || toggleBtn.contains(event.target);
+                if (!isClickInside && sidebar.classList.contains('active')) {
+                    sidebar.classList.remove('active');
+                }
+            });
+
+            // Handle window resize
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 768) {
+                    sidebar.classList.remove('active');
+                }
+            });
+        });
+    </script>
 </body>
 </html>

@@ -18,6 +18,9 @@ RewriteRule ^register$ pages/signup.php [L]
 #Route /verify to pages/verify.php
 RewriteRule ^verify$ pages/verify.php [L]
 
+#Route /forgot-password to pages/forgot_password.php
+RewriteRule ^forgot_password$ pages/forgot_password.php [L]
+
 #Route logics to route.php
 RewriteRule ^(.*)/?user-login$ backends/route.php [L]
 RewriteRule ^(.*)/?user-register$ backends/route.php [L]

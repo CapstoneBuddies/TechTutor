@@ -8,342 +8,411 @@
 
     // Get paginated data
     $techkids = getUserByRole('TECHKID', $techkids_page, $items_per_page);
+    $techkidsCount = getItemCountByTable('users','TECHKID');
 
     // Calculate total pages
     $techkids_total_pages = ceil($techkidsCount / $items_per_page);
 ?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="utf-8">
-  <meta content="width=device-width, initial-scale=1.0" name="viewport">
-  <title>TechTutor | View All Tutors</title>
-  <meta name="description" content="">
-  <meta name="keywords" content="">
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>TechTutor | TechKids</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
 
-  <!-- Favicons -->
-  <link href="<?php echo IMG; ?>stand_alone_logo.png" rel="icon">
-  <link href="<?php echo IMG; ?>apple-touch-icon.png" rel="apple-touch-icon">
+    <!-- Favicons -->
+    <link href="<?php echo IMG; ?>stand_alone_logo.png" rel="icon">
+    <link href="<?php echo IMG; ?>apple-touch-icon.png" rel="apple-touch-icon">
 
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com" rel="preconnect">
-  <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700;900&family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect">
+    <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700;900&family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <!-- Vendor CSS Files -->
-  <link href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-  <link href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-  <link href="<?php echo BASE; ?>assets/vendor/aos/aos.css" rel="stylesheet">
-  <link href="<?php echo BASE; ?>assets/vendor/glightbox/css/glightbox.min.css" rel="stylesheet">
-  <link href="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
+    <!-- Vendor CSS Files -->
+    <link href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
+    <link href="<?php echo BASE; ?>assets/vendor/aos/aos.css" rel="stylesheet">
+    <link href="<?php echo BASE; ?>assets/vendor/glightbox/css/glightbox.min.css" rel="stylesheet">
+    <link href="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
 
-  <!-- Main CSS File -->
-  <link href="<?php echo CSS; ?>main.css" rel="stylesheet">
+    <!-- Main CSS Files -->
+    <link href="<?php echo CSS; ?>dashboard.css" rel="stylesheet">
+    <style>
+        .dashboard-section {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .search-bar {
+            display: flex;
+            align-items: center;
+            background: #f5f5f5;
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            width: 300px;
+        }
+
+        .search-bar input {
+            border: none;
+            background: none;
+            outline: none;
+            padding-left: 0.5rem;
+            width: 100%;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-inactive {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+        }
+
+        .pagination a {
+            padding: 0.5rem 1rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            color: #333;
+            text-decoration: none;
+        }
+
+        .pagination a.active {
+            background: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .section-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .search-bar {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 
-<body class="index-page">
+<body>
+    <?php include ROOT_PATH . '/components/header.php'; ?>
 
-<header id="header" class="header d-flex align-items-center fixed-top" style="padding: 0 20px;">
-  <div class="container-fluid container-xl position-relative d-flex align-items-center">
+    <div class="dashboard-content">
+        <div class="container-fluid">
+            <div class="row">
+                <main class="col-12">
+                    <div class="dashboard-section">
+                        <div class="section-header">
+                            <h2>TechKids</h2>
+                            <div class="search-bar">
+                                <i class="bi bi-search"></i>
+                                <input type="text" id="searchInput" placeholder="Search TechKids...">
+                            </div>
+                        </div>
 
-    <a href="home" class="logo d-flex align-items-center me-auto">
-    <img src="<?php echo IMG; ?>stand_alone_logo.png" alt="">
-    <img src="<?php echo IMG; ?>TechTutor_text.png" alt="">
-    </a>
+                        <div class="table-container">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Enrolled Courses</th>
+                                        <th>Progress</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($techkids as $user): ?>
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <img src="<?php echo USER_IMG.$user['profile_picture']; ?>" alt="Avatar" class="rounded-circle me-2" style="width: 32px; height: 32px;">
+                                                <span><?php echo $user['first_name'] . ' ' . $user['last_name']; ?></span>
+                                            </div>
+                                        </td>
+                                        <td><?php echo $user['email']; ?></td>
+                                        <td>3 Courses</td>
+                                        <td>
+                                            <div class="progress" style="height: 8px;">
+                                                <div class="progress-bar bg-success" role="progressbar" style="width: 75%;" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="status-badge <?php echo getStatusBadgeClass($user['status']); ?>">
+                                                <?php echo normalizeStatus($user['status']); ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="action-buttons">
+                                                <button class="btn btn-sm btn-outline-primary">View</button>
+                                                <button class="btn btn-sm btn-outline-warning" onclick="restrictAccount(<?php echo $user['uid']; ?>)">Restrict</button>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteAccountConfirm(<?php echo $user['uid']; ?>, '<?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?>')">Delete</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
 
-    <nav id="navmenu" class="navmenu">
-    <ul class="d-flex align-items-center">
-      <li class="nav-item">
-      <a href="#" class="nav-link">
-        <i class="bi bi-bell"></i>
-      </a>
-      </li>
-      <li class="nav-item dropdown">
-      <a href="#" class="nav-link dropdown-toggle main-avatar" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-        <img src=<?php echo $_SESSION['profile']; ?> alt="User Avatar" class="avatar-icon">
-      </a>
-      <ul class="dropdown-menu" aria-labelledby="userDropdown">
-        <li><span class="dropdown-item user-item"><?php echo $_SESSION['name']; ?></span></li>
-        <li><a class="dropdown-item" href="profile">Profile</a></li>
-        <li><a class="dropdown-item" href="settings">Settings</a></li>
-        <li><hr class="dropdown-divider"></li>
-        <li><a class="dropdown-item" href="user-logout">Log Out</a></li>
-      </ul>
-      </li>
-    </ul>
-    <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
-    </nav>
-
-  </div>
-</header>
-<br><br><br><br><br>
-
-<div class="container-fluid">
-    <div class="row">
-        <!-- Sidebar -->
-        <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
-            <div class="position-sticky">
-                <!-- User Profile Section -->
-                <div class="text-center py-4">
-                    <img src="<?php echo $_SESSION['profile']; ?>" alt="User Avatar" class="rounded-circle profile" width="80" height="80">
-                    <h5 class="mt-2" style="font-size: 20px;"><?php echo $_SESSION['name']; ?></h5>
-                    <span style="font-size: 16px;">Admin</span>
-                </div>
-
-                <!-- Sidebar Menu -->
-                <ul class="nav flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center px-3 py-2 rounded" href="<?php echo BASE; ?>dashboard">
-                            <i class="bi bi-house-door"></i>
-                            <span class="ms-2">Dashboard</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center px-3 py-2 rounded" href="TechGurus">
-                            <i class="bi bi-people"></i>
-                            <span class="ms-2">TechGurus</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center px-3 py-2 rounded active" href="TechKids">
-                            <i class="bi bi-person"></i>
-                            <span class="ms-2">TechKids</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center px-3 py-2 rounded" href="course">
-                            <i class="bi bi-book"></i>
-                            <span class="ms-2">Courses</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center px-3 py-2 rounded" href="notifications">
-                            <i class="bi bi-bell"></i>
-                            <span class="ms-2">Notification</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center px-3 py-2 rounded" href="dashboard/transactions">
-                            <i class="bi bi-wallet2"></i>
-                            <span class="ms-2">Transactions</span>
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </nav>
-
-        <!-- Main Content -->
-        <main id="main-content" class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-            
-        <div class="row" style="height: 100vh;">
-            <div class="col-12" style="background-color: #f8f9fa; height: 100%;">
-            <h2 style="margin:10px 20px 0px 20px;">TechGurus</h2>
-            <div class="d-flex justify-content-between align-items-center mb-3 mt-3">
-                <div></div>
-                <div class="d-flex">
-                    <select class="form-select me-2" id="searchColumn" style="width: auto;">
-                        <option value="name">Name</option>
-                        <option value="email">Email</option>
-                        <option value="course">Course</option>
-                        <option value="schedule">Schedule</option>
-                        <option value="status">Status</option>
-                    </select>
-                    <input type="text" class="form-control me-2" id="searchInput" placeholder="Search" style="width: 250px;">
-                </div>
-            </div>
-            <div class="table-responsive" style="max-height: calc(100% - 100px); overflow-y: auto;">
-                <table class="table table-striped table-sm">
-                    <thead>
-                        <tr>
-                            <th class="sortable" data-sort="id">ID NO. <i class="bi bi-arrow-down-up"></i></th>
-                            <th class="sortable" data-sort="name">Name <i class="bi bi-arrow-down-up"></i></th>
-                            <th class="sortable" data-sort="email">Email <i class="bi bi-arrow-down-up"></i></th>
-                            <th class="sortable" data-sort="course">Course <i class="bi bi-arrow-down-up"></i></th>
-                            <th class="sortable" data-sort="schedule">Schedule <i class="bi bi-arrow-down-up"></i></th>
-                            <th class="sortable" data-sort="last_login">Last login <i class="bi bi-arrow-down-up"></i></th>
-                            <th class="sortable" data-sort="status">Status <i class="bi bi-arrow-down-up"></i></th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="techGuruTable">
-                        <?php
-                            if (!empty($techkids)) {
-                                foreach ($techkids as $kids) {
-                                    if ((bool)$kids['status']) {
-                                        $statusClass = getStatusBadgeClass($kids['status']);
-                                        $statusText = ucfirst(normalizeStatus($kids['status']));
-                                        
-                                        echo "<tr>
-                                            <td class='text-center'>{$kids['uid']}</td>
-                                            <td>{$kids['first_name']} {$kids['last_name']}</td>
-                                            <td>{$kids['email']}</td>
-                                            <td>{$kids['course']}</td>
-                                            <td>{$kids['schedule']}</td>
-                                            <td>{$kids['last_login']}</td>
-                                            <td><span class='badge {$statusClass}'>{$statusText}</span></td>
-                                            <td>
-                                                <div class='d-flex'>
-                                                    <button class='btn btn-sm btn-danger rounded-circle me-1'><i class='bi bi-trash'></i></button>
-                                                    <button class='btn btn-sm btn-primary rounded-circle me-1'><i class='bi bi-pencil'></i></button>
-                                                    <button class='btn btn-sm btn-warning rounded-circle'><i class='bi bi-eye'></i></button>
-                                                </div>
-                                            </td>
-                                        </tr>";
-                                    }
-                                }
-                            } else {
-                                echo "<tr><td colspan='8'>No active TechKids found.</td></tr>";
-                            }
-                        ?>
-                    </tbody>
-                </table>
-            </div>
+                        <?php if ($techkids_total_pages > 1): ?>
+                        <div class="pagination">
+                            <?php for ($i = 1; $i <= $techkids_total_pages; $i++): ?>
+                                <a href="?tkpage=<?php echo $i; ?>" class="<?php echo $techkids_page == $i ? 'active' : ''; ?>">
+                                    <?php echo $i; ?>
+                                </a>
+                            <?php endfor; ?>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                </main>
             </div>
         </div>
-
-        </main>
     </div>
-</div>
 
-<!-- Vendor JS Files -->
-<script src="../assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-<script src="../assets/vendor/php-email-form/validate.js"></script>
-<script src="../assets/vendor/aos/aos.js"></script>
-<script src="../assets/vendor/glightbox/js/glightbox.min.js"></script>
-<script src="../assets/vendor/purecounter/purecounter_vanilla.js"></script>
-<script src="../assets/vendor/imagesloaded/imagesloaded.pkgd.min.js"></script>
-<script src="../assets/vendor/isotope-layout/isotope.pkgd.min.js"></script>
-<script src="../assets/vendor/swiper/swiper-bundle.min.js"></script>
+    <!-- Delete Account Confirmation Modal -->
+    <div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteAccountModalLabel">Delete Account</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete <span id="deleteUserName"></span>'s account? This action cannot be undone.</p>
+                    <input type="hidden" id="deleteUserId" value="">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="deleteAccount()">Delete Account</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<!-- Main JS File -->
-<script src="../assets/js/main.js"></script>
+    <!-- Restrict Account Confirmation Modal -->
+    <div class="modal fade" id="restrictAccountModal" tabindex="-1" aria-labelledby="restrictAccountModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="restrictAccountModalLabel">Restrict Account</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to restrict this account? The user will not be able to access the platform until reactivated.</p>
+                    <input type="hidden" id="restrictUserId" value="">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" onclick="restrictAccountConfirmed()">Restrict Account</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<!-- Custom JavaScript for search and sorting -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Search functionality
-    const searchInput = document.getElementById('searchInput');
-    const searchColumn = document.getElementById('searchColumn');
-    const table = document.getElementById('techGuruTable');
-    const rows = table.getElementsByTagName('tr');
+    <!-- Vendor JS Files -->
+    <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="<?php echo BASE; ?>assets/vendor/aos/aos.js"></script>
+    <script src="<?php echo BASE; ?>assets/vendor/glightbox/js/glightbox.min.js"></script>
+    <script src="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.js"></script>
+    <script src="<?php echo BASE; ?>assets/vendor/isotope-layout/isotope.pkgd.min.js"></script>
+    <script src="<?php echo BASE; ?>assets/vendor/php-email-form/validate.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-    searchInput.addEventListener('keyup', function() {
-        const searchText = searchInput.value.toLowerCase();
-        const columnIndex = getColumnIndex(searchColumn.value);
-        
-        for (let i = 0; i < rows.length; i++) {
-            const cells = rows[i].getElementsByTagName('td');
-            if (cells.length > 0) {
-                const cellText = cells[columnIndex].textContent.toLowerCase();
-                if (cellText.indexOf(searchText) > -1) {
-                    rows[i].style.display = '';
+    <!-- Main JS File -->
+    <script src="<?php echo BASE; ?>assets/js/main.js"></script>
+
+    <script>
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', function() {
+            const searchValue = this.value.toLowerCase();
+            const tableRows = document.querySelectorAll('.table tbody tr');
+            
+            tableRows.forEach(row => {
+                const name = row.querySelector('td:nth-child(1)').textContent.toLowerCase();
+                const email = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                const course = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+                
+                if (name.includes(searchValue) || email.includes(searchValue) || course.includes(searchValue)) {
+                    row.style.display = '';
                 } else {
-                    rows[i].style.display = 'none';
+                    row.style.display = 'none';
                 }
-            }
-        }
-    });
-
-    // Get column index based on selected value
-    function getColumnIndex(columnName) {
-        switch(columnName) {
-            case 'name': return 1;
-            case 'email': return 2;
-            case 'course': return 3;
-            case 'schedule': return 4;
-            case 'tutor': return 5;
-            case 'status': return 6;
-            default: return 1;
-        }
-    }
-
-    // Sorting functionality
-    const sortableHeaders = document.querySelectorAll('.sortable');
-    sortableHeaders.forEach(header => {
-        header.addEventListener('click', function() {
-            const column = this.getAttribute('data-sort');
-            const columnIndex = getSortColumnIndex(column);
-            const currentDirection = this.getAttribute('data-direction') || 'asc';
-            const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
-            
-            // Reset all headers
-            sortableHeaders.forEach(h => {
-                h.setAttribute('data-direction', '');
-                h.querySelector('i').className = 'bi bi-arrow-down-up';
             });
-            
-            // Set new direction and icon
-            this.setAttribute('data-direction', newDirection);
-            this.querySelector('i').className = newDirection === 'asc' ? 'bi bi-arrow-up' : 'bi bi-arrow-down';
-            
-            // Sort the table
-            sortTable(columnIndex, newDirection);
         });
-    });
 
-    // Get column index for sorting
-    function getSortColumnIndex(columnName) {
-        switch(columnName) {
-            case 'id': return 0;
-            case 'name': return 1;
-            case 'email': return 2;
-            case 'course': return 3;
-            case 'schedule': return 4;
-            case 'tutor': return 5;
-            case 'status': return 6;
-            default: return 0;
-        }
-    }
+        // Sidebar toggle
+        document.querySelector('.mobile-nav-toggle').addEventListener('click', function() {
+            document.querySelector('body').classList.toggle('sidebar-open');
+        });
 
-    // Sort table function
-    function sortTable(columnIndex, direction) {
-        const rowsArray = Array.from(rows);
-        const tbody = table.querySelector('tbody');
-        
-        // Skip any rows without cells (like "No data" messages)
-        const sortableRows = rowsArray.filter(row => row.cells.length > 0);
-        
-        sortableRows.sort((a, b) => {
-            let aValue = a.cells[columnIndex].textContent.trim();
-            let bValue = b.cells[columnIndex].textContent.trim();
+        // Delete account confirmation
+        function deleteAccountConfirm(userId, userName) {
+            document.getElementById('deleteUserId').value = userId;
+            document.getElementById('deleteUserName').textContent = userName;
             
-            // Handle numeric sorting for ID column
-            if (columnIndex === 0) {
-                return direction === 'asc' 
-                    ? parseInt(aValue) - parseInt(bValue)
-                    : parseInt(bValue) - parseInt(aValue);
+            const deleteModal = new bootstrap.Modal(document.getElementById('deleteAccountModal'));
+            deleteModal.show();
+        }
+
+        // Delete account
+        function deleteAccount() {
+            const userId = document.getElementById('deleteUserId').value;
+            const deleteButton = document.querySelector('#deleteAccountModal .btn-danger');
+            
+            // Show loading state
+            deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+            deleteButton.disabled = true;
+            
+            // Send AJAX request
+            $.ajax({
+                url: '<?php echo BASE; ?>admin-delete-user',
+                type: 'POST',
+                data: { user_id: userId },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        showAlert('success', 'Account deleted successfully');
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        showAlert('error', response.message || 'Failed to delete account');
+                        deleteButton.innerHTML = 'Delete Account';
+                        deleteButton.disabled = false;
+                    }
+                    
+                    const deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteAccountModal'));
+                    deleteModal.hide();
+                },
+                error: function(xhr) {
+                    showAlert('error', 'Connection error. Please try again.');
+                    deleteButton.innerHTML = 'Delete Account';
+                    deleteButton.disabled = false;
+                }
+            });
+        }
+
+        // Restrict account
+        function restrictAccount(userId) {
+            document.getElementById('restrictUserId').value = userId;
+            
+            const restrictModal = new bootstrap.Modal(document.getElementById('restrictAccountModal'));
+            restrictModal.show();
+        }
+
+        // Confirm restrict account
+        function restrictAccountConfirmed() {
+            const userId = document.getElementById('restrictUserId').value;
+            const restrictButton = document.querySelector('#restrictAccountModal .btn-warning');
+            
+            // Show loading state
+            restrictButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+            restrictButton.disabled = true;
+            
+            // Send AJAX request
+            $.ajax({
+                url: '<?php echo BASE; ?>admin-restrict-user',
+                type: 'POST',
+                data: { user_id: userId },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        showAlert('success', 'Account restricted successfully');
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        showAlert('error', response.message || 'Failed to restrict account');
+                        restrictButton.innerHTML = 'Restrict Account';
+                        restrictButton.disabled = false;
+                    }
+                    
+                    const restrictModal = bootstrap.Modal.getInstance(document.getElementById('restrictAccountModal'));
+                    restrictModal.hide();
+                },
+                error: function(xhr) {
+                    showAlert('error', 'Connection error. Please try again.');
+                    restrictButton.innerHTML = 'Restrict Account';
+                    restrictButton.disabled = false;
+                }
+            });
+        }
+
+        function showAlert(type, message) {
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            const icon = type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill';
+            
+            const alertHtml = `
+                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                    <i class="bi ${icon} me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            
+            // Create a container for alerts if it doesn't exist
+            let alertContainer = document.querySelector('.alert-container');
+            if (!alertContainer) {
+                alertContainer = document.createElement('div');
+                alertContainer.className = 'alert-container position-fixed top-0 end-0 p-3';
+                alertContainer.style.zIndex = '1050';
+                document.body.appendChild(alertContainer);
             }
             
-            // Handle text sorting
-            return direction === 'asc'
-                ? aValue.localeCompare(bValue)
-                : bValue.localeCompare(aValue);
-        });
-        
-        // Remove all existing rows
-        while (tbody.firstChild) {
-            tbody.removeChild(tbody.firstChild);
+            // Add the alert to the container
+            const alertElement = document.createElement('div');
+            alertElement.innerHTML = alertHtml;
+            alertContainer.appendChild(alertElement.firstChild);
+            
+            // Auto-remove the alert after 5 seconds
+            setTimeout(function() {
+                const alerts = document.querySelectorAll('.alert');
+                if (alerts.length > 0) {
+                    alerts[0].remove();
+                }
+            }, 5000);
         }
-        
-        // Add sorted rows
-        sortableRows.forEach(row => {
-            tbody.appendChild(row);
-        });
-    }
-
-    // Add CSS for sortable headers
-    const style = document.createElement('style');
-    style.textContent = `
-        .sortable {
-            cursor: pointer;
-        }
-        .sortable:hover {
-            background-color: #f0f0f0;
-        }
-    `;
-    document.head.appendChild(style);
-});
-</script>
+    </script>
 </body>
 </html>

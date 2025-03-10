@@ -2197,7 +2197,7 @@ section,
     background: #FF6B00;
     color: white;
     border: none;
-    padding: 10px 25px;
+    padding: 10px 20px;
     border-radius: 5px;
     float: right;
     transition: all 0.3s ease;
@@ -2841,3 +2841,308 @@ input[type="password"] {
         .phone-input-container input {
             flex: 1;
         }
+
+/* Responsive Design */
+@media screen and (max-width: 1024px) {
+  .header {
+    padding: 15px;
+  }
+
+  .header .logo h1 {
+    font-size: 24px;
+  }
+
+  .header .btn-getstarted {
+    margin: 0 15px;
+    padding: 6px 20px;
+  }
+
+  .hero {
+    padding: 40px 20px 0;
+  }
+
+  .section-padding {
+    padding: 40px 0;
+  }
+
+  .rounded-box {
+    padding: 15px;
+    margin: 10px;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+
+  .container {
+    padding: 0 15px;
+  }
+
+  .header {
+    padding: 10px;
+  }
+
+  .header .logo img {
+    max-height: 30px;
+  }
+
+  .header .logo h1 {
+    font-size: 20px;
+  }
+
+  .header .btn-getstarted {
+    font-size: 14px;
+    padding: 6px 15px;
+    margin: 0 10px;
+  }
+
+  /* Navigation adjustments */
+  .navbar {
+    padding: 10px;
+  }
+
+  .navbar-mobile {
+    position: fixed;
+    overflow: hidden;
+    top: 0;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    background: rgba(1, 22, 61, 0.9);
+    transition: 0.3s;
+  }
+
+  .navbar-mobile .mobile-nav-toggle {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+  }
+
+  .navbar-mobile ul {
+    display: block;
+    position: absolute;
+    top: 55px;
+    right: 15px;
+    bottom: 15px;
+    left: 15px;
+    padding: 10px 0;
+    border-radius: 10px;
+    background-color: var(--nav-mobile-background-color);
+    overflow-y: auto;
+    transition: 0.3s;
+  }
+
+  /* Profile and settings adjustments */
+  .profile-picture,
+  .profile-picture-modal {
+    width: 120px;
+    height: 120px;
+  }
+
+  .profile-info {
+    padding: 15px;
+  }
+
+  .profile-buttons {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .profile-buttons button {
+    width: 100%;
+  }
+
+  /* Form adjustments */
+  .form-group {
+    margin-bottom: 15px;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  select,
+  textarea {
+    padding: 8px;
+    font-size: 14px;
+  }
+
+  /* Modal adjustments */
+  .modal-content {
+    width: 90%;
+    margin: 20px auto;
+    padding: 15px;
+  }
+
+  /* Table adjustments */
+  .table-responsive {
+    overflow-x: auto;
+  }
+
+  table {
+    font-size: 14px;
+  }
+
+  td, th {
+    padding: 8px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .header .logo h1 {
+    font-size: 18px;
+  }
+
+  .header .btn-getstarted {
+    font-size: 12px;
+    padding: 5px 12px;
+  }
+
+  .profile-picture,
+  .profile-picture-modal {
+    width: 100px;
+    height: 100px;
+  }
+
+  .hero {
+    padding: 30px 15px 0;
+  }
+
+  .section-title {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+
+  .rounded-box {
+    padding: 12px;
+    margin: 8px;
+  }
+
+  /* Button adjustments */
+  .btn {
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+
+  /* Alert adjustments */
+  .alert {
+    padding: 10px;
+    margin-bottom: 15px;
+    font-size: 13px;
+  }
+
+  /* Card adjustments */
+  .card {
+    margin-bottom: 15px;
+  }
+
+  .card-body {
+    padding: 12px;
+  }
+
+  /* Form adjustments */
+  label {
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+
+  .form-control {
+    font-size: 13px;
+    padding: 6px 10px;
+  }
+}
+
+/* Tablet-specific adjustments */
+@media screen and (min-width: 769px) and (max-width: 1024px) {
+  .container {
+    padding: 0 20px;
+  }
+
+  .header {
+    padding: 12px 20px;
+  }
+
+  .profile-info {
+    padding: 20px;
+  }
+
+  .rounded-box {
+    padding: 18px;
+  }
+
+  .btn {
+    padding: 10px 20px;
+  }
+
+  /* Grid adjustments */
+  .row {
+    margin: 0 -10px;
+  }
+
+  .col {
+    padding: 0 10px;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .header,
+  .footer {
+    display: none;
+  }
+
+  body {
+    padding: 0;
+    margin: 0;
+  }
+
+  .container {
+    width: 100%;
+    padding: 0;
+    margin: 0;
+  }
+}
+
+/* Input Appearance Resets */
+input[type="number"],
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+select,
+textarea {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  font-family: inherit;
+}
+
+/* Specific select element styling */
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23333' class='bi bi-chevron-down' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 16px 12px;
+  padding-right: 2.5rem;
+}
+
+/* Hide number input spinners */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
