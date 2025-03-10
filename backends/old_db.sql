@@ -1,18 +1,23 @@
 CREATE TABLE IF NOT EXISTS `users` (
-    `uid` INT PRIMARY KEY AUTO_INCREMENT,
-    `email` VARCHAR(255) UNIQUE NOT NULL,
-    `password` VARCHAR(255) NOT NULL,
+	`uid` INT PRIMARY KEY AUTO_INCREMENT,
+	`email` VARCHAR(255) UNIQUE NOT NULL,
+	`password` VARCHAR(255) NOT NULL,
+	`is_verified` BOOLEAN NOT NULL DEFAULT FALSE,
+	`status` BOOLEAN NOT NULL DEFAULT TRUE,
+	`role` ENUM('TECHGURU', 'TECHKID', 'ADMIN') NOT NULL DEFAULT 'TECHKID',
+	`created_on` TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    `last_login` TIMESTAMP NULL
+);
+
+CREATE TABLE IF NOT EXISTS `user_details` (
+    `user_id` INT UNIQUE,
     `first_name` VARCHAR(255) NOT NULL,
     `last_name` VARCHAR(255) NOT NULL,
     `profile_picture` VARCHAR(255) DEFAULT 'default.jpg',
     `address` TEXT NULL,
     `contact_number` VARCHAR(16) NULL,
     `rating` INT,
-    `is_verified` BOOLEAN NOT NULL DEFAULT FALSE,
-    `status` BOOLEAN NOT NULL DEFAULT TRUE,
-    `role` ENUM('TECHGURU', 'TECHKID', 'ADMIN') NOT NULL DEFAULT 'TECHKID',
-    `created_on` TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
-    `last_login` TIMESTAMP NULL
+    FOREIGN KEY (user_id) REFERENCES users(uid)
 );
 
 CREATE TABLE IF NOT EXISTS `login_tokens` (
@@ -21,9 +26,11 @@ CREATE TABLE IF NOT EXISTS `login_tokens` (
     `token` VARCHAR(64) NOT NULL,
     `verification_code` VARCHAR(6) NULL,
     `type` ENUM('remember_me', 'email_verification') NOT NULL,
-    `expiration_date` DATETIME NOT NULL,
+    `remember_expiration_date` DATETIME NOT NULL,
+    `verification_expiration_date` DATETIME NOT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (`user_id`) REFERENCES `users`(`uid`) ON DELETE CASCADE,
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`uid`) 
+    ON DELETE CASCADE,
     UNIQUE (`user_id`,`token`)
 );
 
@@ -59,23 +66,21 @@ CREATE TABLE IF NOT EXISTS `class` (
     FOREIGN KEY (tutor_id) REFERENCES users(uid)
 );
 
-CREATE TABLE IF NOT EXISTS `class_schedule` (
-    `schedule_id` INT PRIMARY KEY AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `class_assignment` (
     `class_id` INT NOT NULL,
-    `user_id` INT NOT NULL,  -- Can be student or tutor
-    `role` ENUM('TUTOR', 'STUDENT') NOT NULL,
-    `session_date` DATE NOT NULL,
-    `start_time` TIME NOT NULL,
-    `end_time` TIME NOT NULL,
-    `status` ENUM('pending', 'confirmed', 'completed', 'canceled') DEFAULT 'pending',
+    `student_id` INT NOT NULL,
+    `class_day` VARCHAR(255),
+    `class_time` TIME,
     FOREIGN KEY (class_id) REFERENCES class(class_id),
-    FOREIGN KEY (user_id) REFERENCES users(uid)
+    FOREIGN KEY (student_id) REFERENCES users(uid)
 );
 
 CREATE TABLE IF NOT EXISTS `meetings` (
     `meeting_id` INT PRIMARY KEY AUTO_INCREMENT,
     `meeting_uid` VARCHAR(50) UNIQUE NOT NULL,
     `meeting_name` VARCHAR(255) NOT NULL,
+    `student_pw` VARCHAR(50) NOT NULL,
+    `tutor_pw` VARCHAR(50) NOT NULL,
     `createtime` BIGINT NOT NULL,
     `is_running` BOOLEAN NOT NULL DEFAULT TRUE
 );
@@ -103,7 +108,7 @@ CREATE TABLE IF NOT EXISTS `certificate` (
     FOREIGN KEY (donor) REFERENCES users(uid)
 );
 
-CREATE TABLE IF NOT EXISTS `notification` (
+CREATE TABLE IF NOT EXISTS `notifcation` (
     `notif_id` INT PRIMARY KEY AUTO_INCREMENT,
     `notif_type` VARCHAR(50) NOT NULL,
     `creator` INT NOT NULL,
@@ -114,30 +119,41 @@ CREATE TABLE IF NOT EXISTS `notification` (
 );
 
 CREATE TABLE IF NOT EXISTS `transactions` (
-    `transaction_id` INT PRIMARY KEY AUTO_INCREMENT,
-    `user_id` INT NOT NULL,
-    `reference_number` VARCHAR(255) UNIQUE NOT NULL,
-    `amount` FLOAT(10,2) NOT NULL,
-    `transaction_date` TIMESTAMP NOT NULL,
-    `status` ENUM('Completed', 'Pending', 'Failed') NOT NULL,
-    `transaction_type` ENUM('Deposit', 'Withdrawal') NOT NULL,
-    `payment_method` ENUM('Paypal', 'Credit Card', 'Bank Transfer') NOT NULL,
+    transaction_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    merchant_id VARCHAR(255) NOT NULL,
+    reference_number VARCHAR(255) NOT NULL,
+    amount FLOAT(100,2) NOT NULL,
+    transaction_date TIMESTAMP NOT NULL,
+    status ENUM('Completed', 'Pending', 'Failed') NOT NULL,
+    transaction_type ENUM('Deposit', 'Withdrawal') NOT NULL,
+    sender_account VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    payment_method ENUM('Paypal', 'Credit Card', 'Bank Transfer') NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(uid)
 );
 
--- Indexing for optimization
+-- Indexing
 CREATE INDEX idx_status ON users(status);
-CREATE INDEX idx_email ON users(email);
+CREATE INDEX idx_first_name_last_name ON user_details(first_name, last_name);
 CREATE INDEX idx_class_name ON class(class_name);
 CREATE INDEX idx_meeting_uid ON meetings(meeting_uid);
+CREATE INDEX idx_meetin_name ON meetings(meeting_name);
 CREATE INDEX idx_file_uuid ON file_management(file_uuid);
+CREATE INDEX idx_notif_header ON notifcation(notif_type, notif_title);
 CREATE INDEX idx_reference_number ON transactions(reference_number);
 CREATE INDEX idx_token ON login_tokens (token);
 
--- Sample Data
+
+-- Adding Information
 INSERT INTO `course`(`course_name`) VALUES('Computer Programming'), ('Computer Networking'), ('Graphics Design');
 INSERT INTO `subject`(`course_id`,`subject_name`) VALUES (1,'Python Programming'), (2,'Networking'), (3,'UI/UX Designing');
-INSERT INTO `users`(`email`,`password`,`role`,`is_verified`, `first_name`, `last_name`) VALUES 
-('tutor@test.com','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','TECHGURU',1, 'Test', 'Tutor'),
-('student@test.com','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','TECHKID',1, 'Test', 'Student'),
-('admin@test.com','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','ADMIN',1, 'Test', 'Admin');
+
+-- Adding Sample User logins (default password is Abc123!!)
+INSERT INTO `users`(`email`,`password`,`role`,`is_verified`) VALUES 
+('tutor@test.com','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','TECHGURU',1),
+('student@test.com','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','TECHKID',1),
+('admin@test.com','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','ADMIN',1);
+
+INSERT INTO `user_details`(`user_id`,`first_name`,`last_name`) VALUES 
+(1,'Test','Tutor'), (2,'Test','Student'), (3,'Test','Admin');

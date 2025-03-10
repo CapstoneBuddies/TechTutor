@@ -155,8 +155,8 @@
                                     <tr>
                                         <th>Name</th>
                                         <th>Email</th>
-                                        <th>Enrolled Courses</th>
-                                        <th>Progress</th>
+                                        <th>Enrolled Courses</th><!-- Need to update table data  -->
+                                        <th>Progress</th><!-- Need to update table data  -->
                                         <th>Status</th>
                                         <th>Actions</th>
                                     </tr>

@@ -8,13 +8,13 @@
     $offset = ($page - 1) * $items_per_page;
     
     // Get total counts
-    $studentCount = getItemCountByTable('students');
+    $studentCount = getItemCountByTable('users','TECHKID');
     $courseCount = getItemCountByTable('course');
     $classCount = getItemCountByTable('class');
     $total_pages = ceil($studentCount / $items_per_page);
-    
+
     // Get paginated students
-    $sql = "SELECT * FROM students ORDER BY id DESC LIMIT ? OFFSET ?";
+    $sql = "SELECT * FROM users INNER JOIN user_details ON users.uid = user_details.user_id ORDER BY uid DESC LIMIT ? OFFSET ?";
     $stmt = mysqli_prepare($conn, $sql);
     mysqli_stmt_bind_param($stmt, "ii", $items_per_page, $offset);
     mysqli_stmt_execute($stmt);
@@ -33,12 +33,16 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
+    <!-- Favicons -->
+    <link href="<?php echo IMG; ?>stand_alone_logo.png" rel="icon">
+    <link href="<?php echo IMG; ?>apple-touch-icon.png" rel="apple-touch-icon">
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     
     <!-- Custom CSS -->
-    <link href="<?php echo ROOT_URL; ?>/assets/css/dashboard.css" rel="stylesheet">
+    <link href="<?php echo CSS; ?>dashboard.css" rel="stylesheet">
 </head>
 <body>
     <?php include ROOT_PATH . '/components/header.php'; ?>
@@ -48,8 +52,6 @@
         <!-- Welcome Section -->
         <div class="welcome-section">
             <h1>Hello <?php echo explode(' ', $_SESSION['name'])[0]; ?></h1>
-            <p class="role">TechGuru</p>
-            <p class="subject">Computer Programming</p>
         </div>
 
         <!-- Statistics Cards -->
@@ -107,7 +109,6 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>ID</th>
                             <th>Name</th>
                             <th>Email</th>
                             <th>Class</th>
@@ -118,8 +119,7 @@
                     <tbody>
                         <?php foreach ($students as $student): ?>
                         <tr>
-                            <td><?php echo $student['student_id']; ?></td>
-                            <td><?php echo $student['name']; ?></td>
+                            <td><?php echo $student['first_name']." ".$student['last_name']; ?></td>
                             <td><?php echo $student['email']; ?></td>
                             <td><?php echo $student['class']; ?></td>
                             <td><?php echo $student['schedule']; ?></td>

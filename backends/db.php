@@ -61,27 +61,15 @@
 				}
 
 				// Adding Details to the User Table
-				$stmt = $conn->prepare("INSERT INTO `users`(`password`,`email`,`role`) VALUES(?,?,?)");
-				$stmt->bind_param("sss", $password, $email, $role);
+				$stmt = $conn->prepare("INSERT INTO `users`(`password`,`email`,`role`,`first_name`,`last_name`) VALUES(?,?,?,?,?)");
+				$stmt->bind_param("sssss", $password, $email, $role,$fname, $lname);
 
 				if($stmt->execute()) {
 					$conn->commit();
-					$stmt = $conn->prepare("SELECT uid FROM `users` WHERE `email` = ?");
-					$stmt->bind_param("s", $email);
-					$stmt->execute();
-					$result = $stmt->get_result()->fetch_assoc();
-
-					if ($result) { // Ensure a user was found before proceeding
-    					$user_id = $result['uid'];
-    					$stmt = $conn->prepare("INSERT INTO `user_details`(`user_id`,`first_name`,`last_name`) VALUES(?,?,?)");
-    					$stmt->bind_param("iss", $user_id, $fname, $lname);
-    					if($stmt->execute()) {
-    						$mail = getMailerInstance();
-							// Sending of verification
-							$token = generateVerificationToken($user_id);
-							sendVerificationEmail($mail, $email, $token, $fname);
-    					}
-    				}
+					$mail = getMailerInstance();
+					// Sending of verification
+					$token = generateVerificationToken($user_id);
+					sendVerificationEmail($mail, $email, $token, $fname);
 					$_SESSION["msg"] = "Account was succesfully created, Please Log In";
 					header("location: ".BASE."login");
 					exit();
@@ -642,26 +630,6 @@
 		}
 		return null;
 	}
-
-	function getUserData() {
-		global $conn;
-
-		$stmt = $conn->prepare("SELECT `first_name`, `last_name`, `profile_picture`, `address`, `contact_number` FROM `user_details` WHERE user_id = ?");
-		$stmt->bind_param("i", $user);
-		$stmt->execute();
-		$result = $stmt->get_result();
-
-		// Since there should only be one row, we can directly fetch the result
-		if ($result->num_rows === 1) {
-			// Fetch and return the associative array with the user details
-			return $result->fetch_assoc();
-		} 
-		else {
-			// If no user is found or more than 1 (shouldn't happen with unique user_id), return null
-			return null;
-		}
-	}
-
 	function updateUserData() {
 		global $conn;
 
@@ -752,7 +720,20 @@
 			exit();
 		}
 	}
+	function getStudentByTutor($tutor) {
+		global $conn;
 
+		try {
+			$stmt = $conn->prepare();
+		}
+		catch(Exception $e) {
+
+		}
+
+
+
+	}
+	function getStudentByCourse($course) {}
 
 
 	

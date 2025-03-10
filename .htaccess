@@ -39,7 +39,7 @@ RewriteRule ^dashboard$ pages/techkid/techkid_dashboard.php [L]
 
 # Redirect user to tutor pages if role=TechGuru
 RewriteCond %{HTTP_COOKIE} role=TECHGURU(;|$)
-RewriteRule ^dashboard$ pages/techguru/techguru_dashboard.php [L]
+RewriteRule ^dashboard$ pages/techguru/main_dashboard.php [L]
 
 # Redirect user to admin pages if role=Admin
 RewriteCond %{HTTP_COOKIE} role=ADMIN(;|$)
