@@ -3,39 +3,21 @@
     require_once ROOT_PATH . '/backends/main.php';
     
     // Get enrolled courses
-    $sql = "SELECT * FROM enrollments WHERE student_id = ? ORDER BY enrollment_date DESC";
-    $stmt = mysqli_prepare($conn, $sql);
-    mysqli_stmt_bind_param($stmt, "i", $_SESSION['user']);
-    mysqli_stmt_execute($stmt);
-    $enrollments = mysqli_stmt_get_result($stmt);
-    $enrolled_courses = mysqli_fetch_all($enrollments, MYSQLI_ASSOC);
+    $enrollments = [];
+    $enrolled_courses = [];
     
     // Get available courses
-    $sql = "SELECT * FROM course WHERE id NOT IN (SELECT course_id FROM enrollments WHERE student_id = ?) LIMIT 6";
-    $stmt = mysqli_prepare($conn, $sql);
-    mysqli_stmt_bind_param($stmt, "i", $_SESSION['user']);
-    mysqli_stmt_execute($stmt);
-    $available = mysqli_stmt_get_result($stmt);
-    $available_courses = mysqli_fetch_all($available, MYSQLI_ASSOC);
+    
+    $available = [];
+    $available_courses = [];
     
     // Get student stats
-    $sql = "SELECT points, badges FROM students WHERE id = ?";
-    $stmt = mysqli_prepare($conn, $sql);
-    mysqli_stmt_bind_param($stmt, "i", $_SESSION['user']);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    $stats = mysqli_fetch_assoc($result);
+
+    $result = null;
+    $stats = null;
     
-    // Get upcoming classes
-    $sql = "SELECT c.*, t.name as tutor_name FROM class c 
-            JOIN users t ON c.tutor_id = t.id 
-            WHERE c.student_id = ? AND c.date >= CURDATE() 
-            ORDER BY c.date, c.time LIMIT 5";
-    $stmt = mysqli_prepare($conn, $sql);
-    mysqli_stmt_bind_param($stmt, "i", $_SESSION['user']);
-    mysqli_stmt_execute($stmt);
-    $classes = mysqli_stmt_get_result($stmt);
-    $upcoming_classes = mysqli_fetch_all($classes, MYSQLI_ASSOC);
+    $classes = null;
+    $upcoming_classes = [];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -54,7 +36,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     
     <!-- Custom CSS -->
-    <link href="<?php echo ROOT_URL; ?>/assets/css/dashboard.css" rel="stylesheet">
+    <link href="<?php echo BASE; ?>/assets/css/dashboard.css" rel="stylesheet">
 </head>
 <body>
     <?php include ROOT_PATH . '/components/header.php'; ?>

@@ -1,5 +1,5 @@
 <?php 
-    require_once '../../backends/config.php';
+    require_once '../backends/config.php';
     require_once ROOT_PATH . '/backends/main.php';
 ?>
 <!DOCTYPE html>
@@ -7,7 +7,7 @@
 <head>
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title>TechTutor | All Users </title>
+    <title>TechTutor | </title>
     <meta name="description" content="">
     <meta name="keywords" content="">
 

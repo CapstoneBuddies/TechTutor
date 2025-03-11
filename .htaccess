@@ -26,16 +26,24 @@ RewriteRule ^(.*)/?user-login$ backends/route.php [L]
 RewriteRule ^(.*)/?user-register$ backends/route.php [L]
 RewriteRule ^(.*)/?user-logout$ backends/route.php [L]
 RewriteRule ^(.*)/?verify_code$ backends/route.php [L]
+RewriteRule ^(.*)/?resend-verification-code$ backends/route.php [L]
 RewriteRule ^(.*)/?user-profile-update$ backends/route.php [L,QSA]
 RewriteRule ^(.*)/?user-deactivate$ backends/route.php [L]
 RewriteRule ^(.*)/?user-change-password$ backends/route.php [L]
+RewriteRule ^(.*)/?admin-delete-user$ backends/route.php [L]
+RewriteRule ^(.*)/?admin-restrict-user$ backends/route.php [L]
+RewriteRule ^(.*)/?admin-activate-user$ backends/route.php [L]
+
+
+
+#Profile And its subheader handler
 RewriteRule ^dashboard/profile$ pages/profile.php [L]
 RewriteRule ^dashboard/settings$ pages/settings.php [L]
 
 
 # Redirect user to student pages if role=TechKids
 RewriteCond %{HTTP_COOKIE} role=TECHKID(;|$)
-RewriteRule ^dashboard$ pages/techkid/techkid_dashboard.php [L]
+RewriteRule ^dashboard$ pages/techkid/main_dashboard.php [L]
 
 # Redirect user to tutor pages if role=TechGuru
 RewriteCond %{HTTP_COOKIE} role=TECHGURU(;|$)
@@ -46,9 +54,7 @@ RewriteCond %{HTTP_COOKIE} role=ADMIN(;|$)
 RewriteRule ^dashboard$ pages/admin/main_dashboard.php [L]
 RewriteRule ^dashboard/TechKids$ pages/admin/main_view-techkids.php [L]
 RewriteRule ^dashboard/TechGurus$ pages/admin/main_view-techguru.php [L]
+RewriteRule ^dashboard/users$ pages/admin/main_view-users.php [L]
 RewriteRule ^dashboard/transactions$ pages/admin/main_view-transactions.php [L]
 RewriteRule ^dashboard/notifications$ pages/admin/main_view-notifications.php [L]
 RewriteRule ^dashboard/courses$ pages/admin/main_view-course.php [L]
-
-
-

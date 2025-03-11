@@ -65,12 +65,15 @@
 				$stmt->bind_param("sssss", $password, $email, $role,$fname, $lname);
 
 				if($stmt->execute()) {
-					$conn->commit();
 					$mail = getMailerInstance();
+
+					$user_id = $conn->insert_id; // Retrieve the last query user id
+
 					// Sending of verification
 					$token = generateVerificationToken($user_id);
 					sendVerificationEmail($mail, $email, $token, $fname);
 					$_SESSION["msg"] = "Account was succesfully created, Please Log In";
+					$conn->commit();
 					header("location: ".BASE."login");
 					exit();
 				}
@@ -112,10 +115,7 @@
 			$pass = mysqli_real_escape_string($conn, $_POST['password']);
 
 			// Check if email exists
-			$query = "SELECT u.*, ud.first_name, ud.last_name, ud.profile_picture, ud.address, ud.contact_number 
-					FROM users u 
-					LEFT JOIN user_details ud ON u.uid = ud.user_id 
-					WHERE u.email = ?";
+			$query = "SELECT * FROM users WHERE email = ?";
 			$stmt = $conn->prepare($query);
 			$stmt->bind_param("s", $email);
 			$stmt->execute();
@@ -131,6 +131,13 @@
 						$_SESSION['msg'] = "Your account is not verified. Please check your email for a verification link.";
 						$_SESSION['email'] = $email;
 						$_SESSION['user'] = $user['uid'];
+
+						// Sending of verification for login
+						$mail = getMailerInstance();
+						$token = generateVerificationCode($user['uid']);
+						sendVerificationCode($mail, $email, $token);
+
+
 						header("Location: verify");
 						exit();
 					}
@@ -148,7 +155,7 @@
 
 						$hashed_token = password_hash($token, PASSWORD_BCRYPT);
 
-						$stmt = $conn->prepare("INSERT INTO login_tokens (user_id, token, remember_expiration_date, type) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), 'remember_me')");
+						$stmt = $conn->prepare("INSERT INTO login_tokens (user_id, token, expiration_date, type) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), 'remember_me')");
 						$stmt->bind_param("is",$user['uid'], $hashed_token);
 						
 						if(!$stmt->execute()) {
@@ -166,7 +173,7 @@
 					$_SESSION['address'] = $user['address'];
 					$_SESSION['phone'] = $user['contact_number'];
 					$_SESSION['profile'] = USER_IMG . ($user['profile_picture'] ?? 'default.jpg');
-					
+
 					if(empty($user['role'])) {
 						header("Location: user-logout");
 						exit();
@@ -272,7 +279,7 @@
         // Handle profile picture removal via POST parameter
         if (isset($_POST['removeProfilePicture']) && $_POST['removeProfilePicture'] === 'true') {
             // Get current profile picture
-            $stmt = $conn->prepare("SELECT profile_picture FROM user_details WHERE user_id = ?");
+            $stmt = $conn->prepare("SELECT profile_picture FROM users WHERE uid = ?");
             $stmt->bind_param("i", $userId);
             $stmt->execute();
             $result = $stmt->get_result();
@@ -288,7 +295,7 @@
                 
                 // Reset to default picture in database
                 $defaultPic = 'default.jpg';
-                $stmt = $conn->prepare("UPDATE user_details SET profile_picture = ? WHERE user_id = ?");
+                $stmt = $conn->prepare("UPDATE users SET profile_picture = ? WHERE uid = ?");
                 $stmt->bind_param("si", $defaultPic, $userId);
                 if (!$stmt->execute()) {
                     error_log("Failed to reset profile picture in database: " . $stmt->error);
@@ -298,7 +305,7 @@
                 }
                 $stmt->close();
                 
-                $_SESSION['profile'] = BASE . 'assets/img/users/default.jpg';
+                $_SESSION['profile'] = USER_IMG.'default.jpg';
                 $response['success'] = true;
                 $response['message'] = 'Profile picture removed successfully';
                 echo json_encode($response);
@@ -366,7 +373,7 @@
             // Move uploaded file
             if (move_uploaded_file($fileTmp, $uploadPath)) {
                 // Update profile picture in database
-                $stmt = $conn->prepare("UPDATE user_details SET profile_picture = ? WHERE user_id = ?");
+                $stmt = $conn->prepare("UPDATE users SET profile_picture = ? WHERE uid = ?");
                 $stmt->bind_param("si", $newFileName, $userId);
                 if (!$stmt->execute()) {
                     error_log("Failed to update profile picture in database: " . $stmt->error);
@@ -376,7 +383,7 @@
                 }
                 $stmt->close();
                 
-                $_SESSION['profile'] = BASE . 'assets/img/users/' . $newFileName;
+                $_SESSION['profile'] = USER_IMG . $newFileName;
             } else {
                 log_error("Failed to move uploaded file from $fileTmp to $uploadPath", 'database_error.log');
                 $response['message'] = 'Failed to upload profile picture';
@@ -431,7 +438,7 @@
         }
 
         // Update user details
-        $query = "UPDATE user_details SET first_name = ?, last_name = ?, address = ?, contact_number = ? WHERE user_id = ?";
+        $query = "UPDATE users SET first_name = ?, last_name = ?, address = ?, contact_number = ? WHERE uid = ?";
         $stmt = $conn->prepare($query);
         $stmt->bind_param("ssssi", $firstName, $lastName, $address, $phone, $userId);
 
@@ -572,23 +579,7 @@
 	    // Calculate the offset
 	    $offset = ($page - 1) * $limit;
 
-	    $stmt = $conn->prepare("SELECT 
-			    `u`.`uid`, `ud`.*, `u`.`email`, `co`.`course_name` AS `course`, CONCAT(`cl`.`start_date`, ' = ', `cl`.`end_date`) AS `schedule`, `cl`.`tutor_id` AS guru, `u`.`status`,`u`.`last_login`
-			FROM 
-			    `users` `u`
-			INNER JOIN
-			    `user_details` `ud` ON `u`.`uid` = `ud`.`user_id`
-			LEFT JOIN 
-			    `class_assignment` `ca` ON `u`.`uid` = `ca`.`student_id`
-			LEFT JOIN 
-			    `class` `cl` ON `ca`.`class_id` = `cl`.`class_id` OR `u`.`uid` = `cl`.`tutor_id`
-			LEFT JOIN 
-			    `subject` `sub` ON `cl`.`subject_id` = `sub`.`subject_id`
-			LEFT JOIN 
-			    `course` `co` ON `sub`.`course_id` = `co`.`course_id`
-			WHERE 
-			    `u`.`role` = ?
-	        LIMIT ? OFFSET ?");
+	    $stmt = $conn->prepare("SELECT `u`.*, `s`.`subject_name` AS 'subject', (SELECT COUNT(*) FROM `class_schedule` cs WHERE cs.`user_id` = `u`.`uid` AND cs.`role` = 'STUDENT') AS 'enrolled-classes', (SELECT COUNT(*) FROM `class_schedule` cs2 WHERE cs2.`class_id` = cs.`class_id` AND cs2.`role` = 'STUDENT') AS 'enrolled-students' FROM `users` `u` LEFT JOIN `class_schedule` cs ON `u`.`uid` = cs.`user_id` LEFT JOIN `class` c ON cs.`class_id` = c.`class_id` LEFT JOIN `subject` s ON c.`subject_id` = s.`subject_id` WHERE `u`.`role` = ? AND `u`.`status` in (0,1) LIMIT ? OFFSET ?");
 
 	    $stmt->bind_param("sii", $role, $limit, $offset);
 	    $stmt->execute();
@@ -596,9 +587,8 @@
 
 	    if ($result->num_rows > 0) {
 	        return $result->fetch_all(MYSQLI_ASSOC);
-	    } else {
-	        return [];
-	    }
+	    } 
+	    return [];
 	}//End of getUsersByRole table
 	function getItemCountByTable($table,$role = null) {
 		$valid_tables = ['users', 'course', 'transactions'];
@@ -699,7 +689,7 @@
 				$contact_num = $_POST['contact-number'];
 				$filename = ""; //get filename from input type="file"
 
-				$stmt = $conn->prepare("UPDATE user_details SET `first_name` = ?, `last_name` = ?, `address` = ?, `contact_number` = ?, `profile_picture` = ? WHERE user_id = ?");
+				$stmt = $conn->prepare("UPDATE users SET `first_name` = ?, `last_name` = ?, `address` = ?, `contact_number` = ?, `profile_picture` = ? WHERE uid = ?");
 				$stmt->bind_param("sssssi",$fname, $lname, $address, $contact_num, $filename, $user);
 				if (!$stmt->execute()) {
 					throw new Exception("Error processing profile information update");
@@ -723,11 +713,14 @@
 	function getStudentByTutor($tutor) {
 		global $conn;
 
+		$stmt = $conn->prepare("SELECT u.first_name, u.last_name, u.profile_picture, u.email, u.status FROM users u JOIN class_schedule cs ON u.uid = cs.user_id JOIN class c ON cs.class_id = c.class_id WHERE cs.role = 'STUDENT' AND c.tutor_id = ?");
+		$stmt->bind_param("i",$tutor);
+
 		try {
-			$stmt = $conn->prepare();
+			$stmt = $conn->prepare("");
 		}
 		catch(Exception $e) {
-
+			log_error($e->getMessage(),'database_error.log');
 		}
 
 
@@ -741,7 +734,7 @@
 	function rememberTokenVerifier($hashed_token) {
 		global $conn;
 		try {
-			$stmt = $conn->prepare("SELECT token_id, token FROM login_tokens WHERE type = 'remember_me' AND remember_expiration_date > NOW()");
+			$stmt = $conn->prepare("SELECT token_id, token FROM login_tokens WHERE type = 'remember_me' AND expiration_date > NOW()");
 		    $stmt->execute();
 		    $result = $stmt->get_result();
 
@@ -764,7 +757,7 @@
 	    $expires_at = date("Y-m-d H:i:s", strtotime("+1 hour")); // Token expires in 1 hour
 
 	    // Insert the verification token
-	    $stmt = $conn->prepare("INSERT INTO login_tokens (user_id, type, token, verification_expiration_date) VALUES (?, 'email_verification', ?, ?)");
+	    $stmt = $conn->prepare("INSERT INTO login_tokens (user_id, type, token, expiration_date) VALUES (?, 'email_verification', ?, ?)");
 	    $stmt->bind_param("iss", $user_id, $hashed_token, $expires_at);
 	    if (!$stmt->execute()) {
 	        log_error($stmt->error, 'database_error.log');
@@ -779,12 +772,12 @@
 	    $expiresAt = date('Y-m-d H:i:s', strtotime('+3 minutes')); // Expires in 10 minutes
 
 		// Save the code and expiration in the database
-	    $stmt = $conn->prepare("UPDATE login_tokens SET verification_code = ?, verification_expiration_date	= ? WHERE user_id = ?");
+	    $stmt = $conn->prepare("UPDATE login_tokens SET verification_code = ?, expiration_date	= ? WHERE user_id = ?");
 	    $stmt->bind_param("ssi", $code, $expiresAt, $userId);
 	    if (!$stmt->execute()) {
 	        log_error($stmt->error, 'database_error.log');
-	        $stmt = $conn->prepare("INSERT INTO login_tokens(verification_code, verification_expiration_date, user_id) VALUES(?,?,?)");
-	    	$stmt->bind_param("ssi", $code, $expiresAt, $userId);
+	        $stmt = $conn->prepare("INSERT INTO login_tokens(verification_code, expiration_date, user_id, type) VALUES(?,?,?)");
+	    	$stmt->bind_param("ssis", $code, $expiresAt, $userId, 'email_verification');
     		if (!$stmt->execute()) {
 	        	log_error($stmt->error, 'database_error.log');
 	        	$_SESSION['msg'] = "An error occured during verifcation. Please contact the System Administrator";
@@ -798,7 +791,7 @@
 
 	function checkVCodeStatus($user_id) {
 		global $conn;
-		$stmt = $conn->prepare("SELECT verification_code FROM login_tokens WHERE user_id = ? AND type = 'email_verification' AND verification_expiration_date > NOW()");
+		$stmt = $conn->prepare("SELECT verification_code FROM login_tokens WHERE user_id = ? AND type = 'email_verification' AND expiration_date > NOW()");
 	    $stmt->bind_param("i", $user_id);
 	    $stmt->execute();
 	    $result = $stmt->get_result();
@@ -810,7 +803,7 @@
 		global $conn;
 
 		try {
-			$stmt = $conn->prepare("SELECT user_id, token FROM login_tokens WHERE type = 'email_verification' AND verification_expiration_date > NOW()");
+			$stmt = $conn->prepare("SELECT user_id, token FROM login_tokens WHERE type = 'email_verification' AND expiration_date > NOW()");
 			$stmt->execute();
 			$result = $stmt->get_result();
 
@@ -841,40 +834,190 @@
 		}
 	}
 	function verifyCode() {
-		global $conn;
-		if(isset($_POST['code']) && is_array($_POST['code'])) {
-			$verification_code = implode('', $_POST['code']);
-			if (strlen($verification_code) === 6 && ctype_digit($verification_code)) { 
-				$stmt = $conn->prepare("SELECT user_id FROM login_tokens WHERE verification_code = ? AND type = 'email_verification' AND verification_expiration_date > NOW()");
-				$stmt->bind_param("s", $verification_code);
-	    		$stmt->execute();
-	    		$result = $stmt->get_result();
-	    		if ($result->num_rows > 0) { 
-	    			$user = $result->fetch_assoc();
-	                $user_id = $user['user_id'];
+    global $conn;
+    try {
+        if (isset($_POST['code']) && is_array($_POST['code'])) {
+            $verification_code = implode('', $_POST['code']);
+            if (strlen($verification_code) === 6 && ctype_digit($verification_code)) {
+                // First SELECT query to check verification code
+                $stmt = $conn->prepare("SELECT user_id FROM login_tokens WHERE verification_code = ? AND type = 'email_verification' AND expiration_date > NOW()");
+                $stmt->bind_param("s", $verification_code);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                
+                if ($result->num_rows > 0) {
+                    $user = $result->fetch_assoc();
+                    $user_id = $user['user_id'];
 
-	                // Update user's verification status
-	                $update_stmt = $conn->prepare("UPDATE users SET is_verified = 1 WHERE uid = ?");
-	                $update_stmt->bind_param("i", $user_id);
-	                $update_stmt->execute();
+                    // Update user's verification status
+                    $update_stmt = $conn->prepare("UPDATE users SET is_verified = 1 WHERE uid = ?");
+                    $update_stmt->bind_param("i", $user_id);
+                    $update_stmt->execute();
 
+                    // Retrieve User Information
+                    $stmt = $conn->prepare("SELECT * FROM users WHERE uid = ?");
+                    $stmt->bind_param("i", $user_id);
+                    $stmt->execute();
+                    $user_result = $stmt->get_result();
 
-					// Set session and cookie information
-					$_SESSION['name'] = $user['first_name'].' '.$user['last_name'];
-					$_SESSION['first-name'] = $user['first_name'];
-					$_SESSION['profile'] = USER_IMG.$user['profile_picture'];
-					$_SESSION['email'] = $user['email'];
-					$_SESSION['role'] = $user['role'];  
-					setcookie('role', $user['role'], time() + (3 * 60 * 60), "/", "", true, true);
+                    if ($user_result->num_rows > 0) {
+                        $user = $user_result->fetch_assoc();
 
-	                $_SESSION['msg'] = "Account Verification has been successful!";
-	                header("location: dashboard");
-	                exit();
-	    		}
-			}
-		}
-		$_SESSION['msg'] = "Invalid Verification code!";
+                        // Remove all verification tokens for user
+                        $del_stmt = $conn->prepare("DELETE FROM login_tokens WHERE user_id = ?");
+                        $del_stmt->bind_param("i", $user_id);
+                        $del_stmt->execute();
+
+                        // Set session and cookie information
+                        $_SESSION['name'] = $user['first_name'] . ' ' . $user['last_name'];
+                        $_SESSION['first-name'] = $user['first_name'];
+                        $_SESSION['profile'] = USER_IMG . $user['profile_picture'];
+                        $_SESSION['email'] = $user['email'];
+                        $_SESSION['role'] = $user['role'];
+                        setcookie('role', $user['role'], time() + (3 * 60 * 60), "/", "", true, true);
+
+                        $_SESSION['msg'] = "Account Verification has been successful!";
+                        header("location: dashboard");
+                        exit();
+                    }
+                }
+
+                // Invalid verification code
+                $_SESSION['msg'] = "Invalid Verification code!";
+                header("location: verify");
+                exit();
+            }
+        }
+    } catch (Exception $e) {
+        // Log error and show a generic message
+        log_error($e->getMessage(), 'error.log');
+        $_SESSION['msg'] = "Unexpected Error Occurred";
         header("location: verify");
         exit();
-	}
+    }
+}
+
+/**
+ * Insert a new notification into the database
+ */
+function insertNotification($recipient_id, $recipient_role, $message, $link, $class_id, $icon, $icon_color) {
+    global $conn;
+    
+    $query = "INSERT INTO notifications (recipient_id, recipient_role, message, link, class_id, icon, icon_color) 
+             VALUES (?, ?, ?, ?, ?, ?, ?)";
+             
+    try {
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("isssis", 
+            $recipient_id, 
+            $recipient_role,
+            $message,
+            $link,
+            $class_id,
+            $icon,
+            $icon_color
+        );
+        
+        $success = $stmt->execute();
+        $stmt->close();
+        
+        return $success;
+    } catch (Exception $e) {
+        error_log("Error inserting notification: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Update read status for notifications based on user role
+ */
+function updateNotificationsReadStatus($user_id, $role) {
+    global $conn;
+    
+    try {
+        if ($role == 'ADMIN') {
+            // Admins can mark all notifications as read
+            $query = "UPDATE notifications SET is_read = 1";
+            $stmt = $conn->prepare($query);
+        } elseif ($role == 'TECHGURU') {
+            // TechGurus can mark their own and their class notifications as read
+            $query = "UPDATE notifications SET is_read = 1 
+                     WHERE recipient_id = ? 
+                     OR class_id IN (SELECT class_id FROM clas WHERE techguru_id = ?)
+                     OR recipient_role = 'ALL'";
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param("ii", $user_id, $user_id);
+        } else {
+            // TechKids can mark their own and enrolled class notifications as read
+            $query = "UPDATE notifications SET is_read = 1 
+                     WHERE recipient_id = ? 
+                     OR class_id IN (SELECT class_id FROM enrollments WHERE student_id = ?)
+                     OR recipient_role = 'ALL'";
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param("ii", $user_id, $user_id);
+        }
+        
+        $success = $stmt->execute();
+        $stmt->close();
+        
+        return $success;
+    } catch (Exception $e) {
+        error_log("Error updating notification read status: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Fetch notifications for a user based on their role
+ */
+function fetchUserNotifications($user_id, $role) {
+    global $conn;
+    
+    try {
+        if ($role == 'ADMIN') {
+            // Admins can see all notifications
+            $query = "SELECT n.*, CONCAT(u.first_name+' '+u.last_name) as recipient_name, c.class_name 
+                     FROM notifications n 
+                     LEFT JOIN users u ON n.recipient_id = u.uid 
+                     LEFT JOIN class c ON n.class_id = c.class_id 
+                     ORDER BY n.created_at DESC";
+            $stmt = $conn->prepare($query);
+        } elseif ($role == 'TECHGURU') {
+            // TechGurus see their own and their class notifications
+            $query = "SELECT n.*, CONCAT(u.first_name+' '+u.last_name) as recipient_name, c.class_name 
+                     FROM notifications n 
+                     LEFT JOIN users u ON n.recipient_id = u.uid 
+                     LEFT JOIN class c ON n.class_id = c.class_id 
+                     WHERE n.recipient_id = ? 
+                     OR n.class_id IN (SELECT class_id FROM class WHERE techguru_id = ?) 
+                     OR n.recipient_role = 'ALL' 
+                     ORDER BY n.created_at DESC";
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param("ii", $user_id, $user_id);
+        } else {
+            // TechKids see their own and enrolled class notifications
+            $query = "SELECT n.*, CONCAT(u.first_name+' '+u.last_name) as recipient_name, c.class_name 
+                     FROM notifications n 
+                     LEFT JOIN users u ON n.recipient_id = u.uid 
+                     LEFT JOIN class c ON n.class_id = c.class_id 
+                     WHERE n.recipient_id = ? 
+                     OR n.class_id IN (SELECT class_id FROM enrollments WHERE student_id = ?) 
+                     OR n.recipient_role = 'ALL' 
+                     ORDER BY n.created_at DESC";
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param("ii", $user_id, $user_id);
+        }
+        
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $notifications = $result->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        
+        return $notifications;
+    } catch (Exception $e) {
+        error_log("Error fetching notifications: " . $e->getMessage());
+        return [];
+    }
+}
+
 ?>

@@ -1,7 +1,6 @@
 <?php 
     require_once '../backends/config.php';
     require_once '../backends/main.php';
-    verify();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -28,6 +27,32 @@
 
   <!-- Main CSS File -->
   <link href="<?php echo BASE; ?>assets/css/verify.css" rel="stylesheet">
+  <style>
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.8);
+      z-index: 9999;
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+    .loading-spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #FF6B00;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 </head>
 
 <body>
@@ -74,9 +99,19 @@
       </div>
     </div>
   </div>
+  <div class='loading-overlay'>
+    <div class='loading-spinner'></div>
+  </div>
 
   <!-- Vendor JS Files -->
   <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+  
+  <?php if(isset($_SESSION['msg'])): ?>
+  <script>
+    alert('<?php echo $_SESSION['msg']; ?>');
+    <?php unset($_SESSION['msg']); ?>
+  </script>
+  <?php endif; ?>
   
   <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -162,6 +197,11 @@
           }, 300);
         }
       }
+
+      // Setup resend button click handler
+      resendBtn.addEventListener('click', function() {
+        window.location.href = '<?php echo BASE; ?>resend-verification-code';
+      });
       
       // Check if there's a stored end time
       let endTime = localStorage.getItem('verificationEndTime');
@@ -172,6 +212,13 @@
         const now = Math.floor(Date.now() / 1000);
         endTime = parseInt(endTime);
         timeLeft = Math.max(0, endTime - now);
+        
+        // If time has already elapsed, enable the resend button immediately
+        if (timeLeft <= 0) {
+          resendBtn.disabled = false;
+          countdownEl.textContent = '0:00';
+          return; // Exit early as no timer is needed
+        }
       } else {
         // Set new end time (3 minutes from now)
         timeLeft = 3 * 60;
@@ -190,25 +237,20 @@
           clearInterval(countdownTimer);
           countdownEl.textContent = '0:00';
           resendBtn.disabled = false;
+          localStorage.removeItem('verificationEndTime'); // Clear the stored time
         } else {
           timeLeft--;
-          resendBtn.disabled = true;
         }
       }
       
       // Initial call and start interval
       updateCountdown();
       const countdownTimer = setInterval(updateCountdown, 1000);
-      
-      // Resend button
-      resendBtn.addEventListener('click', function() {
-        if (!resendBtn.disabled) {
-          // Clear the stored end time
-          localStorage.removeItem('verificationEndTime');
-          // Redirect to resend verification code
-          window.location.href = '<?php echo BASE; ?>verify';
-        }
-      });
+    });
+  </script>
+  <script>
+    document.querySelector('form').addEventListener('submit', function(e) {
+      document.querySelector('.loading-overlay').style.display = 'flex';
     });
   </script>
 </body>

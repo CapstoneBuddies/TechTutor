@@ -3,7 +3,7 @@
 include "db.php"; 
 
 // SQL query to delete expired remember_me tokens
-$sql = "DELETE FROM login_tokens WHERE remember_expiration_date < NOW()";
+$sql = "DELETE FROM login_tokens WHERE expiration_date < NOW()";
 
 if ($conn->query($sql) === TRUE) {
     echo "Expired tokens removed successfully.";
@@ -12,7 +12,7 @@ if ($conn->query($sql) === TRUE) {
 }
 
 // SQL query to delete expired remember_me tokens
-$sql = "DELETE FROM login_tokens WHERE verification_expiration_date < NOW()";
+$sql = "DELETE FROM login_tokens WHERE expiration_date < NOW()";
 
 if ($conn->query($sql) === TRUE) {
     echo "Expired tokens removed successfully.";

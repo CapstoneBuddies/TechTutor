@@ -90,6 +90,11 @@
             color: #c62828;
         }
 
+        .status-deleted {
+            background-color: #263238;
+            color: #ffffff;
+        }
+
         .table-container {
             overflow-x: auto;
         }
@@ -178,15 +183,37 @@
                                             </div>
                                         </td>
                                         <td>
-                                            <span class="status-badge <?php echo getStatusBadgeClass($user['status']); ?>">
-                                                <?php echo normalizeStatus($user['status']); ?>
+                                            <span class="status-badge <?php 
+                                                if ($user['status'] == 1) {
+                                                    echo 'status-active';
+                                                } elseif ($user['status'] == 0) {
+                                                    echo 'status-inactive';
+                                                } else {
+                                                    echo 'status-deleted';
+                                                }
+                                            ?>">
+                                                <?php 
+                                                    if ($user['status'] == 1) {
+                                                        echo 'Active';
+                                                    } elseif ($user['status'] == 0) {
+                                                        echo 'Inactive';
+                                                    } else {
+                                                        echo 'Deleted';
+                                                    }
+                                                ?>
                                             </span>
                                         </td>
                                         <td>
                                             <div class="action-buttons">
                                                 <button class="btn btn-sm btn-outline-primary">View</button>
-                                                <button class="btn btn-sm btn-outline-warning" onclick="restrictAccount(<?php echo $user['uid']; ?>)">Restrict</button>
-                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteAccountConfirm(<?php echo $user['uid']; ?>, '<?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?>')">Delete</button>
+                                                <?php if ($user['status'] == 1): ?>
+                                                    <button class="btn btn-sm btn-outline-warning" onclick="showRestrictModal(<?php echo $user['uid']; ?>)">Restrict</button>
+                                                <?php elseif ($user['status'] == 0): ?>
+                                                    <button class="btn btn-sm btn-outline-success" onclick="showRestrictModal(<?php echo $user['uid']; ?>)">Activate</button>
+                                                <?php endif; ?>
+                                                <?php if ($user['status'] != 2): ?>
+                                                    <button class="btn btn-sm btn-outline-danger" onclick="showDeleteModal(<?php echo $user['uid']; ?>)">Delete</button>
+                                                <?php endif; ?>
                                             </div>
                                         </td>
                                     </tr>
@@ -250,169 +277,194 @@
         </div>
     </div>
 
+    <!-- Action Modals -->
+    <div class="modal fade" id="restrictModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="restrictModalTitle">Restrict TechKid Account</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="restrictModalBody">
+                    Are you sure you want to restrict this TechKid's account? They will no longer be able to access the platform.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" id="confirmRestrict">Restrict Account</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete TechKid Account</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to delete this TechKid's account? This action cannot be undone.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDelete">Delete Account</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Vendor JS Files -->
     <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/aos/aos.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/glightbox/js/glightbox.min.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.js"></script>
-    <script src="<?php echo BASE; ?>assets/vendor/isotope-layout/isotope.pkgd.min.js"></script>
-    <script src="<?php echo BASE; ?>assets/vendor/php-email-form/validate.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-    <!-- Main JS File -->
-    <script src="<?php echo BASE; ?>assets/js/main.js"></script>
-
+    
+    <!-- Commenting out main.js temporarily to isolate issues -->
+    <!-- <script src="<?php echo BASE; ?>assets/js/main.js"></script> -->
+    
     <script>
-        // Search functionality
-        document.getElementById('searchInput').addEventListener('input', function() {
-            const searchValue = this.value.toLowerCase();
-            const tableRows = document.querySelectorAll('.table tbody tr');
+        // Make functions available globally
+        let selectedUserId = null;
+        let selectedAction = null;
+        
+        function showRestrictModal(userId) {
+            selectedUserId = userId;
             
-            tableRows.forEach(row => {
-                const name = row.querySelector('td:nth-child(1)').textContent.toLowerCase();
-                const email = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
-                const course = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
-                
-                if (name.includes(searchValue) || email.includes(searchValue) || course.includes(searchValue)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        });
-
-        // Sidebar toggle
-        document.querySelector('.mobile-nav-toggle').addEventListener('click', function() {
-            document.querySelector('body').classList.toggle('sidebar-open');
-        });
-
-        // Delete account confirmation
-        function deleteAccountConfirm(userId, userName) {
-            document.getElementById('deleteUserId').value = userId;
-            document.getElementById('deleteUserName').textContent = userName;
+            // Find the user's current status to determine if we're restricting or activating
+            const userRow = document.querySelector(`tr[data-user-id="${userId}"]`);
+            const statusBadge = userRow ? userRow.querySelector('.status-badge') : null;
+            const isActive = statusBadge && statusBadge.classList.contains('status-active');
             
-            const deleteModal = new bootstrap.Modal(document.getElementById('deleteAccountModal'));
-            deleteModal.show();
-        }
-
-        // Delete account
-        function deleteAccount() {
-            const userId = document.getElementById('deleteUserId').value;
-            const deleteButton = document.querySelector('#deleteAccountModal .btn-danger');
-            
-            // Show loading state
-            deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
-            deleteButton.disabled = true;
-            
-            // Send AJAX request
-            $.ajax({
-                url: '<?php echo BASE; ?>admin-delete-user',
-                type: 'POST',
-                data: { user_id: userId },
-                dataType: 'json',
-                success: function(response) {
-                    if (response.status === 'success') {
-                        showAlert('success', 'Account deleted successfully');
-                        setTimeout(function() {
-                            window.location.reload();
-                        }, 1000);
-                    } else {
-                        showAlert('error', response.message || 'Failed to delete account');
-                        deleteButton.innerHTML = 'Delete Account';
-                        deleteButton.disabled = false;
-                    }
-                    
-                    const deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteAccountModal'));
-                    deleteModal.hide();
-                },
-                error: function(xhr) {
-                    showAlert('error', 'Connection error. Please try again.');
-                    deleteButton.innerHTML = 'Delete Account';
-                    deleteButton.disabled = false;
-                }
-            });
-        }
-
-        // Restrict account
-        function restrictAccount(userId) {
-            document.getElementById('restrictUserId').value = userId;
-            
-            const restrictModal = new bootstrap.Modal(document.getElementById('restrictAccountModal'));
-            restrictModal.show();
-        }
-
-        // Confirm restrict account
-        function restrictAccountConfirmed() {
-            const userId = document.getElementById('restrictUserId').value;
-            const restrictButton = document.querySelector('#restrictAccountModal .btn-warning');
-            
-            // Show loading state
-            restrictButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
-            restrictButton.disabled = true;
-            
-            // Send AJAX request
-            $.ajax({
-                url: '<?php echo BASE; ?>admin-restrict-user',
-                type: 'POST',
-                data: { user_id: userId },
-                dataType: 'json',
-                success: function(response) {
-                    if (response.status === 'success') {
-                        showAlert('success', 'Account restricted successfully');
-                        setTimeout(function() {
-                            window.location.reload();
-                        }, 1000);
-                    } else {
-                        showAlert('error', response.message || 'Failed to restrict account');
-                        restrictButton.innerHTML = 'Restrict Account';
-                        restrictButton.disabled = false;
-                    }
-                    
-                    const restrictModal = bootstrap.Modal.getInstance(document.getElementById('restrictAccountModal'));
-                    restrictModal.hide();
-                },
-                error: function(xhr) {
-                    showAlert('error', 'Connection error. Please try again.');
-                    restrictButton.innerHTML = 'Restrict Account';
-                    restrictButton.disabled = false;
-                }
-            });
-        }
-
-        function showAlert(type, message) {
-            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
-            const icon = type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill';
-            
-            const alertHtml = `
-                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
-                    <i class="bi ${icon} me-2"></i>
-                    ${message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            `;
-            
-            // Create a container for alerts if it doesn't exist
-            let alertContainer = document.querySelector('.alert-container');
-            if (!alertContainer) {
-                alertContainer = document.createElement('div');
-                alertContainer.className = 'alert-container position-fixed top-0 end-0 p-3';
-                alertContainer.style.zIndex = '1050';
-                document.body.appendChild(alertContainer);
+            // Set the appropriate modal content based on the action
+            if (isActive) {
+                selectedAction = 'restrict';
+                document.getElementById('restrictModalTitle').textContent = 'Restrict TechKid Account';
+                document.getElementById('restrictModalBody').textContent = 'Are you sure you want to restrict this TechKid\'s account? They will no longer be able to access the platform.';
+                document.getElementById('confirmRestrict').textContent = 'Restrict Account';
+                document.getElementById('confirmRestrict').className = 'btn btn-warning';
+            } else {
+                selectedAction = 'activate';
+                document.getElementById('restrictModalTitle').textContent = 'Activate TechKid Account';
+                document.getElementById('restrictModalBody').textContent = 'Are you sure you want to activate this TechKid\'s account? They will regain access to the platform.';
+                document.getElementById('confirmRestrict').textContent = 'Activate Account';
+                document.getElementById('confirmRestrict').className = 'btn btn-success';
             }
             
-            // Add the alert to the container
-            const alertElement = document.createElement('div');
-            alertElement.innerHTML = alertHtml;
-            alertContainer.appendChild(alertElement.firstChild);
-            
-            // Auto-remove the alert after 5 seconds
-            setTimeout(function() {
-                const alerts = document.querySelectorAll('.alert');
-                if (alerts.length > 0) {
-                    alerts[0].remove();
-                }
-            }, 5000);
+            const modal = new bootstrap.Modal(document.getElementById('restrictModal'));
+            modal.show();
         }
+
+        function showDeleteModal(userId) {
+            selectedUserId = userId;
+            const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            modal.show();
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add data-user-id attribute to each user row for easier reference
+            document.querySelectorAll('.table tbody tr').forEach(row => {
+                try {
+                    // Get the user ID from the row's first action button with an onclick attribute
+                    const actionButtons = row.querySelectorAll('.action-buttons button[onclick]');
+                    if (actionButtons.length > 0) {
+                        const onclickAttr = actionButtons[0].getAttribute('onclick');
+                        const match = onclickAttr.match(/\d+/);
+                        if (match) {
+                            row.setAttribute('data-user-id', match[0]);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error setting data-user-id attribute:', error);
+                }
+            });
+            
+            // Search functionality
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    const searchValue = this.value.toLowerCase();
+                    const tableRows = document.querySelectorAll('.table tbody tr');
+                    tableRows.forEach(row => {
+                        const name = row.querySelector('td:nth-child(1)').textContent.toLowerCase();
+                        const email = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                        const subject = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+                        if (name.includes(searchValue) || email.includes(searchValue) || subject.includes(searchValue)) {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+                });
+            }
+
+            // Sidebar toggle functionality
+            const toggleSidebar = document.querySelector('.toggle-sidebar');
+            if (toggleSidebar) {
+                toggleSidebar.addEventListener('click', function() {
+                    document.querySelector('body').classList.toggle('sidebar-open');
+                });
+            }
+
+            // Add event listeners for modal buttons
+            const confirmRestrict = document.getElementById('confirmRestrict');
+            if (confirmRestrict) {
+                confirmRestrict.addEventListener('click', function() {
+                    if (!selectedUserId) return;
+                    
+                    // Determine the endpoint based on the action
+                    const endpoint = selectedAction === 'activate' 
+                        ? '<?php echo BASE; ?>admin-activate-user' 
+                        : '<?php echo BASE; ?>admin-restrict-user';
+                    
+                    fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: 'userId=' + selectedUserId
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            location.reload(); // Refresh to show updated status
+                        } else {
+                            alert(data.message || 'Failed to update account status');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while updating the account status');
+                    });
+                });
+            }
+
+            const confirmDelete = document.getElementById('confirmDelete');
+            if (confirmDelete) {
+                confirmDelete.addEventListener('click', function() {
+                    if (!selectedUserId) return;
+                    fetch('<?php echo BASE; ?>admin-delete-user', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: 'userId=' + selectedUserId
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            location.reload(); // Refresh to show updated list
+                        } else {
+                            alert(data.message || 'Failed to delete account');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while deleting the account');
+                    });
+                });
+            }
+        });
     </script>
 </body>
 </html>

@@ -84,7 +84,7 @@
           <select class="form-control" id="role" name="role" required>
             <option value="" selected disabled>Select your role</option>
             <option value="TECHGURU">TechGuru</option>
-            <option value="TECHKIDS">TechKids</option>
+            <option value="TECHKID">TechKids</option>
           </select>
           <div class="error-message">Please select a role</div>
         </div>

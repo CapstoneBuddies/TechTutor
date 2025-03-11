@@ -14,7 +14,7 @@
     $total_pages = ceil($studentCount / $items_per_page);
 
     // Get paginated students
-    $sql = "SELECT * FROM users INNER JOIN user_details ON users.uid = user_details.user_id ORDER BY uid DESC LIMIT ? OFFSET ?";
+    $sql = "SELECT * FROM users ORDER BY uid DESC LIMIT ? OFFSET ?";
     $stmt = mysqli_prepare($conn, $sql);
     mysqli_stmt_bind_param($stmt, "ii", $items_per_page, $offset);
     mysqli_stmt_execute($stmt);

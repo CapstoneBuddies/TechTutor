@@ -102,33 +102,13 @@ body {
 /* Top Bar */
 .top-bar {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
     padding: 15px 30px;
     background: #fff;
     border-radius: 12px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
     margin-bottom: 30px;
-}
-
-.search-bar {
-    display: flex;
-    align-items: center;
-    background: #f5f5f5;
-    border-radius: 8px;
-    padding: 8px 15px;
-}
-
-.search-bar i {
-    color: #666;
-    margin-right: 10px;
-}
-
-.search-bar input {
-    border: none;
-    background: none;
-    outline: none;
-    width: 200px;
 }
 
 .top-bar-right {
@@ -141,6 +121,11 @@ body {
     position: relative;
     color: #333;
     font-size: 20px;
+    text-decoration: none;
+}
+
+.notification-icon:hover {
+    color: var(--primary-color);
 }
 
 .notification-badge {
@@ -158,12 +143,169 @@ body {
     justify-content: center;
 }
 
+.profile-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 25px;
+    transition: background-color 0.3s;
+}
+
+.profile-toggle:hover {
+    background-color: #f5f5f5;
+}
+
 .profile-img {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    cursor: pointer;
     object-fit: cover;
+}
+
+.chevron-icon {
+    transition: transform 0.3s ease;
+}
+
+.show .chevron-icon {
+    transform: rotate(180deg);
+}
+
+.dropdown-menu {
+    margin-top: 10px;
+    border: none;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+.dropdown-item {
+    padding: 8px 20px;
+    color: #333;
+    transition: all 0.3s;
+}
+
+.dropdown-item:hover {
+    background-color: #f0f7ff;
+    color: var(--primary-color);
+}
+
+.dropdown-divider {
+    margin: 8px 0;
+    border-color: #eee;
+}
+
+/* Notifications */
+.notification-dropdown {
+    width: 300px;
+    padding: 0;
+    max-height: 400px;
+    overflow-y: auto;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.notification-dropdown .dropdown-header {
+    padding: 12px 15px;
+    font-weight: 600;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #eee;
+    color: #333;
+}
+
+.notification-list {
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+.notification-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 12px 15px !important;
+    border-bottom: 1px solid #f5f5f5;
+    gap: 12px;
+    transition: background-color 0.2s ease;
+}
+
+.notification-item:hover {
+    background-color: #f8f9fa;
+}
+
+.notification-item.unread {
+    background-color: #f0f7ff;
+}
+
+.notification-item.unread:hover {
+    background-color: #e6f3ff;
+}
+
+.notification-item i {
+    font-size: 18px;
+    padding-top: 2px;
+}
+
+.notification-content {
+    flex: 1;
+    min-width: 0; /* Prevents text from overflowing */
+}
+
+.notification-content p {
+    margin: 0;
+    font-size: 13px;
+    color: #333;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.notification-content small {
+    display: block;
+    font-size: 11px;
+    color: #888;
+    margin-top: 3px;
+}
+
+.view-all {
+    padding: 12px !important;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--primary-color) !important;
+    border-top: 1px solid #eee;
+    margin-top: -1px;
+}
+
+.view-all:hover {
+    background-color: #f0f7ff !important;
+}
+
+/* Scrollbar Styles for Notifications */
+.notification-list::-webkit-scrollbar {
+    width: 5px;
+}
+
+.notification-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 5px;
+}
+
+.notification-list::-webkit-scrollbar-thumb {
+    background: #ddd;
+    border-radius: 5px;
+}
+
+.notification-list::-webkit-scrollbar-thumb:hover {
+    background: #ccc;
+}
+
+/* Empty Notification State */
+.notification-item.text-center {
+    justify-content: center;
+    padding: 20px 15px !important;
+}
+
+.notification-item.text-center p {
+    font-size: 13px;
+    color: #888;
 }
 
 /* Welcome Section */
@@ -326,6 +468,143 @@ body {
     background: #0d6efd;
     color: #fff;
 }
+
+/* Notifications Page */
+.notification-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.notification-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 1rem;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #eee;
+    transition: all 0.2s ease;
+    gap: 1rem;
+    cursor: pointer;
+    position: relative;
+}
+
+.notification-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.notification-item.unread {
+    background-color: #f0f7ff;
+    border-color: #e6f3ff;
+}
+
+.notification-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.notification-icon i {
+    font-size: 1.25rem;
+}
+
+.notification-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.notification-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+}
+
+.notification-time {
+    color: #6c757d;
+    font-size: 0.75rem;
+}
+
+.notification-message {
+    margin: 0;
+    color: #333;
+    line-height: 1.4;
+}
+
+.notification-status {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+}
+
+.notification-status .badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* Empty State */
+.text-center.py-5 {
+    padding: 3rem 0;
+}
+
+.text-center.py-5 i {
+    opacity: 0.5;
+}
+
+.text-center.py-5 p {
+    margin-top: 1rem;
+    font-size: 1rem;
+    color: #6c757d;
+}
+
+/* Card Styles */
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    background-color: #fff;
+    border-bottom: 1px solid #eee;
+    padding: 1rem 1.5rem;
+}
+
+.card-header h5 {
+    font-weight: 600;
+    color: #333;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* Mark All as Read Button */
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    padding: 0.375rem 1rem;
+    font-size: 0.875rem;
+    border-radius: 6px;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-color-dark);
+    border-color: var(--primary-color-dark);
+}
+
+/* Color Classes */
+.text-success { color: #28a745 !important; }
+.text-primary { color: var(--primary-color) !important; }
+.text-warning { color: #ffc107 !important; }
+.text-danger { color: #dc3545 !important; }
+.text-info { color: #17a2b8 !important; }
 
 /* Responsive Design */
 @media (max-width: 991px) {

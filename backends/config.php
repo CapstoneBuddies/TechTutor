@@ -75,7 +75,7 @@
 
 
 	/* IMPORTANT FUNCTIONS */
-	function log_error($message, $destination) {
+	function log_error($message, $destination = 'tracking.log') {
 		 $file_path = LOG_PATH . $destination;
 
 		  if (!file_exists($file_path)) {
@@ -126,6 +126,28 @@
 			return true;
 		} catch (Exception $e) {
 			log_error("Mailer Error: " . $mail->ErrorInfo,'mail.log');
+			return false;
+		}
+	}
+	function sendVerificationCode(PHPMailer $mail, $email, $code) {
+		try {
+			$mail->addAddress($email);
+			$mail->Subject = "Your Verification Code";
+			$mail->Body = "
+			<p>Hello,</p>
+			<p>Thank you for registering with us! To complete your verification process, please use the following verification code:</p>
+			<p><b>$code</b></p>
+			<p>Please note, this code is valid for the next 3 minutes. If you do not enter the code in time, it will expire, and you will need to request a new one.</p>
+			<p>If you did not request this verification code or believe this is an error, please ignore this email.</p>
+			<p>Thank you for being part of our community!</p>
+			<p>Best regards,<br>Your Company Name</p>
+			";
+			$mail->send();
+			return true;
+		}
+		catch (Exception $e) {
+			$_SESSION['msg'] = "An error occurred, Please try again later!";
+			log_error("Mailer Error: " . $mail->ErrorInfo, 'mail.log');
 			return false;
 		}
 	}

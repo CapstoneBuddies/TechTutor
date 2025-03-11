@@ -19,13 +19,57 @@
 	elseif ($link == 'verify_code') {
 		verifyCode();
 	}
+	elseif ($link == 'resend-verification-code') {
+		if(isset($_SESSION['user'])) {
+			$mail = getMailerInstance();
+			$code = generateVerificationCode($_SESSION['user']);
+			sendVerificationCode($mail, $_SESSION['email'], $code);
+			$_SESSION['msg'] = "A new code has been sent!";
+			header("location:".BASE."verify");
+			exit();
+		}
+		else {
+			$_SESSION['msg'] = "Invalid Action";
+			header("location: login");
+			exit();
+		}
+	}
 	elseif ($link == 'user-deactivate') {
 		deleteAccount();
 	}
 	elseif ($link == 'user-change-password') {
 		changeUserPassword();
 	}
+	elseif ($link == 'admin-restrict-user') {
+		log_error('Was run here!');
+		$userId = isset($_POST['userId']) ? $_POST['userId'] : null;
+		if ($userId) {
+			$result = adminUpdateAccount($userId, 'restrict');
+			echo json_encode($result);
+		} else {
+			echo json_encode(['success' => false, 'message' => 'User ID is required']);
+		}
+	}
+	elseif ($link == 'admin-activate-user') {
+		$userId = isset($_POST['userId']) ? $_POST['userId'] : null;
+		if ($userId) {
+			$result = adminUpdateAccount($userId, 'activate');
+			echo json_encode($result);
+		} else {
+			echo json_encode(['success' => false, 'message' => 'User ID is required']);
+		}
+	}
+	elseif ($link == 'admin-delete-user') {
+		$userId = isset($_POST['userId']) ? $_POST['userId'] : null;
+		if ($userId) {
+			$result = adminUpdateAccount($userId, 'delete');
+			echo json_encode($result);
+		} else {
+			echo json_encode(['success' => false, 'message' => 'User ID is required']);
+		}
+	}
 	elseif ($link == 'home') {
 		header("location: ".BASE);
 	}
+	
 ?>

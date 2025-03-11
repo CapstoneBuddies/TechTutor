@@ -27,7 +27,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $params[] = $userId;
     
     // Update database
-    $sql = "UPDATE users SET full_name = ?, email = ?, address = ?, phone = ?" . $passwordUpdate . " WHERE id = ?";
+    $sql = "UPDATE users SET full_name = ?, email = ?, address = ?, phone = ?" . $passwordUpdate . " WHERE uid = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param($types, ...$params);
     

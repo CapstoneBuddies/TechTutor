@@ -103,14 +103,19 @@ CREATE TABLE IF NOT EXISTS `certificate` (
     FOREIGN KEY (donor) REFERENCES users(uid)
 );
 
-CREATE TABLE IF NOT EXISTS `notification` (
-    `notif_id` INT PRIMARY KEY AUTO_INCREMENT,
-    `notif_type` VARCHAR(50) NOT NULL,
-    `creator` INT NOT NULL,
-    `notif_title` VARCHAR(255) NOT NULL,
-    `message` TEXT NOT NULL,
-    `is_blast` BOOLEAN DEFAULT FALSE,
-    FOREIGN KEY (creator) REFERENCES users(uid)
+CREATE TABLE IF NOT EXISTS notifications (
+    notification_id INT PRIMARY KEY AUTO_INCREMENT,
+    recipient_id INT,
+    recipient_role ENUM('ADMIN', 'TECHGURU', 'TECHKID', 'ALL') NOT NULL,
+    class_id INT,
+    message TEXT NOT NULL,
+    link VARCHAR(255),
+    icon VARCHAR(50) NOT NULL,
+    icon_color VARCHAR(50) NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (recipient_id) REFERENCES users(uid),
+    FOREIGN KEY (class_id) REFERENCES class(class_id)
 );
 
 CREATE TABLE IF NOT EXISTS `transactions` (

@@ -168,7 +168,7 @@
                 <main class="col-12">
                     <!-- Welcome Section -->
                     <div class="welcome-section dashboard-section">
-                        <h1>Welcome, <?php echo explode(' ', $_SESSION['name'])[0]; ?>!</h1>
+                        <h1>Welcome, <?php echo explode(' ', $_SESSION['first_name'])[0]; ?>!</h1>
                         <p>Here's what's happening in your platform today.</p>
                     </div>
 
@@ -249,11 +249,11 @@
                             <table class="table">
                                 <thead>
                                     <tr>
-                                        <th style="width: 200px;">Name</th>
-                                        <th>Email</th>
-                                        <th>Subject</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
+                                        <th class="text-center">Name</th>
+                                        <th class="text-center">Email</th>
+                                        <th class="text-center">Subject</th>
+                                        <th class="text-center">Status</th>
+                                        <th class="text-center">Last Login</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -265,12 +265,14 @@
                                                 <span><?php echo $user['first_name'] . ' ' . $user['last_name']; ?></span>
                                             </div>
                                         </td>
-                                        <td><?php echo $user['email']; ?></td>
-                                        <td>Computer Programming</td>
-                                        <td><span class="status-badge status-active">Active</span></td>
-                                        <td>
-                                            <button class="btn btn-sm btn-outline-primary">View</button>
+                                        <td class="text-center"><?php echo $user['email']; ?></td>
+                                        <td><?php echo $user['subject']; ?></td>
+                                        <td class="text-center">
+                                            <span class="status-badge <?php echo getStatusBadgeClass($user['status']); ?>">
+                                                <?php echo normalizeStatus($user['status']); ?>
+                                            </span>
                                         </td>
+                                        <td class="text-center"><?php echo $user['last_login']; ?></td>
                                     </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -291,11 +293,11 @@
                             <table class="table">
                                 <thead>
                                     <tr>
-                                        <th>Name</th>
-                                        <th>Email</th>
-                                        <th>Enrolled Courses</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
+                                        <th class="text-center">Name</th>
+                                        <th class="text-center">Email</th>
+                                        <th class="text-center">Enrolled Classes</th>
+                                        <th class="text-center">Status</th>
+                                        <th class="text-center">Last Login</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -307,12 +309,14 @@
                                                 <span><?php echo $user['first_name']." ".$user['last_name']; ?></span>
                                             </div>
                                         </td>
-                                        <td><?php echo $user['email']; ?></td>
-                                        <td>3 Courses</td>
-                                        <td><span class="status-badge status-active">Active</span></td>
-                                        <td>
-                                            <button class="btn btn-sm btn-outline-primary">View</button>
+                                        <td class="text-center"><?php echo $user['email']; ?></td>
+                                        <td class="text-center"><?php echo $user['enrolled-classes']; ?></td>
+                                        <td class="text-center">
+                                            <span class="status-badge <?php echo getStatusBadgeClass($user['status']); ?>">
+                                                <?php echo normalizeStatus($user['status']); ?>
+                                            </span>
                                         </td>
+                                        <td class="text-center"><?php echo $user['last_login']; ?></td>
                                     </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -324,6 +328,8 @@
         </div>
     </div>
 
+    </main>
+</div>
     <!-- JavaScript Section -->
     <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/aos/aos.js"></script>
