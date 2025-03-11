@@ -35,7 +35,6 @@
 
 <body class="index-page">
 
-<!---
 <header id="header" class="header d-flex align-items-center fixed-top" style="padding: 0 20px;">
   <div class="container-fluid container-xl position-relative d-flex align-items-center">
 
@@ -68,15 +67,14 @@
     </nav>
 
   </div>
-</header>-->
-
+</header>
+<br><br><br><br><br>
 
 <div class="container-fluid">
   <div class="row">
     <!-- Sidebar -->
     <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar vh-100">
       <div class="position-sticky">
-      <center><img src="../../assets/img/stand_alone_logo.png" alt="" style="width: 50px; height: 50px; margin: 20px auto;"></center>
       <!-- User Profile Section -->
       <div class="text-center py-4">
         <img src="<?php echo $_SESSION['profile']; ?>" alt="User Avatar" class="rounded-circle profile" width="80" height="80">
@@ -110,13 +108,6 @@
           <span class="ms-2">Transactions</span>
         </a>
         </li>
-        <li class="nav-item">
-        <a class="nav-link d-flex align-items-center px-3 py-2 rounded" href="certificates">
-          <i class="bi bi-award"></i>
-          <span class="ms-2">Certificates</span>
-        </a>
-        </li>
-        
       </ul>
       </div>
     </nav>
@@ -124,155 +115,106 @@
     <!-- Main Content -->
     <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
       <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+      <h1 class="h2">Class Subject</h1>
       <div class="search-bar d-flex">
         <input type="text" id="classSearch" placeholder="Search classes..." class="form-control me-2">
-        <button class="btn btn-primary" onclick="searchClasses()">Search</button>
+        <button class="btn btn-primary" onclick="searchClasses()" >Search</button>
       </div>
-      <nav id="navmenu" class="navmenu">
-      <ul class="d-flex align-items-center">
-      <li class="nav-item dropdown">
-        <a href="#" class="nav-link" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-          <i class="bi bi-bell"></i>
-        </a>
-        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown">
-          <li><a class="dropdown-item" href="#">Sender 1</a></li><hr>
-          <li><a class="dropdown-item" href="#">Sender 2</a></li><hr>
-          <li><a class="dropdown-item" href="#">Sender 3</a></li>
-          <li><hr class="dropdown-divider"></li>
-          <li><a class="dropdown-item" href="#">See all notifications</a></li>
-        </ul>
-      </li>
-        <li class="nav-item dropdown">
-          <a href="#" class="nav-link dropdown-toggle main-avatar" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <img src="<?php echo $_SESSION['profile']; ?>" alt="User Avatar" class="avatar-icon">
-          </a>
-          <ul class="dropdown-menu" aria-labelledby="userDropdown">
-            <li><span class="dropdown-item user-item"><?php echo $_SESSION['name']; ?></span></li>
-            <li><a class="dropdown-item" href="dashboard/profile">Profile</a></li>
-            <li><a class="dropdown-item" href="#">Settings</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="user-logout">Log Out</a></li>
-          </ul>
-        </li>
-      </ul>
-      <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
-    </nav>
       </div>
 
       <div class="row">
-        <div class="col-md-6 mb-4">
-            <div class="card module" onclick="showClassDetails('Python Programming', 'Learn the basics of Python programming.', 120, '5 hours', 'Beginner');" style="cursor: pointer;">
-              <div class="card-body">
-                <h5 class="card-title">Hello Mr. Durano</h5>
-                <p class="card-text">Tutor</p>
-                  <div class="module-details">
-                    <p>Computer Programming</p>
-                  </div>
-            </div>
+        <div class="col-md-4 mb-4">
+          <div class="card module" onclick="showClassDetails('Python Programming', 'Learn the basics of Python programming.', 120, '5 hours', 'Beginner');" style="cursor: pointer;">
+        <img src=<?php echo CLASS_IMG.'Python.png'; ?> class="card-img-top" alt="Class 1">
+        <div class="card-body">
+          <h5 class="card-title">Java Programming</h5>
+          <p class="card-text">Manage class content and settings.</p>
+          <div class="module-details">
+            <p>Enrolled: 120</p>
+            <p>Duration: 5 hours</p>
+          </div>
+          <a href="class-details.php?class=Python" class="btn btn-primary mt-2" style="background-color: #0F52BA;">View Details <i class="bi bi-arrow-right"></i></a>
+        </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+          <div class="card module" onclick="showClassDetails('Python Programming', 'Learn the basics of Python programming.', 120, '5 hours', 'Beginner');" style="cursor: pointer;">
+        <img src=<?php echo CLASS_IMG.'Python.png'; ?> class="card-img-top" alt="Class 1">
+        <div class="card-body">
+          <h5 class="card-title">Php Programming</h5>
+          <p class="card-text">Manage class content and settings.</p>
+          <div class="module-details">
+            <p>Enrolled: 120</p>
+            <p>Duration: 5 hours</p>
+          </div>
+          <a href="class-details.php?class=Python" class="btn btn-primary mt-2" style="background-color: #0F52BA;">View Details <i class="bi bi-arrow-right"></i></a>
+        </div>
           </div>
         </div>
 
-      <div class="col-md-6 mb-4">
-        <div class="card module" style="cursor: pointer;">
-          <div class="card-body">
-            <h5 class="card-title">Transaction Notification</h5>
-            <p class="card-text">You have a new transaction notification.</p>
-            <div class="module-details">
-              <p>Amount: $120</p>
-              <p>Date: 2023-10-05</p>
-            </div>
+        <div class="col-md-4 mb-4">
+          <div class="card module" onclick="showClassDetails('Python Programming', 'Learn the basics of Python programming.', 120, '5 hours', 'Beginner');" style="cursor: pointer;">
+        <img src=<?php echo CLASS_IMG.'Python.png'; ?> class="card-img-top" alt="Class 1">
+        <div class="card-body">
+          <h5 class="card-title">Python Programming</h5>
+          <p class="card-text">Manage class content and settings.</p>
+          <div class="module-details">
+            <p>Enrolled: 120</p>
+            <p>Duration: 5 hours</p>
+          </div>
+          <a href="class-details.php?class=Python" class="btn btn-primary mt-2" style="background-color: #0F52BA;">View Details <i class="bi bi-arrow-right"></i></a>
+        </div>
           </div>
         </div>
+        <!-- Add more modules as needed -->
       </div>
 
-      <div class="col-md-12 mb-4">
-        <div class="card">
-          <div class="card-body">
-        <h5 class="card-title">List of Students</h5>
-        <div class="table-responsive">
-          <table class="table table-striped">
-            <thead>
-          <tr>
-            <th>ID NO.</th>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Class</th>
-            <th>Date</th>
-          </tr>
-            </thead>
-            <tbody>
-              <!-- PHP Back end -->
-            </tbody>
-          </table>
+      <div class="row mt-4">
+        <div class="col-md-12">
+          <div class="card">
+        <div class="card-header">
+          Available Classes and Schedule
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-striped">
+          <thead>
+            <tr>
+              <th>Subject</th>
+              
+              <th>Schedule</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Programming</td>
+              
+              <td>Monday 10 AM - 12 PM</td>
+            </tr>
+            <tr>
+              <td>Web Development</td>
+              
+              <td>Wednesday 2 PM - 4 PM</td>
+            </tr>
+            <tr>
+              <td>Data Science</td>
+              
+              <td>Friday 1 PM - 3 PM</td>
+            </tr>
+            <!-- Add more classes and schedules as needed -->
+          </tbody>
+            </table>
+          </div>
+          <div class="text-end">
+            <a href="all-classes.php" class="btn btn-primary mt-2" style="background-color: #0F52BA;">View All</a>
+          </div>
         </div>
           </div>
         </div>
       </div>
       
-      <div class="row">
-        <!-- Class Schedule Column -->
-        <div class="col-md-6 mb-4">
-          <div class="card h-100">
-        <div class="card-body">
-          <h5 class="card-title">Class Schedule</h5>
-          <div class="schedule-item mb-3 d-flex justify-content-between align-items-center">
-            <div>
-          <p>Date: 2023-10-10</p>
-          <p>Time: 10:00 AM - 12:00 PM</p>
-          <p style="color: orange;">In Session</p>
-            </div>
-            <button class="btn btn-primary">Join Class</button>
-          </div>
-          <div class="schedule-item mb-3 d-flex justify-content-between align-items-center">
-            <div>
-          <p>Date: 2023-10-12</p>
-          <p>Time: 2:00 PM - 4:00 PM</p>
-          <p style="color: blue;">Incoming Session</p>
-            </div>
-            <button class="btn btn-primary">Join Class</button>
-          </div>
-          <div class="schedule-item mb-3 d-flex justify-content-between align-items-center">
-            <div>
-          <p>Date: 2023-10-15</p>
-          <p>Time: 9:00 AM - 11:00 AM</p>
-          <p style="color: blue;">Incoming Session</p>
-            </div>
-            <button class="btn btn-primary">Join Class</button>
-          </div>
-        </div>
-          </div>
-        </div>
-
-        <!-- Feedback Column -->
-        <div class="col-md-6 mb-4">
-          <div class="card h-100">
-        <div class="card-body">
-          <h5 class="card-title">Feedback</h5>
-          <div class="feedback-item mb-3 d-flex align-items-start">
-            <i class="bi bi-chat-left-text me-2"></i>
-            <div>
-          <p><strong>John Doe:</strong> Great class, learned a lot!</p>
-            </div>
-          </div>
-          <div class="feedback-item mb-3 d-flex align-items-start">
-            <i class="bi bi-chat-left-text me-2"></i>
-            <div>
-          <p><strong>Jane Smith:</strong> Very informative session.</p>
-            </div>
-          </div>
-          <div class="feedback-item mb-3 d-flex align-items-start">
-            <i class="bi bi-chat-left-text me-2"></i>
-            <div>
-          <p><strong>Bob Johnson:</strong> Looking forward to the next class.</p>
-            </div>
-          </div>
-        </div>
-          </div>
-        </div>
-      </div>
-
     </main>
-    
   </div>
 </div>
 
