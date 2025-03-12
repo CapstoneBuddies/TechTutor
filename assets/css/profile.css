@@ -1,8 +1,5 @@
 .profile-container {
     padding: 20px;
-    margin-left: 280px; /* Adjust based on your sidebar width */
-    margin-top: 60px; /* Height of the top navigation bar */
-    width: calc(100% - 280px);
     min-height: calc(100vh - 60px);
 }
 
@@ -122,4 +119,8 @@
     display: flex;
     gap: 10px;
     justify-content: center;
+}
+
+.item-disable {
+    pointer-events: none;
 }

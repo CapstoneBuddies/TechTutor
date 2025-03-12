@@ -27,164 +27,100 @@
     <link href="<?php echo BASE; ?>assets/vendor/glightbox/css/glightbox.min.css" rel="stylesheet">
     <link href="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
 
-    <!-- Main CSS File -->
-    <link href="<?php echo CSS; ?>main.css" rel="stylesheet">
+    <!-- Main CSS Files -->
+    <link href="<?php echo CSS; ?>dashboard.css" rel="stylesheet">
+    <link href="<?php echo CSS; ?>profile.css" rel="stylesheet">
 </head>
 
-<body class="index-page">
-    <header id="header" class="header d-flex align-items-center fixed-top">
-        <div class="container-fluid container-xl position-relative d-flex align-items-center">
-            <a href="<?php echo BASE; ?>" class="logo d-flex align-items-center me-auto">
-                <img src="<?php echo IMG; ?>stand_alone_logo.png" alt="">
-                <img src="<?php echo IMG; ?>TechTutor_text.png" alt="">
-            </a>
+<body>
+    
+    <!-- Header -->
+    <?php include ROOT_PATH . '/components/header.php'; ?>
 
-            <nav id="navmenu" class="navmenu">
-                <ul class="d-flex align-items-center">
-                    <li class="nav-item">
-                        <a href="#" class="nav-link">
-                            <i class="bi bi-bell"></i>
-                        </a>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a href="#" class="nav-link dropdown-toggle main-avatar" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <img src="<?php echo $_SESSION['profile']; ?>" alt="User Avatar" class="avatar-icon">
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="userDropdown">
-                            <li><span class="dropdown-item user-item"><?php echo $_SESSION['name']; ?></span></li>
-                            <li><a class="dropdown-item" href="<?php echo BASE; ?>dashboard/profile">Profile</a></li>
-                            <li><a class="dropdown-item" href="<?php echo BASE; ?>dashboard/settings">Settings</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="user-logout">Log Out</a></li>
-                        </ul>
-                    </li>
-                </ul>
-                <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
-            </nav>
-        </div>
-    </header>
-    <br><br><br><br>
+    <!-- Main Content -->
+    <div class="profile-container">
+        <div class="profile-section">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h2 class="mb-4">Account Settings</h2>
+                    <h5 class="text-muted mb-4">Personal Details</h5>
+                    <div class="text-center mb-4">
+                        <img src="<?php echo $_SESSION['profile']; ?>" alt="Profile Picture" class="rounded-circle img-thumbnail" style="width: 150px; height: 150px; object-fit: cover;">
+                    </div>
 
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
-                <div class="position-sticky">
-                    <ul class="nav flex-column">
-                        <li class="nav-item mb-2">
-                            <a class="nav-link" href="<?php echo BASE; ?>dashboard">
-                                <i class="bi bi-house-door"></i>
-                                Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item mb-2">
-                            <a class="nav-link" href="<?php echo BASE; ?>dashboard/profile">
-                                <i class="bi bi-person"></i>
-                                Profile
-                            </a>
-                        </li>
-                        <li class="nav-item mb-2">
-                            <a class="nav-link active" disabled>
-                                <i class="bi bi-gear"></i>
-                                Settings
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </nav>
-
-            <!-- Main Content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                <div class="container mt-4">
-                    <div class="row justify-content-center">
-                        <div class="col-md-8">
-                            <div class="card shadow-sm">
-                                <div class="card-body p-4">
-                                    <h2 class="mb-4">Account Settings</h2>
-                                    
-                                    <h5 class="text-muted mb-4">Personal Details</h5>
-                                    
-                                    <div class="text-center mb-4">
-                                        <img src="<?php echo $_SESSION['profile']; ?>" alt="Profile Picture" class="rounded-circle img-thumbnail" style="width: 150px; height: 150px; object-fit: cover;">
-                                    </div>
-                                    
-                                    <div class="row mb-3">
-                                        <div class="col-md-3">
-                                            <label class="form-label text-muted">Full Name</label>
-                                        </div>
-                                        <div class="col-md-9">
-                                            <p class="form-control-plaintext"><?php echo isset($_SESSION['first_name']) && isset($_SESSION['last_name']) ? $_SESSION['first_name'] . ' ' . $_SESSION['last_name'] : $_SESSION['name']; ?></p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="row mb-3">
-                                        <div class="col-md-3">
-                                            <label class="form-label text-muted">Birthday</label>
-                                        </div>
-                                        <div class="col-md-9">
-                                            <p class="form-control-plaintext"><?php echo isset($_SESSION['birthday']) ? $_SESSION['birthday'] : 'August 8, 1988'; ?></p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="row mb-3">
-                                        <div class="col-md-3">
-                                            <label class="form-label text-muted">Address</label>
-                                        </div>
-                                        <div class="col-md-9">
-                                            <p class="form-control-plaintext"><?php echo isset($_SESSION['address']) ? $_SESSION['address'] : 'Cebu City, Philippines, 6000'; ?></p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="row mb-3">
-                                        <div class="col-md-3">
-                                            <label class="form-label text-muted">Phone</label>
-                                        </div>
-                                        <div class="col-md-9">
-                                            <p class="form-control-plaintext"><?php echo isset($_SESSION['phone']) ? $_SESSION['phone'] : '+6391 2346 789'; ?></p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="row mb-3">
-                                        <div class="col-md-3">
-                                            <label class="form-label text-muted">Email Address</label>
-                                        </div>
-                                        <div class="col-md-9">
-                                            <p class="form-control-plaintext"><?php echo $_SESSION['email']; ?></p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="row mb-3">
-                                        <div class="col-md-3">
-                                            <label class="form-label text-muted">Password</label>
-                                        </div>
-                                        <div class="col-md-9">
-                                            <p class="form-control-plaintext">••••••••••</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="row mb-3">
-                                        <div class="col-md-3">
-                                            <label class="form-label text-muted">Position</label>
-                                        </div>
-                                        <div class="col-md-9">
-                                            <p class="form-control-plaintext"><?php echo $_SESSION['role']; ?></p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="d-flex justify-content-end mt-4">
-                                        <button type="button" class="btn btn-danger me-2" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">Delete Account</button>
-                                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#changePasswordModal">Change Password</button>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label text-muted">Full Name</label>
+                        </div>
+                        <div class="col-md-9">
+                            <p class="form-control-plaintext"><?php echo isset($_SESSION['first_name']) && isset($_SESSION['last_name']) ? $_SESSION['first_name'] . ' ' . $_SESSION['last_name'] : $_SESSION['name']; ?></p>
                         </div>
                     </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label text-muted">Birthday</label>
+                        </div>
+                        <div class="col-md-9">
+                            <p class="form-control-plaintext"><?php echo isset($_SESSION['birthday']) ? $_SESSION['birthday'] : 'August 8, 1988'; ?></p>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label text-muted">Address</label>
+                        </div>
+                        <div class="col-md-9">
+                            <p class="form-control-plaintext"><?php echo isset($_SESSION['address']) ? $_SESSION['address'] : 'Cebu City, Philippines, 6000'; ?></p>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label text-muted">Phone</label>
+                        </div>
+                        <div class="col-md-9">
+                            <p class="form-control-plaintext"><?php echo isset($_SESSION['phone']) ? $_SESSION['phone'] : '+6391 2346 789'; ?></p>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label text-muted">Email Address</label>
+                        </div>
+                        <div class="col-md-9">
+                            <p class="form-control-plaintext"><?php echo $_SESSION['email']; ?></p>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label text-muted">Password</label>
+                        </div>
+                        <div class="col-md-9">
+                            <p class="form-control-plaintext">••••••••••</p>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label text-muted">Position</label>
+                        </div>
+                        <div class="col-md-9">
+                            <p class="form-control-plaintext"><?php echo $_SESSION['role']; ?></p>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end mt-4">
+                        <button type="button" class="btn btn-danger me-2" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">Delete Account</button>
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#changePasswordModal">Change Password</button>
+                    </div>
                 </div>
-            </main>
+            </div>
         </div>
     </div>
-
-    <!-- Update Profile Modal -->
+    </main>
+<!-- Update Profile Modal -->
     <div class="modal fade" id="updateProfileModal" tabindex="-1" aria-labelledby="updateProfileModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">

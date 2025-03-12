@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => '__root__',
-        'pretty_version' => '1.0.0+no-version-set',
-        'version' => '1.0.0.0',
-        'reference' => null,
+        'pretty_version' => 'dev-main',
+        'version' => 'dev-main',
+        'reference' => '625d1410da5db1bcefb0453fe64c0da8a0dbac6b',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -11,9 +11,9 @@
     ),
     'versions' => array(
         '__root__' => array(
-            'pretty_version' => '1.0.0+no-version-set',
-            'version' => '1.0.0.0',
-            'reference' => null,
+            'pretty_version' => 'dev-main',
+            'version' => 'dev-main',
+            'reference' => '625d1410da5db1bcefb0453fe64c0da8a0dbac6b',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
@@ -115,6 +115,15 @@
             'reference' => '996434e5492cb4c3edcb9168db6fbb1359ef965a',
             'type' => 'library',
             'install_path' => __DIR__ . '/../paragonie/random_compat',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'paymongo/paymongo-php' => array(
+            'pretty_version' => 'v0.0.0',
+            'version' => '0.0.0.0',
+            'reference' => '48ce4f38b366d8ca73f426cd3b04fe1d7d59f5bd',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../paymongo/paymongo-php',
             'aliases' => array(),
             'dev_requirement' => false,
         ),

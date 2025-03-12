@@ -1,6 +1,15 @@
 <?php 
     require_once '../backends/config.php';
     require_once '../backends/main.php';
+
+    if (isset($_GET['token'])) {
+      $success = verifyEmailToken($_GET['token']);
+      if($success) {
+        $_SESSION['msg'] = "Account has been successfully verified. Please log in";
+        header("location: login");
+        exit();
+      }
+    }
 ?>
 <!DOCTYPE html>
 <html lang="en">

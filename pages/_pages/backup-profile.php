@@ -320,7 +320,6 @@
     <script src="<?php echo BASE; ?>assets/vendor/aos/aos.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/glightbox/js/glightbox.min.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.js"></script>
-    <script src="<?php echo BASE; ?>assets/js/main.js"></script>
 
     <script>
         const updateModal = new bootstrap.Modal(document.getElementById('updateProfileModal'));
@@ -461,6 +460,7 @@
             })
             .then(response => response.json())
             .then(data => {
+                console.log("Test");
                 if(data.success) {
                     showToast('success', 'Profile updated successfully');
                     setTimeout(() => window.location.reload(), 1000);

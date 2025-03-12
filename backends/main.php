@@ -11,7 +11,7 @@
 	$excluded_page = ['index.php', 'login.php', 'signup.php', 'verify.php', 'route.php'];
 	$excluded_link = ['user-login','user-register','home'];
 	$logged_excluded_page = ['dashboard','profile','settings'];
-	$approved_link = ['user-logout','user-profile-update','user-change-password','user-deactivate','admin-restrict-user','admin-delete-user','admin-activate-user'];
+	$approved_link = ['user-logout','user-profile-update','user-change-password','user-deactivate','admin-restrict-user','admin-delete-user','admin-activate-user', 'get-transaction-details', 'get-transactions', 'export-transactions', 'create-payment', 'process-card-payment'];
 
 	// Check if user is logged but trying to access unauthorized link
 	if(isset($_SESSION['user']) && in_array($link,$excluded_link) && isset($_COOKIE['role'])) {
@@ -133,13 +133,6 @@
 	// /verify
 	function verify() {
 		global $conn;
-		if (isset($_GET['token'])) {
-			$success = verifyEmailToken($_GET['token']);
-			if($success) {
-				header("location: login");
-				exit();
-			}
-		}
 		$id = $_SESSION['user'];
 		$email = $_SESSION['email'];
 		$mail = getMailerInstance();

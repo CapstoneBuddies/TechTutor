@@ -1,52 +1,19 @@
 <?php 
     require_once '../backends/config.php';
-    require_once '../backends/main.php';
-    require_once '../backends/db.php';
+    require_once ROOT_PATH.'/backends/main.php';
 
-    // Fetch notifications based on user role
-    $query = "";
-    $params = [];
-    $types = "";
-
-    if ($_SESSION['role'] == 'ADMIN') {
-        // Admins can see all notifications
-        $query = "SELECT n.*, u.name as recipient_name, c.class_name 
-                 FROM notifications n 
-                 LEFT JOIN users u ON n.recipient_id = u.uid 
-                 LEFT JOIN classes c ON n.class_id = c.class_id 
-                 ORDER BY n.created_at DESC";
-    } elseif ($_SESSION['role'] == 'TECHGURU') {
-        // TechGurus see their own and their class notifications
-        $query = "SELECT n.*, u.name as recipient_name, c.class_name 
-                 FROM notifications n 
-                 LEFT JOIN users u ON n.recipient_id = u.uid 
-                 LEFT JOIN classes c ON n.class_id = c.class_id 
-                 WHERE n.recipient_id = ? 
-                 OR n.class_id IN (SELECT class_id FROM classes WHERE techguru_id = ?) 
-                 OR n.recipient_role = 'ALL' 
-                 ORDER BY n.created_at DESC";
-        $params = [$_SESSION['user'], $_SESSION['user']];
-        $types = "ii";
-    } else {
-        // TechKids see their own and enrolled class notifications
-        $query = "SELECT n.*, u.name as recipient_name, c.class_name 
-                 FROM notifications n 
-                 LEFT JOIN users u ON n.recipient_id = u.uid 
-                 LEFT JOIN classes c ON n.class_id = c.class_id 
-                 WHERE n.recipient_id = ? 
-                 OR n.class_id IN (SELECT class_id FROM enrollments WHERE student_id = ?) 
-                 OR n.recipient_role = 'ALL' 
-                 ORDER BY n.created_at DESC";
-        $params = [$_SESSION['user'], $_SESSION['user']];
-        $types = "ii";
+    if (!isset($_SESSION)) {
+        session_start();
     }
 
-    $stmt = $conn->prepare($query);
-    if (!empty($params)) {
-        $stmt->bind_param($types, ...$params);
+    // Check if user is logged in
+    if (!isset($_SESSION['user']) || !isset($_SESSION['role'])) {
+        header('Location: ' . BASE . 'login.php');
+        exit;
     }
-    $stmt->execute();
-    $notifications = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+    // Fetch notifications using the new function
+    $notifications = getUserNotifications($_SESSION['user'], $_SESSION['role']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -77,7 +44,7 @@
     <link href="<?php echo CSS; ?>dashboard.css" rel="stylesheet">
 </head>
 <body>
-    <?php include '../components/header.php'; ?>
+    <?php include ROOT_PATH . '/components/header.php'; ?>
 
     <div class="container-fluid py-4">
         <div class="row">
@@ -85,7 +52,13 @@
                 <div class="card">
                     <div class="card-header">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">All Notifications</h5>
+                            <h5 class="mb-0">
+                                <?php if ($_SESSION['role'] == 'ADMIN'): ?>
+                                    All System Notifications
+                                <?php else: ?>
+                                    My Notifications
+                                <?php endif; ?>
+                            </h5>
                             <?php if (!empty($notifications)): ?>
                                 <button class="btn btn-primary btn-sm" onclick="markAllAsRead()">
                                     Mark All as Read
@@ -119,7 +92,7 @@
                                                     </small>
                                                 <?php endif; ?>
                                                 <small class="notification-time">
-                                                    <?php echo getTimeAgo($notification['created_at']); ?>
+                                                    <?php echo getTimeAgoNotif($notification['created_at']); ?>
                                                 </small>
                                             </div>
                                             <p class="notification-message">

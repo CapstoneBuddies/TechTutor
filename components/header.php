@@ -35,13 +35,24 @@
             $unread_count++;
         }
     }
+
+    // Check if current page is teaching-related
+    $current_page = basename($_SERVER['PHP_SELF']);
+    $teaching_pages = [
+        'techguru_classes.php',
+        'techguru_subjects.php',
+        'techguru_subject_details.php',
+        'techguru_create_class.php',
+        'class.php'
+    ];
+    $is_teaching_page = in_array($current_page, $teaching_pages);
 ?>
 <div class="dashboard-container">
     <!-- Sidebar -->
     <nav class="sidebar">
         <div class="logo-container">
             <a href="<?php echo BASE; ?>/home">
-                <img src="<?php echo BASE; ?>/assets/img/stand_alone_logo.png" alt="Logo" class="logo">
+                <img src="<?php echo IMG; ?>circle-logo.png" alt="Logo" class="logo">
             </a>
         </div>
         <div class="user-info">
@@ -52,63 +63,74 @@
         </div>
         
         <nav class="sidebar-nav">
-            <a href="<?php echo BASE; ?>dashboard" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'main_dashboard.php' ? 'active' : ''; ?>">
+            <a href="<?php echo BASE; ?>dashboard" class="nav-item <?php echo $current_page == 'main_dashboard.php' ? 'active' : ''; ?>">
                 <i class="bi bi-house-door"></i>
                 <span>Dashboard</span>
             </a>
+            <?php if( $current_page != 'profile.php' && $current_page != 'settings.php' ) : ?>
             <!-- ADMIN DASHBOARD SELECTION -->
             <?php if ($_SESSION['role'] == 'ADMIN'): ?>
                 <!-- Admin Links -->
-                <a href="<?php echo BASE; ?>dashboard/TechGurus" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'main_view-techguru.php' ? 'active' : ''; ?>">
+                <a href="<?php echo BASE; ?>dashboard/TechGurus" class="nav-item <?php echo $current_page == 'main_view-techguru.php' ? 'active' : ''; ?>">
                     <i class="bi bi-person-check"></i>
                     <span>TechGurus</span>
                 </a>
-                <a href="<?php echo BASE; ?>dashboard/TechKids" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'main_view-techkids.php' ? 'active' : ''; ?>">
+                <a href="<?php echo BASE; ?>dashboard/TechKids" class="nav-item <?php echo $current_page == 'main_view-techkids.php' ? 'active' : ''; ?>">
                 <i class="bi bi-person"></i>
                     <span>TechKids</span>
                 </a>
-                <a href="<?php echo BASE; ?>dashboard/users" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'main_view-users.php' ? 'active' : ''; ?>">
+                <a href="<?php echo BASE; ?>dashboard/users" class="nav-item <?php echo $current_page == 'main_view-users.php' ? 'active' : ''; ?>">
                     <i class="bi bi-people"></i>
                     <span>View All Users</span>
                 </a>
-                <a href="<?php echo BASE; ?>dashboard/courses" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'main_view-course.php' ? 'active' : ''; ?>">
+                <a href="<?php echo BASE; ?>dashboard/courses" class="nav-item <?php echo $current_page == 'main_view-course.php' ? 'active' : ''; ?>">
                     <i class="bi bi-book"></i>
                     <span>Courses</span>
                 </a>
             <!-- END ADMIN DASHBOARD SELECTION -->
             <!-- TECHGURU DASHBOARD SELECTION -->
             <?php elseif ($_SESSION['role'] == 'TECHGURU'): ?>
-            <a href="<?php echo BASE; ?>courses" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'courses.php' ? 'active' : ''; ?>">
-                <i class="bi bi-book"></i>
-                <span>Courses</span>
-            </a>
-            <a href="<?php echo BASE; ?>class" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'class.php' ? 'active' : ''; ?>">
+            <a href="<?php echo BASE; ?>dashboard/class" class="nav-item <?php echo $is_teaching_page ? 'active' : ''; ?>">
                 <i class="bi bi-people"></i>
-                <span>Class</span>
+                <span>Classes</span>
+            </a>
+            <a href="<?php echo BASE; ?>class" class="nav-item <?php echo $current_page == 'certificates.php' ? 'active' : ''; ?>">
+                <i class="bi bi-award"></i>
+                <span>Certificates</span>
             </a>
             <!-- END TECHGURU DASHBOARD SELECTION -->
             <!-- TECHKID DASHBOARD SELECTION -->
             <?php elseif ($_SESSION['role'] == 'TECHKID'): ?>
                 <!-- TechKid Links -->
-                <a href="<?php echo BASE; ?>dashboard/courses" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'courses.php' ? 'active' : ''; ?>">
+                <a href="<?php echo BASE; ?>dashboard/courses" class="nav-item <?php echo $current_page == 'courses.php' ? 'active' : ''; ?>">
                     <i class="bi bi-book"></i>
                     <span>My Courses</span>
                 </a>
-                <a href="<?php echo BASE; ?>dashboard/tutors" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'tutors.php' ? 'active' : ''; ?>">
+                <a href="<?php echo BASE; ?>dashboard/tutors" class="nav-item <?php echo $current_page == 'tutors.php' ? 'active' : ''; ?>">
                     <i class="bi bi-person-check"></i>
                     <span>My Tutors</span>
                 </a>
             <?php endif; ?>
-            
             <!-- Common Bottom Links -->
-            <a href="<?php echo BASE; ?>dashboard/transactions" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'transactions.php' ? 'active' : ''; ?>">
+            <a href="<?php echo BASE; ?>dashboard/transactions" class="nav-item <?php echo $current_page == 'transactions.php' ? 'active' : ''; ?>">
                 <i class="bi bi-cash"></i>
                 <span>Transactions</span>
             </a>
-            <a href="<?php echo BASE; ?>dashboard/notifications" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'notifications.php' ? 'active' : ''; ?>">
+            <a href="<?php echo BASE; ?>dashboard/notifications" class="nav-item <?php echo $current_page == 'notifications.php' ? 'active' : ''; ?>">
                 <i class="bi bi-bell"></i>
                 <span>Notifications</span>
             </a>
+            <!--  -->
+            <?php else: ?>
+            <a href="<?php echo BASE; ?>profile" class="nav-item <?php echo $current_page == 'profile.php' ? 'active' : ''; ?>">
+                <i class="bi bi-person"></i>
+                <span>Profile</span>
+            </a>
+            <a href="<?php echo BASE; ?>settings" class="nav-item <?php echo $current_page == 'settings.php' ? 'active' : ''; ?>">
+                <i class="bi bi-gear"></i>
+                <span>Settings</span>
+            </a>
+            <?php endif; ?>
         </nav>
     </nav>
 

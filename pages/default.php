@@ -30,12 +30,19 @@
     <!-- Main CSS Files -->
     <link href="<?php echo CSS; ?>dashboard.css" rel="stylesheet">
 </head>
-    <?php include ROOT_PATH . '/components/header.php'; ?>
-
-    TEST INFO!
 <body>
+    <?php include ROOT_PATH . '/components/header.php'; ?>
+    <!-- Main Content -->
+
+    <!-- END Main Content -->
+
+
 </main>
 </div>
+<!-- End header -->
+
+    <!-- REPLACE THIS FOR HIDDEN MODALS AND WHATNOT -->
+
     <!-- JavaScript Section -->
     <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/aos/aos.js"></script>

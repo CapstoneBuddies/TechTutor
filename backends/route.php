@@ -68,6 +68,26 @@
 			echo json_encode(['success' => false, 'message' => 'User ID is required']);
 		}
 	}
+	elseif ($link == 'get-transactions' || $link == 'get-transaction-details' || $link == 'export-transactions') {
+		require_once 'transaction_handlers.php';
+		// transaction_handlers.php will handle the logic and exit
+	}
+	elseif ($link == 'create-payment' || $link == 'process-card-payment') {
+		if (!isset($_SESSION['user'])) {
+			echo json_encode(['success' => false, 'message' => 'Please login to continue']);
+			exit;
+		}
+
+		require_once 'paymongo_config.php';
+		require_once 'payment_handlers.php';
+		
+		if ($link == 'create-payment') {
+			handleCreatePayment($conn);
+		} else {
+			handleCardPayment($conn);
+		}
+		exit;
+	}
 	elseif ($link == 'home') {
 		header("location: ".BASE);
 	}

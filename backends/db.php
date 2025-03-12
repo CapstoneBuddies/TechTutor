@@ -173,8 +173,13 @@
 					$_SESSION['address'] = $user['address'];
 					$_SESSION['phone'] = $user['contact_number'];
 					$_SESSION['profile'] = USER_IMG . ($user['profile_picture'] ?? 'default.jpg');
+					$_SESSION['rating'] = $user['rating'] ?? 'Undecided';
 
 					if(empty($user['role'])) {
+						$deleteStmt = $conn->prepare("DELETE FROM users WHERE email = ?");
+						$deleteStmt->bind_param("s", $user['email']);
+						$deleteStmt->execute();
+						$deleteStmt->close();
 						header("Location: user-logout");
 						exit();
 					}
@@ -355,7 +360,7 @@
             $uploadPath = ROOT_PATH . '/assets/img/users/' . $newFileName;
             
             // Get current profile picture
-            $stmt = $conn->prepare("SELECT profile_picture FROM user_details WHERE user_id = ?");
+            $stmt = $conn->prepare("SELECT profile_picture FROM users WHERE uid = ?");
             $stmt->bind_param("i", $userId);
             $stmt->execute();
             $result = $stmt->get_result();
@@ -620,116 +625,121 @@
 		}
 		return null;
 	}
-	function updateUserData() {
-		global $conn;
+	function getStudentByTutor($tutor_id) {
+	    global $conn;
 
-		if (!isset($_SESSION['user'])) { // Fix: Negate condition
-		$_SESSION['msg'] = "An error occurred, Please login";
-		header("Location: login");
-		exit();
-		}
-		$user = $_SESSION['user'];
+	    $stmt = $conn->prepare("SELECT u.first_name AS student_first_name, u.last_name AS student_last_name, u.profile_picture, u.email, u.status, c.class_name, cs.session_date, DATE_FORMAT(cs.start_time, '%h:%i %p') AS formatted_start_time, DATE_FORMAT(cs.end_time, '%h:%i %p') AS formatted_end_time FROM users u JOIN class_schedule cs ON u.uid = cs.user_id JOIN class c ON cs.class_id = c.class_id WHERE cs.role = 'STUDENT' AND c.tutor_id = ? ORDER BY c.class_name, cs.session_date, u.last_name, u.first_name");
+	    $stmt->bind_param("i", $tutor_id);
+	    $stmt->execute();
+	    $result = $stmt->get_result();
+	    
+	    $students = $result->fetch_all(MYSQLI_ASSOC);
+	    $num_students = count($students);
 
-		try {
-			$conn->begin_transaction(); // Start transaction
-
-			if (isset($_POST['change-password'])) {
-				$curpass = $_POST['current-password'];
-				$pass = $_POST['new-password'];
-				$cpass = $_POST['confirm-new-password'];
-
-				$stmt = $conn->prepare("SELECT password FROM users WHERE uid = ?");
-				$stmt->bind_param("i", $user);
-				$stmt->execute();
-				$result = $stmt->get_result();
-
-				if ($row = $result->fetch_assoc()) {
-					if (!password_verify($curpass, $row['password'])) {
-						$_SESSION['msg'] = "Current password is incorrect.";
-						throw new Exception("Incorrect current password");
-					}
-				} 
-				else {
-					$_SESSION['msg'] = "User not found.";
-					throw new Exception("User ID not found in database");
-				}
-
-				if ($pass !== $cpass) {
-					$_SESSION['msg'] = "Password does not match.";
-					throw new Exception("Mismatch Password");
-				}
-				if (strlen($pass) < 8) {
-					$_SESSION['msg'] = "Password must be at least 8 characters long.";
-					throw new Exception("Password too short");
-				}
-				if (!preg_match("/^(?=(.*[A-Z]))(?=(.*[a-z]))(?=(.*\d))(?=(.*[*-_!]))[A-Za-z\d*-_!]{8,16}$/", $pass)) {
-					$_SESSION['msg'] = "Password must be 8-16 characters long and contain a mix of letters, numbers, and special characters.";
-					throw new Exception("Password complexity failed(uniqueness)");
-				}
-
-				$password = password_hash($pass, PASSWORD_DEFAULT);
-				if (!$password) {
-					$_SESSION['msg'] = "We encountered an issue while updating your password. Please try again.";
-					throw new Exception("Hashing Error!");
-				}
-
-				$stmt = $conn->prepare("UPDATE users SET password = ? WHERE uid = ?");
-				$stmt->bind_param("si", $password, $user);
-				if (!$stmt->execute()) {
-					throw new Exception("Error processing password update");
-				}
-
-				$conn->commit(); // Commit transaction
-			}
-
-			if (isset($_POST['change-profile'])) {
-				$fname = $_POST['first-name'];
-				$lname = $_POST['last-name'];
-				$address = $_POST['address'];
-				$contact_num = $_POST['contact-number'];
-				$filename = ""; //get filename from input type="file"
-
-				$stmt = $conn->prepare("UPDATE users SET `first_name` = ?, `last_name` = ?, `address` = ?, `contact_number` = ?, `profile_picture` = ? WHERE uid = ?");
-				$stmt->bind_param("sssssi",$fname, $lname, $address, $contact_num, $filename, $user);
-				if (!$stmt->execute()) {
-					throw new Exception("Error processing profile information update");
-				}
-				$conn->commit(); // Commit transaction
-			}
-		}
-		catch (Exception $e) {
-			$conn->rollback(); // Rollback on error
-			log_error($e->getMessage(), 'database_error.log');
-		}
-		finally {
-			if (isset($stmt)) {
-				$stmt->close();
-			}
-			$conn->close();
-			header("Location: dashboard/profile");
-			exit();
-		}
+	    return [
+	        'count' => $num_students, 
+	        'students' => $students
+	    ];
 	}
-	function getStudentByTutor($tutor) {
-		global $conn;
+	function getStudentByClass($class_id) {
+	    global $conn;
 
-		$stmt = $conn->prepare("SELECT u.first_name, u.last_name, u.profile_picture, u.email, u.status FROM users u JOIN class_schedule cs ON u.uid = cs.user_id JOIN class c ON cs.class_id = c.class_id WHERE cs.role = 'STUDENT' AND c.tutor_id = ?");
-		$stmt->bind_param("i",$tutor);
+	    $stmt = $conn->prepare("SELECT u.first_name, u.last_name, u.profile_picture, u.email, u.status FROM users u JOIN class_schedule cs ON u.uid = cs.user_id WHERE cs.role = 'STUDENT' AND cs.class_id = ?");
+	    
+	    $stmt->bind_param("i", $class_id);
+	    $stmt->execute();
+	    $result = $stmt->get_result();
 
-		try {
-			$stmt = $conn->prepare("");
-		}
-		catch(Exception $e) {
-			log_error($e->getMessage(),'database_error.log');
-		}
+	    // Get number of students in the class
+	    $num_students = $result->num_rows;
 
+	    // Fetch all students
+	    $students = $result->fetch_all(MYSQLI_ASSOC);
 
-
+	    return [
+	        'count' => $num_students,
+	        'students' => $students
+	    ];
 	}
-	function getStudentByCourse($course) {}
+	function getClassByTutor($tutor_id) {
+	    global $conn;
+
+	    $stmt = $conn->prepare("SELECT c.class_id, c.class_name, c.class_desc, c.start_date, c.end_date, c.class_size, c.is_active, c.is_free, c.price, c.thumbnail, s.subject_name, co.course_name FROM class c JOIN subject s ON c.subject_id = s.subject_id JOIN course co ON s.course_id = co.course_id WHERE c.tutor_id = ?");
+	    
+	    $stmt->bind_param("i", $tutor_id);
+	    $stmt->execute();
+	    $result = $stmt->get_result();
+
+	    // Get the count of classes
+	    $num_classes = $result->num_rows;
+	    
+	    // Fetch classes
+	    $classes = $result->fetch_all(MYSQLI_ASSOC);
+
+	    return [
+	        'count' => $num_classes, 
+	        'classes' => $classes
+	    ];
+	}
+	function submitRating($student_id, $tutor_id, $rating, $comment = null) {
+	    global $conn;
+
+	    try {
+	        // Check if student has already rated the tutor
+	        $stmt = $conn->prepare("SELECT rating_id FROM ratings WHERE student_id = ? AND tutor_id = ?");
+	        $stmt->bind_param("ii", $student_id, $tutor_id);
+	        $stmt->execute();
+	        $result = $stmt->get_result();
+
+	        if ($result->num_rows > 0) {
+	            return "You have already rated this tutor.";
+	        }
+
+	        // Insert new rating
+	        $stmt = $conn->prepare("INSERT INTO ratings (student_id, tutor_id, rating, comment) VALUES (?, ?, ?, ?)");
+	        $stmt->bind_param("iiis", $student_id, $tutor_id, $rating, $comment);
+	        $stmt->execute();
+
+	        // Update tutor's average rating
+	        updateTutorRating($tutor_id);
+
+	        return "Thank you for your feedback!";
+	    } catch (Exception $e) {
+	        return "Error: " . $e->getMessage();
+	    }
+	}
+	function updateTutorRating($tutor_id) {
+	    global $conn;
+
+	    // Calculate new average rating
+	    $stmt = $conn->prepare("SELECT AVG(rating) AS avg_rating FROM ratings WHERE tutor_id = ?");
+	    $stmt->bind_param("i", $tutor_id);
+	    $stmt->execute();
+	    $result = $stmt->get_result();
+	    $row = $result->fetch_assoc();
+
+	    $average_rating = round($row['avg_rating'], 1); // Round to 1 decimal place
+
+	    // Update the tutor's rating in the users table
+	    $stmt = $conn->prepare("UPDATE users SET rating = ? WHERE uid = ?");
+	    $stmt->bind_param("di", $average_rating, $tutor_id);
+	    $stmt->execute();
+	}
+	function getTutorRatings($tutor_id) {
+	    global $conn;
+
+	    $stmt = $conn->prepare("SELECT r.rating, r.comment, u.first_name, u.last_name
+	                            FROM ratings r
+	                            JOIN users u ON r.student_id = u.uid
+	                            WHERE r.tutor_id = ?
+	                            ORDER BY r.created_at DESC");
+	    $stmt->bind_param("i", $tutor_id);
+	    $stmt->execute();
+	    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+	}
 
 
-	
+
 	/* EXTRAS */
 	function rememberTokenVerifier($hashed_token) {
 		global $conn;
@@ -773,7 +783,7 @@
 
 		// Save the code and expiration in the database
 	    $stmt = $conn->prepare("UPDATE login_tokens SET verification_code = ?, expiration_date	= ? WHERE user_id = ?");
-	    $stmt->bind_param("ssi", $code, $expiresAt, $userId);
+	    $stmt->bind_param("ssis", $code, $expiresAt, $userId);
 	    if (!$stmt->execute()) {
 	        log_error($stmt->error, 'database_error.log');
 	        $stmt = $conn->prepare("INSERT INTO login_tokens(verification_code, expiration_date, user_id, type) VALUES(?,?,?)");
@@ -1020,4 +1030,231 @@ function fetchUserNotifications($user_id, $role) {
     }
 }
 
-?>
+    // Transaction-related functions
+    function getTransactions($page = 1, $filter = 'all', $role = '', $userId = null) {
+        global $conn;
+        $limit = 10;
+        $offset = ($page - 1) * $limit;
+        
+        try {
+            $whereClause = '';
+            $params = [];
+            $types = '';
+
+            // Filter by status if specified
+            if ($filter !== 'all') {
+                $whereClause .= " WHERE status = ?";
+                $params[] = strtoupper($filter);
+                $types .= 's';
+            }
+
+            // Role-based filtering
+            if ($role !== 'ADMIN') {
+                $whereClause = $whereClause ? $whereClause . " AND user_id = ?" : " WHERE user_id = ?";
+                $params[] = $userId;
+                $types .= 'i';
+            }
+
+            // Get total count for pagination
+            $countQuery = "SELECT COUNT(*) as total FROM transactions" . $whereClause;
+            $stmt = $conn->prepare($countQuery);
+            if (!empty($params)) {
+                $stmt->bind_param($types, ...$params);
+            }
+            $stmt->execute();
+            $totalResult = $stmt->get_result()->fetch_assoc();
+            $total = $totalResult['total'];
+
+            // Get transactions with pagination
+            $query = "SELECT t.*, 
+                            u.first_name, 
+                            u.last_name, 
+                            u.role as user_role
+                     FROM transactions t
+                     LEFT JOIN users u ON t.user_id = u.uid" . 
+                     $whereClause . 
+                     " ORDER BY t.created_at DESC
+                     LIMIT ? OFFSET ?";
+
+            $stmt = $conn->prepare($query);
+            $params[] = $limit;
+            $params[] = $offset;
+            $types .= 'ii';
+            
+            $stmt->bind_param($types, ...$params);
+            $stmt->execute();
+            $result = $stmt->get_result();
+
+            $transactions = [];
+            while ($row = $result->fetch_assoc()) {
+                $transactions[] = [
+                    'id' => $row['transaction_id'],
+                    'userId' => $row['user_id'],
+                    'userName' => $row['first_name'] . ' ' . $row['last_name'],
+                    'userRole' => $row['user_role'],
+                    'type' => $row['type'],
+                    'amount' => $row['amount'],
+                    'status' => $row['status'],
+                    'date' => $row['created_at'],
+                    'description' => $row['description'],
+                    'reference' => $row['reference_number']
+                ];
+            }
+
+            return [
+                'success' => true,
+                'transactions' => $transactions,
+                'totalPages' => ceil($total / $limit),
+                'currentPage' => $page
+            ];
+
+        } catch (Exception $e) {
+            log_error($e->getMessage(), 'database_error.log');
+            return [
+                'success' => false,
+                'message' => 'Failed to fetch transactions'
+            ];
+        }
+    }
+
+    function getTransactionDetails($transactionId) {
+        global $conn;
+        
+        try {
+            $query = "SELECT t.*, 
+                            u.first_name, 
+                            u.last_name, 
+                            u.role as user_role
+                     FROM transactions t
+                     LEFT JOIN users u ON t.user_id = u.uid
+                     WHERE t.transaction_id = ?";
+
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param('s', $transactionId);
+            $stmt->execute();
+            $result = $stmt->get_result();
+
+            if ($row = $result->fetch_assoc()) {
+                return [
+                    'success' => true,
+                    'transaction' => [
+                        'id' => $row['transaction_id'],
+                        'userId' => $row['user_id'],
+                        'userName' => $row['first_name'] . ' ' . $row['last_name'],
+                        'userRole' => $row['user_role'],
+                        'type' => $row['type'],
+                        'amount' => $row['amount'],
+                        'status' => $row['status'],
+                        'date' => $row['created_at'],
+                        'description' => $row['description'],
+                        'reference' => $row['reference_number']
+                    ]
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'Transaction not found'
+            ];
+
+        } catch (Exception $e) {
+            log_error($e->getMessage(), 'database_error.log');
+            return [
+                'success' => false,
+                'message' => 'Failed to fetch transaction details'
+            ];
+        }
+    }
+
+    function exportTransactions($filter = 'all', $role = '', $userId = null) {
+        global $conn;
+        
+        try {
+            $whereClause = '';
+            $params = [];
+            $types = '';
+
+            if ($filter !== 'all') {
+                $whereClause .= " WHERE status = ?";
+                $params[] = strtoupper($filter);
+                $types .= 's';
+            }
+
+            if ($role !== 'ADMIN') {
+                $whereClause = $whereClause ? $whereClause . " AND user_id = ?" : " WHERE user_id = ?";
+                $params[] = $userId;
+                $types .= 'i';
+            }
+
+            $query = "SELECT t.*, 
+                            u.first_name, 
+                            u.last_name, 
+                            u.role as user_role
+                     FROM transactions t
+                     LEFT JOIN users u ON t.user_id = u.uid" . 
+                     $whereClause . 
+                     " ORDER BY t.created_at DESC";
+
+            $stmt = $conn->prepare($query);
+            if (!empty($params)) {
+                $stmt->bind_param($types, ...$params);
+            }
+            $stmt->execute();
+            $result = $stmt->get_result();
+
+            $transactions = [];
+            while ($row = $result->fetch_assoc()) {
+                $transactions[] = [
+                    'Transaction ID' => $row['transaction_id'],
+                    'User' => $row['first_name'] . ' ' . $row['last_name'],
+                    'Role' => $row['user_role'],
+                    'Type' => $row['type'],
+                    'Amount' => $row['amount'],
+                    'Status' => $row['status'],
+                    'Date' => $row['created_at'],
+                    'Description' => $row['description'],
+                    'Reference' => $row['reference_number']
+                ];
+            }
+
+            return [
+                'success' => true,
+                'transactions' => $transactions
+            ];
+
+        } catch (Exception $e) {
+            log_error($e->getMessage(), 'database_error.log');
+            return [
+                'success' => false,
+                'message' => 'Failed to export transactions'
+            ];
+        }
+    }
+
+    // Class Management Functions have been moved to class_management.php
+    // Keeping empty function declarations for backward compatibility
+    /**
+     * Class Management Functions
+     * These functions have been moved to class_management.php for better organization
+     * Keeping stubs here for backward compatibility
+     */
+    function getClassStats($tutor_id) {
+        require_once __DIR__ . '/class_management.php';
+        return \getClassStats($tutor_id);
+    }
+
+    function deleteClass($class_id, $tutor_id) {
+        require_once __DIR__ . '/class_management.php';
+        return \deleteClass($class_id, $tutor_id);
+    }
+
+    function getClassDetails($class_id, $tutor_id) {
+        require_once __DIR__ . '/class_management.php';
+        return \getClassDetails($class_id, $tutor_id);
+    }
+
+    function updateClassStatus($class_id, $tutor_id, $is_active) {
+        require_once __DIR__ . '/class_management.php';
+        return \updateClassStatus($class_id, $tutor_id, $is_active);
+    }
+    ?>

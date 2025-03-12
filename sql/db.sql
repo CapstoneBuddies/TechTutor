@@ -14,7 +14,16 @@ CREATE TABLE IF NOT EXISTS `users` (
     `created_on` TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
     `last_login` TIMESTAMP NULL
 );
-
+CREATE TABLE IF NOT EXISTS `ratings` (
+    `rating_id` INT PRIMARY KEY AUTO_INCREMENT,
+    `student_id` INT NOT NULL,
+    `tutor_id` INT NOT NULL,
+    `rating` INT CHECK (`rating` BETWEEN 1 AND 5), -- 1 (worst) to 5 (best)
+    `comment` TEXT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`student_id`) REFERENCES users(uid) ON DELETE CASCADE,
+    FOREIGN KEY (`tutor_id`) REFERENCES users(uid) ON DELETE CASCADE
+);
 CREATE TABLE IF NOT EXISTS `login_tokens` (
     `token_id` INT PRIMARY KEY AUTO_INCREMENT,
     `user_id` INT NOT NULL,
@@ -117,17 +126,41 @@ CREATE TABLE IF NOT EXISTS notifications (
     FOREIGN KEY (recipient_id) REFERENCES users(uid),
     FOREIGN KEY (class_id) REFERENCES class(class_id)
 );
-
 CREATE TABLE IF NOT EXISTS `transactions` (
-    `transaction_id` INT PRIMARY KEY AUTO_INCREMENT,
+    `transaction_id` VARCHAR(36) NOT NULL,
     `user_id` INT NOT NULL,
-    `reference_number` VARCHAR(255) UNIQUE NOT NULL,
-    `amount` FLOAT(10,2) NOT NULL,
-    `transaction_date` TIMESTAMP NOT NULL,
-    `status` ENUM('Completed', 'Pending', 'Failed') NOT NULL,
-    `transaction_type` ENUM('Deposit', 'Withdrawal') NOT NULL,
-    `payment_method` ENUM('Paypal', 'Credit Card', 'Bank Transfer') NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(uid)
+    `type` ENUM('PAYMENT', 'REFUND', 'DEPOSIT', 'WITHDRAWAL') NOT NULL,
+    `amount` DECIMAL(10,2) NOT NULL,
+    `status` ENUM('COMPLETED', 'PENDING', 'FAILED') NOT NULL DEFAULT 'PENDING',
+    `description` TEXT,
+    `reference_number` VARCHAR(50),
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`transaction_id`),
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`uid`) ON DELETE CASCADE,
+    INDEX `idx_user_id` (`user_id`),
+    INDEX `idx_status` (`status`),
+    INDEX `idx_created_at` (`created_at`)
+);
+CREATE TABLE IF NOT EXISTS `paymongo_transactions` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT NOT NULL,
+    `payment_intent_id` VARCHAR(255) NOT NULL,
+    `payment_method_id` VARCHAR(255),
+    `amount` DECIMAL(10,2) NOT NULL,
+    `currency` VARCHAR(3) DEFAULT 'PHP',
+    `status` ENUM('pending', 'processing', 'succeeded', 'failed') DEFAULT 'pending',
+    `payment_method_type` VARCHAR(50), -- card, gcash, grab_pay, paymaya
+    `description` TEXT,
+    `metadata` JSON,
+    `error_message` TEXT,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`uid`) ON DELETE CASCADE,
+    INDEX `idx_payment_intent` (`payment_intent_id`),
+    INDEX `idx_user_id` (`user_id`),
+    INDEX `idx_status` (`status`),
+    INDEX `idx_created_at` (`created_at`)
 );
 
 -- Indexing for optimization
