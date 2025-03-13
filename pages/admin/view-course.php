@@ -67,9 +67,6 @@
         $row = $result->fetch_assoc();
         $stats['total_students'] = $row['count'];
     }
-    
-    // Pending reviews (you may want to add a reviews table)
-    $stats['pending_reviews'] = 0;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -144,17 +141,6 @@
                     <div class="stat-info">
                         <h3>Enrolled Students</h3>
                         <p class="stat-number"><?php echo $stats['total_students'] ?? 0; ?></p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card bg-warning text-white">
-                    <div class="stat-icon">
-                        <i class="bi bi-clock-history"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h3>Pending Reviews</h3>
-                        <p class="stat-number"><?php echo $stats['pending_reviews'] ?? 0; ?></p>
                     </div>
                 </div>
             </div>

@@ -75,5 +75,13 @@ RewriteRule ^dashboard/users$ pages/admin/view-users.php [L]
 RewriteRule ^dashboard/courses$ pages/admin/view-course.php [L]
 RewriteRule ^dashboard/class-details$ pages/admin/class-details.php [L,QSA]
 
+#Admin AJAX REDIRECT
+RewriteRule ^dashboard/get-users$ backends/admin/get_users.php [L]
+RewriteRule ^dashboard/toggle-user-status$ backends/admin/toggle_user_status.php [L]
+RewriteRule ^dashboard/delete-users$ backends/admin/delete_user.php [L]
+RewriteRule ^dashboard/send-password-reset$ backends/admin/send_password_reset.php [L]
+RewriteRule ^dashboard/get-user-emails$ backends/admin/get_user_emails.php [L]
+
+
 #Testing pages
 #RewriteRule ^test$ pages/techguru/create_class.php [L]

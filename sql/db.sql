@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS `login_tokens` (
     `user_id` INT NOT NULL,
     `token` VARCHAR(64) NOT NULL,
     `verification_code` VARCHAR(6) NULL,
-    `type` ENUM('remember_me', 'email_verification') NOT NULL,
+    `type` ENUM('remember_me', 'email_verification','reset') NOT NULL,
     `expiration_date` DATETIME NOT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`user_id`) REFERENCES `users`(`uid`) ON DELETE CASCADE,

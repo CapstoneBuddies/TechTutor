@@ -7,17 +7,7 @@ function getUserByRole($role, $page = 1, $limit = 8) {
     
     $offset = ($page - 1) * $limit;
 
-    $stmt = $conn->prepare("SELECT `u`.*, `s`.`subject_name` AS 'subject', 
-                           (SELECT COUNT(*) FROM `class_schedule` cs 
-                            WHERE cs.`user_id` = `u`.`uid` AND cs.`role` = 'STUDENT') AS 'enrolled-classes',
-                           (SELECT COUNT(*) FROM `class_schedule` cs2 
-                            WHERE cs2.`class_id` = cs.`class_id` AND cs2.`role` = 'STUDENT') AS 'enrolled-students' 
-                           FROM `users` `u` 
-                           LEFT JOIN `class_schedule` cs ON `u`.`uid` = cs.`user_id` 
-                           LEFT JOIN `class` c ON cs.`class_id` = c.`class_id` 
-                           LEFT JOIN `subject` s ON c.`subject_id` = s.`subject_id` 
-                           WHERE `u`.`role` = ? AND `u`.`status` in (0,1) 
-                           LIMIT ? OFFSET ?");
+    $stmt = $conn->prepare("SELECT u.uid, u.first_name, u.last_name, u.email, u.profile_picture, IF(u.role = 'TECHKID', (SELECT COUNT(*) FROM class_schedule cs WHERE cs.user_id = u.uid AND cs.role = 'STUDENT'), (SELECT COUNT(*) FROM class c WHERE c.tutor_id = u.uid)) AS `num_classes`, u.status, u.last_login FROM users u WHERE u.role = ? AND u.status IN (0,1) ORDER BY u.last_name, u.first_name  LIMIT ? OFFSET ?;");
 
     $stmt->bind_param("sii", $role, $limit, $offset);
     $stmt->execute();
@@ -103,6 +93,7 @@ function getSubjectDetails($identifier, $by = 'course_id') {
         return $result->num_rows > 0 ? $result->fetch_assoc() : null;
     }
 }
+
 /**
  * Verify a remember me token
  */
@@ -282,5 +273,62 @@ function verifyCode() {
         header("location: verify");
         exit();
     }
+}
+
+/**
+ * Search users by name or email across all roles
+ */
+function searchUsers($search) {
+    global $conn;
+    
+    $search = "%{$search}%";
+    
+    $stmt = $conn->prepare("SELECT u.*, 
+                           IF(u.role = 'TECHKID', 
+                              (SELECT COUNT(*) FROM class_schedule cs WHERE cs.user_id = u.uid AND cs.role = 'STUDENT'), 
+                              (SELECT COUNT(*) FROM class c WHERE c.tutor_id = u.uid)) AS `num_classes`,
+                           u.status, u.last_login 
+                           FROM users u 
+                           WHERE (u.first_name LIKE ? OR u.last_name LIKE ? OR u.email LIKE ? OR CONCAT(u.first_name, ' ', u.last_name) LIKE ?) 
+                           AND u.status IN (0,1) 
+                           ORDER BY u.last_name, u.first_name");
+    
+    $stmt->bind_param("ssss", $search, $search, $search, $search);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        return $result->fetch_all(MYSQLI_ASSOC);
+    }
+    return [];
+}
+
+/**
+ * Search users by name or email within a specific role
+ */
+function searchUsersByRole($role, $search) {
+    global $conn;
+    
+    $search = "%{$search}%";
+    
+    $stmt = $conn->prepare("SELECT u.*, 
+                           IF(u.role = 'TECHKID', 
+                              (SELECT COUNT(*) FROM class_schedule cs WHERE cs.user_id = u.uid AND cs.role = 'STUDENT'), 
+                              (SELECT COUNT(*) FROM class c WHERE c.tutor_id = u.uid)) AS `num_classes`,
+                           u.status, u.last_login 
+                           FROM users u 
+                           WHERE (u.first_name LIKE ? OR u.last_name LIKE ? OR u.email LIKE ? OR CONCAT(u.first_name, ' ', u.last_name) LIKE ?) 
+                           AND u.role = ? 
+                           AND u.status IN (0,1) 
+                           ORDER BY u.last_name, u.first_name");
+    
+    $stmt->bind_param("sssss", $search, $search, $search, $search, $role);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        return $result->fetch_all(MYSQLI_ASSOC);
+    }
+    return [];
 }
 ?>

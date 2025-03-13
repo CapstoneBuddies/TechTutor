@@ -204,8 +204,8 @@
         global $conn;
         
         try {
-            $stmt = $conn->prepare("SELECT * FROM notifications WHERE recipient_id = ? OR recipient_role = ? OR recipient_role = 'ALL' ORDER BY created_at DESC LIMIT 50");
-            $stmt->bind_param("is", $user_id, $role);
+            $stmt = $conn->prepare("SELECT n.*, c.class_name FROM notifications n LEFT JOIN class c ON n.class_id = c.class_id WHERE (? = 'ADMIN') OR n.recipient_id = ? OR n.recipient_role = ? OR n.recipient_role = 'ALL' ORDER BY n.created_at DESC LIMIT 50");
+            $stmt->bind_param("sii", $role, $user_id, $user_id);
             $stmt->execute();
             return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         } catch (Exception $e) {
@@ -213,4 +213,17 @@
             return [];
         }
     }
+    function normalizeStatus($status) {
+	    return $status == 1 ? 'active' : 'inactive';
+	}
+
+	/**
+	 * Gets the CSS class for status badges
+	 * @param mixed $status The status from database (1 for active, 0 for inactive)
+	 * @return string CSS class for the status badge
+	 */
+	function getStatusBadgeClass($status) {
+	    $normalizedStatus = normalizeStatus($status);
+	    return 'status-badge status-' . $normalizedStatus;
+	}
 ?>

@@ -250,7 +250,7 @@
                                     <tr>
                                         <th class="text-center">Name</th>
                                         <th class="text-center">Email</th>
-                                        <th class="text-center">Subject</th>
+                                        <th class="text-center">No of Classes</th>
                                         <th class="text-center">Status</th>
                                         <th class="text-center">Last Login</th>
                                     </tr>
@@ -265,7 +265,7 @@
                                             </div>
                                         </td>
                                         <td class="text-center"><?php echo $user['email']; ?></td>
-                                        <td><?php echo $user['subject']; ?></td>
+                                        <td class="text-center"><?php echo $user['num_classes']; ?></td>
                                         <td class="text-center">
                                             <span class="status-badge <?php echo getStatusBadgeClass($user['status']); ?>">
                                                 <?php echo normalizeStatus($user['status']); ?>
@@ -309,7 +309,7 @@
                                             </div>
                                         </td>
                                         <td class="text-center"><?php echo $user['email']; ?></td>
-                                        <td class="text-center"><?php echo $user['enrolled-classes']; ?></td>
+                                        <td class="text-center"><?php echo $user['num_classes']; ?></td>
                                         <td class="text-center">
                                             <span class="status-badge <?php echo getStatusBadgeClass($user['status']); ?>">
                                                 <?php echo normalizeStatus($user['status']); ?>

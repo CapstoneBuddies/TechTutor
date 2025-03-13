@@ -4,11 +4,10 @@
     }
     
     // Since this is a shared component, we need to use ROOT_PATH for consistent access
-    require_once ROOT_PATH . '/backends/config.php';
     require_once ROOT_PATH . '/backends/db.php';
     
     // Helper function for time ago
-    function getTimeAgoNotifNotif($timestamp) {
+    function getTimeAgoNotif($timestamp) {
         $datetime = new DateTime($timestamp);
         $now = new DateTime();
         $interval = $now->diff($datetime);
@@ -73,19 +72,11 @@
             <!-- ADMIN DASHBOARD SELECTION -->
             <?php if ($_SESSION['role'] == 'ADMIN'): ?>
                 <!-- Admin Links -->
-                <a href="<?php echo BASE; ?>dashboard/TechGurus" class="nav-item <?php echo $current_page == 'main_view-techguru.php' ? 'active' : ''; ?>">
-                    <i class="bi bi-person-check"></i>
-                    <span>TechGurus</span>
-                </a>
-                <a href="<?php echo BASE; ?>dashboard/TechKids" class="nav-item <?php echo $current_page == 'main_view-techkids.php' ? 'active' : ''; ?>">
-                <i class="bi bi-person"></i>
-                    <span>TechKids</span>
-                </a>
-                <a href="<?php echo BASE; ?>dashboard/users" class="nav-item <?php echo $current_page == 'main_view-users.php' ? 'active' : ''; ?>">
+                <a href="<?php echo BASE; ?>dashboard/users" class="nav-item <?php echo $current_page == 'view-users.php' ? 'active' : ''; ?>">
                     <i class="bi bi-people"></i>
                     <span>View All Users</span>
                 </a>
-                <a href="<?php echo BASE; ?>dashboard/courses" class="nav-item <?php echo $current_page == 'main_view-course.php' ? 'active' : ''; ?>">
+                <a href="<?php echo BASE; ?>dashboard/courses" class="nav-item <?php echo $current_page == 'view-course.php' ? 'active' : ''; ?>">
                     <i class="bi bi-book"></i>
                     <span>Courses</span>
                 </a>
