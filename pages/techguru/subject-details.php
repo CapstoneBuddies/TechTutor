@@ -1,6 +1,5 @@
 <?php 
-require_once '../../backends/config.php';
-require_once ROOT_PATH . '/backends/main.php';
+require_once '../../backends/main.php';
 
 // Ensure user is logged in and is a TechGuru
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
@@ -9,23 +8,17 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
 }
 
 // Get subject from URL parameter
-$subject = isset($_GET['subject']) ? $_GET['subject'] : '';
-
-// Map subject IDs to readable names and categories
-$subjectMap = [
-    'java' => ['name' => 'Java Programming', 'category' => 'Computer Programming'],
-    'python' => ['name' => 'Python Programming', 'category' => 'Computer Programming'],
-    'cpp' => ['name' => 'C++ Programming', 'category' => 'Computer Programming'],
-    'frontend' => ['name' => 'Frontend Development', 'category' => 'Web Development']
-];
+$subject_name = isset($_GET['subject']) ? $_GET['subject'] : '';
 
 // Get subject details or redirect if invalid
-if (!isset($subjectMap[$subject])) {
+$subjectDetails = getSubjectDetails($subject_name, 'subject_name');
+if (!$subjectDetails) {
     header('Location: ./');
     exit();
 }
 
-$subjectDetails = $subjectMap[$subject];
+// Get active classes for this subject and tutor
+$activeClasses = getActiveClassesForSubject($subjectDetails['subject_id'], $_SESSION['user']);
 ?>
 
 <!DOCTYPE html>
@@ -33,7 +26,7 @@ $subjectDetails = $subjectMap[$subject];
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TechTutor | <?php echo htmlspecialchars($subjectDetails['name']); ?></title>
+    <title>TechTutor | <?php echo htmlspecialchars($subjectDetails['subject_name']); ?></title>
     
     <!-- Favicons -->
     <link href="<?php echo IMG; ?>stand_alone_logo.png" rel="icon">
@@ -60,16 +53,15 @@ $subjectDetails = $subjectMap[$subject];
                         <div>
                             <nav aria-label="breadcrumb" class="breadcrumb-nav">
                                 <ol class="breadcrumb">
-                                    <li class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></li>
-                                    <li class="breadcrumb-item"><a href="techguru_subjects.php">Teaching Subjects</a></li>
-                                    <li class="breadcrumb-item"><?php echo htmlspecialchars($subjectDetails['category']); ?></li>
-                                    <li class="breadcrumb-item active"><?php echo htmlspecialchars($subjectDetails['name']); ?></li>
+                                    <li class="breadcrumb-item"><a href="<?php echo BASE; ?>dashboard">Dashboard</a></li>
+                                    <li class="breadcrumb-item"><a href="./">Teaching Subjects</a></li>
+                                    <li class="breadcrumb-item active"><?php echo htmlspecialchars($subjectDetails['subject_name']); ?></li>
                                 </ol>
                             </nav>
-                            <h2 class="page-header"><?php echo htmlspecialchars($subjectDetails['name']); ?></h2>
+                            <h2 class="page-header"><?php echo htmlspecialchars($subjectDetails['subject_name']); ?></h2>
                             <p class="subtitle">View subject details and create a class</p>
                         </div>
-                        <a href="class/create?subject=<?php echo urlencode($subject); ?>" class="btn btn-primary btn-action">
+                        <a href="class/create?subject=<?php echo urlencode($subject_name); ?>" class="btn btn-primary btn-action">
                             <i class="bi bi-plus-lg"></i>
                             Create Class
                         </a>
@@ -84,29 +76,14 @@ $subjectDetails = $subjectMap[$subject];
                 <div class="dashboard-card">
                     <h3>Subject Overview</h3>
                     <div class="subject-content mt-4">
-                        <?php if ($subject === 'java'): ?>
                         <h4>Course Description</h4>
-                        <p>Java Programming is a comprehensive course that covers object-oriented programming principles using Java. Students will learn everything from basic syntax to advanced concepts like multithreading and GUI development.</p>
+                        <p><?php echo nl2br(htmlspecialchars($subjectDetails['subject_desc'])); ?></p>
                         
-                        <h4 class="mt-4">Learning Outcomes</h4>
-                        <ul>
-                            <li>Understand Java syntax and basic programming concepts</li>
-                            <li>Master object-oriented programming principles</li>
-                            <li>Work with Java collections and data structures</li>
-                            <li>Develop GUI applications using JavaFX</li>
-                            <li>Implement multithreading and concurrent programming</li>
-                            <li>Handle exceptions and debug Java applications</li>
-                        </ul>
+                        <h4 class="mt-4">Course Category</h4>
+                        <p><?php echo htmlspecialchars($subjectDetails['course_name']); ?> - <?php echo htmlspecialchars($subjectDetails['course_desc']); ?></p>
 
-                        <h4 class="mt-4">Prerequisites</h4>
-                        <ul>
-                            <li>Basic understanding of programming concepts</li>
-                            <li>Familiarity with any programming language (preferred but not required)</li>
-                            <li>Basic computer skills</li>
-                        </ul>
-                        <?php endif; ?>
-
-                        <!-- Add similar blocks for other subjects -->
+                        <h4 class="mt-4">Subject Image</h4>
+                        <img src="<?php echo SUBJECT_IMG . $subjectDetails['image']; ?>" alt="<?php echo htmlspecialchars($subjectDetails['subject_name']); ?>" class="img-fluid rounded" style="max-width: 300px;">
                     </div>
                 </div>
             </div>
@@ -118,19 +95,25 @@ $subjectDetails = $subjectMap[$subject];
                     <div class="stats-content mt-4">
                         <div class="stat-item d-flex justify-content-between align-items-center mb-3">
                             <span class="stat-label">Active Classes</span>
-                            <span class="stat-value">5</span>
+                            <span class="stat-value"><?php echo (int)$subjectDetails['active_classes']; ?></span>
                         </div>
                         <div class="stat-item d-flex justify-content-between align-items-center mb-3">
                             <span class="stat-label">Total Students</span>
-                            <span class="stat-value">120</span>
+                            <span class="stat-value"><?php echo (int)$subjectDetails['total_students']; ?></span>
                         </div>
                         <div class="stat-item d-flex justify-content-between align-items-center mb-3">
                             <span class="stat-label">Average Rating</span>
-                            <span class="stat-value">4.8 <i class="bi bi-star-fill text-warning"></i></span>
+                            <span class="stat-value">
+                                <?php 
+                                $rating = number_format($subjectDetails['average_rating'] ?? 0, 1);
+                                echo $rating; 
+                                ?> 
+                                <i class="bi bi-star-fill text-warning"></i>
+                            </span>
                         </div>
                         <div class="stat-item d-flex justify-content-between align-items-center">
                             <span class="stat-label">Completion Rate</span>
-                            <span class="stat-value">92%</span>
+                            <span class="stat-value"><?php echo number_format($subjectDetails['completion_rate'] ?? 0, 1); ?>%</span>
                         </div>
                     </div>
                 </div>
@@ -139,16 +122,29 @@ $subjectDetails = $subjectMap[$subject];
                 <div class="dashboard-card mt-4">
                     <h3>Your Active Classes</h3>
                     <div class="active-classes mt-4">
-                        <div class="class-item p-3 mb-3 bg-light rounded">
-                            <h5 class="mb-2">Morning Batch</h5>
-                            <p class="mb-2"><i class="bi bi-clock me-2"></i>Mon, Wed, Fri - 9:00 AM</p>
-                            <p class="mb-0"><i class="bi bi-person me-2"></i>15 Students</p>
-                        </div>
-                        <div class="class-item p-3 bg-light rounded">
-                            <h5 class="mb-2">Evening Batch</h5>
-                            <p class="mb-2"><i class="bi bi-clock me-2"></i>Tue, Thu - 7:00 PM</p>
-                            <p class="mb-0"><i class="bi bi-person me-2"></i>12 Students</p>
-                        </div>
+                        <?php if (empty($activeClasses)): ?>
+                            <div class="text-center text-muted py-4">
+                                <i class="bi bi-calendar2-x" style="font-size: 2rem;"></i>
+                                <p class="mt-2 mb-0">No active classes</p>
+                            </div>
+                        <?php else: ?>
+                            <?php foreach ($activeClasses as $class): ?>
+                                <div class="class-item p-3 mb-3 bg-light rounded">
+                                    <h5 class="mb-2"><?php echo htmlspecialchars($class['class_name']); ?></h5>
+                                    <p class="mb-2">
+                                        <i class="bi bi-clock me-2"></i>
+                                        <?php 
+                                        $start = new DateTime($class['start_date']);
+                                        echo $start->format('D, M j - g:i A'); 
+                                        ?>
+                                    </p>
+                                    <p class="mb-0">
+                                        <i class="bi bi-person me-2"></i>
+                                        <?php echo (int)$class['student_count']; ?> Students
+                                    </p>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>

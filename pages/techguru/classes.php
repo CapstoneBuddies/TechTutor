@@ -1,6 +1,5 @@
 <?php 
-require_once '../../backends/config.php';
-require_once ROOT_PATH . '/backends/main.php';
+require_once '../../backends/main.php';
 
 // Ensure user is logged in and is a TechGuru
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
@@ -16,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['class_id'])) {
     } else {
         $_SESSION['error'] = "Failed to delete class";
     }
-    header('Location: ' . $_SERVER['PHP_SELF']);
+    header('Location: ' . BASE . 'dashboard/class');
     exit();
 }
 
@@ -64,7 +63,7 @@ $stats = getClassStats($_SESSION['user']);
                             <h2 class="page-header">My Classes</h2>
                             <p class="subtitle">Manage your tutoring classes and create new ones</p>
                         </div>
-                        <a href="subjects" class="btn btn-primary btn-action">
+                        <a href="<?php echo BASE; ?>dashboard/subjects" class="btn btn-primary btn-action">
                             <i class="bi bi-plus-lg"></i>
                             Create Class
                         </a>
@@ -159,11 +158,11 @@ $stats = getClassStats($_SESSION['user']);
                                             </td>
                                             <td>
                                                 <div class="btn-group">
-                                                    <a href="class_details.php?id=<?php echo $class['class_id']; ?>" 
+                                                    <a href="<?php echo BASE; ?>dashboard/class/details?id=<?php echo $class['class_id']; ?>" 
                                                        class="btn btn-sm btn-outline-primary">
                                                         <i class="bi bi-eye"></i>
                                                     </a>
-                                                    <a href="class_edit.php?id=<?php echo $class['class_id']; ?>" 
+                                                    <a href="<?php echo BASE; ?>dashboard/class/edit?id=<?php echo $class['class_id']; ?>" 
                                                        class="btn btn-sm btn-outline-secondary">
                                                         <i class="bi bi-pencil"></i>
                                                     </a>

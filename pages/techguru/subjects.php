@@ -1,12 +1,12 @@
 <?php 
-require_once '../../backends/config.php';
-require_once ROOT_PATH . '/backends/main.php';
+require_once '../../backends/main.php';
 
 // Ensure user is logged in and is a TechGuru
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
     header('Location: ' . BASE . 'login');
     exit();
 }
+    $courses = getCourseDetails();
 ?>
 
 <!DOCTYPE html>
@@ -41,7 +41,7 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
                         <div>
                             <nav aria-label="breadcrumb" class="breadcrumb-nav">
                                 <ol class="breadcrumb">
-                                    <li class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></li>
+                                    <li class="breadcrumb-item"><a href="<?php echo BASE; ?>dashboard">Dashboard</a></li>
                                     <li class="breadcrumb-item active">Teaching Subjects</li>
                                 </ol>
                             </nav>
@@ -63,131 +63,96 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
 
         <!-- Subject Categories -->
         <div class="row">
-            <!-- Computer Programming Category -->
+            <?php foreach ($courses as $course):?>
             <div class="col-12 mt-4">
-                <h3 class="category-title">Computer Programming</h3>
-            </div>
-            
-            <div class="col-md-4 mb-4">
-                <div class="subject-card">
-                    <img src="<?php echo IMG; ?>subjects/java.jpg" class="card-img-top" alt="Java Programming">
-                    <div class="card-body d-flex flex-column">
-                        <h5 class="card-title">Java Programming</h5>
-                        <p class="card-text">Learn object-oriented programming with Java. Perfect for beginners and intermediate programmers.</p>
-                        <div class="subject-stats">
-                            <span class="subject-stat">
-                                <i class="bi bi-person"></i>
-                                120 Students
-                            </span>
-                            <span class="subject-stat">
-                                <i class="bi bi-star-fill"></i>
-                                4.8
-                            </span>
-                        </div>
-                        <a href="subjects/class?subject=java" class="btn btn-primary btn-action mt-3">
-                            <i class="bi bi-book"></i>
-                            View Subject
-                        </a>
-                    </div>
+                <h3 class="category-title mb-3"><?php echo htmlspecialchars($course['course_name']); ?></h3>
+                <div class="subtitle mb-4">
+                    <?php echo htmlspecialchars($course['course_desc']); ?>
                 </div>
             </div>
-
-            <div class="col-md-4 mb-4">
-                <div class="subject-card">
-                    <img src="<?php echo IMG; ?>subjects/python.jpg" class="card-img-top" alt="Python Programming">
-                    <div class="card-body d-flex flex-column">
-                        <h5 class="card-title">Python Programming</h5>
-                        <p class="card-text">Master Python programming language. From basics to advanced concepts including AI and ML.</p>
-                        <div class="subject-stats">
-                            <span class="subject-stat">
-                                <i class="bi bi-person"></i>
-                                150 Students
-                            </span>
-                            <span class="subject-stat">
-                                <i class="bi bi-star-fill"></i>
-                                4.9
-                            </span>
+            <div class="row course-category mx-0" data-course="<?php echo htmlspecialchars($course['course_name']); ?>">
+                <?php foreach (getSubjectDetails($course['course_id']) as $subject):?>
+                <div class="col-md-4 mb-4">
+                    <div class="subject-card">
+                        <img src="<?php echo SUBJECT_IMG.$subject['image']; ?>" class="card-img-top" alt="<?php echo htmlspecialchars($subject['subject_name']); ?>">
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title"><?php echo htmlspecialchars($subject['subject_name']); ?></h5>
+                            <p class="card-text"><?php echo htmlspecialchars($subject['subject_desc']); ?></p>
+                            <div class="subject-stats">
+                                <span class="subject-stat">
+                                    <i class="bi bi-person"></i>
+                                    <?php echo htmlspecialchars($subject['student_count']); ?> Students
+                                </span>
+                                <span class="subject-stat">
+                                    <i class="bi bi-journal-bookmark-fill"></i>
+                                    <?php echo htmlspecialchars($subject['class_count']); ?> Classes
+                                </span>
+                            </div>
+                            <a href="subjects/class?subject=<?php echo urlencode($subject['subject_name']); ?>" class="btn btn-primary btn-action mt-3">
+                                <i class="bi bi-book"></i>
+                                View Subject
+                            </a>
                         </div>
-                        <a href="subjects/class?subject=python" class="btn btn-primary btn-action mt-3">
-                            <i class="bi bi-book"></i>
-                            View Subject
-                        </a>
                     </div>
                 </div>
+                <?php endforeach; ?>
             </div>
-
-            <div class="col-md-4 mb-4">
-                <div class="subject-card">
-                    <img src="<?php echo IMG; ?>subjects/cpp.jpg" class="card-img-top" alt="C++ Programming">
-                    <div class="card-body d-flex flex-column">
-                        <h5 class="card-title">C++ Programming</h5>
-                        <p class="card-text">Learn system and game development with C++. Covers both basic and advanced topics.</p>
-                        <div class="subject-stats">
-                            <span class="subject-stat">
-                                <i class="bi bi-person"></i>
-                                90 Students
-                            </span>
-                            <span class="subject-stat">
-                                <i class="bi bi-star-fill"></i>
-                                4.7
-                            </span>
-                        </div>
-                        <a href="subjects/class?subject=cpp" class="btn btn-primary btn-action mt-3">
-                            <i class="bi bi-book"></i>
-                            View Subject
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Web Development Category -->
-            <div class="col-12 mt-4">
-                <h3 class="category-title">Web Development</h3>
-            </div>
-            
-            <div class="col-md-4 mb-4">
-                <div class="subject-card">
-                    <img src="<?php echo IMG; ?>subjects/frontend.jpg" class="card-img-top" alt="Frontend Development">
-                    <div class="card-body d-flex flex-column">
-                        <h5 class="card-title">Frontend Development</h5>
-                        <p class="card-text">Master HTML, CSS, and JavaScript to create beautiful and responsive websites.</p>
-                        <div class="subject-stats">
-                            <span class="subject-stat">
-                                <i class="bi bi-person"></i>
-                                200 Students
-                            </span>
-                            <span class="subject-stat">
-                                <i class="bi bi-star-fill"></i>
-                                4.8
-                            </span>
-                        </div>
-                        <a href="subjects/class?subject=frontend" class="btn btn-primary btn-action mt-3">
-                            <i class="bi bi-book"></i>
-                            View Subject
-                        </a>
-                    </div>
-                </div>
-            </div>
+            <?php endforeach; ?>
         </div>
     </main>
+
+    <!-- No Results Message -->
+    <div id="noResults" class="text-center py-5" style="display: none;">
+        <i class="bi bi-search" style="font-size: 3rem; color: #6c757d;"></i>
+        <h4 class="mt-3">No subjects found</h4>
+        <p class="text-muted">Try adjusting your search terms</p>
+    </div>
 
     <!-- Scripts -->
     <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Add event listener for real-time search
+        document.getElementById('subjectSearch').addEventListener('input', searchSubjects);
+
         function searchSubjects() {
             const searchTerm = document.getElementById('subjectSearch').value.toLowerCase();
             const subjectCards = document.querySelectorAll('.subject-card');
-            
-            subjectCards.forEach(card => {
-                const title = card.querySelector('.card-title').textContent.toLowerCase();
-                const description = card.querySelector('.card-text').textContent.toLowerCase();
-                
-                if (title.includes(searchTerm) || description.includes(searchTerm)) {
+            const courseCategories = document.querySelectorAll('.course-category');
+            let hasResults = false;
+
+            if (searchTerm.trim() === '') {
+                document.getElementById('noResults').style.display = 'none';
+                courseCategories.forEach(category => {
+                    category.style.display = 'flex';
+                });
+                subjectCards.forEach(card => {
                     card.closest('.col-md-4').style.display = 'block';
-                } else {
-                    card.closest('.col-md-4').style.display = 'none';
-                }
+                });
+                return;
+            }
+
+            courseCategories.forEach(category => {
+                const courseName = category.dataset.course.toLowerCase();
+                let categoryHasMatch = false;
+                
+                const categorySubjects = category.querySelectorAll('.subject-card');
+                categorySubjects.forEach(card => {
+                    const title = card.querySelector('.card-title').textContent.toLowerCase();
+                    const description = card.querySelector('.card-text').textContent.toLowerCase();
+                    
+                    if (title.includes(searchTerm) || description.includes(searchTerm) || courseName.includes(searchTerm)) {
+                        card.closest('.col-md-4').style.display = 'block';
+                        categoryHasMatch = true;
+                        hasResults = true;
+                    } else {
+                        card.closest('.col-md-4').style.display = 'none';
+                    }
+                });
+
+                category.style.display = categoryHasMatch ? 'flex' : 'none';
             });
+
+            document.getElementById('noResults').style.display = hasResults ? 'none' : 'block';
         }
     </script>
 </body>

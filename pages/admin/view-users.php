@@ -1,6 +1,5 @@
 <?php 
-    require_once '../../backends/config.php';
-    require_once ROOT_PATH . '/backends/main.php';
+    require_once '../../backends/main.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">

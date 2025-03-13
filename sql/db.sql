@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS `subject` (
     `course_id` INT,
     `subject_name` VARCHAR(255) NOT NULL,
     `subject_desc` TEXT,
+    `image` VARCHAR(255) DEFAULT 'defaul.jpg',
     `is_active` BOOLEAN NOT NULL DEFAULT TRUE,
     FOREIGN KEY (course_id) REFERENCES course(course_id)
 );
@@ -173,9 +174,18 @@ CREATE INDEX idx_reference_number ON transactions(reference_number);
 CREATE INDEX idx_token ON login_tokens (token);
 
 -- Sample Data
-INSERT INTO `course`(`course_name`) VALUES('Computer Programming'), ('Computer Networking'), ('Graphics Design');
-INSERT INTO `subject`(`course_id`,`subject_name`) VALUES (1,'Python Programming'), (2,'Networking'), (3,'UI/UX Designing');
 INSERT INTO `users`(`email`,`password`,`role`,`is_verified`, `first_name`, `last_name`) VALUES 
 ('tutor@test.com','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','TECHGURU',1, 'Test', 'Tutor'),
 ('student@test.com','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','TECHKID',1, 'Test', 'Student'),
 ('admin@test.com','$2y$10$FwM//r8Nn2GUWpHSBMv0RuYxw7oBScsxjf.cYlnUuq1V2KcQkyM3.','ADMIN',1, 'Test', 'Admin');
+INSERT INTO `course`(`course_name`,`course_desc`) VALUES('Computer Programming','Learn how to write, debug, and develop software applications using various programming languages and methodologies.'), ('Computer Networking','Understand the principles of networking, including setup, security, and cloud integration to build robust IT infrastructures.'), ('Graphics Design','Master digital design, UI/UX, and animation techniques to create stunning visuals and interactive experiences.');
+INSERT INTO `subject`(`course_id`,`subject_name`,`subject_desc`) VALUES 
+(1,'Python Programming', 'Learn the fundamentals of Python, including syntax, data structures, and object-oriented programming.'), 
+(1,'Java Development', 'Covers Java programming basics, OOP principles, and application development.'), 
+(1,'C++ for Beginners', 'Introduces students to C++ programming, focusing on memory management, data structures, and algorithms.'), 
+(2,'Network Fundamentals', 'Explores basic networking concepts, protocols, and network topologies.'), 
+(2,'Routing and Switching', 'Focuses on configuring routers and switches, subnetting, and VLANs.'), 
+(2,'Network Security', 'Covers firewalls, intrusion detection systems, and encryption techniques for secure networking.'), 
+(3,'UI/UX Designing', 'Teaches principles of user interface and user experience design for web and mobile applications.'),
+(3,'Adobe Photoshop Essentials', 'Covers photo editing, digital painting, and design techniques using Adobe Photoshop.'), 
+(3,'Vector Illustration with Adobe Illustrator', 'Focuses on creating digital illustrations, logos, and typography with Illustrator.');

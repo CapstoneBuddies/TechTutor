@@ -1,6 +1,6 @@
-RewriteEngine On
+	RewriteEngine On
 
-#RewriteBase /
+#RewriteBase /capstone/
 
 # Remove trailing slashes except for root "/"
 RewriteCond %{REQUEST_URI} ^(.+)/$ [NC]
@@ -8,6 +8,8 @@ RewriteRule ^(.+)/$ %1 [R=301,L]
 
 #Route to homepage
 RewriteRule ^(.*)/?home$ backends/route.php [L]
+#TEST , Route to dashboard
+#RewriteRule ^(.*)/?dashboard$ /dashboard [L]
 
 #Route /login to pages/login.php
 RewriteRule ^login$ pages/login.php [L]
@@ -52,7 +54,7 @@ RewriteRule ^dashboard/transactions$ pages/transactions.php [L]
 
 # Redirect user to student pages if role=TechKids
 RewriteCond %{HTTP_COOKIE} role=TECHKID(;|$)
-RewriteRule ^dashboard$ pages/techkid/main_dashboard.php [L]
+RewriteRule ^(.*)/?dashboard$ pages/techkid/main_dashboard.php [L]
 
 # Redirect user to tutor pages if role=TechGuru
 RewriteCond %{HTTP_COOKIE} role=TECHGURU(;|$)
@@ -61,14 +63,17 @@ RewriteRule ^dashboard/class$ pages/techguru/classes.php [L]
 RewriteRule ^dashboard/subjects$ pages/techguru/subjects.php [L]
 RewriteRule ^dashboard/subjects/class$ pages/techguru/subject-details.php [L,QSA]
 RewriteRule ^dashboard/subjects/class/create$ pages/techguru/create-class.php [L]
+RewriteRule ^dashboard/class/details$ pages/techguru/class-details.php [L,QSA]
+RewriteRule ^dashboard/class/edit$ pages/techguru/class-edit.php [L,QSA]
 
 # Redirect user to admin pages if role=Admin
 RewriteCond %{HTTP_COOKIE} role=ADMIN(;|$)
 RewriteRule ^dashboard$ pages/admin/main_dashboard.php [L]
-RewriteRule ^dashboard/TechKids$ pages/admin/main_view-techkids.php [L]
-RewriteRule ^dashboard/TechGurus$ pages/admin/main_view-techguru.php [L]
-RewriteRule ^dashboard/users$ pages/admin/main_view-users.php [L]
-RewriteRule ^dashboard/courses$ pages/admin/main_view-course.php [L]
+RewriteRule ^dashboard/TechKids$ pages/admin/view-techkids.php [L]
+RewriteRule ^dashboard/TechGurus$ pages/admin/view-techguru.php [L]
+RewriteRule ^dashboard/users$ pages/admin/view-users.php [L]
+RewriteRule ^dashboard/courses$ pages/admin/view-course.php [L]
+RewriteRule ^dashboard/class-details$ pages/admin/class-details.php [L,QSA]
 
 #Testing pages
 #RewriteRule ^test$ pages/techguru/create_class.php [L]

@@ -1,7 +1,5 @@
 <?php 
-require_once '../../backends/config.php';
-require_once ROOT_PATH . '/backends/main.php';
-require_once ROOT_PATH . '/backends/class_management.php';
+require_once '../../backends/main.php';
 
 // Ensure user is logged in and is a TechGuru
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {

@@ -1,7 +1,5 @@
 <?php 
-    require_once '../../backends/config.php';
-    require_once ROOT_PATH . '/backends/main.php';
-    require_once ROOT_PATH . '/backends/db.php';
+    require_once '../../backends/main.php';
 
     // Check if user is logged in
     if (!isset($_SESSION['user'])) {
@@ -11,7 +9,7 @@
 
     $tutor_id = $_SESSION['user'];
     $students_data = getStudentByTutor($tutor_id);
-    $classes_data = getClassByTutor($tutor_id);
+    $classes_data = getTechGuruClasses($tutor_id);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -54,7 +52,7 @@
                 <div class="dashboard-card">
                     <h5 class="card-title">Students</h5>
                     <div class="student-list">
-                        <?php if ($students_data['count'] > 0): ?>
+                        <?php if (isset($students_data['count']) && $students_data['count'] > 0): ?>
                             <div class="table-container">
                                 <div class="table-responsive">
                                     <table class="table table-hover align-middle">
@@ -116,7 +114,7 @@
                 <div class="dashboard-card">
                     <h5 class="card-title">Class Schedule</h5>
                     <div class="mb-2">Incoming class session</div>
-                    <?php if ($classes_data['count'] > 0): ?>
+                    <?php if (isset($classes_data['count']) && $classes_data['count'] > 0): ?>
                         <div class="text-muted">No upcoming classes</div>
                     <?php else: ?>
                         <div class="text-muted">No classes scheduled</div>

@@ -39,11 +39,13 @@
     // Check if current page is teaching-related
     $current_page = basename($_SERVER['PHP_SELF']);
     $teaching_pages = [
-        'techguru_classes.php',
-        'techguru_subjects.php',
-        'techguru_subject_details.php',
-        'techguru_create_class.php',
-        'class.php'
+        'class-details.php',
+        'class-edit.php',
+        'classes.php',
+        'create-class.php',
+        'subjects.php',
+        'subject-details.php',
+        'subjects.php'
     ];
     $is_teaching_page = in_array($current_page, $teaching_pages);
 ?>

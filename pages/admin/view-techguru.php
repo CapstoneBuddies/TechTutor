@@ -1,24 +1,23 @@
 <?php 
-    require_once '../../backends/config.php';
-    require_once ROOT_PATH . '/backends/main.php';
+    require_once '../../backends/main.php';
 
     // Get current page from URL parameter, default to 1
-    $techkids_page = isset($_GET['tkpage']) ? (int)$_GET['tkpage'] : 1;
+    $techgurus_page = isset($_GET['tgpage']) ? (int)$_GET['tgpage'] : 1;
     $items_per_page = 50;
 
     // Get paginated data
-    $techkids = getUserByRole('TECHKID', $techkids_page, $items_per_page);
-    $techkidsCount = getItemCountByTable('users','TECHKID');
+    $techguru = getUserByRole('TECHGURU', $techgurus_page, $items_per_page);
+    $techguruCount = getItemCountByTable('users','TECHGURU');
 
     // Calculate total pages
-    $techkids_total_pages = ceil($techkidsCount / $items_per_page);
+    $techgurus_total_pages = ceil($techguruCount / $items_per_page);
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title>TechTutor | TechKids</title>
+    <title>TechTutor | TechGurus</title>
     <meta name="description" content="">
     <meta name="keywords" content="">
 
@@ -147,10 +146,10 @@
                 <main class="col-12">
                     <div class="dashboard-section">
                         <div class="section-header">
-                            <h2>TechKids</h2>
+                            <h2>TechGurus</h2>
                             <div class="search-bar">
                                 <i class="bi bi-search"></i>
-                                <input type="text" id="searchInput" placeholder="Search TechKids...">
+                                <input type="text" id="searchInput" placeholder="Search TechGurus...">
                             </div>
                         </div>
 
@@ -160,14 +159,15 @@
                                     <tr>
                                         <th>Name</th>
                                         <th>Email</th>
-                                        <th>Enrolled Courses</th><!-- Need to update table data  -->
-                                        <th>Progress</th><!-- Need to update table data  -->
+                                        <th>Subject</th><!-- Need to update table data  -->
+                                        <th class="text-center">Students</th><!-- Need to update table data(count)  -->
                                         <th>Status</th>
+                                        <th>Last Login</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($techkids as $user): ?>
+                                    <?php foreach ($techguru as $user): ?>
                                     <tr>
                                         <td>
                                             <div class="d-flex align-items-center">
@@ -176,33 +176,14 @@
                                             </div>
                                         </td>
                                         <td><?php echo $user['email']; ?></td>
-                                        <td>3 Courses</td>
+                                        <td><?php echo $user['subject']; ?></td>
+                                        <td class="text-center" ><?php echo $user['enrolled-students']; ?></td>
                                         <td>
-                                            <div class="progress" style="height: 8px;">
-                                                <div class="progress-bar bg-success" role="progressbar" style="width: 75%;" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100"></div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="status-badge <?php 
-                                                if ($user['status'] == 1) {
-                                                    echo 'status-active';
-                                                } elseif ($user['status'] == 0) {
-                                                    echo 'status-inactive';
-                                                } else {
-                                                    echo 'status-deleted';
-                                                }
-                                            ?>">
-                                                <?php 
-                                                    if ($user['status'] == 1) {
-                                                        echo 'Active';
-                                                    } elseif ($user['status'] == 0) {
-                                                        echo 'Inactive';
-                                                    } else {
-                                                        echo 'Deleted';
-                                                    }
-                                                ?>
+                                            <span class="status-badge <?php echo getStatusBadgeClass($user['status']); ?>">
+                                                <?php echo normalizeStatus($user['status']); ?>
                                             </span>
                                         </td>
+                                        <td class="text-center"><?php echo $user['last_login']; ?></td>
                                         <td>
                                             <div class="action-buttons">
                                                 <button class="btn btn-sm btn-outline-primary">View</button>
@@ -222,10 +203,10 @@
                             </table>
                         </div>
 
-                        <?php if ($techkids_total_pages > 1): ?>
+                        <?php if ($techgurus_total_pages > 1): ?>
                         <div class="pagination">
-                            <?php for ($i = 1; $i <= $techkids_total_pages; $i++): ?>
-                                <a href="?tkpage=<?php echo $i; ?>" class="<?php echo $techkids_page == $i ? 'active' : ''; ?>">
+                            <?php for ($i = 1; $i <= $techgurus_total_pages; $i++): ?>
+                                <a href="?tgpage=<?php echo $i; ?>" class="<?php echo $techgurus_page == $i ? 'active' : ''; ?>">
                                     <?php echo $i; ?>
                                 </a>
                             <?php endfor; ?>
@@ -237,56 +218,16 @@
         </div>
     </div>
 
-    <!-- Delete Account Confirmation Modal -->
-    <div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="deleteAccountModalLabel">Delete Account</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Are you sure you want to delete <span id="deleteUserName"></span>'s account? This action cannot be undone.</p>
-                    <input type="hidden" id="deleteUserId" value="">
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" onclick="deleteAccount()">Delete Account</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Restrict Account Confirmation Modal -->
-    <div class="modal fade" id="restrictAccountModal" tabindex="-1" aria-labelledby="restrictAccountModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="restrictAccountModalLabel">Restrict Account</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Are you sure you want to restrict this account? The user will not be able to access the platform until reactivated.</p>
-                    <input type="hidden" id="restrictUserId" value="">
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-warning" onclick="restrictAccountConfirmed()">Restrict Account</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Action Modals -->
     <div class="modal fade" id="restrictModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="restrictModalTitle">Restrict TechKid Account</h5>
+                    <h5 class="modal-title" id="restrictModalTitle">Restrict TechGuru Account</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" id="restrictModalBody">
-                    Are you sure you want to restrict this TechKid's account? They will no longer be able to access the platform.
+                    Are you sure you want to restrict this TechGuru's account? They will no longer be able to access the platform.
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -300,11 +241,11 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Delete TechKid Account</h5>
+                    <h5 class="modal-title">Delete TechGuru Account</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    Are you sure you want to delete this TechKid's account? This action cannot be undone.
+                    Are you sure you want to delete this TechGuru's account? This action cannot be undone.
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -319,10 +260,14 @@
     <script src="<?php echo BASE; ?>assets/vendor/aos/aos.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/glightbox/js/glightbox.min.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.js"></script>
-    
+    <script src="<?php echo BASE; ?>assets/vendor/isotope-layout/isotope.pkgd.min.js"></script>
+    <script src="<?php echo BASE; ?>assets/vendor/php-email-form/validate.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- Main JS File -->
     <!-- Commenting out main.js temporarily to isolate issues -->
     <!-- <script src="<?php echo BASE; ?>assets/js/main.js"></script> -->
-    
+
     <script>
         // Make functions available globally
         let selectedUserId = null;
@@ -339,14 +284,14 @@
             // Set the appropriate modal content based on the action
             if (isActive) {
                 selectedAction = 'restrict';
-                document.getElementById('restrictModalTitle').textContent = 'Restrict TechKid Account';
-                document.getElementById('restrictModalBody').textContent = 'Are you sure you want to restrict this TechKid\'s account? They will no longer be able to access the platform.';
+                document.getElementById('restrictModalTitle').textContent = 'Restrict TechGuru Account';
+                document.getElementById('restrictModalBody').textContent = 'Are you sure you want to restrict this TechGuru\'s account? They will no longer be able to access the platform.';
                 document.getElementById('confirmRestrict').textContent = 'Restrict Account';
                 document.getElementById('confirmRestrict').className = 'btn btn-warning';
             } else {
                 selectedAction = 'activate';
-                document.getElementById('restrictModalTitle').textContent = 'Activate TechKid Account';
-                document.getElementById('restrictModalBody').textContent = 'Are you sure you want to activate this TechKid\'s account? They will regain access to the platform.';
+                document.getElementById('restrictModalTitle').textContent = 'Activate TechGuru Account';
+                document.getElementById('restrictModalBody').textContent = 'Are you sure you want to activate this TechGuru\'s account? They will regain access to the platform.';
                 document.getElementById('confirmRestrict').textContent = 'Activate Account';
                 document.getElementById('confirmRestrict').className = 'btn btn-success';
             }

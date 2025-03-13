@@ -1,6 +1,6 @@
 <?php 
-	require_once 'config.php';
 	require_once 'db.php';
+	
 	use PHPMailer\PHPMailer\PHPMailer;
 	use PHPMailer\PHPMailer\Exception;
 
@@ -112,334 +112,105 @@
 	}
 
 	/**
-	 * Normalizes numeric status (1/0) to 'active' or 'inactive'
-	 * @param mixed $status The status from database (1 for active, 0 for inactive)
-	 * @return string Normalized status ('active' or 'inactive')
-	 */
-	function normalizeStatus($status) {
-	    return $status == 1 ? 'active' : 'inactive';
-	}
-
-	/**
-	 * Gets the CSS class for status badges
-	 * @param mixed $status The status from database (1 for active, 0 for inactive)
-	 * @return string CSS class for the status badge
-	 */
-	function getStatusBadgeClass($status) {
-	    $normalizedStatus = normalizeStatus($status);
-	    return 'status-badge status-' . $normalizedStatus;
-	}
-	
-	// /verify
-	function verify() {
-		global $conn;
-		$id = $_SESSION['user'];
-		$email = $_SESSION['email'];
-		$mail = getMailerInstance();
-		$code = generateVerificationCode($id);
-		sendVerificationCode($mail, $email, $code);
-		$_SESSION['msg'] = "A new code has been sent!";
-	}
-
-	function deleteAccount() {
-		global $conn;
-		
-		if (!isset($_SESSION['user'])) {
-			echo json_encode(['status' => 'error', 'message' => 'Not logged in']);
-			exit();
-		}
-
-		$password = $_POST['password'] ?? '';
-		if (empty($password)) {
-			echo json_encode(['status' => 'error', 'message' => 'Password is required']);
-			exit();
-		}
-
-		$userId = $_SESSION['user'];
-		
-		// Verify password
-		$stmt = $conn->prepare("SELECT password FROM users WHERE uid = ?");
-		$stmt->bind_param("i", $userId);
-		$stmt->execute();
-		$result = $stmt->get_result();
-		$user = $result->fetch_assoc();
-		
-		if (!$user || !password_verify($password, $user['password'])) {
-			echo json_encode(['status' => 'error', 'message' => 'Invalid password']);
-			exit();
-		}
-
-		// Delete user's profile picture if it exists
-		$stmt = $conn->prepare("SELECT profile_picture FROM user_details WHERE user_id = ?");
-		$stmt->bind_param("i", $userId);
-		$stmt->execute();
-		$result = $stmt->get_result();
-		$profile = $result->fetch_assoc();
-		
-		if ($profile && $profile['profile_picture'] !== 'default.png') {
-			$picturePath = ROOT_PATH . '/assets/img/users/' . $profile['profile_picture'];
-			if (file_exists($picturePath)) {
-				unlink($picturePath);
-			}
-		}
-
-		// Start transaction
-		$conn->begin_transaction();
-		try {
-			// Update user status to 2 and set email to 'deleted'
-			$countQuery = $conn->prepare("SELECT COUNT(*) as count FROM users WHERE email LIKE 'deleted%'");
-			$countQuery->execute();
-			$countResult = $countQuery->get_result()->fetch_assoc();
-			if(empty($countResult)) {
-				$counter = null;
-			}
-			else {
-				$counter = $countResult['count'] + 1;
-			}
-			// Create deleted email format
-			$deletedEmail = "deleted" . $counter;
-
-			$stmt = $conn->prepare("UPDATE users SET status = 2, email = ?, password='' WHERE uid = ?");
-			$stmt->bind_param("si", $deletedEmail, $userId);
-			$stmt->execute();
-			
-			$conn->commit();
-			
-			// Clear session and cookies
-			session_destroy();
-			if (isset($_COOKIE['role'])) {
-				setcookie('role', '', time() - 3600, '/');
-			}
-			if (isset($_COOKIE['remember_me'])) {
-				setcookie('remember_me', '', time() - 3600, '/');
-			}
-
-			// Set session message for logout and alert
-			$_SESSION['msg'] = "Your account has been deleted successfully.";
-			
-			// Alert message for account deletion
-			echo json_encode(['status' => 'success', 'alert' => 'We\'re sad to see you go—your account has been deleted.']);
-			exit();
-		} catch (Exception $e) {
-			$conn->rollback();
-			error_log("Delete account error: " . $e->getMessage());
-			echo json_encode(['status' => 'error', 'message' => 'Failed to delete account']);
-			exit();
-		}
-	}
-
-	function changeUserPassword() {
-		global $conn;
-		
-		if (!isset($_SESSION['user'])) {
-			echo json_encode(['status' => 'error', 'message' => 'Not logged in']);
-			exit();
-		}
-
-		$currentPassword = $_POST['current_password'] ?? '';
-		$newPassword = $_POST['new_password'] ?? '';
-		$confirmPassword = $_POST['confirm_password'] ?? '';
-
-		if (empty($currentPassword) || empty($newPassword) || empty($confirmPassword)) {
-			echo json_encode(['status' => 'error', 'message' => 'All fields are required']);
-			exit();
-		}
-
-		if ($newPassword !== $confirmPassword) {
-			echo json_encode(['status' => 'error', 'message' => 'New passwords do not match']);
-			exit();
-		}
-
-		if (strlen($newPassword) < 8) {
-			echo json_encode(['status' => 'error', 'message' => 'Password must be at least 8 characters']);
-			exit();
-		}
-
-		$userId = $_SESSION['user'];
-		
-		// Verify current password
-		$stmt = $conn->prepare("SELECT password FROM users WHERE uid = ?");
-		$stmt->bind_param("i", $userId);
-		$stmt->execute();
-		$result = $stmt->get_result();
-		$user = $result->fetch_assoc();
-
-		if (!$user || !password_verify($currentPassword, $user['password'])) {
-			echo json_encode(['status' => 'error', 'message' => 'Current password is incorrect']);
-			exit();
-		}
-
-		// Update password
-		$hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
-		$stmt = $conn->prepare("UPDATE users SET password = ? WHERE uid = ?");
-		$stmt->bind_param("si", $hashedPassword, $userId);
-		
-		if ($stmt->execute()) {
-			echo json_encode(['status' => 'success']);
-		} else {
-			echo json_encode(['status' => 'error', 'message' => 'Failed to update password']);
-		}
-		exit();
-	}
-
-	function adminUpdateAccount($userId, $action) {
-		global $conn;
-		
-		try {
-			// Check if user exists and is not an admin
-			$checkUser = $conn->prepare("SELECT email, status FROM users WHERE uid = ? AND role != 'ADMIN'");
-			$checkUser->bind_param("i", $userId);
-			$checkUser->execute();
-			$result = $checkUser->get_result();
-			
-			if ($result->num_rows === 0) {
-				return ["success" => false, "message" => "User not found or cannot modify admin account"];
-			}
-			
-			$userData = $result->fetch_assoc();
-			
-			switch($action) {
-				case 'restrict':
-					// Update user status to inactive (0)
-					$stmt = $conn->prepare("UPDATE users SET status = 0 WHERE uid = ?");
-					$stmt->bind_param("i", $userId);
-					$success = $stmt->execute();
-					
-					if ($success) {
-						return ["success" => true, "message" => "Account restricted successfully"];
-					} else {
-						return ["success" => false, "message" => "Failed to restrict account: " . $conn->error];
-					}
-					break;
-					
-				case 'activate':
-					// Update user status to active (1)
-					$stmt = $conn->prepare("UPDATE users SET status = 1 WHERE uid = ?");
-					$stmt->bind_param("i", $userId);
-					$success = $stmt->execute();
-					
-					if ($success) {
-						return ["success" => true, "message" => "Account activated successfully"];
-					} else {
-						return ["success" => false, "message" => "Failed to activate account: " . $conn->error];
-					}
-					break;
-					
-				case 'delete':
-					// Get count of deleted emails to handle repetition
-					$countQuery = $conn->prepare("SELECT COUNT(*) as count FROM users WHERE email LIKE 'deleted%'");
-					$countQuery->execute();
-					$countResult = $countQuery->get_result()->fetch_assoc();
-					$counter = $countResult['count'] + 1;
-					
-					// Create deleted email format
-					$deletedEmail = "deleted" . $counter;
-					
-					// Update user record (status = 2 for deleted, modify email)
-					$stmt = $conn->prepare("UPDATE users SET status = 2, email = ?, password='' WHERE uid = ?");
-					$stmt->bind_param("si", $deletedEmail, $userId);
-					$success = $stmt->execute();
-					
-					if ($success) {
-						return ["success" => true, "message" => "Account deleted successfully"];
-					}
-					break;
-					
-				default:
-					return ["success" => false, "message" => "Invalid action specified"];
-			}
-			
-			return ["success" => false, "message" => "Failed to update account"];
-			
-		} catch (Exception $e) {
-			return ["success" => false, "message" => "Error: " . $e->getMessage()];
-		}
-	}
-
-	/**
-	 * Send a notification to a user or role
-	 * 
-	 * @param int|null $recipient_id The user ID to send to, or null for role-wide notifications
-	 * @param string $recipient_role The role to send to (ADMIN, TECHGURU, TECHKID, ALL)
-	 * @param string $message The notification message
-	 * @param string|null $link Optional link for the notification
-	 * @param int|null $class_id Optional class ID if notification is related to a class
-	 * @param string $icon Bootstrap icon class (e.g., 'bi-person-check')
-	 * @param string $icon_color Bootstrap color class (e.g., 'text-success')
-	 * @return bool True if notification was sent successfully
-	 */
-	function sendNotification($recipient_id, $recipient_role, $message, $link = null, $class_id = null, $icon = 'bi-bell', $icon_color = 'text-primary') {
-	    return insertNotification($recipient_id, $recipient_role, $message, $link, $class_id, $icon, $icon_color);
-	}
-	/**
-	 * Example
-	 * sendNotification(
-	    $userId,              // specific user ID
-	    'TECHKID',           // user's role
-	    'Your assignment has been graded!',
-	    '/dashboard/grades',  // link to grades
-	    $classId,            // related class ID
-	    'bi-check-circle',   // Bootstrap icon
-	    'text-success'       // Bootstrap color
-		);
-	**/ 
-
-	/**
-	 * Mark all notifications as read for the current user based on their role
-	 * 
-	 * @return bool True if notifications were marked as read successfully
-	 */
-	function markAllNotificationsAsRead() {
-	    if (!isset($_SESSION['user']) || !isset($_SESSION['role'])) {
-	        return false;
-	    }
-	    return updateNotificationsReadStatus($_SESSION['user'], $_SESSION['role']);
-	}
-
-	/**
-	 * Get notifications for a user based on their role and access level
-	 * 
-	 * @param int $user_id The user ID
-	 * @param string $role The user's role (ADMIN, TECHGURU, TECHKID)
-	 * @return array Array of notifications
-	 */
-	function getUserNotifications($user_id, $role) {
-	    return fetchUserNotifications($user_id, $role);
-	}
-
-	/**
 	 * Format a timestamp into a human-readable time ago string
 	 * 
 	 * @param string $timestamp The timestamp to format
 	 * @return string Formatted time ago string (e.g., "2 hours ago")
 	 */
 	function getTimeAgo($timestamp) {
-	    $time_ago = strtotime($timestamp);
-	    $current_time = time();
-	    $time_difference = $current_time - $time_ago;
+	    $datetime = new DateTime($timestamp);
+	    $now = new DateTime();
+	    $interval = $datetime->diff($now);
 	    
-	    $seconds = $time_difference;
-	    $minutes = round($seconds / 60);
-	    $hours = round($seconds / 3600);
-	    $days = round($seconds / 86400);
-	    $weeks = round($seconds / 604800);
-	    $months = round($seconds / 2629440);
-	    $years = round($seconds / 31553280);
-	    
-	    if ($seconds <= 60) {
+	    if ($interval->i < 1) {
 	        return "Just now";
-	    } else if ($minutes <= 60) {
-	        return ($minutes == 1) ? "1 minute ago" : "$minutes minutes ago";
-	    } else if ($hours <= 24) {
-	        return ($hours == 1) ? "1 hour ago" : "$hours hours ago";
-	    } else if ($days <= 7) {
-	        return ($days == 1) ? "Yesterday" : "$days days ago";
-	    } else if ($weeks <= 4.3) {
-	        return ($weeks == 1) ? "1 week ago" : "$weeks weeks ago";
-	    } else if ($months <= 12) {
-	        return ($months == 1) ? "1 month ago" : "$months months ago";
-	    } else {
-	        return ($years == 1) ? "1 year ago" : "$years years ago";
 	    }
+	    
+	    if ($interval->i < 60) {
+	        return ($interval->i == 1) ? "1 minute ago" : "$interval->i minutes ago";
+	    }
+	    
+	    if ($interval->h < 24) {
+	        return ($interval->h == 1) ? "1 hour ago" : "$interval->h hours ago";
+	    }
+	    
+	    if ($interval->d < 30) {
+	        return ($interval->d == 1) ? "1 day ago" : "$interval->d days ago";
+	    }
+	    
+	    if ($interval->m < 12) {
+	        return ($interval->m == 1) ? "1 month ago" : "$interval->m months ago";
+	    }
+	    
+	    $years = $interval->y;
+	    return ($years == 1) ? "1 year ago" : "$years years ago";
 	}
+
+    /**
+     * Send a notification to a user or role
+     * 
+     * @param int|null $recipient_id The user ID to send to, or null for role-wide notifications
+     * @param string $recipient_role The role to send to (ADMIN, TECHGURU, TECHKID, ALL)
+     * @param string $message The notification message
+     * @param string|null $link Optional link for the notification
+     * @param int|null $class_id Optional class ID if notification is related to a class
+     * @param string $icon Bootstrap icon class (e.g., 'bi-person-check')
+     * @param string $icon_color Bootstrap color class (e.g., 'text-success')
+     * @return bool True if notification was sent successfully
+     */
+    function sendNotification($recipient_id, $recipient_role, $message, $link = null, $class_id = null, $icon = 'bi-bell', $icon_color = 'text-primary') {
+        global $conn;
+        
+        try {
+            $stmt = $conn->prepare("INSERT INTO notifications (recipient_id, recipient_role, message, link, class_id, icon, icon_color) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("isssiss", $recipient_id, $recipient_role, $message, $link, $class_id, $icon, $icon_color);
+            return $stmt->execute();
+        } catch (Exception $e) {
+            error_log("Failed to send notification: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Mark all notifications as read for the current user based on their role
+     * 
+     * @return bool True if notifications were marked as read successfully
+     */
+    function markAllNotificationsAsRead() {
+        global $conn;
+        
+        if (!isset($_SESSION['user']) || !isset($_SESSION['role'])) {
+            return false;
+        }
+        
+        try {
+            $stmt = $conn->prepare("UPDATE notifications SET is_read = 1 WHERE (recipient_id = ? OR recipient_role = ? OR recipient_role = 'ALL')");
+            $stmt->bind_param("is", $_SESSION['user'], $_SESSION['role']);
+            return $stmt->execute();
+        } catch (Exception $e) {
+            error_log("Failed to mark notifications as read: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Get notifications for a user based on their role and access level
+     * 
+     * @param int $user_id The user ID
+     * @param string $role The user's role (ADMIN, TECHGURU, TECHKID)
+     * @return array Array of notifications
+     */
+    function getUserNotifications($user_id, $role) {
+        global $conn;
+        
+        try {
+            $stmt = $conn->prepare("SELECT * FROM notifications WHERE recipient_id = ? OR recipient_role = ? OR recipient_role = 'ALL' ORDER BY created_at DESC LIMIT 50");
+            $stmt->bind_param("is", $user_id, $role);
+            $stmt->execute();
+            return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        } catch (Exception $e) {
+            error_log("Failed to get user notifications: " . $e->getMessage());
+            return [];
+        }
+    }
 ?>

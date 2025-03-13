@@ -27,8 +27,9 @@
 	define('CSS', BASE.'assets/css/');
 	define('JS', BASE.'assets/js/');
 	define('IMG', BASE.'assets/img/');
-	define('USER_IMG', BASE.'assets/img/users/');
 	define('CLASS_IMG', BASE.'assets/img/class/');
+	define('SUBJECT_IMG', BASE.'assets/img/subjects/');
+	define('USER_IMG', BASE.'assets/img/users/');
 
 	// Define LOG_PATH based on fixed ROOT_PATH
 	define('LOG_PATH', ROOT_PATH . '/logs/');

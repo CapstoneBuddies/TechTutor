@@ -1,7 +1,5 @@
 <?php
-require_once 'config.php';
-require_once ROOT_PATH . '/backends/main.php';
-require_once ROOT_PATH . '/backends/db.php';
+require_once 'backends/main.php';
 
 /**
  * Handle payment creation request
