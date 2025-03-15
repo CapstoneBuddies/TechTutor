@@ -1,33 +1,23 @@
 	RewriteEngine On
 
-#RewriteBase /capstone/
-
 # Remove trailing slashes except for root "/"
 RewriteCond %{REQUEST_URI} ^(.+)/$ [NC]
 RewriteRule ^(.+)/$ %1 [R=301,L]
 
-#Route to homepage
+#Common pages routing
 RewriteRule ^(.*)/?home$ backends/route.php [L]
-#TEST , Route to dashboard
-#RewriteRule ^(.*)/?dashboard$ /dashboard [L]
-
-#Route /login to pages/login.php
 RewriteRule ^login$ pages/login.php [L]
-
-#Route /register to pages/signup.php
 RewriteRule ^register$ pages/signup.php [L]
-
-#Route /verify to pages/verify.php
 RewriteRule ^verify$ pages/verify.php [L]
-
-#Route /forgot-password to pages/forgot_password.php
-RewriteRule ^forgot_password$ pages/forgot_password.php [L]
+RewriteRule ^forgot$ pages/forgot-password.php [L]
+RewriteRule ^reset-password$ pages/reset-password.php [L,QSA]
 
 #Route logics to route.php
 RewriteRule ^(.*)/?user-login$ backends/route.php [L]
 RewriteRule ^(.*)/?user-register$ backends/route.php [L]
 RewriteRule ^(.*)/?user-logout$ backends/route.php [L]
 RewriteRule ^(.*)/?verify_code$ backends/route.php [L]
+RewriteRule ^(.*)/?forgot-password$ backends/route.php [L]
 RewriteRule ^(.*)/?resend-verification-code$ backends/route.php [L]
 RewriteRule ^(.*)/?user-profile-update$ backends/route.php [L,QSA]
 RewriteRule ^(.*)/?user-deactivate$ backends/route.php [L]
@@ -40,6 +30,7 @@ RewriteRule ^(.*)/?get-transaction-details$ backends/route.php [L]
 RewriteRule ^(.*)/?export-transactions$ backends/route.php [L]
 RewriteRule ^(.*)/?create-payment$ backends/route.php [L]
 RewriteRule ^(.*)/?process-card-payment$ backends/route.php [L]
+RewriteRule ^(.*)/?mark-notification-read$ backends/route.php [L]
 
 # Payment routes
 RewriteRule ^(.*)/?payment$ pages/payment.php [L]
@@ -69,11 +60,10 @@ RewriteRule ^dashboard/class/edit$ pages/techguru/class-edit.php [L,QSA]
 # Redirect user to admin pages if role=Admin
 RewriteCond %{HTTP_COOKIE} role=ADMIN(;|$)
 RewriteRule ^dashboard$ pages/admin/main_dashboard.php [L]
-RewriteRule ^dashboard/TechKids$ pages/admin/view-techkids.php [L]
-RewriteRule ^dashboard/TechGurus$ pages/admin/view-techguru.php [L]
 RewriteRule ^dashboard/users$ pages/admin/view-users.php [L]
 RewriteRule ^dashboard/courses$ pages/admin/view-course.php [L]
-RewriteRule ^dashboard/class-details$ pages/admin/class-details.php [L,QSA]
+RewriteRule ^dashboard/classes$ pages/admin/view-class.php [L]
+RewriteRule ^dashboard/classes/details$ pages/admin/class-details.php [L,QSA]
 
 #Admin AJAX REDIRECT
 RewriteRule ^dashboard/get-users$ backends/admin/get_users.php [L]
@@ -81,7 +71,12 @@ RewriteRule ^dashboard/toggle-user-status$ backends/admin/toggle_user_status.php
 RewriteRule ^dashboard/delete-users$ backends/admin/delete_user.php [L]
 RewriteRule ^dashboard/send-password-reset$ backends/admin/send_password_reset.php [L]
 RewriteRule ^dashboard/get-user-emails$ backends/admin/get_user_emails.php [L]
+RewriteRule ^mark-all-notifications-read$ backends/mark_all_notifications_read.php [L]
+RewriteRule ^dashboard/toggle-subject-status$ backends/admin/course_handler.php [L,QSA]
+RewriteRule ^dashboard/add-course$ backends/admin/course_handler.php [L]
+RewriteRule ^dashboard/add-subject$ backends/admin/course_handler.php [L]
+RewriteRule ^dashboard/edit-course$ backends/admin/course_handler.php [L]
+RewriteRule ^dashboard/delete-course$ backends/admin/course_handler.php [L]
 
-
-#Testing pages
-#RewriteRule ^test$ pages/techguru/create_class.php [L]
+#API REDIRECT
+RewriteRule ^api/toggle-class-status$ api/toggle-class-status.php [L]

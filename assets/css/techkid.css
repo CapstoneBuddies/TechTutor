@@ -1,0 +1,347 @@
+/* TechKid Dashboard Specific Styles */
+:root {
+    --primary-color: #0052cc;
+    --secondary-color: #00b37a;
+    --accent-color: #ff8c00;
+    --text-color: #333;
+    --bg-color: #f5f7fa;
+    --border-color: #ddd;
+}
+
+/* Course List Styles */
+.course-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.course-item {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease;
+}
+
+.course-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.course-icon {
+    width: 50px;
+    height: 50px;
+    background: #e6f3ff;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+}
+
+.course-icon i {
+    font-size: 24px;
+    color: var(--primary-color);
+}
+
+.course-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.course-details h6 {
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: var(--text-color);
+}
+
+.course-details .tutor {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.course-details .progress {
+    height: 6px;
+    background-color: #e9ecef;
+    border-radius: 3px;
+}
+
+.course-details .progress-bar {
+    background: linear-gradient(to right, var(--primary-color), #00a3ff);
+    border-radius: 3px;
+}
+
+/* Course Grid Styles */
+.course-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.course-card {
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease;
+}
+
+.course-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.course-image {
+    height: 150px;
+    overflow: hidden;
+}
+
+.course-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.course-card:hover .course-image img {
+    transform: scale(1.05);
+}
+
+.course-info {
+    padding: 15px;
+}
+
+.course-info h6 {
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--text-color);
+}
+
+.course-info p {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 15px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Schedule List Styles */
+.schedule-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.schedule-item {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.schedule-time {
+    min-width: 120px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--primary-color);
+}
+
+.schedule-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.course-name {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 5px;
+    color: var(--text-color);
+}
+
+.tutor-name {
+    font-size: 12px;
+    color: #666;
+}
+
+/* Badge Grid Styles */
+.badge-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 15px;
+}
+
+.badge-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.badge-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.badge-item.earned .badge-icon {
+    background: linear-gradient(135deg, var(--primary-color), #00a3ff);
+    color: #fff;
+    box-shadow: 0 5px 15px rgba(0, 82, 204, 0.3);
+}
+
+.badge-item:not(.earned) .badge-icon {
+    background: #f0f0f0;
+    color: #aaa;
+}
+
+.badge-icon i {
+    font-size: 24px;
+}
+
+.badge-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.badge-item:not(.earned) .badge-name {
+    color: #aaa;
+}
+
+/* Button Styles */
+.btn-success {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
+.btn-success:hover {
+    background-color: #009e6a;
+    border-color: #009e6a;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: #0046ad;
+    border-color: #0046ad;
+}
+
+.btn-outline-primary {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    color: #fff;
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 991px) {
+    .course-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+    
+    .badge-grid {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .course-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .course-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .course-details {
+        width: 100%;
+    }
+    
+    .course-item .btn {
+        align-self: flex-end;
+        margin-top: -30px;
+    }
+    
+    .schedule-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .schedule-time {
+        min-width: auto;
+    }
+    
+    .schedule-item .btn {
+        align-self: flex-end;
+        margin-top: 10px;
+    }
+    
+    .badge-grid {
+        grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    }
+}
+
+@media (max-width: 576px) {
+    .course-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+    }
+    
+    .course-details h6 {
+        font-size: 14px;
+    }
+    
+    .course-details .tutor {
+        font-size: 11px;
+    }
+    
+    .schedule-time {
+        font-size: 12px;
+    }
+    
+    .course-name {
+        font-size: 13px;
+    }
+    
+    .tutor-name {
+        font-size: 11px;
+    }
+    
+    .badge-icon {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .badge-icon i {
+        font-size: 20px;
+    }
+    
+    .badge-name {
+        font-size: 11px;
+    }
+}

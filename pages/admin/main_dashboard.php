@@ -47,6 +47,7 @@
 
     <!-- Main CSS Files -->
     <link href="<?php echo CSS; ?>dashboard.css" rel="stylesheet">
+    <link href="<?php echo CSS; ?>header.css" rel="stylesheet">
     <style>
         /* Responsive Styles */
         @media (max-width: 768px) {
@@ -157,10 +158,6 @@
 <body>
     <?php include ROOT_PATH . '/components/header.php'; ?>
 
-    <button class="toggle-sidebar">
-        <i class="bi bi-list"></i>
-    </button>
-
     <div class="dashboard-content">
         <div class="container-fluid">
             <div class="row">
@@ -239,7 +236,7 @@
                     <div class="dashboard-section">
                         <div class="table-header">
                             <h2 class="section-title">Recent TechGurus</h2>
-                            <a href="<?php echo BASE; ?>dashboard/TechGurus" class="view-all-btn">
+                            <a href="<?php echo BASE; ?>dashboard/users?role=TECHGURU" class="view-all-btn">
                                 <i class="bi bi-eye"></i>
                                 View All
                             </a>
@@ -283,7 +280,7 @@
                     <div class="dashboard-section">
                         <div class="table-header">
                             <h2 class="section-title">Recent TechKids</h2>
-                            <a href="<?php echo BASE; ?>dashboard/TechKids" class="view-all-btn">
+                            <a href="<?php echo BASE; ?>dashboard/users?role=TECHKID" class="view-all-btn">
                                 <i class="bi bi-eye"></i>
                                 View All
                             </a>

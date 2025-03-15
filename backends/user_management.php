@@ -331,4 +331,104 @@ function searchUsersByRole($role, $search) {
     }
     return [];
 }
+
+/**
+ * Generate password reset token
+ */
+function generatePasswordResetToken($user_id) {
+    global $conn;
+    $token = bin2hex(random_bytes(32));
+    $hashed_token = password_hash($token, PASSWORD_DEFAULT);
+    $expires_at = date("Y-m-d H:i:s", strtotime("+24 hours")); // 24-hour expiry for password resets
+
+    // Delete any existing reset tokens for this user
+    $stmt = $conn->prepare("DELETE FROM login_tokens WHERE user_id = ? AND type = 'reset'");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+
+    // Create new reset token
+    $stmt = $conn->prepare("INSERT INTO login_tokens (user_id, type, token, expiration_date) VALUES (?, 'reset', ?, ?)");
+    $stmt->bind_param("iss", $user_id, $hashed_token, $expires_at);
+    if (!$stmt->execute()) {
+        log_error($stmt->error, 'database_error.log');
+        return null;
+    }
+    return $token;
+}
+
+/**
+ * Forgot Password
+ */
+function forgotPassword() {
+    global $conn;
+
+    if (isset($_POST['send_reset_code'])) {
+        $email = $_POST['email'] ?? '';
+
+        // Validate email
+        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $_SESSION['msg'] = "Please enter a valid email address.";
+            header("location: ".BASE."forgot");
+            exit();
+        }
+
+        // Check if email exists
+        $stmt = $conn->prepare("SELECT uid, first_name FROM users WHERE email = ?");
+        $stmt->bind_param("s", $email);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows === 0) {
+            $_SESSION['msg'] = "No account found with that email address.";
+            header("location: ".BASE."forgot");
+            exit();
+        }
+
+        $user = $result->fetch_assoc();
+        $user_id = $user['uid'];
+        $first_name = htmlspecialchars($user['first_name']); // Prevent XSS
+
+        // Generate verification token
+        $token = generatePasswordResetToken($user_id);
+        $reset_link = "https://".$_SERVER['SERVER_NAME']."/reset-password?token=" . $token . "&email=" . urlencode($email);
+
+        // Email setup
+        $mail = getMailerInstance();
+        $mail->addAddress($email);
+        $mail->Subject = 'TechTutor | Password Reset Request';
+        
+        // Styled email body (HTML format)
+        $mail->isHTML(true);
+        $mail->AddEmbeddedImage(__DIR__.'/../assets/img/stand_alone_logo.png','logo','TechTutor Logo');
+        $mail->Body = "
+            <div style='font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 10px; padding: 20px;'>
+                <div style='text-align: center;'>
+                    <img src='cid:logo' alt='TechTutor Logo' style='max-width: 150px; margin-bottom: 10px;'>
+                </div>
+                <h2 style='color: #007bff; text-align: center;'>Password Reset Request</h2>
+                <p>Dear <strong>$first_name</strong>,</p>
+                <p>We received a request to reset your password. Click the button below to set a new password:</p>
+                <div style='text-align: center; margin: 20px 0;'>
+                    <a href='$reset_link' style='background-color: #007bff; color: #fff; padding: 10px 20px; border-radius: 5px; text-decoration: none; font-weight: bold;'>Reset Password</a>
+                </div>
+                <p>If you did not request this, please ignore this email or contact our support team.</p>
+                <hr style='border: 0; border-top: 1px solid #ddd; margin: 20px 0;'>
+                <p style='text-align: center; font-size: 12px; color: #777;'>This is an automated email from TechTutor. Please do not reply.</p>
+            </div>
+        ";
+
+        // Send email
+        if (!$mail->send()) {
+            log_error("Mailer Error: " . $mail->ErrorInfo, 'email.log');
+            $_SESSION['msg'] = "Failed to send reset email. Please try again later.";
+            header("location: ".BASE."forgot");
+            exit();
+        }
+
+        $_SESSION['msg'] = "A reset link has been sent to your email address.";
+        header("location: ".BASE."login");
+        exit();
+    }
+}
+
 ?>

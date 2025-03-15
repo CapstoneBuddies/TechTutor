@@ -99,7 +99,21 @@
                                             </p>
                                             <?php if ($notification['class_id']): ?>
                                                 <small class="text-primary">
-                                                    Class: <?php echo htmlspecialchars($notification['class_name']); ?>
+                                                    <?php 
+                                                    try {
+                                                        // Get class name from class_id
+                                                        $class_query = "SELECT class_name FROM class WHERE class_id = ?";
+                                                        $class_stmt = $conn->prepare($class_query);
+                                                        $class_stmt->bind_param("i", $notification['class_id']);
+                                                        $class_stmt->execute();
+                                                        $class_result = $class_stmt->get_result();
+                                                        $class_name = $class_result->fetch_assoc()['class_name'] ?? 'Unknown Class';
+                                                        echo "Class: " . htmlspecialchars($class_name);
+                                                    } catch (Exception $e) {
+                                                        log_error("Error fetching class name: " . $e->getMessage());
+                                                        echo "Class: Unknown";
+                                                    }
+                                                    ?>
                                                 </small>
                                             <?php endif; ?>
                                         </div>
@@ -130,7 +144,7 @@
     <script>
         // Mark all notifications as read
         function markAllAsRead() {
-            fetch('<?php echo BASE; ?>backends/mark_all_notifications_read.php', {
+            fetch('mark-all-notifications-read', {
                 method: 'POST'
             })
             .then(response => response.json())

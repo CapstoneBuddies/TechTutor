@@ -132,17 +132,17 @@
                     <div class="col-12">
                         <div class="card">
                             <div class="card-header">
-                                <h5 class="card-title">User Management (PA HELP KO TT)</h5>
+                                <h5 class="card-title">User Management</h5>
                             </div>
                             <div class="card-body">
                                 <!-- Filter Buttons -->
                                 <div class="row mb-3">
                                     <div class="col-md-8">
                                         <div class="user-filter-buttons">
-                                            <button class="btn btn-outline-primary role-filter active" data-role="all">All Users</button>
-                                            <button class="btn btn-outline-primary role-filter" data-role="ADMIN">Admins</button>
-                                            <button class="btn btn-outline-primary role-filter" data-role="TECHGURU">Tech Gurus</button>
-                                            <button class="btn btn-outline-primary role-filter" data-role="TECHKID">Tech Kids</button>
+                                            <button class="btn btn-outline-primary role-filter <?php echo !isset($_GET['role']) || $_GET['role'] === 'all' ? 'active' : ''; ?>" data-role="all">All Users</button>
+                                            <button class="btn btn-outline-primary role-filter <?php echo isset($_GET['role']) && $_GET['role'] === 'ADMIN' ? 'active' : ''; ?>" data-role="ADMIN">Admins</button>
+                                            <button class="btn btn-outline-primary role-filter <?php echo isset($_GET['role']) && $_GET['role'] === 'TECHGURU' ? 'active' : ''; ?>" data-role="TECHGURU">Tech Gurus</button>
+                                            <button class="btn btn-outline-primary role-filter <?php echo isset($_GET['role']) && $_GET['role'] === 'TECHKID' ? 'active' : ''; ?>" data-role="TECHKID">Tech Kids</button>
                                         </div>
                                     </div>
                                     <div class="col-md-4 text-end">
@@ -278,7 +278,7 @@
             const mainContent = document.querySelector('.dashboard-content');
 
             // Variables
-            let currentRole = 'all';
+            let currentRole = '<?php echo isset($_GET['role']) ? $_GET['role'] : 'all'; ?>';
             let currentSearch = '';
             let selectedUserId = null;
             
@@ -306,21 +306,11 @@
             // Role filter click event
             roleFilters.forEach(button => {
                 button.addEventListener('click', function() {
-                    roleFilters.forEach(btn => btn.classList.remove('active'));
+                    const role = this.dataset.role;
+                    document.querySelectorAll('.role-filter').forEach(btn => btn.classList.remove('active'));
                     this.classList.add('active');
-                    currentRole = this.dataset.role;
-                    
-                    // Show/hide role-specific columns
-                    if (currentRole === 'TECHGURU') {
-                        techguruColumn.forEach(col => col.classList.remove('d-none'));
-                        techkidColumn.forEach(col => col.classList.add('d-none'));
-                    } else if (currentRole === 'TECHKID') {
-                        techkidColumn.forEach(col => col.classList.remove('d-none'));
-                        techguruColumn.forEach(col => col.classList.add('d-none'));
-                    } else {
-                        techguruColumn.forEach(col => col.classList.add('d-none'));
-                        techkidColumn.forEach(col => col.classList.add('d-none'));
-                    }
+                    currentRole = role;
+                    updateURL(role);
                     loadUsers();
                 });
             });
@@ -641,6 +631,13 @@
                     emailAutocomplete.classList.add('d-none');
                 }
             });
+            
+            // Function to update URL without reloading
+            function updateURL(role) {
+                const url = new URL(window.location);
+                url.searchParams.set('role', role);
+                window.history.pushState({}, '', url);
+            }
             
             // Helper function to show/hide loading indicator
             function showLoading(show) {

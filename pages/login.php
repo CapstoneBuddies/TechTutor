@@ -7,8 +7,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TechTutor | Login</title>
-    <meta name="description" content="">
+    <title>TechTutor | Welcome Back</title>
+    <meta name="description" content="Log in to TechTutor - Your personalized IT learning platform. Access your courses, connect with TechGurus, and continue your tech journey.">
     <meta name="keywords" content="">
 
     <!-- Favicons -->
@@ -31,8 +31,7 @@
   <div class="login-container">
     <div class="login-left">
       <div class="login-form">
-        <h2>Log into TechTutor</h2>
-        
+        <h2>Welcome Back to TechTutor!</h2>
         <?php
           if (isset($_SESSION["msg"])) {
             echo '<div class="alert alert-warning"><p>' . $_SESSION["msg"] . '</p></div>';
@@ -42,24 +41,24 @@
         
         <form action="<?php echo BASE; ?>user-login" method="POST" id="loginForm">
           <div class="form-group">
-            <label for="email">Email</label>
+            <label for="email">Email Address</label>
             <input type="email" class="form-control" id="email" name="email" required>
-            <div class="error-message">This field can't be empty</div>
+            <div class="error-message">Email is required</div>
           </div>
           
           <div class="form-group">
             <label for="password">Password</label>
             <input type="password" class="form-control" id="password" name="password" required>
-            <div class="error-message">This field can't be empty</div>
-            <a href="<?php echo BASE; ?>forgot_password" class="forgot-password-link">Forgot Password?</a>
+            <div class="error-message">Password is required</div>
+            <a href="<?php echo BASE; ?>forgot" class="forgot-password-link">Forgot Password?</a>
           </div>
           
           <div class="remember-me">
             <input type="checkbox" id="remember" name="remember">
-            <label for="remember">Remember me</label>
+            <label for="remember">Keep me signed in</label>
           </div>
           
-          <button type="submit" class="btn-login" name="signin" value="1">Log in</button>
+          <button type="submit" class="btn-login" name="signin" value="1">Sign In</button>
         </form>
       </div>
     </div>
@@ -73,15 +72,16 @@
       
       <div class="welcome-content">
         <img src="<?php echo BASE; ?>assets/img/tutor-illustration.png" alt="Welcome" class="welcome-image">
-        <h1>Welcome Back!</h1>
+        <h1>Ready to Learn?</h1>
         <p>
-          Already have an account?<br/>
-          Great! Let's get you back to learning and growing with TechTutor.
+          New to TechTutor?<br/>
+          Join our community of TechKids and TechGurus to start your tech learning journey.
         </p>
       </div>
       
       <a href="<?php echo BASE; ?>register" class="sign-up-link">
-        <i class="bi bi-arrow-left"></i> Sign up
+        Create Account&nbsp;
+        <i class="bi bi-arrow-right"></i> 
       </a>
     </div>
   </div>
@@ -95,45 +95,70 @@
       const emailInput = document.getElementById('email');
       const passwordInput = document.getElementById('password');
       
-      // Function to validate form fields
-      function validateField(field) {
-        if (!field.value.trim()) {
-          field.classList.add('is-invalid');
+      // Function to validate email format
+      function validateEmail(email) {
+        const value = email.value.trim();
+        if (!value) {
+          email.classList.add('is-invalid');
+          email.nextElementSibling.textContent = 'Email is required';
           return false;
-        } else {
-          field.classList.remove('is-invalid');
-          return true;
         }
+        
+        // Using the same email validation as PHP's filter_var
+        const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!re.test(value)) {
+          email.classList.add('is-invalid');
+          email.nextElementSibling.textContent = 'Invalid email format';
+          return false;
+        }
+        
+        email.classList.remove('is-invalid');
+        return true;
       }
       
-      // Add event listeners for input validation
-      emailInput.addEventListener('blur', function() {
-        validateField(emailInput);
-      });
-      
-      passwordInput.addEventListener('blur', function() {
-        validateField(passwordInput);
-      });
-      
-      // Remove validation styling when user starts typing
-      emailInput.addEventListener('input', function() {
-        emailInput.classList.remove('is-invalid');
-      });
-      
-      passwordInput.addEventListener('input', function() {
-        passwordInput.classList.remove('is-invalid');
-      });
-      
-      // Form submission validation
-      loginForm.addEventListener('submit', function(event) {
-        let isValid = true;
-        
-        if (!validateField(emailInput)) isValid = false;
-        if (!validateField(passwordInput)) isValid = false;
-        
-        if (!isValid) {
-          event.preventDefault();
+      // Function to validate password
+      function validatePassword(password) {
+        const value = password.value;
+        if (!value) {
+          password.classList.add('is-invalid');
+          password.nextElementSibling.textContent = 'Password is required';
+          return false;
         }
+        
+        // Basic validation for login - we don't check complexity on login
+        password.classList.remove('is-invalid');
+        return true;
+      }
+      
+      // Real-time validation
+      emailInput.addEventListener('input', () => validateEmail(emailInput));
+      passwordInput.addEventListener('input', () => validatePassword(passwordInput));
+      
+      // Form submission handler
+      loginForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const isEmailValid = validateEmail(emailInput);
+        const isPasswordValid = validatePassword(passwordInput);
+        
+        if (isEmailValid && isPasswordValid) {
+          this.submit();
+        } else {
+          // Focus the first invalid field
+          const firstInvalid = loginForm.querySelector('.is-invalid');
+          if (firstInvalid) {
+            firstInvalid.focus();
+          }
+        }
+      });
+      
+      // Clear validation on focus
+      const inputs = [emailInput, passwordInput];
+      inputs.forEach(input => {
+        input.addEventListener('focus', function() {
+          this.classList.remove('is-invalid');
+          this.nextElementSibling.textContent = '';
+        });
       });
     });
   </script>

@@ -1,5 +1,4 @@
 <?php 
-    require_once '../backends/config.php';
     require_once '../backends/main.php';
 
     if (isset($_GET['token'])) {

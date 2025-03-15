@@ -61,10 +61,12 @@ CREATE TABLE IF NOT EXISTS `class` (
     `start_date` DATETIME NOT NULL,
     `end_date` DATETIME NOT NULL,
     `class_size` INT NULL,
-    `is_active` BOOLEAN NOT NULL DEFAULT TRUE,
+    `status` ENUM('active', 'restricted', 'completed', 'pending') NOT NULL DEFAULT 'active',
     `is_free` BOOLEAN NOT NULL DEFAULT TRUE,
     `price` FLOAT(10,2) NULL,
     `thumbnail` VARCHAR(255),
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (subject_id) REFERENCES subject(subject_id),
     FOREIGN KEY (tutor_id) REFERENCES users(uid)
 );
@@ -81,7 +83,16 @@ CREATE TABLE IF NOT EXISTS `class_schedule` (
     FOREIGN KEY (class_id) REFERENCES class(class_id),
     FOREIGN KEY (user_id) REFERENCES users(uid)
 );
-
+CREATE TABLE IF NOT EXISTS `enrollments` (
+    `enrollment_id` INT PRIMARY KEY AUTO_INCREMENT,
+    `class_id` INT NOT NULL,
+    `student_id` INT NOT NULL,
+    `enrollment_date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `status` ENUM('active', 'completed', 'dropped') NOT NULL DEFAULT 'active',
+    FOREIGN KEY (class_id) REFERENCES class(class_id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES users(uid) ON DELETE CASCADE,
+    UNIQUE KEY `unique_enrollment` (`class_id`, `student_id`)
+);
 CREATE TABLE IF NOT EXISTS `meetings` (
     `meeting_id` INT PRIMARY KEY AUTO_INCREMENT,
     `meeting_uid` VARCHAR(50) UNIQUE NOT NULL,
@@ -172,6 +183,12 @@ CREATE INDEX idx_meeting_uid ON meetings(meeting_uid);
 CREATE INDEX idx_file_uuid ON file_management(file_uuid);
 CREATE INDEX idx_reference_number ON transactions(reference_number);
 CREATE INDEX idx_token ON login_tokens (token);
+CREATE INDEX idx_class_status ON class(status);
+CREATE INDEX idx_class_tutor ON class(tutor_id);
+CREATE INDEX idx_class_subject ON class(subject_id);
+CREATE INDEX idx_enrollment_class ON enrollments(class_id);
+CREATE INDEX idx_enrollment_student ON enrollments(student_id);
+CREATE INDEX idx_enrollment_status ON enrollments(status);
 
 -- Sample Data
 INSERT INTO `users`(`email`,`password`,`role`,`is_verified`, `first_name`, `last_name`) VALUES 

@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!notificationId) return;
             
             try {
-                const response = await fetch(BASE + 'backends/mark_notification_read.php', {
+                const response = await fetch(BASE + 'mark-notification-read', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',

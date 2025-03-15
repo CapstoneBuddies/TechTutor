@@ -9,17 +9,18 @@
 
 	function register() {
 		global $conn;
+		
 		if(isset($_POST['register'])) {
-			$email = $_POST['email'];
-			$fname = $_POST['first-name'];
-			$lname = $_POST['last-name'];
-			$pass = $_POST['password'];
-			$cpass = $_POST['confirm-password'];
-			$role = $_POST['role'];
-			$profile = 'default.jpg';
-
 			try {
-				// Cleansing inputted data
+				// Get form data
+				$email = $_POST['email'] ?? '';
+				$fname = $_POST['first-name'] ?? '';
+				$lname = $_POST['last-name'] ?? '';
+				$pass = $_POST['password'] ?? '';
+				$cpass = $_POST['confirm-password'] ?? '';
+				$role = $_POST['role'] ?? '';
+				
+				// Input validation
 				if(empty($email) || empty($fname) || empty($lname) || empty($pass) || empty($cpass)){
 					$_SESSION['msg'] = "Please fill in all the required fields.";
 					throw new Exception("Empty Fields");
@@ -40,69 +41,73 @@
 					$_SESSION['msg'] = "Password must be 8-16 characters long and contain a mix of letters, numbers, and special characters.";
 					throw new Exception("Password complexity failed(uniqueness)");
 				}
+				if(!in_array($role, ['TECHGURU', 'TECHKID'])) {
+					$_SESSION['msg'] = "Invalid user role selected.";
+					throw new Exception("Invalid Role");
+				}
 
-				$conn -> begin_transaction();
+				$conn->begin_transaction();
 
-				// Checking if email already exist
-				$stmt = $conn->prepare("SELECT * FROM `users` WHERE `email` = ?");
+				// Check for existing email
+				$stmt = $conn->prepare("SELECT uid FROM users WHERE email = ?");
 				$stmt->bind_param("s", $email);
 				$stmt->execute();
-				$result = $stmt->get_result();
-				if ($result->num_rows > 0) {
+				if ($stmt->get_result()->num_rows > 0) {
 					$_SESSION['msg'] = "The email address is already registered.";
-					throw new Exception("User already exist");
+					throw new Exception("User already exists");
 				}
 
+				// Hash password
 				$password = password_hash($pass, PASSWORD_DEFAULT);
-
 				if ($password === false) {
 					$_SESSION['msg'] = "We encountered an issue while creating your account. Please try again.";
-					throw new Exception("Hashing Error!");
+					throw new Exception("Password hashing failed");
 				}
 
-				// Adding Details to the User Table
-				$stmt = $conn->prepare("INSERT INTO `users`(`password`,`email`,`role`,`first_name`,`last_name`) VALUES(?,?,?,?,?)");
-				$stmt->bind_param("sssss", $password, $email, $role,$fname, $lname);
-
+				// Create user account
+				$stmt = $conn->prepare("INSERT INTO users (password, email, role, first_name, last_name) VALUES (?, ?, ?, ?, ?)");
+				$stmt->bind_param("sssss", $password, $email, $role, $fname, $lname);
+				
 				if($stmt->execute()) {
+					$user_id = $conn->insert_id;
 					$mail = getMailerInstance();
-
-					$user_id = $conn->insert_id; // Retrieve the last query user id
-
-					// Sending of verification
 					$token = generateVerificationToken($user_id);
 					sendVerificationEmail($mail, $email, $token, $fname);
-					$_SESSION["msg"] = "Account was succesfully created, Please Log In";
+					
 					$conn->commit();
+					$_SESSION["msg"] = "Account was successfully created. Please check your email to verify your account.";
 					header("location: ".BASE."login");
 					exit();
+				} else {
+					throw new Exception("Failed to create user account");
 				}
 			}
 			catch(mysqli_sql_exception $e) {
 				$conn->rollback();
-				log_error("Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database_error.log');
-
+				log_error("SQL Error in registration: " . $e->getMessage(), 'database_error.log');
 				$_SESSION['msg'] = "Something went wrong. Please try again later.";
-			 	header("location: ".BASE."login");
+			 	header("location: ".BASE."signup");
 				exit();
 			}
 			catch(Exception $e) {
 				$conn->rollback();
-				log_error("Error on line " . $e->getLine() . " in " . $e->getFile() . ": ".$e->getMessage(), 'error.log');
-				
-				if(!isset($_SESSION['msg']))
-					$_SESSION['msg'] = "Unexpected Error Occured. Please contact System Administrator.";
+				log_error("Registration error: " . $e->getMessage(), 'error.log');
+				if(!isset($_SESSION['msg'])) {
+					$_SESSION['msg'] = "An unexpected error occurred. Please try again.";
+				}
 				header("location: ".BASE."register");
 				exit();
 			}
-			finally{
-				$stmt->close();
-				$conn->close();
+			finally {
+				if(isset($stmt)) {
+					$stmt->close();
+				}
 			}
-		}
-		else {
-			$_SESSION['msg'] = "Invalid Action";
-			header("location: ".BASE."login");
+		} else {
+			log_error("Invalid registration attempt - missing register field");
+			$_SESSION['msg'] = "Invalid registration attempt";
+			header("location: ".BASE."register");
+			exit();
 		}
 	}//End Registration Block
 
@@ -233,7 +238,7 @@
 				try{
 					$conn -> begin_transaction();
 
-					$token_id = rememberTokenVerifier($token);
+					$token_id = tokenVerifier($token);
 
 					if(isset($token_id)) {
 						$stmt = $conn->prepare("DELETE FROM `login_tokens` WHERE `token_id` = ?");
@@ -571,6 +576,6 @@
      * These functions have been moved to student_management.php for better organization
      */
     require_once 'student_management.php';
-
     require_once 'user_management.php';
+    require_once 'admin_management.php';
     ?>

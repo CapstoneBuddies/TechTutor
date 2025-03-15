@@ -2914,12 +2914,6 @@ input[type="password"] {
     transition: 0.3s;
   }
 
-  .navbar-mobile .mobile-nav-toggle {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-  }
-
   .navbar-mobile ul {
     display: block;
     position: absolute;
@@ -3145,4 +3139,44 @@ input[type="number"]::-webkit-inner-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
+}
+
+.testimonial-card {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 15px;
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.testimonial-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+.testimonial-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  margin: 0 auto 1.5rem;
+  object-fit: cover;
+  border: 3px solid var(--primary-color);
+}
+
+.testimonial-quote {
+  font-style: italic;
+  color: #666;
+  margin: 1rem 0;
+  line-height: 1.6;
+}
+
+.testimonial-card h5 {
+  color: var(--heading-color);
+  margin-bottom: 0.25rem;
+}
+
+.testimonial-card .text-muted {
+  color: #6c757d;
+  font-size: 0.9rem;
 }

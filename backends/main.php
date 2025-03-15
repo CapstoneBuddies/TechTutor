@@ -1,6 +1,6 @@
 <?php 
 	require_once 'db.php';
-	
+		
 	use PHPMailer\PHPMailer\PHPMailer;
 	use PHPMailer\PHPMailer\Exception;
 
@@ -11,12 +11,12 @@
 	$excluded_page = ['index.php', 'login.php', 'signup.php', 'verify.php', 'route.php'];
 	$excluded_link = ['user-login','user-register','home'];
 	$logged_excluded_page = ['dashboard','profile','settings'];
-	$approved_link = ['user-logout','user-profile-update','user-change-password','user-deactivate','admin-restrict-user','admin-delete-user','admin-activate-user', 'get-transaction-details', 'get-transactions', 'export-transactions', 'create-payment', 'process-card-payment'];
+	$approved_link = ['user-logout','user-profile-update','user-change-password','user-deactivate','admin-restrict-user','admin-delete-user','admin-activate-user', 'get-transaction-details', 'get-transactions', 'export-transactions', 'create-payment', 'process-card-payment','add-course','add-subject','toggle-subject-status'];
 
 	// Check if user is logged but trying to access unauthorized link
 	if(isset($_SESSION['user']) && in_array($link,$excluded_link) && isset($_COOKIE['role'])) {
 		$_SESSION['err-msg'] = "Invalid Link Accessed!";
-		error_log('Unauthorized link');
+		log_error('Unauthorized link');
 		header("location: ".BASE."dashboard");
 		exit();
 	}
@@ -36,7 +36,7 @@
 
 	// Clean up role cookie if no session exists
 	if(isset($_COOKIE['role']) && !isset($_SESSION['user'])) {
-		error_log("I run here! cookie clean");
+		log_error("I run here! cookie clean");
 		setcookie('role','',time() - 3600, '/');
 		unset($_COOKIE['role']);
 		header("location: ".BASE."login");
@@ -44,7 +44,7 @@
 	}
 	// Create role cookie user and role session exist
 	if(!isset($_COOKIE['role']) && isset($_SESSION['user']) && isset($_SESSION['role']) && $link == 'dashboard') {
-		error_log("I run here! cookie clean");
+		log_error("I run here! cookie clean");
 		setcookie('role',$_SESSION['role'],time() + (3 * 60 * 60),"/","",true,true);
 		header("location: ".BASE."dashboard");
 		exit();
@@ -52,7 +52,7 @@
 
 	// Check if user is not logged in but trying to access protected pages
 	if (!isset($_SESSION['user']) && in_array($link, $logged_excluded_page)) {
-		error_log("was accessed this");
+		log_error("was accessed this");
 	    $_SESSION['msg'] = "Please log in to access this page.";
 	    header("location: ".BASE."login");
 	    exit();
@@ -60,15 +60,12 @@
 
 	// Check if user is not logged on but was set to autologin
 	if(!isset($_SESSION['user']) && isset($_COOKIE['remember_me'])) {
-		error_log("I run here!");
+		log_error("I run here!");
 		try { 
 			global $conn;
 			$token = $_COOKIE['remember_me'];
 
-			$token_id = rememberTokenVerifier($token);
-
-
-					error_log("Token ID: " . $token_id." Token: ".$token);
+			$token_id = tokenVerifier($token);
 
 			if (isset($token_id)) { 
 				// Token matched, retrieve user details
@@ -166,7 +163,7 @@
             $stmt->bind_param("isssiss", $recipient_id, $recipient_role, $message, $link, $class_id, $icon, $icon_color);
             return $stmt->execute();
         } catch (Exception $e) {
-            error_log("Failed to send notification: " . $e->getMessage());
+            log_error("Failed to send notification: " . $e->getMessage());
             return false;
         }
     }
@@ -188,7 +185,7 @@
             $stmt->bind_param("is", $_SESSION['user'], $_SESSION['role']);
             return $stmt->execute();
         } catch (Exception $e) {
-            error_log("Failed to mark notifications as read: " . $e->getMessage());
+            log_error("Failed to mark notifications as read: " . $e->getMessage());
             return false;
         }
     }
@@ -209,7 +206,7 @@
             $stmt->execute();
             return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         } catch (Exception $e) {
-            error_log("Failed to get user notifications: " . $e->getMessage());
+            log_error("Failed to get user notifications: " . $e->getMessage());
             return [];
         }
     }

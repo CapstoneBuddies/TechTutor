@@ -354,18 +354,20 @@ function getClassDetails($class_id, $tutor_id = null) {
 }
 
 /**
- * Update a class's status (active/inactive)
+ * Update a class's status and notify relevant users
  * 
  * @param int $class_id The ID of the class
  * @param int|null $tutor_id Optional tutor ID for verification. If null, acts as admin access
- * @param bool $is_active The new status
+ * @param string $new_status New status (active, restricted, completed, pending)
  * @return bool True if update was successful
  */
-function updateClassStatus($class_id, $tutor_id = null, $is_active) {
+function updateClassStatus($class_id, $tutor_id = null, $new_status) {
     global $conn;
     
     try {
-        // Verify ownership if tutor_id is provided
+        $conn->begin_transaction();
+        
+        // If tutor_id is provided, verify ownership
         if ($tutor_id !== null) {
             $verify = $conn->prepare("SELECT tutor_id FROM class WHERE class_id = ?");
             $verify->bind_param("i", $class_id);
@@ -373,40 +375,66 @@ function updateClassStatus($class_id, $tutor_id = null, $is_active) {
             $result = $verify->get_result()->fetch_assoc();
             
             if (!$result || $result['tutor_id'] != $tutor_id) {
-                return false;
+                throw new Exception("Unauthorized status update attempt");
             }
         }
         
-        $stmt = $conn->prepare("UPDATE class SET is_active = ? WHERE class_id = ?");
-        $stmt->bind_param("ii", $is_active, $class_id);
+        // Update class status
+        $query = "UPDATE class SET status = ? WHERE class_id = ?";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("si", $new_status, $class_id);
+        $stmt->execute();
         
-        if ($stmt->execute()) {
-            // Get class details for notification
-            $class = getClassDetails($class_id);
-            if ($class) {
-                $status = $is_active ? 'activated' : 'deactivated';
-                $icon = $is_active ? 'bi-check-circle-fill' : 'bi-x-circle-fill';
-                $color = $is_active ? 'text-success' : 'text-danger';
-                
-                // Notify the tutor if admin made the change
-                if ($tutor_id === null) {
-                    require_once 'notifications.php';
-                    insertNotification(
-                        $class['tutor_id'],
-                        'TECHGURU',
-                        "Your class '{$class['class_name']}' has been {$status} by admin",
-                        "/techguru/class-details?id={$class_id}",
-                        $class_id,
-                        $icon,
-                        $color
-                    );
-                }
-            }
-            return true;
+        // Get class and user details for notification
+        $query = "SELECT c.class_name, c.tutor_id, u.email as tutor_email 
+                 FROM class c 
+                 JOIN users u ON c.tutor_id = u.uid 
+                 WHERE c.class_id = ?";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("i", $class_id);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        
+        // Send notification to tutor
+        $message = "Your class '{$result['class_name']}' status has been updated to " . ucfirst($new_status);
+        insertNotification(
+            $result['tutor_id'],
+            'TECHGURU',
+            $message,
+            "class-details?id=$class_id",
+            $class_id,
+            'bi bi-info-circle',
+            'text-info'
+        );
+        
+        // Send notifications to enrolled students
+        $query = "SELECT e.student_id, u.email 
+                 FROM enrollments e 
+                 JOIN users u ON e.student_id = u.uid 
+                 WHERE e.class_id = ? AND e.status = 'active'";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("i", $class_id);
+        $stmt->execute();
+        $students = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        
+        foreach ($students as $student) {
+            $message = "Class '{$result['class_name']}' status has been updated to " . ucfirst($new_status);
+            insertNotification(
+                $student['student_id'],
+                'TECHKID',
+                $message,
+                "class-details?id=$class_id",
+                $class_id,
+                'bi bi-info-circle',
+                'text-info'
+            );
         }
-        return false;
+        
+        $conn->commit();
+        return true;
     } catch (Exception $e) {
-        error_log("Error updating class status: " . $e->getMessage());
+        $conn->rollback();
+        log_error("Error updating class status: " . $e->getMessage());
         return false;
     }
 }

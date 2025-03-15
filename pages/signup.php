@@ -1,5 +1,4 @@
 <?php 
-    require_once '../backends/config.php';
     require_once '../backends/main.php';
 ?>
 <!DOCTYPE html>
@@ -65,16 +64,16 @@
           <div class="col-md-6">
             <div class="form-group">
               <label for="firstname">Firstname</label>
-              <input type="text" class="form-control" id="firstname" name="first-name" required>
-              <div class="error-message">This field can't be empty</div>
+              <input type="text" class="form-control" id="firstname" name="first-name" required autocomplete="given-name">
+              <div class="error-message">Please enter a valid name (letters, spaces, hyphens only)</div>
             </div>
           </div>
           
           <div class="col-md-6">
             <div class="form-group">
               <label for="lastname">Lastname</label>
-              <input type="text" class="form-control" id="lastname" name="last-name" required>
-              <div class="error-message">This field can't be empty</div>
+              <input type="text" class="form-control" id="lastname" name="last-name" required autocomplete="family-name">
+              <div class="error-message">Please enter a valid name (letters, spaces, hyphens only)</div>
             </div>
           </div>
         </div>
@@ -91,31 +90,31 @@
         
         <div class="form-group">
           <label for="email">Email Address</label>
-          <input type="email" class="form-control" id="email" name="email" required>
+          <input type="email" class="form-control" id="email" name="email" required autocomplete="email">
           <div class="error-message">Please enter a valid email address</div>
         </div>
         
         <div class="form-group">
           <label for="password">Password</label>
-          <input type="password" class="form-control" id="password" name="password" required>
-          <div class="error-message">Password must be at least 6 characters</div>
+          <input type="password" class="form-control" id="password" name="password" required autocomplete="new-password">
+          <div class="error-message">Password must be 8-16 characters and include uppercase, lowercase, number, and special character (*-_!)</div>
         </div>
         
         <div class="form-group">
           <label for="confirm-password">Confirm Password</label>
-          <input type="password" class="form-control" id="confirm-password" name="confirm-password" required>
+          <input type="password" class="form-control" id="confirm-password" name="confirm-password" required autocomplete="new-password">
           <div class="error-message">Passwords do not match</div>
         </div>
         
         <p class="terms">
-          People who use our service may have upload your contact information to TechTutor. <a href="#">Learn more</a>.
+          By signing up, you acknowledge that TechTutor may store and process your information to provide our services. <a href="<?php echo BASE; ?>terms" class="terms-link">Learn more</a>
         </p>
         
         <p class="terms">
-          By clicking Sign Up, you agree to disagree one half one fourth, disappear appear. You may receive email from us for verification purposes, bantay ka.
+          By clicking Sign Up, you agree to TechTutor's <a href="<?php echo BASE; ?>terms" class="terms-link">Terms and Conditions</a>. You'll receive a verification email to activate your account and start your learning journey with us.
         </p>
         
-        <button type="submit" class="btn-signup" name="register">Sign up</button>
+        <button type="submit" class="btn-signup" name="register" value='1'>Sign up</button>
       </form>
     </div>
   </div>
@@ -132,117 +131,132 @@
       const emailInput = document.getElementById('email');
       const passwordInput = document.getElementById('password');
       const confirmPasswordInput = document.getElementById('confirm-password');
-      const fileUploadGroup = document.getElementById('file-upload-group');
-      
-      // Initially hide the file upload group
-      fileUploadGroup.style.display = 'none';
       
       // Function to validate form fields
       function validateField(field) {
-        if (!field.value.trim()) {
+        const value = field.value.trim();
+        if (!value) {
           field.classList.add('is-invalid');
+          field.nextElementSibling.textContent = 'This field is required';
           return false;
-        } else {
-          field.classList.remove('is-invalid');
-          return true;
         }
+        
+        // Additional validation for names
+        if (field === firstnameInput || field === lastnameInput) {
+          if (!/^[a-zA-Z\s-']{2,}$/.test(value)) {
+            field.classList.add('is-invalid');
+            field.nextElementSibling.textContent = 'Please enter a valid name (letters, spaces, hyphens only)';
+            return false;
+          }
+        }
+        
+        field.classList.remove('is-invalid');
+        return true;
       }
       
       // Function to validate email format
       function validateEmail(email) {
-        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const isValid = re.test(email.value.trim());
-        if (!isValid) {
+        const value = email.value.trim();
+        if (!value) {
           email.classList.add('is-invalid');
+          email.nextElementSibling.textContent = 'Email is required';
           return false;
-        } else {
-          email.classList.remove('is-invalid');
-          return true;
         }
+        
+        // Using the same email validation as PHP's filter_var
+        const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!re.test(value)) {
+          email.classList.add('is-invalid');
+          email.nextElementSibling.textContent = 'Invalid email format';
+          return false;
+        }
+        
+        email.classList.remove('is-invalid');
+        return true;
       }
       
       // Function to validate password
       function validatePassword(password) {
-        if (password.value.length < 6) {
+        const value = password.value;
+        if (!value) {
           password.classList.add('is-invalid');
+          password.nextElementSibling.textContent = 'Password is required';
           return false;
-        } else {
-          password.classList.remove('is-invalid');
-          return true;
         }
+        
+        // Using the exact same regex as the backend
+        const passwordRegex = /^(?=(.*[A-Z]))(?=(.*[a-z]))(?=(.*\d))(?=(.*[*\-_!]))[A-Za-z\d*\-_!]{8,16}$/;
+        if (!passwordRegex.test(value)) {
+          password.classList.add('is-invalid');
+          password.nextElementSibling.textContent = 'Password must be 8-16 characters and contain uppercase, lowercase, number, and special character (*-_!)';
+          return false;
+        }
+        
+        password.classList.remove('is-invalid');
+        return true;
       }
       
       // Function to validate password confirmation
-      function validatePasswordConfirmation(password, confirmPassword) {
-        if (password.value !== confirmPassword.value) {
-          confirmPassword.classList.add('is-invalid');
+      function validatePasswordConfirmation() {
+        const value = confirmPasswordInput.value;
+        if (!value) {
+          confirmPasswordInput.classList.add('is-invalid');
+          confirmPasswordInput.nextElementSibling.textContent = 'Please confirm your password';
           return false;
-        } else {
-          confirmPassword.classList.remove('is-invalid');
-          return true;
         }
+        
+        if (passwordInput.value !== value) {
+          confirmPasswordInput.classList.add('is-invalid');
+          confirmPasswordInput.nextElementSibling.textContent = 'Passwords do not match';
+          return false;
+        }
+        
+        confirmPasswordInput.classList.remove('is-invalid');
+        return true;
       }
       
-      // Function to toggle file upload based on role
-      roleSelect.addEventListener('change', function() {
-        if (this.value === 'TECHGURU') {
-          fileUploadGroup.style.display = 'block';
+      // Real-time validation
+      firstnameInput.addEventListener('input', () => validateField(firstnameInput));
+      lastnameInput.addEventListener('input', () => validateField(lastnameInput));
+      roleSelect.addEventListener('change', () => validateField(roleSelect));
+      emailInput.addEventListener('input', () => validateEmail(emailInput));
+      passwordInput.addEventListener('input', () => {
+        validatePassword(passwordInput);
+        if (confirmPasswordInput.value) {
+          validatePasswordConfirmation();
+        }
+      });
+      confirmPasswordInput.addEventListener('input', validatePasswordConfirmation);
+      
+      // Form submission handler
+      signupForm.addEventListener('submit', function(e) {
+        // e.preventDefault();
+        
+        const isFirstNameValid = validateField(firstnameInput);
+        const isLastNameValid = validateField(lastnameInput);
+        const isRoleValid = validateField(roleSelect);
+        const isEmailValid = validateEmail(emailInput);
+        const isPasswordValid = validatePassword(passwordInput);
+        const isConfirmPasswordValid = validatePasswordConfirmation();
+        
+        if (isFirstNameValid && isLastNameValid && isRoleValid && 
+            isEmailValid && isPasswordValid && isConfirmPasswordValid) {
+          this.submit();
         } else {
-          fileUploadGroup.style.display = 'none';
+          // Focus the first invalid field
+          const firstInvalid = signupForm.querySelector('.is-invalid');
+          if (firstInvalid) {
+            firstInvalid.focus();
+          }
         }
       });
       
-      // Add event listeners for input validation
-      firstnameInput.addEventListener('blur', function() {
-        validateField(firstnameInput);
-      });
-      
-      lastnameInput.addEventListener('blur', function() {
-        validateField(lastnameInput);
-      });
-      
-      roleSelect.addEventListener('blur', function() {
-        validateField(roleSelect);
-      });
-      
-      emailInput.addEventListener('blur', function() {
-        validateEmail(emailInput);
-      });
-      
-      passwordInput.addEventListener('blur', function() {
-        validatePassword(passwordInput);
-      });
-      
-      confirmPasswordInput.addEventListener('blur', function() {
-        validatePasswordConfirmation(passwordInput, confirmPasswordInput);
-      });
-      
-      // Remove validation styling when user starts typing
+      // Clear validation on focus
       const inputs = [firstnameInput, lastnameInput, emailInput, passwordInput, confirmPasswordInput];
       inputs.forEach(input => {
-        input.addEventListener('input', function() {
+        input.addEventListener('focus', function() {
           this.classList.remove('is-invalid');
         });
-      });
-      
-      roleSelect.addEventListener('input', function() {
-        this.classList.remove('is-invalid');
-      });
-      
-      // Form submission validation
-      signupForm.addEventListener('submit', function(event) {
-        let isValid = true;
-        
-        if (!validateField(firstnameInput)) isValid = false;
-        if (!validateField(lastnameInput)) isValid = false;
-        if (!validateField(roleSelect)) isValid = false;
-        if (!validateEmail(emailInput)) isValid = false;
-        if (!validatePassword(passwordInput)) isValid = false;
-        if (!validatePasswordConfirmation(passwordInput, confirmPasswordInput)) isValid = false;
-        
-        if (!isValid) {
-          event.preventDefault();
-        }
       });
     });
   </script>

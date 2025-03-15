@@ -37,6 +37,7 @@
     
     <!-- Custom CSS -->
     <link href="<?php echo BASE; ?>/assets/css/dashboard.css" rel="stylesheet">
+    <link href="<?php echo BASE; ?>/assets/css/techkid.css" rel="stylesheet">
 </head>
 <body>
     <?php include ROOT_PATH . '/components/header.php'; ?>

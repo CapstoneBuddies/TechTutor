@@ -14,7 +14,7 @@ function insertNotification($recipient_id, $recipient_role, $message, $link, $cl
         
         return $success;
     } catch (Exception $e) {
-        error_log("Error inserting notification: " . $e->getMessage());
+        log_error("Error inserting notification: " . $e->getMessage());
         return false;
     }
 }
@@ -43,7 +43,7 @@ function updateNotificationsReadStatus($user_id, $role) {
         
         return $success;
     } catch (Exception $e) {
-        error_log("Error updating notification read status: " . $e->getMessage());
+        log_error("Error updating notification read status: " . $e->getMessage());
         return false;
     }
 }
@@ -96,8 +96,32 @@ function fetchUserNotifications($user_id, $role) {
         
         return $notifications;
     } catch (Exception $e) {
-        error_log("Error fetching notifications: " . $e->getMessage());
+        log_error("Error fetching notifications: " . $e->getMessage());
         return [];
+    }
+}
+
+/**
+ * Mark a single notification as read
+ * 
+ * @param int $notification_id The ID of the notification to mark as read
+ * @return bool True if successful, false otherwise
+ */
+function markNotificationAsRead($notification_id) {
+    global $conn;
+    
+    try {
+        $query = "UPDATE notifications SET is_read = 1 WHERE notification_id = ?";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("i", $notification_id);
+        
+        $success = $stmt->execute();
+        $stmt->close();
+        
+        return $success;
+    } catch (Exception $e) {
+        log_error("Error marking notification as read: " . $e->getMessage());
+        return false;
     }
 }
 ?>

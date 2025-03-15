@@ -48,11 +48,16 @@
     ];
     $is_teaching_page = in_array($current_page, $teaching_pages);
 ?>
+<!-- Include header.css for styling -->
+<link rel="stylesheet" href="<?php echo CSS; ?>header.css">
+<!-- Include responsive.css for mobile responsiveness -->
+<link rel="stylesheet" href="<?php echo CSS; ?>responsive.css">
+
 <div class="dashboard-container">
     <!-- Sidebar -->
-    <nav class="sidebar">
-        <div class="logo-container">
-            <a href="<?php echo BASE; ?>/home">
+    <nav class="sidebar collapsed">
+        <div class="logo-container" id="sidebarToggle">
+            <a style="cursor: pointer;">
                 <img src="<?php echo IMG; ?>circle-logo.png" alt="Logo" class="logo">
             </a>
         </div>
@@ -76,8 +81,12 @@
                     <i class="bi bi-people"></i>
                     <span>View All Users</span>
                 </a>
+                <a href="<?php echo BASE; ?>dashboard/classes" class="nav-item <?php echo $current_page == 'view-class.php' ? 'active' : ''; ?>">
+                    <i class="bi bi-book-fill"></i>
+                    <span>View All Classes</span>
+                </a>
                 <a href="<?php echo BASE; ?>dashboard/courses" class="nav-item <?php echo $current_page == 'view-course.php' ? 'active' : ''; ?>">
-                    <i class="bi bi-book"></i>
+                    <i class="bi bi-journal-bookmark-fill"></i>
                     <span>Courses</span>
                 </a>
             <!-- END ADMIN DASHBOARD SELECTION -->
@@ -127,40 +136,41 @@
         </nav>
     </nav>
 
-    <main class="main-content">
+    <main class="main-content expanded">
         <!-- Top Bar -->
         <div class="top-bar">
+            <div class="top-bar-left">
+                <!-- Menu toggle button will be inserted by JavaScript -->
+            </div>
             <div class="top-bar-right">
                 <div class="dropdown">
-                    <a href="#" class="notification-icon" data-bs-toggle="dropdown">
+                    <a href="#" class="notification-icon" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="bi bi-bell"></i>
                         <?php if ($unread_count > 0): ?>
                             <span class="notification-badge"><?php echo $unread_count; ?></span>
                         <?php endif; ?>
                     </a>
-                    <div class="dropdown-menu notification-dropdown dropdown-menu-end">
-                        <h6 class="dropdown-header">Recent Notifications</h6>
+                    <div class="dropdown-menu notification-dropdown">
+                        <div class="dropdown-header">Recent Notifications</div>
                         <div class="notification-list">
                             <?php if (empty($notifications)): ?>
-                                <div class="dropdown-item notification-item text-center">
-                                    <p class="text-muted mb-0">No notifications yet</p>
-                                </div>
+                                <div class="no-notifications">No notifications yet</div>
                             <?php else: ?>
                                 <?php foreach ($notifications as $notification): ?>
-                                    <a href="<?php echo $notification['link']; ?>" class="dropdown-item notification-item <?php echo !$notification['is_read'] ? 'unread' : ''; ?>">
-                                        <i class="bi <?php echo $notification['icon']; ?> <?php echo $notification['icon_color']; ?>"></i>
+                                    <a href="<?php echo $notification['link']; ?>" class="notification-item <?php echo !$notification['is_read'] ? 'unread' : ''; ?>">
+                                        <div class="notification-icon">
+                                            <i class="bi <?php echo $notification['icon']; ?> <?php echo $notification['icon_color']; ?>"></i>
+                                        </div>
                                         <div class="notification-content">
-                                            <p><?php echo htmlspecialchars($notification['message']); ?></p>
-                                            <small><?php echo getTimeAgoNotif($notification['created_at']); ?></small>
+                                            <div class="notification-message"><?php echo htmlspecialchars($notification['message']); ?></div>
+                                            <div class="notification-time"><?php echo getTimeAgoNotif($notification['created_at']); ?></div>
                                         </div>
                                     </a>
                                 <?php endforeach; ?>
                             <?php endif; ?>
                         </div>
                         <div class="dropdown-divider"></div>
-                        <a href="<?php echo BASE; ?>dashboard/notifications" class="dropdown-item text-center view-all">
-                            View All Notifications
-                        </a>
+                        <a href="<?php echo BASE; ?>dashboard/notifications" class="view-all">View All Notifications</a>
                     </div>
                 </div>
                 <div class="dropdown">
@@ -177,3 +187,167 @@
                 </div>
             </div>
         </div>
+
+<!-- Include header.js for sidebar functionality -->
+<script>
+    const BASE = '<?php echo BASE; ?>';
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            // Handle sidebar toggle
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebar = document.querySelector('.sidebar');
+            const mainContent = document.querySelector('.main-content');
+            
+            if (!sidebarToggle || !sidebar || !mainContent) {
+                throw new Error('Required DOM elements not found for sidebar functionality');
+            }
+            
+            // Create overlay for mobile
+            const overlay = document.createElement('div');
+            overlay.className = 'sidebar-overlay';
+            document.body.appendChild(overlay);
+            
+            // Toggle sidebar
+            sidebarToggle.addEventListener('click', function(e) {
+                try {
+                    e.preventDefault();
+                    if (window.innerWidth <= 991) {
+                        // Mobile behavior
+                        sidebar.classList.toggle('active');
+                        overlay.classList.toggle('active');
+                    } else {
+                        // Desktop behavior
+                        sidebar.classList.toggle('collapsed');
+                        mainContent.classList.toggle('expanded');
+                    }
+                } catch (error) {
+                    console.error('Error toggling sidebar:', error);
+                    fetch(BASE + 'log-error.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            error: error.message,
+                            component: 'header',
+                            action: 'toggle_sidebar'
+                        })
+                    }).catch(err => console.error('Error logging to server:', err));
+                }
+            });
+            
+            // Close sidebar when clicking overlay (mobile only)
+            overlay.addEventListener('click', function() {
+                try {
+                    sidebar.classList.remove('active');
+                    overlay.classList.remove('active');
+                } catch (error) {
+                    console.error('Error closing sidebar:', error);
+                    fetch(BASE + 'log-error.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            error: error.message,
+                            component: 'header',
+                            action: 'close_sidebar'
+                        })
+                    }).catch(err => console.error('Error logging to server:', err));
+                }
+            });
+            
+            // Handle window resize
+            let resizeTimeout;
+            window.addEventListener('resize', function() {
+                try {
+                    // Debounce resize event
+                    clearTimeout(resizeTimeout);
+                    resizeTimeout = setTimeout(() => {
+                        if (window.innerWidth > 991) {
+                            sidebar.classList.remove('active');
+                            overlay.classList.remove('active');
+                        }
+                    }, 250);
+                } catch (error) {
+                    console.error('Error handling resize:', error);
+                    fetch(BASE + 'log-error.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            error: error.message,
+                            component: 'header',
+                            action: 'window_resize'
+                        })
+                    }).catch(err => console.error('Error logging to server:', err));
+                }
+            });
+            
+            // Handle notifications dropdown
+            const notificationIcon = document.querySelector('.notification-icon');
+            const notificationDropdown = document.querySelector('.notification-dropdown');
+            
+            if (notificationIcon && notificationDropdown) {
+                notificationIcon.addEventListener('click', function(e) {
+                    try {
+                        e.preventDefault();
+                        e.stopPropagation(); // Prevent event from bubbling up
+                        notificationDropdown.classList.toggle('show');
+                    } catch (error) {
+                        console.error('Error toggling notifications:', error);
+                        fetch(BASE + 'log-error.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                error: error.message,
+                                component: 'header',
+                                action: 'toggle_notifications'
+                            })
+                        }).catch(err => console.error('Error logging to server:', err));
+                    }
+                });
+            }
+            
+            // Close notifications dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                try {
+                    const target = e.target;
+                    if (!target.closest('.notification-icon') && !target.closest('.notification-dropdown')) {
+                        const dropdowns = document.querySelectorAll('.notification-dropdown');
+                        dropdowns.forEach(dropdown => {
+                            if (dropdown.classList.contains('show')) {
+                                dropdown.classList.remove('show');
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error closing notifications:', error);
+                    fetch(BASE + 'log-error.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            error: error.message,
+                            component: 'header',
+                            action: 'close_notifications'
+                        })
+                    }).catch(err => console.error('Error logging to server:', err));
+                }
+            });
+            
+            // Prevent notification dropdown from closing when clicking inside it
+            if (notificationDropdown) {
+                notificationDropdown.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                });
+            }
+        } catch (error) {
+            console.error('Error initializing header functionality:', error);
+            fetch(BASE + 'log-error.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    error: error.message,
+                    component: 'header',
+                    action: 'initialization'
+                })
+            }).catch(err => console.error('Error logging to server:', err));
+        }
+    });
+</script>

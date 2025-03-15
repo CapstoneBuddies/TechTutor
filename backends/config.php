@@ -76,16 +76,23 @@
 
 
 	/* IMPORTANT FUNCTIONS */
-	function log_error($message, $destination = 'tracking.log') {
-		 $file_path = LOG_PATH . $destination;
+	function log_error($message, $type = 'general') {
+	    $logFiles = [
+	        'general' => LOG_PATH . 'error.log',
+	        'database' => LOG_PATH . 'database.log',
+	        'mail' => LOG_PATH . 'mail.log',
+	        'security' => LOG_PATH . 'security.log'
+	    ];
 
-		  if (!file_exists($file_path)) {
-        // Attempt to create the file if it doesn't exist
-	        touch($file_path);  // Create the file if it does not exist
-	        chmod($file_path, 0666);  // Make the file writable by PHP (optional, for permission issues)
-	    }
-    	error_log(date("Y-m-d H:i:s")." ".$message."\n", 3, $file_path);
+	    $logFile = $logFiles[$type] ?? $logFiles['general']; // Default to general if type is invalid
+	    $ip = $_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN'; // Get user IP
+	    $date = date('Y-m-d H:i:s');
+	    $logEntry = "({$date})::{$ip}::{$message}\n";
+
+	    file_put_contents($logFile, $logEntry, FILE_APPEND);
 	}
+
+
 
 	// provide a clone for mailing instance
 	function getMailerInstance() {

@@ -1,6 +1,5 @@
 <?php
-require_once 'backends/main.php';
-require_once 'backends/db.php';
+require_once '../backends/main.php';
 
 $token = isset($_GET['token']) ? trim($_GET['token']) : '';
 $error = '';
@@ -12,7 +11,9 @@ if (empty($token)) {
 } else {
     // Verify token and check if it's not expired
     global $conn;
-    $stmt = $conn->prepare("SELECT uid, email, first_name, last_name, role, reset_token_expiry FROM users WHERE reset_token = ? AND status = 1");
+    $stmt = $conn->prepare("SELECT u.uid, u.email, u.first_name, u.last_name, u.role FROM users u 
+                           INNER JOIN login_tokens l ON u.uid = l.user_id 
+                           WHERE l.token = ? AND l.type = 'reset' AND l.expiration_date > NOW() AND u.status = 1");
     $stmt->bind_param("s", $token);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -21,12 +22,7 @@ if (empty($token)) {
         $error = 'Invalid reset token. Please request a new password reset link.';
     } else {
         $user = $result->fetch_assoc();
-        $expiry = strtotime($user['reset_token_expiry']);
-        $now = time();
-        
-        if ($now > $expiry) {
-            $error = 'This reset token has expired. Please request a new password reset link.';
-        }
+        // No need to check expiry separately as it's handled in the SQL query
     }
 }
 
@@ -45,45 +41,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password']) && 
     } else {
         // Hash the new password
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-        
-        // Update user's password and clear reset token
-        $stmt = $conn->prepare("UPDATE users SET password = ?, reset_token = NULL, reset_token_expiry = NULL WHERE reset_token = ?");
-        $stmt->bind_param("ss", $hashed_password, $token);
-        $stmt->execute();
-        
-        if ($stmt->affected_rows > 0) {
-            $success = 'Your password has been reset successfully. You can now log in with your new password.';
-            
-            // Send notification to the user
-            $message = "Your password has been reset successfully.";
-            sendNotification($user['uid'], $user['role'], $message, null, null, 'bi-check-circle', 'text-success');
-            
-            // Send email confirmation
-            if ($user['role'] !== 'ADMIN') {
-                $subject = "TechTutor Password Reset Confirmation";
-                $email_message = "Dear {$user['first_name']},\n\n";
-                $email_message .= "Your TechTutor account password has been successfully reset.\n\n";
-                $email_message .= "If you did not perform this action, please contact our support team immediately.\n\n";
-                $email_message .= "Best regards,\nThe TechTutor Team";
-                
-                // Get mailer instance from config.php
-                $mailer = getMailerInstance();
-                $mailer->addAddress($user['email']);
-                $mailer->Subject = $subject;
-                $mailer->Body = $email_message;
-                
-                try {
-                    $mailer->send();
-                } catch (Exception $e) {
-                    error_log("Failed to send password reset confirmation email: " . $e->getMessage());
-                    // Continue execution even if email fails
-                }
-            }
+        if (!$hashed_password) {
+            log_error('Password hashing failed', 'security.log');
+            $error = 'An error occurred while securing your password. Please try again.';
         } else {
-            $error = 'Failed to reset password. Please try again.';
+            try {
+                $conn->begin_transaction();
+
+                // Get user ID from token
+                $stmt = $conn->prepare("SELECT user_id FROM login_tokens WHERE token = ? AND type = 'reset' AND expiration_date > NOW()");
+                $stmt->bind_param("s", $token);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                
+                if ($result->num_rows > 0) {
+                    $row = $result->fetch_assoc();
+                    $user_id = $row['user_id'];
+
+                    // Update user's password
+                    $stmt = $conn->prepare("UPDATE users SET password = ? WHERE uid = ?");
+                    $stmt->bind_param("si", $hashed_password, $user_id);
+                    $stmt->execute();
+
+                    // Delete reset token
+                    $stmt = $conn->prepare("DELETE FROM login_tokens WHERE token = ? AND type = 'reset'");
+                    $stmt->bind_param("s", $token);
+                    $stmt->execute();
+
+                    $conn->commit();
+                    $success = 'Your password has been reset successfully. You can now log in with your new password.';
+
+                    // Fetch user details for notification
+                    $stmt = $conn->prepare("SELECT first_name, email, role FROM users WHERE uid = ?");
+                    $stmt->bind_param("i", $user_id);
+                    $stmt->execute();
+                    $user = $stmt->get_result()->fetch_assoc();
+
+                    // Send notification
+                    $message = "Your password has been reset successfully.";
+                    sendNotification($user_id, $user['role'], $message, null, null, 'bi-check-circle', 'text-success');
+
+                    // Send email confirmation
+                    if ($user['role'] !== 'ADMIN') {
+                        $subject = "TechTutor Password Reset Confirmation";
+                        $email_message = "Dear {$user['first_name']},\n\n";
+                        $email_message .= "Your TechTutor account password has been successfully reset.\n\n";
+                        $email_message .= "If you did not perform this action, please contact us at support@techtutor.cfd immediately.\n\n";
+                        $email_message .= "Best regards,\nThe TechTutor Team";
+
+                        $mailer = getMailerInstance();
+                        $mailer->addAddress($user['email']);
+                        $mailer->Subject = $subject;
+                        $mailer->Body = nl2br($email_message);
+
+                        try {
+                            $mailer->send();
+                        } catch (Exception $e) {
+                            log_error("Failed to send password reset confirmation email: " . $e->getMessage(), 'email.log');
+                        }
+                    }
+                } else {
+                    $error = 'Invalid or expired reset token.';
+                    $conn->rollback();
+                }
+            } catch (Exception $e) {
+                $conn->rollback();
+                log_error($e->getMessage(), 'database.log');
+                $error = 'An error occurred while resetting your password. Please try again later.';
+            }
         }
     }
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -140,7 +169,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password']) && 
     <div class="container">
         <div class="reset-password-container">
             <div class="text-center mb-4">
-                <img src="<?php echo IMG; ?>logo.png" alt="TechTutor Logo" style="max-width: 200px;">
+                <img src="<?php echo IMG; ?>stand_alone_logo.png" alt="TechTutor Logo" style="max-width: 200px;">
                 <h2 class="mt-3">Reset Your Password</h2>
             </div>
             
@@ -236,14 +265,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password']) && 
                     }
                     
                     if (password.match(/[A-Z]/)) {
-                        strength += 25;
+                        strength += 10;
                     }
                     
                     if (password.match(/[0-9]/)) {
-                        strength += 25;
+                        strength += 10;
                     }
                     
                     if (password.match(/[^A-Za-z0-9]/)) {
+                        strength += 30;
+                    }
+
+                    if (password.match(/[^_*!]/)) {
                         strength += 25;
                     }
                     
@@ -287,6 +320,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password']) && 
                     }
                 });
             }
+            if (document.querySelector('.alert-success')) {
+                setTimeout(() => {
+                    window.location.href = "<?php echo BASE; ?>login";
+                }, 5000); // Redirect to login after 5 seconds
+            }
+
         });
     </script>
 </body>
