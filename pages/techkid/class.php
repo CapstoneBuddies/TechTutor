@@ -1,5 +1,6 @@
 <?php 
     require_once '../../backends/main.php';
+    require_once ROOT_PATH.'/backends/student_management.php';
     
     if (!isset($_SESSION)) {
         session_start();

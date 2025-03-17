@@ -1,5 +1,6 @@
 <?php 
 	require_once "main.php";
+	require_once 'user_management.php';
 
 	if($link == 'user-login') {
 		login();

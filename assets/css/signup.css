@@ -130,6 +130,7 @@ html, body {
   width: 70%;
   height: 70%;
   object-fit: contain;
+  margin-left: 15%;
 }
 
 .log-in-link {

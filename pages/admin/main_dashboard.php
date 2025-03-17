@@ -1,5 +1,6 @@
 <?php 
     require_once 'main.php';
+    require_once 'user_management.php';
     
     // Get current page from URL parameter, default to 1
     $techkids_page = isset($_GET['tkpage']) ? (int)$_GET['tkpage'] : 1;
@@ -46,7 +47,7 @@
     <link href="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
 
     <!-- Main CSS Files -->
-    <link href="<?php echo CSS; ?>dashboard.css" rel="stylesheet">
+    <link href="<?php echo CSS; ?>users.css" rel="stylesheet">
     <link href="<?php echo CSS; ?>header.css" rel="stylesheet">
     <style>
         /* Responsive Styles */
@@ -236,7 +237,7 @@
                     <div class="dashboard-section">
                         <div class="table-header">
                             <h2 class="section-title">Recent TechGurus</h2>
-                            <a href="<?php echo BASE; ?>dashboard/users?role=TECHGURU" class="view-all-btn">
+                            <a href="<?php echo BASE.'dashboard/a/'; ?>users?role=TECHGURU" class="view-all-btn">
                                 <i class="bi bi-eye"></i>
                                 View All
                             </a>
@@ -280,7 +281,7 @@
                     <div class="dashboard-section">
                         <div class="table-header">
                             <h2 class="section-title">Recent TechKids</h2>
-                            <a href="<?php echo BASE; ?>dashboard/users?role=TECHKID" class="view-all-btn">
+                            <a href="<?php echo BASE.'dashboard/a/'; ?>users?role=TECHKID" class="view-all-btn">
                                 <i class="bi bi-eye"></i>
                                 View All
                             </a>
@@ -331,32 +332,5 @@
     <script src="<?php echo BASE; ?>assets/vendor/aos/aos.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/glightbox/js/glightbox.min.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.js"></script>
-    
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const toggleBtn = document.querySelector('.toggle-sidebar');
-            const sidebar = document.querySelector('.sidebar');
-            const mainContent = document.querySelector('.dashboard-content');
-
-            toggleBtn.addEventListener('click', function() {
-                sidebar.classList.toggle('active');
-            });
-
-            // Close sidebar when clicking outside
-            document.addEventListener('click', function(event) {
-                const isClickInside = sidebar.contains(event.target) || toggleBtn.contains(event.target);
-                if (!isClickInside && sidebar.classList.contains('active')) {
-                    sidebar.classList.remove('active');
-                }
-            });
-
-            // Handle window resize
-            window.addEventListener('resize', function() {
-                if (window.innerWidth > 768) {
-                    sidebar.classList.remove('active');
-                }
-            });
-        });
-    </script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 <?php 
 require_once '../../backends/main.php';
+require_once ROOT_PATH.'/backends/class_management.php';
 
 // Ensure user is logged in and is a TechGuru
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
@@ -25,7 +26,6 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Main CSS -->
-    <link href="<?php echo CSS; ?>dashboard.css" rel="stylesheet">
     <link href="<?php echo CSS; ?>techguru-common.css" rel="stylesheet">
 </head>
 

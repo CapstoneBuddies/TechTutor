@@ -1,5 +1,6 @@
 <?php
 require_once '../../backends/main.php';
+require_once ROOT_PATH.'/backends/user_management.php';
 
 // Check if user is admin
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'ADMIN') {

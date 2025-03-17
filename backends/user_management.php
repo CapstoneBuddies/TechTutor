@@ -19,27 +19,7 @@ function getUserByRole($role, $page = 1, $limit = 8) {
     return [];
 }
 
-/**
- * Get active classes for a subject and tutor
- */
-function getActiveClassesForSubject($subject_id, $tutor_id) {
-    global $conn;
-    
-    $sql = "SELECT c.*, 
-            (SELECT COUNT(DISTINCT cs.user_id) 
-             FROM class_schedule cs 
-             WHERE cs.class_id = c.class_id AND cs.role = 'STUDENT') as student_count
-            FROM class c
-            WHERE c.subject_id = ? AND c.tutor_id = ? AND c.is_active = TRUE
-            ORDER BY c.start_date ASC";
-            
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ii", $subject_id, $tutor_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    return $result->fetch_all(MYSQLI_ASSOC);
-}
+
 /**
  * Verify a remember me token
  */
@@ -89,19 +69,9 @@ function generateVerificationCode($userId) {
     $code = rand(100000, 999999);
     $expiresAt = date('Y-m-d H:i:s', strtotime('+3 minutes'));
 
-    $stmt = $conn->prepare("UPDATE login_tokens SET verification_code = ?, expiration_date = ? WHERE user_id = ?");
+    $stmt = $conn->prepare("INSERT INTO login_tokens(verification_code, expiration_date, user_id, type) VALUES(?,?,?,'email_verification')");
     $stmt->bind_param("ssi", $code, $expiresAt, $userId);
-    if (!$stmt->execute()) {
-        log_error($stmt->error, 'database_error.log');
-        $stmt = $conn->prepare("INSERT INTO login_tokens(verification_code, expiration_date, user_id, type) VALUES(?,?,?,?)");
-        $stmt->bind_param("ssis", $code, $expiresAt, $userId, 'email_verification');
-        if (!$stmt->execute()) {
-            log_error($stmt->error, 'database_error.log');
-            $_SESSION['msg'] = "An error occured during verifcation. Please contact the System Administrator";
-            header("location: login");
-            exit();
-        }
-    }
+    $stmt->execute();
     $stmt->close();
     return $code;
 }
@@ -200,7 +170,6 @@ function verifyCode() {
                         $_SESSION['profile'] = USER_IMG . $user['profile_picture'];
                         $_SESSION['email'] = $user['email'];
                         $_SESSION['role'] = $user['role'];
-                        setcookie('role', $user['role'], time() + (3 * 60 * 60), "/", "", true, true);
 
                         $_SESSION['msg'] = "Account Verification has been successful!";
                         header("location: dashboard");
@@ -376,5 +345,253 @@ function forgotPassword() {
         exit();
     }
 }
+
+function updateProfile() {
+        global $conn;
+        $response = array('success' => false, 'message' => '');
+
+        if (!isset($_SESSION['user'])) {
+            $response['message'] = 'Not authorized';
+            echo json_encode($response);
+            exit();
+        }
+
+        $userId = $_SESSION['user'];
+
+        // Handle profile picture removal via POST parameter
+        if (isset($_POST['removeProfilePicture']) && $_POST['removeProfilePicture'] === 'true') {
+            // Get current profile picture
+            $stmt = $conn->prepare("SELECT profile_picture FROM users WHERE uid = ?");
+            $stmt->bind_param("i", $userId);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $currentPicture = $result->fetch_assoc()['profile_picture'];
+            $stmt->close();
+            
+            // Delete current picture if it's not the default
+            if ($currentPicture !== 'default.jpg') {
+                $picturePath = ROOT_PATH . '/assets/img/users/' . $currentPicture;
+                if (file_exists($picturePath)) {
+                    unlink($picturePath);
+                }
+                
+                // Reset to default picture in database
+                $defaultPic = 'default.jpg';
+                $stmt = $conn->prepare("UPDATE users SET profile_picture = ? WHERE uid = ?");
+                $stmt->bind_param("si", $defaultPic, $userId);
+                if (!$stmt->execute()) {
+                    error_log("Failed to reset profile picture in database: " . $stmt->error);
+                    $response['message'] = 'Failed to reset profile picture';
+                    echo json_encode($response);
+                    exit();
+                }
+                $stmt->close();
+                
+                $_SESSION['profile'] = USER_IMG.'default.jpg';
+                $response['success'] = true;
+                $response['message'] = 'Profile picture removed successfully';
+                echo json_encode($response);
+                exit();
+            }
+            else {
+                $response['message'] = 'Failed to reset profile picture';
+                echo json_encode($response);
+                exit();
+            }
+        }
+
+        $firstName = isset($_POST['firstName']) ? trim($_POST['firstName']) : null;
+        $lastName = isset($_POST['lastName']) ? trim($_POST['lastName']) : null;
+        $address = isset($_POST['address']) ? trim($_POST['address']) : '';
+        $countryCode = isset($_POST['countryCode']) ? trim($_POST['countryCode']) : '+63';
+        $phone = isset($_POST['phone']) ? trim($_POST['phone']) : '';
+
+        // Handle profile picture upload
+        if (isset($_FILES['profilePicture']) && $_FILES['profilePicture']['error'] === UPLOAD_ERR_OK) {
+            $file = $_FILES['profilePicture'];
+            $fileName = $file['name'];
+            $fileSize = $file['size'];
+            $fileTmp = $file['tmp_name'];
+            
+            // Get file extension
+            $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            
+            // Allowed extensions
+            $allowedExt = array('jpg', 'jpeg', 'png', 'gif');
+            
+            // Validate file type and size
+            if (!in_array($fileExt, $allowedExt)) {
+                $response['message'] = 'Invalid file type. Allowed types: ' . implode(', ', $allowedExt);
+                echo json_encode($response);
+                exit();
+            }
+            
+            if ($fileSize > 5242880) { // 5MB in bytes
+                $response['message'] = 'File size too large. Maximum size: 5MB';
+                echo json_encode($response);
+                exit();
+            }
+            
+            // Create new filename with user ID
+            $newFileName = $userId . '.' . $fileExt;
+            $uploadPath = ROOT_PATH . '/assets/img/users/' . $newFileName;
+            
+            // Get current profile picture
+            $stmt = $conn->prepare("SELECT profile_picture FROM users WHERE uid = ?");
+            $stmt->bind_param("i", $userId);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $currentPicture = $result->fetch_assoc()['profile_picture'];
+            $stmt->close();
+            
+            // Delete old profile picture if it's not the default
+            if ($currentPicture !== 'default.jpg') {
+                $oldPicturePath = ROOT_PATH . '/assets/img/users/' . $currentPicture;
+                if (file_exists($oldPicturePath)) {
+                    unlink($oldPicturePath);
+                }
+            }
+            
+            // Move uploaded file
+            if (move_uploaded_file($fileTmp, $uploadPath)) {
+                // Update profile picture in database
+                $stmt = $conn->prepare("UPDATE users SET profile_picture = ? WHERE uid = ?");
+                $stmt->bind_param("si", $newFileName, $userId);
+                if (!$stmt->execute()) {
+                    error_log("Failed to update profile picture in database: " . $stmt->error);
+                    $response['message'] = 'Failed to update profile picture in database';
+                    echo json_encode($response);
+                    exit();
+                }
+                $stmt->close();
+                
+                $_SESSION['profile'] = USER_IMG . $newFileName;
+            } else {
+                log_error("Failed to move uploaded file from $fileTmp to $uploadPath", 'database_error.log');
+                $response['message'] = 'Failed to upload profile picture';
+                echo json_encode($response);
+                exit();
+            }
+        }
+
+        // Validate first name and last name if provided
+        if ($firstName !== null && (strlen($firstName) < 2 || strlen($firstName) > 50)) {
+            $response['message'] = 'First name must be between 2 and 50 characters';
+            echo json_encode($response);
+            exit();
+        }
+
+        if ($lastName !== null && (strlen($lastName) < 2 || strlen($lastName) > 50)) {
+            $response['message'] = 'Last name must be between 2 and 50 characters';
+            echo json_encode($response);
+            exit();
+        }
+
+        // Validate phone number if provided
+        if (!empty($phone)) {
+            // Remove any existing hyphens for validation
+            $cleanPhone = str_replace('-', '', $phone);
+            
+            // Check if it's exactly 10 digits
+            if (!preg_match('/^[0-9]{10}$/', $cleanPhone)) {
+                $response['message'] = 'Phone number must be exactly 10 digits';
+                echo json_encode($response);
+                exit();
+            }
+
+            // Check if country code is valid (starts with + and has 1-3 digits)
+            if (!preg_match('/^\+[0-9]{1,3}$/', $countryCode)) {
+                $response['message'] = 'Invalid country code';
+                echo json_encode($response);
+                exit();
+            }
+
+            // Format phone number with hyphens and country code
+            $phone = $countryCode . substr($cleanPhone, 0, 3) . '-' . 
+                    substr($cleanPhone, 3, 3) . '-' . 
+                    substr($cleanPhone, 6);
+        }
+
+        // Validate address if provided
+        if (!empty($address) && strlen($address) > 100) {
+            $response['message'] = 'Address must not exceed 100 characters';
+            echo json_encode($response);
+            exit();
+        }
+
+        // Update user details
+        $query = "UPDATE users SET first_name = ?, last_name = ?, address = ?, contact_number = ? WHERE uid = ?";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("ssssi", $firstName, $lastName, $address, $phone, $userId);
+
+        if ($stmt->execute()) {
+            // Update session variables
+            $_SESSION['first_name'] = $firstName;
+            $_SESSION['last_name'] = $lastName;
+            $_SESSION['name'] = $firstName . ' ' . $lastName;
+            $_SESSION['address'] = $address;
+            $_SESSION['phone'] = $phone;
+
+            $response['success'] = true;
+            $response['message'] = 'Profile updated successfully';
+        } else {
+            error_log("Profile update failed: " . $stmt->error);
+            $response['message'] = 'Failed to update profile: ' . $stmt->error;
+        }
+
+        $stmt->close();
+        echo json_encode($response);
+        exit();
+    }
+
+    function deactivateAccount($userId) {
+        global $conn;
+        $response = array('success' => false, 'message' => '');
+
+        // Check if user exists and is active
+        $stmt = $conn->prepare("SELECT status FROM users WHERE uid = ?");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows === 0) {
+            $response['message'] = 'User not found';
+            return $response;
+        }
+        
+        $user = $result->fetch_assoc();
+        if (!$user['status']) {
+            $response['message'] = 'Account is already inactive';
+            return $response;
+        }
+        
+        // Begin transaction
+        $conn->begin_transaction();
+        
+        try {
+            // Set status to 0 (inactive)
+            $stmt = $conn->prepare("UPDATE users SET status = 0 WHERE uid = ?");
+            $stmt->bind_param("i", $userId);
+            
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to deactivate account");
+            }
+            
+            // Commit transaction
+            $conn->commit();
+            
+            $response['success'] = true;
+            $response['message'] = 'Account deactivated successfully';
+            
+        } catch (Exception $e) {
+            // Rollback transaction on error
+            $conn->rollback();
+            error_log("Account deactivation failed: " . $e->getMessage());
+            $response['message'] = 'Failed to deactivate account: ' . $e->getMessage();
+        }
+        
+        $stmt->close();
+        return $response;
+    }
 
 ?>

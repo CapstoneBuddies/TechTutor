@@ -1,101 +1,60 @@
-/**
- * Header and Sidebar Navigation JavaScript
- * Handles notifications and mobile responsiveness
- */
+document.addEventListener("DOMContentLoaded", function () {
+    const BASE = document.body.getAttribute("data-base") || "/";
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Elements
-    const sidebar = document.querySelector('.sidebar');
-    const mainContent = document.querySelector('.main-content');
-    
-    // Create overlay for mobile view
-    const overlay = document.createElement('div');
-    overlay.className = 'sidebar-overlay';
-    document.body.appendChild(overlay);
-    
-    // Handle mobile sidebar
-    function handleMobileSidebar() {
-        if (window.innerWidth <= 991) {
-            // Mobile behavior - show/hide sidebar
-            sidebar.classList.toggle('active');
-            overlay.classList.toggle('active');
-        }
-    }
-    
-    // Close sidebar when clicking overlay (mobile only)
-    overlay.addEventListener('click', function() {
-        sidebar.classList.remove('active');
-        overlay.classList.remove('active');
-    });
-    
-    // Handle window resize
-    window.addEventListener('resize', function() {
-        if (window.innerWidth > 991) {
-            // Remove mobile classes when resizing to desktop
-            sidebar.classList.remove('active');
-            overlay.classList.remove('active');
-        }
-    });
-    
-    // Load notifications
-    function loadNotifications() {
-        fetch(BASE + 'get-notifications.php')
-            .then(response => response.json())
-            .then(data => {
-                const notificationList = document.getElementById('notificationList');
-                if (!notificationList) return;
-                
-                notificationList.innerHTML = '';
-                
-                if (data.length === 0) {
-                    notificationList.innerHTML = '<div class="no-notifications">No notifications</div>';
-                    return;
-                }
-                
-                data.forEach(notification => {
-                    const notificationItem = document.createElement('div');
-                    notificationItem.className = `notification-item ${notification.is_read ? '' : 'unread'}`;
-                    notificationItem.innerHTML = `
-                        <div class="notification-icon">
-                            <i class="${notification.icon} ${notification.icon_color}"></i>
-                        </div>
-                        <div class="notification-content">
-                            <div class="notification-message">${notification.message}</div>
-                            <div class="notification-time">${notification.created_at}</div>
-                        </div>
-                    `;
-                    notificationList.appendChild(notificationItem);
-                });
-            })
-            .catch(error => console.error('Error loading notifications:', error));
-    }
-    
-    // Mark all notifications as read
-    const markAllReadBtn = document.querySelector('.mark-all-read');
-    if (markAllReadBtn) {
-        markAllReadBtn.addEventListener('click', function(e) {
+    // Sidebar Toggle
+    const sidebarToggle = document.getElementById("sidebarToggle");
+    const sidebar = document.querySelector(".sidebar");
+    const mainContent = document.querySelector(".main-content");
+
+    if (sidebarToggle && sidebar && mainContent) {
+        const overlay = document.createElement("div");
+        overlay.className = "sidebar-overlay";
+        document.body.appendChild(overlay);
+
+        sidebarToggle.addEventListener("click", function (e) {
             e.preventDefault();
-            
-            fetch(BASE + 'mark-all-notifications-read.php', {
-                method: 'POST'
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const badge = document.querySelector('.notification-badge');
-                    if (badge) badge.remove();
-                    
-                    const unreadItems = document.querySelectorAll('.notification-item.unread');
-                    unreadItems.forEach(item => item.classList.remove('unread'));
-                }
-            })
-            .catch(error => console.error('Error marking notifications as read:', error));
+            if (window.innerWidth <= 991) {
+                sidebar.classList.toggle("active");
+                overlay.classList.toggle("active");
+            } else {
+                sidebar.classList.toggle("collapsed");
+                mainContent.classList.toggle("expanded");
+            }
+        });
+
+        overlay.addEventListener("click", function () {
+            sidebar.classList.remove("active");
+            overlay.classList.remove("active");
+        });
+
+        // Window resize handling
+        window.addEventListener("resize", function () {
+            if (window.innerWidth > 991) {
+                sidebar.classList.remove("active");
+                overlay.classList.remove("active");
+            }
         });
     }
-    
-    // Initial load of notifications
-    loadNotifications();
-    
-    // Refresh notifications periodically
-    setInterval(loadNotifications, 60000); // Refresh every minute
+
+    // Notifications Dropdown
+    const notificationIcon = document.querySelector(".notification-icon");
+    const notificationDropdown = document.querySelector(".notification-dropdown");
+
+    if (notificationIcon && notificationDropdown) {
+        notificationIcon.addEventListener("click", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            notificationDropdown.classList.toggle("show");
+        });
+
+        document.addEventListener("click", function (e) {
+            if (!e.target.closest(".notification-icon") && !e.target.closest(".notification-dropdown")) {
+                notificationDropdown.classList.remove("show");
+            }
+        });
+
+        notificationDropdown.addEventListener("click", function (e) {
+            e.stopPropagation();
+        });
+    }
 });

@@ -1,5 +1,6 @@
 <?php
 require_once '../main.php';
+require_once '../admin_management.php';
 
 // Check if user is logged in and has admin role
 if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'ADMIN') {
@@ -36,48 +37,90 @@ try {
 
         case 'delete-course':
             $courseId = $_POST['course_id'] ?? '';
-            
+
             if (!$courseId) {
                 http_response_code(400);
                 echo json_encode(['success' => false, 'message' => 'Course ID is required']);
                 exit();
             }
 
-            // Check if course has subjects
-            $stmt = $conn->prepare("SELECT COUNT(*) as count FROM subject WHERE course_id = ?");
-            $stmt->bind_param("i", $courseId);
-            $stmt->execute();
-            $count = $stmt->get_result()->fetch_assoc()['count'];
+            $conn->begin_transaction();
+            try {
+                // Delete related classes first
+                $stmt = $conn->prepare("DELETE FROM class WHERE subject_id IN (SELECT subject_id FROM subject WHERE course_id = ?)");
+                $stmt->bind_param("i", $courseId);
+                $stmt->execute();
 
-            if ($count > 0) {
-                http_response_code(400);
-                echo json_encode(['success' => false, 'message' => 'Cannot delete course with existing subjects']);
+                // Delete subjects
+                $stmt = $conn->prepare("DELETE FROM subject WHERE course_id = ?");
+                $stmt->bind_param("i", $courseId);
+                $stmt->execute();
+
+                // Finally, delete the course
+                $stmt = $conn->prepare("DELETE FROM course WHERE course_id = ?");
+                $stmt->bind_param("i", $courseId);
+                $stmt->execute();
+
+                $conn->commit();
+
+                http_response_code(200);
+                echo json_encode(['success' => true, 'message' => 'Course deleted successfully']);
+                exit();
+            } catch (Exception $e) {
+                $conn->rollback();
+                log_error("Error deleting course: " . $e->getMessage());
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Failed to delete course']);
                 exit();
             }
-
-            $stmt = $conn->prepare("DELETE FROM course WHERE course_id = ?");
-            $stmt->bind_param("i", $courseId);
-            $result = ['success' => $stmt->execute(), 'message' => 'Course deleted successfully'];
             break;
+
+
+
 
         case 'toggle-subject':
             $subjectId = $_POST['subject_id'] ?? null;
             $status = $_POST['status'] ?? null;
-            
+
             if (!$subjectId || !isset($status)) {
                 http_response_code(400);
                 echo json_encode(['success' => false, 'message' => 'Subject ID and status are required']);
                 exit();
             }
 
-            $result = updateSubjectStatus($subjectId, $status === 'true');
+            $isActive = $status == 1 ? 1 : 0; // Convert properly
+
+            $result = updateSubjectStatus($subjectId, $isActive);
+            http_response_code($result['success'] ? 200 : 400);
+            echo json_encode($result);
+            exit();
             break;
+
 
         case 'add-subject':
             $courseId = $_POST['course_id'] ?? '';
             $subjectName = $_POST['subject_name'] ?? '';
             $subjectDesc = $_POST['subject_desc'] ?? '';
             $result = addSubject($courseId, $subjectName, $subjectDesc);
+            break;
+
+        case 'edit-subject':
+            $subjectId = $_POST['subject_id'] ?? '';
+            $subjectName = $_POST['subject_name'] ?? '';
+            $subjectDesc = $_POST['subject_desc'] ?? '';
+
+            if (!$subjectId || !$subjectName) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Subject ID and name are required']);
+                exit();
+            }
+
+            $stmt = $conn->prepare("UPDATE subject SET subject_name = ?, subject_desc = ? WHERE subject_id = ?");
+            $stmt->bind_param("ssi", $subjectName, $subjectDesc, $subjectId);
+            $result = ['success' => $stmt->execute(), 'message' => 'Subject updated successfully'];
+            break;
+            
+        case 'delete-subject':
             break;
 
         default:

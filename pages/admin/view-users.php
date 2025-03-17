@@ -6,126 +6,16 @@
         header("Location: " . BASE . "dashboard");
         exit();
     }
+    if(isset($error)) {
+        log_error($error,1);
+    }
+    $title = 'Users Management';
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title>TechTutor | User Management</title>
-    <meta name="description" content="">
-    <meta name="keywords" content="">
-
-    <!-- Favicons -->
-    <link href="<?php echo IMG; ?>stand_alone_logo.png" rel="icon">
-    <link href="<?php echo IMG; ?>apple-touch-icon.png" rel="apple-touch-icon">
-
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com" rel="preconnect">
-    <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700;900&family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-
-    <!-- Vendor CSS Files -->
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/aos/aos.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/glightbox/css/glightbox.min.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
-    
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Main CSS Files -->
-    <link href="<?php echo CSS; ?>dashboard.css" rel="stylesheet">
-    
-    <style>
-        .user-filter-buttons {
-            margin-bottom: 20px;
-        }
-        
-        .user-filter-buttons .btn {
-            margin-right: 10px;
-            margin-bottom: 10px;
-        }
-        
-        .user-filter-buttons .btn.active {
-            background-color: #FF6B00;
-            border-color: #FF6B00;
-            color: white;
-        }
-        
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            object-fit: cover;
-            margin-right: 10px;
-        }
-        
-        .user-name-cell {
-            display: flex;
-            align-items: center;
-        }
-        
-        .search-container {
-            margin-bottom: 20px;
-        }
-        
-        .status-badge {
-            font-size: 0.8rem;
-            padding: 0.3rem 0.6rem;
-            border-radius: 50px;
-        }
-        
-        .action-buttons .btn {
-            padding: 0.25rem 0.5rem;
-            font-size: 0.8rem;
-            margin-right: 5px;
-        }
-        
-        .reset-password-btn {
-            margin-left: 10px;
-        }
-        
-        /* Autocomplete styles */
-        .autocomplete-items {
-            position: absolute;
-            border: 1px solid #d4d4d4;
-            border-bottom: none;
-            border-top: none;
-            z-index: 99;
-            top: 100%;
-            left: 0;
-            right: 0;
-            max-height: 250px;
-            overflow-y: auto;
-            background-color: #fff;
-        }
-        
-        .autocomplete-items div {
-            padding: 10px;
-            cursor: pointer;
-            background-color: #fff;
-            border-bottom: 1px solid #d4d4d4;
-        }
-        
-        .autocomplete-items div:hover {
-            background-color: #e9e9e9;
-        }
-        
-        .autocomplete-active {
-            background-color: #FF6B00 !important;
-            color: #ffffff;
-        }
-        
-        .autocomplete-container {
-            position: relative;
-        }
-    </style>
-</head>
-<body>
-    <?php include ROOT_PATH . '/components/header.php'; ?>
-        
+    <?php include ROOT_PATH . '/components/head.php'; ?>
+    <body>
+        <?php include ROOT_PATH . '/components/header.php'; ?>
         <main class="dashboard-content">
             <div class="container-fluid">
                 <div class="row">
@@ -146,24 +36,20 @@
                                         </div>
                                     </div>
                                     <div class="col-md-4 text-end">
-                                        <button class="btn btn-warning reset-password-btn" data-bs-toggle="modal" data-bs-target="#resetPasswordModal">
-                                            <i class="bi bi-key"></i> Reset Password
-                                        </button>
+                                        <button class="btn btn-warning reset-password-btn" data-bs-toggle="modal" data-bs-target="#resetPasswordModal"><i class="bi bi-key"></i> Reset Password</button>
                                     </div>
                                 </div>
-                                
                                 <!-- Search Box -->
                                 <div class="row mb-3">
                                     <div class="col-md-6">
                                         <div class="search-container">
                                             <div class="input-group">
                                                 <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                                <input type="text" class="form-control" id="searchInput" placeholder="Search by name...">
+                                                <input type="text" class="form-control" id="searchInput" placeholder="Search by name..." />
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                
                                 <!-- Users Table -->
                                 <div class="table-responsive">
                                     <table class="table table-hover" id="usersTable">
@@ -183,14 +69,12 @@
                                         </tbody>
                                     </table>
                                 </div>
-                                
                                 <!-- Loading Indicator -->
                                 <div id="loadingIndicator" class="text-center my-4 d-none">
                                     <div class="spinner-border text-primary" role="status">
                                         <span class="visually-hidden">Loading...</span>
                                     </div>
                                 </div>
-                                
                                 <!-- No Results Message -->
                                 <div id="noResults" class="alert alert-info text-center my-4 d-none">
                                     No users found matching your criteria.
@@ -201,78 +85,75 @@
                 </div>
             </div>
         </main>
-    </div>
-    
-    <!-- Reset Password Modal -->
-    <div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordModalLabel">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="resetPasswordModalLabel">Reset User Password</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="resetPasswordForm">
-                        <div class="mb-3 autocomplete-container">
-                            <label for="userEmail" class="form-label">User Email</label>
-                            <input type="email" class="form-control" id="userEmail" placeholder="Start typing user email..." required>
-                            <div id="emailAutocomplete" class="autocomplete-items d-none"></div>
-                        </div>
-                        <div class="d-flex justify-content-end">
-                            <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Send Reset Link</button>
-                        </div>
-                    </form>
+        </main>
+        </div>
+        <!-- Reset Password Modal -->
+        <div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordModalLabel">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="resetPasswordModalLabel">Reset User Password</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="resetPasswordForm">
+                            <div class="mb-3 autocomplete-container">
+                                <label for="userEmail" class="form-label">User Email</label>
+                                <input type="email" class="form-control" id="userEmail" placeholder="Start typing user email..." required>
+                                <div id="emailAutocomplete" class="autocomplete-items d-none"></div>
+                            </div>
+                            <div class="d-flex justify-content-end">
+                                <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Send Reset Link</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
-    
-    <!-- Restrict User Modal -->
-    <div class="modal fade" id="restrictUserModal" tabindex="-1" aria-labelledby="restrictUserLabel">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="restrictUserLabel">Confirm Action</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p id="restrictUserMessage">Are you sure you want to restrict this user?</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-warning" id="confirmRestrictBtn">Confirm</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Delete User Modal -->
-    <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="deleteUserModalLabel">Confirm Deletion</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Are you sure you want to delete this user? This action cannot be undone.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+        <!-- Restrict User Modal -->
+        <div class="modal fade" id="restrictUserModal" tabindex="-1" aria-labelledby="restrictUserLabel">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="restrictUserLabel">Confirm Action</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="restrictUserMessage">Are you sure you want to restrict this user?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-warning" id="confirmRestrictBtn">Confirm</button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-
+        <!-- Delete User Modal -->
+        <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteUserModalLabel">Confirm Deletion</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to delete this user? This action cannot be undone.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php include ROOT_PATH . '/components/footer.php'; ?>
     <!-- JavaScript Section -->
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/aos/aos.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/glightbox/js/glightbox.min.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.js"></script>
-
-
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const mainContent = document.querySelector('.dashboard-content');
@@ -295,10 +176,17 @@
             const emailAutocomplete = document.getElementById('emailAutocomplete');
             
             // Modals
-            const restrictUser = new bootstrap.Modal(document.getElementById('restrictUserModal'));
+            const restrictUserModal = new bootstrap.Modal(document.getElementById('restrictUserModal'));
             const deleteUserModal = new bootstrap.Modal(document.getElementById('deleteUserModal'));
             const confirmRestrictBtn = document.getElementById('confirmRestrictBtn');
             const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+            // Actions
+            const getUsers =  "<?php echo BASE.'get-users'; ?>";
+            const userStatus = "<?php echo BASE.'toggle-user-status'; ?>"; 
+            const deleteUserLink = "<?php echo BASE.'delete-user'; ?>"; 
+            const passwordReset = "<?php echo BASE.'send-password-reset'; ?>"; 
+            const getUserEmail = "<?php echo BASE.'get-user-emails'; ?>"; 
             
             // Load users on page load
             loadUsers();
@@ -346,7 +234,7 @@
                 showLoading(true);
                 
                 // AJAX request to get users
-                fetch('get-users', {
+                fetch(getUsers, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -471,8 +359,7 @@
                         
                         document.getElementById('restrictUserMessage').textContent = message;
                         selectedUserId = userId;
-                        restrictUser.show();
-                        console.log(restrictUser);
+                        restrictUserModal.show();
                     });
                 });
                 
@@ -489,7 +376,7 @@
             confirmRestrictBtn.addEventListener('click', function() {
                 if (selectedUserId) {
                     toggleUserStatus(selectedUserId);
-                    restrictUser.hide();
+                    restrictUserModal.hide();
                 }
             });
             
@@ -503,7 +390,7 @@
             
             // Function to toggle user status (restrict/activate)
             function toggleUserStatus(userId) {
-                fetch('toggle-user-status', {
+                fetch(userStatus, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -514,19 +401,20 @@
                 .then(data => {
                     if (data.success) {
                         loadUsers();
+                        showToast('success', "User status was successfully updated.");
                     } else {
-                        alert(data.message || 'Failed to update user status.');
+                        showToast('error', data.message || 'Failed to update user status.');
                     }
                 })
                 .catch(error => {
                     console.error('Error updating user status:', error);
-                    alert('An error occurred. Please try again.');
+                    showToast('error', data.message || 'An error occurred. Please try again.');
                 });
             }
             
             // Function to delete user
             function deleteUser(userId) {
-                fetch('delete-user', {
+                fetch(deleteUserLink, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -537,19 +425,20 @@
                 .then(data => {
                     if (data.success) {
                         loadUsers();
+                        showToast('success' ,data.message || 'User was successfully deleted.');
                     } else {
-                        alert(data.message || 'Failed to delete user.');
+                        showToast('error' ,data.message || 'Failed to delete user.');
                     }
                 })
                 .catch(error => {
                     console.error('Error deleting user:', error);
-                    alert('An error occurred. Please try again.');
+                    showToast('error', 'An error occurred. Please try again.');
                 });
             }
             
             // Function to send password reset
             function sendPasswordReset(email) {
-                fetch('send-password-reset', {
+                fetch(passwordReset, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -559,23 +448,23 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert('Password reset link has been sent to the user.');
+                        showToast('success', 'Password reset link has been sent to the user.');
                         userEmailInput.value = '';
                         const resetPasswordModal = bootstrap.Modal.getInstance(document.getElementById('resetPasswordModal'));
                         resetPasswordModal.hide();
                     } else {
-                        alert(data.message || 'Failed to send password reset.');
+                        showToast('error', data.message || 'Failed to send password reset.');
                     }
                 })
                 .catch(error => {
                     console.error('Error sending password reset:', error);
-                    alert('An error occurred. Please try again.');
+                    showToast('error', 'An error occurred. Please try again.');
                 });
             }
             
             // Function to fetch user emails for autocomplete
             function fetchUserEmails(query) {
-                fetch('get-user-emails', {
+                fetch(getUserEmail, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -593,6 +482,7 @@
                 })
                 .catch(error => {
                     console.error('Error fetching user emails:', error);
+                    showToast('error', 'An error occured while getting the user emails');
                     emailAutocomplete.classList.add('d-none');
                 });
             }
@@ -668,6 +558,44 @@
                 }
             }
         });
+        function showToast(type, message) {
+            const toastContainer = document.createElement('div');
+            toastContainer.style.position = 'fixed';
+            toastContainer.style.top = '20px';
+            toastContainer.style.right = '20px';
+            toastContainer.style.zIndex = '9999';
+
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
+
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'}-fill me-2"></i>
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            `;
+
+            toastContainer.appendChild(toast);
+            document.body.appendChild(toastContainer);
+
+            const bsToast = new bootstrap.Toast(toast, {
+                animation: true,
+                autohide: true,
+                delay: 3000
+            });
+
+            bsToast.show();
+
+            toast.addEventListener('hidden.bs.toast', () => {
+                document.body.removeChild(toastContainer);
+            });
+        }
     </script>
-</body>
+    </body>
 </html>

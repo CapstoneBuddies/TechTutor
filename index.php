@@ -1,5 +1,4 @@
 <?php 
-  require_once 'backends/config.php';
   require_once 'backends/main.php';
 ?>
 
@@ -34,177 +33,7 @@
   
   <!-- Additional CSS for Landing Page -->
   <style>
-    .hero {
-      background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 100%);
-      position: relative;
-      overflow: hidden;
-      padding-top: 120px;
-    }
     
-    .hero::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(45deg, var(--accent-color) 0%, transparent 70%);
-      opacity: 0.05;
-      z-index: 0;
-    }
-    
-    .hero .container {
-      position: relative;
-      z-index: 1;
-    }
-    
-    .hero h1 {
-      font-size: 3.5rem;
-      font-weight: 800;
-      background: linear-gradient(45deg, var(--heading-color), var(--accent-color));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      margin-bottom: 1rem;
-      line-height: 1.2;
-    }
-    
-    .hero p {
-      font-size: 1.2rem;
-      line-height: 1.8;
-      color: #666;
-      margin-bottom: 2rem;
-    }
-    
-    .hero-img {
-      position: relative;
-    }
-    
-    .hero-img::after {
-      content: '';
-      position: absolute;
-      width: 70%;
-      height: 70%;
-      background: radial-gradient(circle, var(--accent-color) 0%, transparent 70%);
-      opacity: 0.1;
-      bottom: 0;
-      right: 0;
-      border-radius: 50%;
-      z-index: -1;
-    }
-    
-    .feature-card {
-      background: var(--surface-color);
-      border-radius: 15px;
-      padding: 2rem;
-      height: 100%;
-      transition: all 0.3s ease;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .feature-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: var(--accent-color);
-      transform: scaleX(0);
-      transition: transform 0.3s ease;
-    }
-    
-    .feature-card:hover {
-      transform: translateY(-5px);
-    }
-    
-    .feature-card:hover::before {
-      transform: scaleX(1);
-    }
-    
-    .feature-icon {
-      width: 60px;
-      height: 60px;
-      background: var(--accent-color);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 1.5rem;
-      transition: transform 0.3s ease;
-    }
-    
-    .feature-card:hover .feature-icon {
-      transform: rotateY(180deg);
-    }
-    
-    .feature-icon i {
-      font-size: 28px;
-      color: var(--contrast-color);
-    }
-    
-    .testimonial-card {
-      background: var(--surface-color);
-      border-radius: 15px;
-      padding: 2rem;
-      margin: 1rem 0;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-    }
-    
-    .testimonial-avatar {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      margin-bottom: 1rem;
-    }
-    
-    .testimonial-quote {
-      font-style: italic;
-      color: #666;
-      margin-bottom: 1rem;
-    }
-    
-    .how-it-works-step {
-      text-align: center;
-      padding: 2rem;
-      position: relative;
-    }
-    
-    .step-number {
-      width: 40px;
-      height: 40px;
-      background: var(--accent-color);
-      color: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 1rem;
-      font-weight: bold;
-    }
-    
-    @media (max-width: 768px) {
-      .hero {
-        padding-top: 100px;
-      }
-      
-      .hero h1 {
-        font-size: 2.5rem;
-      }
-      
-      .hero p {
-        font-size: 1rem;
-      }
-      
-      .feature-card {
-        padding: 1.5rem;
-      }
-      
-      .how-it-works-step {
-        padding: 1rem;
-      }
-    }
   </style>
 </head>
 
@@ -402,7 +231,7 @@
           </div>
 
           <div class="col-lg-6">
-            <form action="backends/contact_handler.php" method="post" class="php-email-form" id="contactForm" data-aos="fade-up" data-aos-delay="200">
+            <form action="sent" method="post" class="php-email-form" id="contactForm" data-aos="fade-up" data-aos-delay="200">
               <div class="row gy-4">
                 <div class="col-md-6">
                   <input type="text" name="name" class="form-control" placeholder="Your Name" required>
@@ -410,10 +239,6 @@
 
                 <div class="col-md-6">
                   <input type="email" class="form-control" name="email" placeholder="Your Email" required>
-                </div>
-
-                <div class="col-12">
-                  <input type="email" class="form-control" name="reply_email" placeholder="Reply Email" required>
                 </div>
 
                 <div class="col-12">

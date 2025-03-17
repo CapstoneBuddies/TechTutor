@@ -1,5 +1,6 @@
 <?php 
     require_once '../backends/main.php';
+    require_once ROOT_PATH.'/backends/user_management.php';
 
     if (isset($_GET['token'])) {
       $success = verifyEmailToken($_GET['token']);

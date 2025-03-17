@@ -1,5 +1,9 @@
 <?php 
     require_once '../backends/main.php';
+    $role = '';
+    if(isset($_GET['role'])) {
+      $role = $_GET['role'];
+    }
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -24,7 +28,7 @@
     <link href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
 
     <!-- Main CSS File -->
-    <link href="<?php echo BASE; ?>assets/css/signup.css" rel="stylesheet">
+    <link href="<?php echo CSS; ?>signup.css" rel="stylesheet">
 </head>
 
 <body>
@@ -32,12 +36,12 @@
     <div class="signup-left">
       <div class="logo">
         <a href="<?php echo BASE; ?>home">
-          <img src="<?php echo BASE; ?>assets/img/stand_alone_logo.png" alt="TechTutor Logo" width="40">
+          <img src="<?php echo IMG; ?>stand_alone_logo.png" alt="TechTutor Logo" width="40">
         </a>
       </div>
       
       <div class="welcome-content">
-        <img src="<?php echo BASE; ?>assets/img/tutor-illustration.png" alt="Welcome" class="welcome-image">
+        <img src="<?php echo IMG; ?>tutor-illustration.png" alt="Welcome" class="welcome-image">
         <h1>Welcome!</h1>
         <p>
           You've just taken the first step toward something awesome. We're here to help you build, grow, and explore. Let's get your profile set up and tailor this experience just for you.
@@ -81,9 +85,15 @@
         <div class="form-group">
           <label for="role">I am a/an...</label>
           <select class="form-control" id="role" name="role" required>
-            <option value="" selected disabled>Select your role</option>
+            <?php if($role == 'tutor'):?>
+            <option value="" selected disabled hidden>Select your role</option>
             <option value="TECHGURU">TechGuru</option>
             <option value="TECHKID">TechKids</option>
+            <?php else: ?>
+            <option value="" disabled hidden>Select your role</option>
+            <option value="TECHGURU" selected>TechGuru</option>
+            <option value="TECHKID">TechKids</option>
+            <?php endif; ?>
           </select>
           <div class="error-message">Please select a role</div>
         </div>
@@ -107,11 +117,11 @@
         </div>
         
         <p class="terms">
-          By signing up, you acknowledge that TechTutor may store and process your information to provide our services. <a href="<?php echo BASE; ?>terms" class="terms-link">Learn more</a>
+          By signing up, you acknowledge that TechTutor may store and process your information to provide our services. <a href="<?php echo BASE; ?>terms#data-protection" class="terms-link">Learn more</a>
         </p>
         
         <p class="terms">
-          By clicking Sign Up, you agree to TechTutor's <a href="<?php echo BASE; ?>terms" class="terms-link">Terms and Conditions</a>. You'll receive a verification email to activate your account and start your learning journey with us.
+          By clicking Sign Up, you agree to TechTutor's <a href="<?php echo BASE; ?>terms#terms-of-use" class="terms-link">Terms and Conditions</a>. You'll receive a verification email to activate your account and start your learning journey with us.
         </p>
         
         <button type="submit" class="btn-signup" name="register" value='1'>Sign up</button>

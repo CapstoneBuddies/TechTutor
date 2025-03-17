@@ -119,58 +119,6 @@ function getTutorRatings($tutor_id) {
     $stmt->execute();
     return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 }
-/**
- * Get subject details by course ID or subject name
- */
-function getSubjectDetails($identifier, $by = 'course_id') {
-    global $conn;
-
-    if ($by === 'course_id') {
-        // For listing subjects in a course
-        $stmt = $conn->prepare("SELECT 
-            s.subject_id, s.subject_name, s.subject_desc, s.image, 
-            COUNT(DISTINCT c.class_id) AS class_count, 
-            COUNT(DISTINCT cs.user_id) AS student_count
-        FROM subject s
-        LEFT JOIN class c ON s.subject_id = c.subject_id AND c.is_active = 1
-        LEFT JOIN class_schedule cs ON cs.class_id = c.class_id AND cs.role = 'STUDENT'
-        WHERE s.is_active = 1 AND s.course_id = ?
-        GROUP BY s.subject_id");
-        $stmt->bind_param("i", $identifier);
-    } else {
-        // For getting detailed subject information
-        $stmt = $conn->prepare("SELECT s.*, c.course_name, c.course_desc,
-            (SELECT COUNT(DISTINCT cl.class_id) 
-             FROM class cl 
-             WHERE cl.subject_id = s.subject_id AND cl.is_active = TRUE) as active_classes,
-            (SELECT COUNT(DISTINCT cs.user_id) 
-             FROM class cl 
-             JOIN class_schedule cs ON cl.class_id = cs.class_id 
-             WHERE cl.subject_id = s.subject_id AND cs.role = 'STUDENT') as total_students,
-            (SELECT AVG(r.rating) 
-             FROM class cl 
-             JOIN ratings r ON cl.tutor_id = r.tutor_id 
-             WHERE cl.subject_id = s.subject_id) as average_rating,
-            (SELECT COUNT(DISTINCT cs.user_id) * 100.0 / NULLIF(COUNT(DISTINCT cs2.user_id), 0)
-             FROM class cl 
-             JOIN class_schedule cs ON cl.class_id = cs.class_id AND cs.status = 'completed'
-             LEFT JOIN class_schedule cs2 ON cl.class_id = cs2.class_id
-             WHERE cl.subject_id = s.subject_id AND cs.role = 'STUDENT') as completion_rate
-        FROM subject s
-        JOIN course c ON s.course_id = c.course_id
-        WHERE s.subject_name = ?");
-        $stmt->bind_param("s", $identifier);
-    }
-
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($by === 'course_id') {
-        return $result->fetch_all(MYSQLI_ASSOC);
-    } else {
-        return $result->num_rows > 0 ? $result->fetch_assoc() : null;
-    }
-}
 function getEnrolledCoursesForStudent($student_id) {
     return [];
 }
@@ -178,7 +126,10 @@ function getUpcomingClassSchedules($student_id) {
     return [];
 }
 function getStudentLearningStats($student_id) {
-    return [];
+    return [
+        'hours_spent' => 0,
+        'completed_classes' => 0
+    ];
 }
 function getStudentClasses($student_id) {
     return [];

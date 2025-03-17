@@ -1,6 +1,4 @@
 <?php
-require_once 'main.php';
-
 /**
  * Get all courses with their subject and enrollment counts
  * 
@@ -108,10 +106,10 @@ function getSubjectsWithCounts() {
  * @return array Array of courses
  */
 function getAllCourses() {
-    global $conn;
+    global $conn; 
     
     try {
-        $query = "SELECT course_id, course_name FROM course ORDER BY course_name";
+        $query = "SELECT c.*, (SELECT count(*) FROM subject WHERE course_id = c.course_id AND is_active = 1) AS subject_count FROM course c ORDER BY course_name;";
         $result = $conn->query($query);
         return $result->fetch_all(MYSQLI_ASSOC);
     } catch (Exception $e) {
@@ -129,61 +127,61 @@ function getAllCourses() {
  */
 function updateSubjectStatus($subject_id, $is_active) {
     global $conn;
-    
+
     try {
         $conn->begin_transaction();
-        
-        // Update subject status
+
         $stmt = $conn->prepare("UPDATE subject SET is_active = ? WHERE subject_id = ?");
         $stmt->bind_param("ii", $is_active, $subject_id);
         $stmt->execute();
-        
-        // Get subject details for notification
-        $query = "SELECT s.subject_name, s.course_id, c.course_name 
-                 FROM subject s 
-                 JOIN course c ON s.course_id = c.course_id 
-                 WHERE s.subject_id = ?";
-        $stmt = $conn->prepare($query);
+        $stmt->close(); 
+
+        $stmt = $conn->prepare("
+            SELECT s.subject_name, s.course_id, c.course_name 
+            FROM subject s 
+            JOIN course c ON s.course_id = c.course_id 
+            WHERE s.subject_id = ?");
         $stmt->bind_param("i", $subject_id);
         $stmt->execute();
         $subject = $stmt->get_result()->fetch_assoc();
-        
+        $stmt->close();
+
         if (!$subject) {
             throw new Exception("Subject not found");
         }
-        
-        // Get affected tutors
-        $query = "SELECT DISTINCT u.uid, u.email 
-                 FROM class cl 
-                 JOIN users u ON cl.tutor_id = u.uid 
-                 WHERE cl.subject_id = ?";
-        $stmt = $conn->prepare($query);
+
+        $stmt = $conn->prepare("
+            SELECT DISTINCT u.uid, u.email 
+            FROM class cl 
+            JOIN users u ON cl.tutor_id = u.uid 
+            WHERE cl.subject_id = ?");
         $stmt->bind_param("i", $subject_id);
         $stmt->execute();
         $tutors = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-        
-        // Notify tutors
+        $stmt->close();
+
         $status = $is_active ? 'activated' : 'deactivated';
         foreach ($tutors as $tutor) {
             insertNotification(
                 $tutor['uid'],
                 'TECHGURU',
                 "Subject '{$subject['subject_name']}' in course '{$subject['course_name']}' has been {$status}",
-                "class-details",
+                "class-details.php?subject_id={$subject_id}",
                 null,
                 $is_active ? 'bi-check-circle' : 'bi-x-circle',
                 $is_active ? 'text-success' : 'text-danger'
             );
         }
-        
+
         $conn->commit();
-        return true;
+        return ['success' => true, 'message' => "{$subject['subject_name']} has been successfully {$status}"];
     } catch (Exception $e) {
         $conn->rollback();
         log_error("Error updating subject status: " . $e->getMessage());
-        return false;
+        return ['success' => false, 'message' => "An error occurred while updating subject information"];
     }
 }
+
 
 /**
  * Get subject statistics
@@ -324,4 +322,7 @@ function addSubject($courseId, $subjectName, $subjectDesc) {
         log_error("Error adding subject: " . $e->getMessage());
         return ['success' => false, 'message' => 'Failed to add subject'];
     }
+}
+function editSubject() {
+    return ['success' => false, 'message' => 'test'];
 }

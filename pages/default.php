@@ -44,22 +44,10 @@
     <!-- REPLACE THIS FOR HIDDEN MODALS AND WHATNOT -->
 
     <!-- JavaScript Section -->
+    
     <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/aos/aos.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/glightbox/js/glightbox.min.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.js"></script>
-    
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const toggleBtn = document.querySelector('.toggle-sidebar');
-            const sidebar = document.querySelector('.sidebar');
-            const mainContent = document.querySelector('.dashboard-content');
-
-            toggleBtn.addEventListener('click', () => {
-                sidebar.classList.toggle('active');
-                mainContent.classList.toggle('active');
-            });
-        });
-    </script>
 </body>
 </html>

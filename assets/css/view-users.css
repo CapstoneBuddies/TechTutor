@@ -1,0 +1,82 @@
+.user-filter-buttons {
+    margin-bottom: 20px;
+}
+
+.user-filter-buttons .btn {
+    margin-right: 10px;
+    margin-bottom: 10px;
+}
+
+.user-filter-buttons .btn.active {
+    background-color: #FF6B00;
+    border-color: #FF6B00;
+    color: white;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 10px;
+}
+
+.user-name-cell {
+    display: flex;
+    align-items: center;
+}
+
+.search-container {
+    margin-bottom: 20px;
+}
+
+.status-badge {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: 50px;
+}
+
+.action-buttons .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    margin-right: 5px;
+}
+
+.reset-password-btn {
+    margin-left: 10px;
+}
+
+/* Autocomplete styles */
+.autocomplete-items {
+    position: absolute;
+    border: 1px solid #d4d4d4;
+    border-bottom: none;
+    border-top: none;
+    z-index: 99;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 250px;
+    overflow-y: auto;
+    background-color: #fff;
+}
+
+.autocomplete-items div {
+    padding: 10px;
+    cursor: pointer;
+    background-color: #fff;
+    border-bottom: 1px solid #d4d4d4;
+}
+
+.autocomplete-items div:hover {
+    background-color: #e9e9e9;
+}
+
+.autocomplete-active {
+    background-color: #FF6B00 !important;
+    color: #ffffff;
+}
+
+.autocomplete-container {
+    position: relative;
+}

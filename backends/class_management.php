@@ -43,10 +43,10 @@ function getClassStats($tutor_id) {
     global $conn;
     
     $query = "SELECT 
-                SUM(CASE WHEN c.is_active = 1 THEN 1 ELSE 0 END) as active_classes,
-                COUNT(DISTINCT c.class_id) as total_classes,
-                COUNT(DISTINCT cs.user_id) as total_students,
-                SUM(CASE WHEN c.is_active = 0 THEN 1 ELSE 0 END) as completed_classes
+                SUM(CASE WHEN c.status = 'active' THEN 1 ELSE 0 END) AS active_classes,
+                COUNT(DISTINCT c.class_id) AS total_classes,
+                COUNT(DISTINCT cs.user_id) AS total_students,
+                SUM(CASE WHEN c.status = 'completed' THEN 1 ELSE 0 END) AS completed_classes
               FROM class c
               LEFT JOIN class_schedule cs ON c.class_id = cs.class_id AND cs.role = 'STUDENT'
               WHERE c.tutor_id = ?";
@@ -67,6 +67,7 @@ function getClassStats($tutor_id) {
         ];
     }
 }
+
 
 /**
  * Delete a class and all its related data
@@ -143,12 +144,14 @@ function createClass($data) {
     try {
         $conn->begin_transaction();
         
-        // Handle unlimited students (null in database)
-        $classSize = empty($data['class_size']) ? null : $data['class_size'];
+        // Handle optional values correctly
+        $classSize = isset($data['class_size']) && $data['class_size'] !== '' ? $data['class_size'] : null;
+        $price = isset($data['price']) ? $data['price'] : 0; // Default price if not set
         
         // Insert into class table
-        $stmt = $conn->prepare("INSERT INTO class (subject_id, class_name, class_desc, tutor_id, start_date, end_date, class_size, is_active, is_free, price, thumbnail) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)");
-        $stmt->bind_param("ississiidd", 
+        $stmt = $conn->prepare("INSERT INTO class (subject_id, class_name, class_desc, tutor_id, start_date, end_date, class_size, status, is_free, price, thumbnail) 
+                                VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)");
+        $stmt->bind_param("ississdids", 
             $data['subject_id'],
             $data['class_name'],
             $data['class_desc'],
@@ -157,24 +160,27 @@ function createClass($data) {
             $data['end_date'],
             $classSize,
             $data['is_free'],
-            $data['price'],
+            $price,
             $data['thumbnail']
         );
         $stmt->execute();
         $class_id = $conn->insert_id;
         
-        // Insert class schedules
-        $scheduleStmt = $conn->prepare("INSERT INTO class_schedule (class_id, user_id, role, session_date, start_time, end_time, status) VALUES (?, ?, 'TUTOR', ?, ?, ?, 'confirmed')");
-        
-        foreach ($data['schedules'] as $schedule) {
-            $scheduleStmt->bind_param("iisss", 
-                $class_id,
-                $data['tutor_id'],
-                $schedule['session_date'],
-                $schedule['start_time'],
-                $schedule['end_time']
-            );
-            $scheduleStmt->execute();
+        // Insert class schedules if provided
+        if (!empty($data['schedules'])) {
+            $scheduleStmt = $conn->prepare("INSERT INTO class_schedule (class_id, user_id, role, session_date, start_time, end_time, status) 
+                                            VALUES (?, ?, 'TUTOR', ?, ?, ?, 'confirmed')");
+
+            foreach ($data['schedules'] as $schedule) {
+                $scheduleStmt->bind_param("iisss", 
+                    $class_id,
+                    $data['tutor_id'],
+                    $schedule['session_date'],
+                    $schedule['start_time'],
+                    $schedule['end_time']
+                );
+                $scheduleStmt->execute();
+            }
         }
         
         $conn->commit();
@@ -185,6 +191,7 @@ function createClass($data) {
         return ['success' => false, 'error' => $e->getMessage()];
     }
 }
+
 
 /**
  * Get subject details by name
@@ -255,6 +262,93 @@ function getClassSchedules($class_id) {
     
     return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 }
+/**
+ * Get subject details by course ID or subject name
+ */
+function getSubjectDetails($identifier, $by = 'course_id') {
+    global $conn;
+
+    if ($by === 'course_id') {
+        // For listing subjects in a course
+        $stmt = $conn->prepare("
+            SELECT 
+                s.subject_id, s.subject_name, s.subject_desc, s.image, 
+                COUNT(DISTINCT c.class_id) AS class_count, 
+                COUNT(DISTINCT cs.user_id) AS student_count
+            FROM subject s
+            LEFT JOIN class c ON s.subject_id = c.subject_id AND c.status = 'active'
+            LEFT JOIN class_schedule cs ON cs.class_id = c.class_id AND cs.role = 'STUDENT'
+            WHERE s.is_active = 1 AND s.course_id = ?
+            GROUP BY s.subject_id
+        ");
+        $stmt->bind_param("i", $identifier);
+    } else {
+        // For getting detailed subject information
+        $stmt = $conn->prepare("
+            SELECT 
+                s.*, 
+                c.course_name, 
+                c.course_desc,
+                (SELECT COUNT(DISTINCT cl.class_id) 
+                 FROM class cl 
+                 WHERE cl.subject_id = s.subject_id AND cl.status = 'active') AS active_classes,
+                (SELECT COUNT(DISTINCT cs.user_id) 
+                 FROM class cl 
+                 JOIN class_schedule cs ON cl.class_id = cs.class_id 
+                 WHERE cl.subject_id = s.subject_id AND cs.role = 'STUDENT') AS total_students,
+                (SELECT AVG(r.rating) 
+                 FROM class cl 
+                 JOIN ratings r ON cl.tutor_id = r.tutor_id 
+                 WHERE cl.subject_id = s.subject_id) AS average_rating,
+                (SELECT 
+                    CASE 
+                        WHEN COUNT(DISTINCT cs2.user_id) = 0 THEN 0 
+                        ELSE COUNT(DISTINCT cs.user_id) * 100.0 / COUNT(DISTINCT cs2.user_id) 
+                    END
+                 FROM class cl 
+                 JOIN class_schedule cs ON cl.class_id = cs.class_id AND cs.status = 'completed'
+                 LEFT JOIN class_schedule cs2 ON cl.class_id = cs2.class_id
+                 WHERE cl.subject_id = s.subject_id AND cs.role = 'STUDENT') AS completion_rate
+            FROM subject s
+            JOIN course c ON s.course_id = c.course_id
+            WHERE s.subject_name = ?
+        ");
+        $stmt->bind_param("s", $identifier);
+    }
+
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($by === 'course_id') {
+        return $result->fetch_all(MYSQLI_ASSOC);
+    } else {
+        return $result->num_rows > 0 ? $result->fetch_assoc() : null;
+    }
+}
+/**
+ * Get active classes for a subject and tutor
+ */
+function getActiveClassesForSubject($subject_id, $tutor_id) {
+    global $conn;
+    
+    $sql = "SELECT 
+                c.*, 
+                COUNT(DISTINCT cs.user_id) AS student_count
+            FROM class c
+            LEFT JOIN class_schedule cs ON c.class_id = cs.class_id AND cs.role = 'STUDENT'
+            WHERE c.subject_id = ? 
+                AND c.tutor_id = ? 
+                AND c.status = 'active'
+            GROUP BY c.class_id
+            ORDER BY c.start_date ASC";
+            
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ii", $subject_id, $tutor_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    return $result->fetch_all(MYSQLI_ASSOC);
+}
 
 /**
  * Get students enrolled in a class with their progress
@@ -314,29 +408,45 @@ function getClassFiles($class_id) {
 function getClassDetails($class_id, $tutor_id = null) {
     global $conn;
     
-    $query = "SELECT c.*, s.subject_name, s.subject_desc, s.image as subject_image,
+    $query = "SELECT c.*, 
+                     s.subject_name, s.subject_desc, s.image AS subject_image,
                      co.course_name, co.course_desc,
                      u.first_name, u.last_name, u.profile_picture,
-                     COUNT(DISTINCT cs.user_id) as total_students,
-                     SUM(CASE WHEN cs.status = 'completed' THEN 1 ELSE 0 END) as completed_students,
-                     (SELECT AVG(r.rating) FROM ratings r WHERE r.tutor_id = c.tutor_id) as average_rating,
-                     (SELECT COUNT(*) FROM class_schedule WHERE class_id = c.class_id AND role = 'STUDENT' AND status = 'completed') as completed_sessions,
-                     (SELECT COUNT(*) FROM class_schedule WHERE class_id = c.class_id AND role = 'STUDENT') as total_sessions,
+                     COUNT(DISTINCT cs.user_id) AS total_students,
+                     SUM(CASE WHEN cs.status = 'completed' THEN 1 ELSE 0 END) AS completed_students,
+                     (SELECT AVG(r.rating) 
+                      FROM ratings r 
+                      WHERE r.tutor_id = c.tutor_id) AS average_rating,
+                     (SELECT COUNT(*) 
+                      FROM class_schedule 
+                      WHERE class_id = c.class_id AND role = 'STUDENT' AND status = 'completed') AS completed_sessions,
+                     (SELECT COUNT(*) 
+                      FROM class_schedule 
+                      WHERE class_id = c.class_id AND role = 'STUDENT') AS total_sessions,
+                     ROUND(
+                        (SELECT COUNT(*) 
+                         FROM class_schedule 
+                         WHERE class_id = c.class_id AND role = 'STUDENT' AND status = 'completed') 
+                        / NULLIF(
+                          (SELECT COUNT(*) 
+                           FROM class_schedule 
+                           WHERE class_id = c.class_id AND role = 'STUDENT'), 0
+                        ) * 100, 2) AS completion_rate,
                      CASE 
                         WHEN c.end_date < NOW() THEN 'completed'
                         WHEN c.start_date > NOW() THEN 'upcoming'
-                        WHEN c.is_active = 0 THEN 'inactive'
+                        WHEN c.status = 'inactive' THEN 'inactive'
                         ELSE 'ongoing'
-                     END as status
+                     END AS status
               FROM class c
               JOIN subject s ON c.subject_id = s.subject_id
               JOIN course co ON s.course_id = co.course_id
               JOIN users u ON c.tutor_id = u.uid
               LEFT JOIN class_schedule cs ON c.class_id = cs.class_id AND cs.role = 'STUDENT'
               WHERE c.class_id = ? " . 
-              ($tutor_id !== null ? "AND c.tutor_id = ? " : "") .
+              ($tutor_id !== null ? "AND c.tutor_id = ? " : "") . 
               "GROUP BY c.class_id";
-              
+
     try {
         $stmt = $conn->prepare($query);
         if ($tutor_id !== null) {
@@ -352,6 +462,7 @@ function getClassDetails($class_id, $tutor_id = null) {
         return null;
     }
 }
+
 
 /**
  * Update a class's status and notify relevant users

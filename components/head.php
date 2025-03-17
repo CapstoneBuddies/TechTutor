@@ -9,8 +9,15 @@ require_once ROOT_PATH . '/backends/db.php';
 
 // Get the current page name for dynamic title
 $current_page = basename($_SERVER['PHP_SELF'], '.php');
-$page_title = ucwords(str_replace('_', ' ', $current_page));
-$page_title = ucwords(str_replace('-', ' ', $page_title));
+
+if(!isset($title)) {
+    $page_title = ucwords(str_replace('_', ' ', $current_page));
+    $page_title = ucwords(str_replace('-', ' ', $page_title));
+}
+else {
+    $page_title = $title;
+}
+
 
 // Default title fallback
 if ($current_page === 'index' || $current_page === 'default') {
@@ -31,19 +38,31 @@ log_error("Page visited: {$current_page} access", 4);
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
  
     <!-- Favicons -->
-    <link href="assets/img/stand_alone_logo.png" rel="icon">
-    <link href="assets/img/apple-touch-icon.png" rel="apple-touch-icon">
+    <link href="<?php echo IMG; ?>stand_alone_logo.png" rel="icon">
+    <link href="<?php echo IMG; ?>apple-touch-icon.png" rel="apple-touch-icon">
 
-    <!-- BOOTSTRAP Files -->
+    <!-- Vendor CSS Files -->
     <link href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
+    <link href="<?php echo BASE; ?>assets/vendor/aos/aos.css" rel="stylesheet">
+    <link href="<?php echo BASE; ?>assets/vendor/glightbox/css/glightbox.min.css" rel="stylesheet">
+    <link href="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
 
     <!-- FONT AWESOME -->
     <link rel="stylesheet" href="<?php echo BASE; ?>assets/vendor/fontawesome/css/all.min.css">
 
     <!-- Base Custom CSS -->
-    <link href="<?php echo BASE; ?>assets/css/style.css" rel="stylesheet">
+    <link href="<?php echo CSS; ?>users.css" rel="stylesheet">
+        
+    <!-- Include header.css for styling -->
+    <link rel="stylesheet" href="<?php echo CSS; ?>header.css">
+    <!-- Include responsive.css for mobile responsiveness -->
+    <link rel="stylesheet" href="<?php echo CSS; ?>responsive.css">
     
+    <!-- header -->
+    <script src="<?php echo JS; ?>header.js"></script>
+
+
     <?php
     // Role-specific base CSS
     if (isset($_SESSION['role'])) {
@@ -65,7 +84,7 @@ log_error("Page visited: {$current_page} access", 4);
     // Load dashboard CSS for dashboard pages
     if (strpos($current_page, 'dashboard') !== false) {
         // First load base dashboard styles
-        echo "<link href='" . BASE . "assets/css/dashboard.css' rel='stylesheet'>";
+        echo "<link href='" . CSS . "dashboard.css' rel='stylesheet'>";
         
         // Then load role-specific dashboard styles if they exist
         if (isset($_SESSION['role'])) {
@@ -80,13 +99,13 @@ log_error("Page visited: {$current_page} access", 4);
     // Finally load page-specific CSS (highest priority)
     $page_css = ROOT_PATH . "/assets/css/{$current_page}.css";
     if (file_exists($page_css)) {
-        echo "<link href='" . BASE . "assets/css/{$current_page}.css' rel='stylesheet'>";
+        echo "<link href='" . CSS . "{$current_page}.css' rel='stylesheet'>";
     }
     ?>
     
     <!-- Common JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
-    <script src="<?php echo BASE; ?>assets/js/common.js" defer></script>
+    <!-- <script src="<?php echo BASE; ?>assets/js/common.js" defer></script> -->
     
     <?php
     // Role-specific JavaScript

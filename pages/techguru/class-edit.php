@@ -81,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <nav aria-label="breadcrumb" class="breadcrumb-nav">
                                 <ol class="breadcrumb">
                                     <li class="breadcrumb-item"><a href="<?php echo BASE; ?>dashboard">Dashboard</a></li>
-                                    <li class="breadcrumb-item"><a href="<?php echo BASE; ?>dashboard/classes">My Classes</a></li>
+                                    <li class="breadcrumb-item"><a href="<?php echo BASE; ?>dashboard/t/classes">My Classes</a></li>
                                     <li class="breadcrumb-item"><a href="details?id=<?php echo $class_id; ?>"><?php echo htmlspecialchars($classDetails['class_name']); ?></a></li>
                                     <li class="breadcrumb-item active">Edit Class</li>
                                 </ol>

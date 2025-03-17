@@ -1,5 +1,6 @@
 <?php 
 	require_once 'db.php';
+	require_once 'notifications_management.php';
 		
 	use PHPMailer\PHPMailer\PHPMailer;
 	use PHPMailer\PHPMailer\Exception;
@@ -28,7 +29,6 @@
 		    exit();	
 		}
 		else {
-		setcookie('role', $_SESSION['role'], time() + (3 * 60 * 60), "/", "", true, true);
 		header("location: ".BASE."dashboard");
 	    exit();
 		}
@@ -37,16 +37,8 @@
 	// Clean up role cookie if no session exists
 	if(isset($_COOKIE['role']) && !isset($_SESSION['user'])) {
 		log_error("I run here! cookie clean");
-		setcookie('role','',time() - 3600, '/');
 		unset($_COOKIE['role']);
 		header("location: ".BASE."login");
-		exit();
-	}
-	// Create role cookie user and role session exist
-	if(!isset($_COOKIE['role']) && isset($_SESSION['user']) && isset($_SESSION['role']) && $link == 'dashboard') {
-		log_error("I run here! cookie clean");
-		setcookie('role',$_SESSION['role'],time() + (3 * 60 * 60),"/","",true,true);
-		header("location: ".BASE."dashboard");
 		exit();
 	}
 
@@ -92,7 +84,6 @@
 					$_SESSION['email'] = $user['email'];
 					$_SESSION['role'] = $user['role'];
 					$_SESSION['profile'] = USER_IMG.$user['profile_picture'];
-					setcookie('role', $user['role'], time() + (24 * 60 * 60), "/", "", true, true);
 				}
 			}
 			else {
@@ -143,73 +134,6 @@
 	    return ($years == 1) ? "1 year ago" : "$years years ago";
 	}
 
-    /**
-     * Send a notification to a user or role
-     * 
-     * @param int|null $recipient_id The user ID to send to, or null for role-wide notifications
-     * @param string $recipient_role The role to send to (ADMIN, TECHGURU, TECHKID, ALL)
-     * @param string $message The notification message
-     * @param string|null $link Optional link for the notification
-     * @param int|null $class_id Optional class ID if notification is related to a class
-     * @param string $icon Bootstrap icon class (e.g., 'bi-person-check')
-     * @param string $icon_color Bootstrap color class (e.g., 'text-success')
-     * @return bool True if notification was sent successfully
-     */
-    function sendNotification($recipient_id, $recipient_role, $message, $link = null, $class_id = null, $icon = 'bi-bell', $icon_color = 'text-primary') {
-        global $conn;
-        
-        try {
-            $stmt = $conn->prepare("INSERT INTO notifications (recipient_id, recipient_role, message, link, class_id, icon, icon_color) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("isssiss", $recipient_id, $recipient_role, $message, $link, $class_id, $icon, $icon_color);
-            return $stmt->execute();
-        } catch (Exception $e) {
-            log_error("Failed to send notification: " . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Mark all notifications as read for the current user based on their role
-     * 
-     * @return bool True if notifications were marked as read successfully
-     */
-    function markAllNotificationsAsRead() {
-        global $conn;
-        
-        if (!isset($_SESSION['user']) || !isset($_SESSION['role'])) {
-            return false;
-        }
-        
-        try {
-            $stmt = $conn->prepare("UPDATE notifications SET is_read = 1 WHERE (recipient_id = ? OR recipient_role = ? OR recipient_role = 'ALL')");
-            $stmt->bind_param("is", $_SESSION['user'], $_SESSION['role']);
-            return $stmt->execute();
-        } catch (Exception $e) {
-            log_error("Failed to mark notifications as read: " . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Get notifications for a user based on their role and access level
-     * 
-     * @param int $user_id The user ID
-     * @param string $role The user's role (ADMIN, TECHGURU, TECHKID)
-     * @return array Array of notifications
-     */
-    function getUserNotifications($user_id, $role) {
-        global $conn;
-        
-        try {
-            $stmt = $conn->prepare("SELECT n.*, c.class_name FROM notifications n LEFT JOIN class c ON n.class_id = c.class_id WHERE (? = 'ADMIN') OR n.recipient_id = ? OR n.recipient_role = ? OR n.recipient_role = 'ALL' ORDER BY n.created_at DESC LIMIT 50");
-            $stmt->bind_param("sii", $role, $user_id, $user_id);
-            $stmt->execute();
-            return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-        } catch (Exception $e) {
-            log_error("Failed to get user notifications: " . $e->getMessage());
-            return [];
-        }
-    }
     function normalizeStatus($status) {
 	    return $status == 1 ? 'active' : 'inactive';
 	}
@@ -223,14 +147,4 @@
 	    $normalizedStatus = normalizeStatus($status);
 	    return 'status-badge status-' . $normalizedStatus;
 	}
-
-	/**
-	 * System Management Files
-	*/
-	require_once 'admin_management.php';
-	require_once 'class_management.php';
-	require_once 'transactions_management.php';
-	require_once 'user_management.php';
-	require_once 'notifications_management.php';
-	require_once 'student_management.php';
 ?>

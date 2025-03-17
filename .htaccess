@@ -1,4 +1,4 @@
-ErrorDocument 404 /capstone-1/pages/error/404.php
+ErrorDocument 404 /capstone-1/pages/error/404.php 
 ErrorDocument 403 /capstone-1/pages/error/403.php
 ErrorDocument 500 /capstone-1/pages/error/500.php
 
@@ -16,6 +16,7 @@ RewriteRule ^login$ pages/login.php [L]
 RewriteRule ^register$ pages/signup.php [L]
 RewriteRule ^verify$ pages/verify.php [L]
 RewriteRule ^forgot$ pages/forgot-password.php [L]
+RewriteRule ^terms$ pages/terms.php [L]
 RewriteRule ^reset-password$ pages/reset-password.php [L,QSA]
 RewriteRule ^dashboard/[sta]/profile$ pages/profile.php [L]
 RewriteRule ^dashboard/[sta]/settings$ pages/settings.php [L]
@@ -45,11 +46,11 @@ RewriteRule ^a/activate-user$ backends/route.php [L]
 # ----------------------------------
 # 💰 Payment Routes
 # ----------------------------------
-RewriteRule ^(.*)/?payment$ pages/payment.php [L]
-RewriteRule ^(.*)/?payment-success$ pages/payment-success.php [L]
-RewriteRule ^(.*)/?payment-failed$ pages/payment-failed.php [L]
-RewriteRule ^(.*)/?create-payment$ backends/route.php [L]
-RewriteRule ^(.*)/?process-card-payment$ backends/route.php [L]
+RewriteRule ^payment$ pages/payment.php [L]
+RewriteRule ^payment-success$ pages/payment-success.php [L]
+RewriteRule ^payment-failed$ pages/payment-failed.php [L]
+RewriteRule ^create-payment$ backends/route.php [L]
+RewriteRule ^process-card-payment$ backends/route.php [L]
 
 # ----------------------------------
 # 🔔 Notifications & Transactions
@@ -82,6 +83,7 @@ RewriteRule ^dashboard/t/class$ pages/techguru/classes.php [L]
 RewriteRule ^dashboard/t/certificates$ pages/default.php [L]
 RewriteRule ^dashboard/t/subjects$ pages/techguru/subjects.php [L]
 RewriteRule ^dashboard/t/subjects/class$ pages/techguru/subject-details.php [L,QSA]
+RewriteRule ^dashboard/t/subjects/class/create$ pages/techguru/create-class.php [L,QSA]
 RewriteRule ^dashboard/t/class/details$ pages/techguru/class-details.php [L,QSA]
 RewriteRule ^dashboard/t/class/edit$ pages/techguru/class-edit.php [L,QSA]
 
@@ -96,15 +98,20 @@ RewriteRule ^dashboard/a/class-details$ pages/admin/class-details.php [L,QSA]
 # ----------------------------------
 # 🛠 Admin AJAX Actions
 # ----------------------------------
-RewriteRule ^dashboard/admin/get-users$ backends/admin/get_users.php [L]
-RewriteRule ^dashboard/admin/toggle-user-status$ backends/admin/toggle_user_status.php [L]
-RewriteRule ^dashboard/admin/delete-users$ backends/admin/delete_user.php [L]
-RewriteRule ^dashboard/admin/send-password-reset$ backends/admin/send_password_reset.php [L]
-RewriteRule ^dashboard/admin/get-user-emails$ backends/admin/get_user_emails.php [L]
-RewriteRule ^dashboard/admin/toggle-subject-status$ backends/admin/course_handler.php [L,QSA]
-RewriteRule ^dashboard/admin/add-course$ backends/admin/course_handler.php [L]
-RewriteRule ^dashboard/admin/edit-course$ backends/admin/course_handler.php [L]
-RewriteRule ^dashboard/admin/delete-course$ backends/admin/course_handler.php [L]
+RewriteRule ^get-users$ backends/admin/get_users.php [L]
+RewriteRule ^toggle-user-status$ backends/admin/toggle_user_status.php [L]
+RewriteRule ^delete-users$ backends/admin/delete_user.php [L]
+RewriteRule ^send-password-reset$ backends/admin/send_password_reset.php [L]
+RewriteRule ^get-user-emails$ backends/admin/get_user_emails.php [L]
+
+RewriteRule ^add-course$ backends/admin/course_handler.php [L]
+RewriteRule ^edit-course$ backends/admin/course_handler.php [L]
+RewriteRule ^delete-course$ backends/admin/course_handler.php [L]
+
+RewriteRule ^add-subject$ backends/admin/course_handler.php [L]
+RewriteRule ^edit-subject$ backends/admin/course_handler.php [L]
+RewriteRule ^delete-subject$ backends/admin/course_handler.php [L]
+RewriteRule ^toggle-subject$ backends/admin/course_handler.php [L,QSA]
 
 # ----------------------------------
 # 🌍 API Endpoints

@@ -3,51 +3,10 @@
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title>TechTutor | Transactions</title>
-    <meta name="description" content="">
-    <meta name="keywords" content="">
-
-    <!-- Favicons -->
-    <link href="<?php echo IMG; ?>stand_alone_logo.png" rel="icon">
-    <link href="<?php echo IMG; ?>apple-touch-icon.png" rel="apple-touch-icon">
-
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com" rel="preconnect">
-    <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700;900&family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-
-    <!-- Vendor CSS Files -->
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/aos/aos.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/glightbox/css/glightbox.min.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="<?php echo BASE; ?>assets/vendor/fontawesome/css/all.min.css">
-
-    <!-- Main CSS Files -->
-    <link href="<?php echo CSS; ?>dashboard.css" rel="stylesheet">
-
-    <style>
-        .transaction-details strong {
-            color: #666;
-            min-width: 120px;
-            display: inline-block;
-        }
-        .hidden-file-input {
-            display: none;
-        }
-        .badge {
-            font-size: 0.85em;
-        }
-    </style>
-</head>
+<?php include ROOT_PATH . '/components/head.php'; ?>
 <body>
     <!-- Header -->
     <?php include ROOT_PATH . '/components/header.php'; ?>
-
     <!-- Main Content -->
     <div class="container-fluid py-4">
         <div class="row">
@@ -62,9 +21,11 @@
                             <?php endif; ?>
                         </h5>
                         <div>
+                            <?php if ($_SESSION['role'] === 'ADMIN'): ?>
                             <button class="btn btn-sm btn-outline-secondary me-2" onclick="exportTransactions()">
                                 <i class="bi bi-download"></i> Export
                             </button>
+                            <?php endif; ?>
                             <div class="btn-group">
                                 <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
                                     <i class="bi bi-funnel"></i> Filter
@@ -137,6 +98,9 @@
                 </div>
             </div>
         </div>
+    </div>
+    <?php include ROOT_PATH . '/components/footer.php'; ?>
+    </main>
     </div>
 
     <!-- JavaScript Section -->

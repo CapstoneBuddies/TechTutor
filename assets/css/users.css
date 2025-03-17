@@ -26,6 +26,8 @@
 /* Table Styles */
 .table {
     margin-bottom: 0;
+    width: 100%;
+    table-layout: fixed;
 }
 
 .table th {
@@ -34,10 +36,12 @@
     text-transform: uppercase;
     font-size: 0.875rem;
     color: #6c757d;
+    text-align: center;
 }
 
 .table td {
     vertical-align: middle;
+    text-align: center;
 }
 
 /* Status Badges */
@@ -200,6 +204,11 @@
     font-size: 3rem;
     margin-bottom: 1rem;
     opacity: 0.5;
+}
+.no-resize {
+  resize: none;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* Responsive Adjustments */

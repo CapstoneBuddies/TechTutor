@@ -1,5 +1,6 @@
 <?php 
 require_once '../../backends/main.php';
+require_once ROOT_PATH.'/backends/class_management.php';
 
 // Ensure user is logged in and is a TechGuru
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
@@ -15,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['class_id'])) {
     } else {
         $_SESSION['error'] = "Failed to delete class";
     }
-    header('Location: ' . BASE . 'dashboard/class');
+    header('Location: ' . BASE . 'dashboard/t/class');
     exit();
 }
 
@@ -40,7 +41,7 @@ $stats = getClassStats($_SESSION['user']);
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Main CSS -->
-    <link href="<?php echo CSS; ?>dashboard.css" rel="stylesheet">
+    <link href="<?php echo CSS; ?>users.css" rel="stylesheet">
     <link href="<?php echo CSS; ?>techguru-common.css" rel="stylesheet">
 </head>
 
@@ -158,11 +159,11 @@ $stats = getClassStats($_SESSION['user']);
                                             </td>
                                             <td>
                                                 <div class="btn-group">
-                                                    <a href="<?php echo BASE; ?>dashboard/class/details?id=<?php echo $class['class_id']; ?>" 
+                                                    <a href="<?php echo BASE; ?>dashboard/t/class/details?id=<?php echo $class['class_id']; ?>" 
                                                        class="btn btn-sm btn-outline-primary">
                                                         <i class="bi bi-eye"></i>
                                                     </a>
-                                                    <a href="<?php echo BASE; ?>dashboard/class/edit?id=<?php echo $class['class_id']; ?>" 
+                                                    <a href="<?php echo BASE; ?>dashboard/t/class/edit?id=<?php echo $class['class_id']; ?>" 
                                                        class="btn btn-sm btn-outline-secondary">
                                                         <i class="bi bi-pencil"></i>
                                                     </a>

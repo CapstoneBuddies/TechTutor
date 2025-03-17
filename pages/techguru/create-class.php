@@ -1,5 +1,7 @@
 <?php 
 require_once '../../backends/main.php';
+require_once ROOT_PATH.'/backends/class_management.php';
+require_once ROOT_PATH.'/backends/student_management.php';
 
 // Ensure user is logged in and is a TechGuru
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
@@ -100,7 +102,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="<?php echo BASE; ?>assets/vendor/clockpicker/dist/bootstrap-clockpicker.min.css" rel="stylesheet">
     
     <!-- Main CSS -->
-    <link href="<?php echo CSS; ?>dashboard.css" rel="stylesheet">
     <link href="<?php echo CSS; ?>techguru-common.css" rel="stylesheet">
     
     <style>
@@ -158,7 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <nav aria-label="breadcrumb" class="breadcrumb-nav">
                                 <ol class="breadcrumb">
                                     <li class="breadcrumb-item"><a href="home">Dashboard</a></li>
-                                    <li class="breadcrumb-item"><a href="<?php echo BASE.'dashboard/subjects'; ?>">Teaching Subjects</a></li>
+                                    <li class="breadcrumb-item"><a href="<?php echo BASE.'dashboard/t/subjects'; ?>">Teaching Subjects</a></li>
                                     <li class="breadcrumb-item"><a href="./?subject=<?php echo urlencode($subject); ?>"><?php echo htmlspecialchars($subjectDetails['subject_name']); ?></a></li>
                                     <li class="breadcrumb-item active">Create Class</li>
                                 </ol>
