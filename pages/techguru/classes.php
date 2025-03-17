@@ -63,7 +63,7 @@ $stats = getClassStats($_SESSION['user']);
                             <h2 class="page-header">My Classes</h2>
                             <p class="subtitle">Manage your tutoring classes and create new ones</p>
                         </div>
-                        <a href="<?php echo BASE; ?>dashboard/subjects" class="btn btn-primary btn-action">
+                        <a href="subjects" class="btn btn-primary btn-action">
                             <i class="bi bi-plus-lg"></i>
                             Create Class
                         </a>

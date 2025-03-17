@@ -38,6 +38,7 @@
     <link href="<?php echo BASE; ?>assets/vendor/aos/aos.css" rel="stylesheet">
     <link href="<?php echo BASE; ?>assets/vendor/glightbox/css/glightbox.min.css" rel="stylesheet">
     <link href="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?php echo BASE; ?>assets/vendor/fontawesome/css/all.min.css">
 
     <!-- Main CSS Files -->
     <link href="<?php echo CSS; ?>dashboard.css" rel="stylesheet">

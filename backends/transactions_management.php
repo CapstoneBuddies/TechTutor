@@ -203,4 +203,11 @@ function exportTransactions($filter = 'all', $role = '', $userId = null) {
         ];
     }
 }
+
+/**
+ * Get Recent Transactions per user
+ */
+function getRecentTransactions($user_id) {
+    return [];
+}
 ?>

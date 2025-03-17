@@ -552,30 +552,4 @@
         }
         return null;
     }
-
-    /**
-     * Class Management Functions
-     * These functions have been moved to class_management.php for better organization
-     */
-    require_once 'class_management.php';
-
-    /**
-     * Notifications Management Functions
-     * These functions have been moved to notifications_management.php for better organization
-     */
-    require_once 'notifications_management.php';
-
-    /**
-     * Transactions Management Functions
-     * These functions have been moved to transactions_management.php for better organization
-     */
-    require_once 'transactions_management.php';
-
-    /**
-     * Student Management Functions
-     * These functions have been moved to student_management.php for better organization
-     */
-    require_once 'student_management.php';
-    require_once 'user_management.php';
-    require_once 'admin_management.php';
     ?>

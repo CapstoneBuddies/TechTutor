@@ -223,4 +223,14 @@
 	    $normalizedStatus = normalizeStatus($status);
 	    return 'status-badge status-' . $normalizedStatus;
 	}
+
+	/**
+	 * System Management Files
+	*/
+	require_once 'admin_management.php';
+	require_once 'class_management.php';
+	require_once 'transactions_management.php';
+	require_once 'user_management.php';
+	require_once 'notifications_management.php';
+	require_once 'student_management.php';
 ?>

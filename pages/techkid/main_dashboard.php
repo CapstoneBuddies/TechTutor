@@ -1,45 +1,32 @@
 <?php 
-    require_once '../../backends/config.php';
-    require_once ROOT_PATH . '/backends/main.php';
+    require_once 'main.php';
     
-    // Get enrolled courses
-    $enrollments = [];
     $enrolled_courses = [];
+    $schedules = [];
+    $transactions = [];
+    $stats = [];
     
-    // Get available courses
-    
-    $available = [];
-    $available_courses = [];
-    
-    // Get student stats
-
-    $result = null;
-    $stats = null;
-    
-    $classes = null;
-    $upcoming_classes = [];
+    try {
+        // Get enrolled courses using centralized function
+        $enrolled_courses = getEnrolledCoursesForStudent($_SESSION['user']);
+        
+        // Get upcoming class schedules using centralized function
+        $schedules = getUpcomingClassSchedules($_SESSION['user']);
+        
+        // Get recent transactions using centralized function
+        $transactions = getRecentTransactions($_SESSION['user']);
+        
+        // Get student learning statistics using centralized function
+        $stats = getStudentLearningStats($_SESSION['user']);
+        
+    } catch (Exception $e) {
+        log_error("Dashboard error: " . $e->getMessage(), 2);
+    }
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TechTutor | Student Dashboard</title>
-    
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com" rel="preconnect">
-    <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    
-    <!-- Custom CSS -->
-    <link href="<?php echo BASE; ?>/assets/css/dashboard.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>/assets/css/techkid.css" rel="stylesheet">
-</head>
-<body>
+<?php include ROOT_PATH . '/components/head.php'; ?>
+<body data-user-role="<?php echo isset($_SESSION['role']) ? htmlspecialchars($_SESSION['role']) : ''; ?>">
     <?php include ROOT_PATH . '/components/header.php'; ?>
 
     <!-- Dashboard Content -->
@@ -48,10 +35,6 @@
         <div class="welcome-section">
             <h1>Keep it going, <?php echo explode(' ', $_SESSION['name'])[0]; ?>!</h1>
             <p class="role">TechKid</p>
-            <div class="progress-info">
-                <p class="points">You have <?php echo $stats['points']; ?> points</p>
-                <p class="next-rank">Earn <?php echo $stats['badges']; ?> more badges to reach Explorer rank</p>
-            </div>
         </div>
 
         <!-- Statistics Cards -->
@@ -72,25 +55,25 @@
                     </div>
                     <div class="stat-details">
                         <h3>Upcoming Classes</h3>
-                        <p class="stat-number"><?php echo count($upcoming_classes); ?></p>
+                        <p class="stat-number"><?php echo count($schedules); ?></p>
                     </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon">
-                        <i class="bi bi-trophy"></i>
+                        <i class="bi bi-clock-history"></i>
                     </div>
                     <div class="stat-details">
-                        <h3>Badges Earned</h3>
-                        <p class="stat-number"><?php echo $stats['badges']; ?></p>
+                        <h3>Hours Spent</h3>
+                        <p class="stat-number"><?php echo $stats['hours_spent']; ?></p>
                     </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon">
-                        <i class="bi bi-star"></i>
+                        <i class="bi bi-mortarboard"></i>
                     </div>
                     <div class="stat-details">
-                        <h3>Points</h3>
-                        <p class="stat-number"><?php echo $stats['points']; ?></p>
+                        <h3>Completed Classes</h3>
+                        <p class="stat-number"><?php echo $stats['completed_classes']; ?></p>
                     </div>
                 </div>
             </div>
@@ -99,120 +82,86 @@
         <!-- Course Sections -->
         <div class="row">
             <!-- Enrolled Courses -->
-            <div class="col-md-6 mb-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h5 class="card-title">My Courses</h5>
-                            <a href="courses.php" class="btn btn-sm btn-primary">View All</a>
-                        </div>
-                        <div class="course-list">
-                            <?php foreach ($enrolled_courses as $course): ?>
-                            <div class="course-item">
-                                <div class="course-icon">
-                                    <i class="bi bi-book"></i>
-                                </div>
-                                <div class="course-details">
-                                    <h6><?php echo $course['course_name']; ?></h6>
-                                    <p class="tutor">with <?php echo $course['tutor_name']; ?></p>
-                                    <div class="progress">
-                                        <div class="progress-bar" role="progressbar" style="width: <?php echo $course['progress']; ?>%" 
-                                             aria-valuenow="<?php echo $course['progress']; ?>" aria-valuemin="0" aria-valuemax="100">
-                                        </div>
+            <div class="col-md-12">
+                <h5 class="section-title mb-4">My Enrolled Courses</h5>
+                <div class="row">
+                    <?php if (empty($enrolled_courses)): ?>
+                    <div class="col-12">
+                        <p class="text-muted">No courses enrolled yet</p>
+                    </div>
+                    <?php else: ?>
+                        <?php foreach ($enrolled_courses as $course): ?>
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <img src="<?php echo $course['image']; ?>" alt="<?php echo $course['name']; ?>" class="img-fluid mb-3">
+                                    <h5 class="card-title"><?php echo $course['name']; ?></h5>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-muted"><?php echo $course['status']; ?></span>
+                                        <a href="<?php echo BASE; ?>pages/techkid/course.php?id=<?php echo $course['id']; ?>" class="btn btn-primary btn-sm">
+                                            Continue
+                                        </a>
                                     </div>
                                 </div>
-                                <button class="btn btn-sm btn-success" onclick="continueClass(<?php echo $course['id']; ?>)">
-                                    Continue
-                                </button>
                             </div>
-                            <?php endforeach; ?>
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Available Courses -->
-            <div class="col-md-6 mb-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h5 class="card-title">Available Courses</h5>
-                            <a href="browse-courses.php" class="btn btn-sm btn-primary">Browse All</a>
-                        </div>
-                        <div class="course-grid">
-                            <?php foreach ($available_courses as $course): ?>
-                            <div class="course-card">
-                                <div class="course-image">
-                                    <img src="<?php echo $course['image']; ?>" alt="<?php echo $course['name']; ?>">
-                                </div>
-                                <div class="course-info">
-                                    <h6><?php echo $course['name']; ?></h6>
-                                    <p><?php echo substr($course['description'], 0, 100); ?>...</p>
-                                    <button class="btn btn-sm btn-outline-primary" onclick="enrollCourse(<?php echo $course['id']; ?>)">
-                                        Enroll Now
-                                    </button>
-                                </div>
-                            </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
 
-        <!-- Schedule and Badges -->
-        <div class="row">
-            <!-- Upcoming Classes -->
+        <!-- Schedule and Transactions -->
+        <div class="row mt-4">
+            <!-- Class Schedule -->
             <div class="col-md-6 mb-4">
                 <div class="card h-100">
                     <div class="card-body">
                         <h5 class="card-title">Upcoming Classes</h5>
                         <div class="schedule-list">
-                            <?php foreach ($upcoming_classes as $class): ?>
-                            <div class="schedule-item">
-                                <div class="schedule-time">
-                                    <?php echo date('M d, Y', strtotime($class['date'])); ?> at 
-                                    <?php echo date('h:i A', strtotime($class['time'])); ?>
-                                </div>
-                                <div class="schedule-details">
-                                    <div class="course-name"><?php echo $class['course_name']; ?></div>
-                                    <div class="tutor-name">with <?php echo $class['tutor_name']; ?></div>
-                                </div>
-                                <button class="btn btn-sm btn-success" onclick="joinClass(<?php echo $class['id']; ?>)">
-                                    Join
-                                </button>
-                            </div>
-                            <?php endforeach; ?>
-                            <?php if (empty($upcoming_classes)): ?>
+                            <?php if (empty($schedules)): ?>
                             <p class="text-muted">No upcoming classes scheduled</p>
+                            <?php else: ?>
+                                <?php foreach ($schedules as $schedule): ?>
+                                <div class="schedule-item d-flex justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <div class="schedule-time"><?php echo $schedule['time']; ?></div>
+                                        <div class="schedule-status <?php echo $schedule['active'] ? 'text-success' : 'text-muted'; ?>">
+                                            <?php echo $schedule['status']; ?>
+                                        </div>
+                                    </div>
+                                    <button class="btn <?php echo $schedule['active'] ? 'btn-success' : 'btn-outline-primary'; ?> btn-sm">
+                                        <?php echo $schedule['active'] ? 'Join Now' : 'View Details'; ?>
+                                    </button>
+                                </div>
+                                <?php endforeach; ?>
                             <?php endif; ?>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Badges -->
+            <!-- Transactions -->
             <div class="col-md-6 mb-4">
                 <div class="card h-100">
                     <div class="card-body">
-                        <h5 class="card-title">My Badges</h5>
-                        <div class="badge-grid">
-                            <?php
-                            $badges = [
-                                ['name' => 'Quick Learner', 'icon' => 'trophy', 'earned' => true],
-                                ['name' => 'Problem Solver', 'icon' => 'puzzle', 'earned' => true],
-                                ['name' => 'Team Player', 'icon' => 'people', 'earned' => false],
-                                ['name' => 'Code Master', 'icon' => 'code-square', 'earned' => false],
-                            ];
-                            foreach ($badges as $badge):
-                            ?>
-                            <div class="badge-item <?php echo $badge['earned'] ? 'earned' : ''; ?>">
-                                <div class="badge-icon">
-                                    <i class="bi bi-<?php echo $badge['icon']; ?>"></i>
+                        <h5 class="card-title">Recent Transactions</h5>
+                        <div class="transaction-list">
+                            <?php if (empty($transactions)): ?>
+                            <p class="text-muted">No recent transactions</p>
+                            <?php else: ?>
+                                <?php foreach ($transactions as $transaction): ?>
+                                <div class="transaction-item mb-3">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <p class="mb-1"><?php echo $transaction['message']; ?></p>
+                                            <small class="text-muted"><?php echo $transaction['date']; ?></small>
+                                        </div>
+                                        <span class="badge bg-success"><?php echo $transaction['amount']; ?></span>
+                                    </div>
                                 </div>
-                                <div class="badge-name"><?php echo $badge['name']; ?></div>
-                            </div>
-                            <?php endforeach; ?>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -220,20 +169,6 @@
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function continueClass(courseId) {
-            window.location.href = `course.php?id=${courseId}`;
-        }
-
-        function enrollCourse(courseId) {
-            window.location.href = `enroll.php?id=${courseId}`;
-        }
-
-        function joinClass(classId) {
-            window.location.href = `join-class.php?id=${classId}`;
-        }
-    </script>
+    <?php include ROOT_PATH . '/components/footer.php'; ?>
 </body>
 </html>

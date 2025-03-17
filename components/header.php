@@ -47,6 +47,22 @@
         'subjects.php'
     ];
     $is_teaching_page = in_array($current_page, $teaching_pages);
+
+    $rolePrefix = '';
+    switch ($_SESSION['role']) {
+        case 'TECHKID':
+            $rolePrefix = 's';
+            break;
+        case 'TECHGURU':
+            $rolePrefix = 't';
+            break;
+        case 'ADMIN':
+            $rolePrefix = 'a';
+            break;
+        default:
+            $rolePrefix = '';
+            break;
+    }
 ?>
 <!-- Include header.css for styling -->
 <link rel="stylesheet" href="<?php echo CSS; ?>header.css">
@@ -77,26 +93,26 @@
             <!-- ADMIN DASHBOARD SELECTION -->
             <?php if ($_SESSION['role'] == 'ADMIN'): ?>
                 <!-- Admin Links -->
-                <a href="<?php echo BASE; ?>dashboard/users" class="nav-item <?php echo $current_page == 'view-users.php' ? 'active' : ''; ?>">
+                <a href="<?php echo BASE.'dashboard/'.$rolePrefix; ?>/users" class="nav-item <?php echo $current_page == 'view-users.php' ? 'active' : ''; ?>">
                     <i class="bi bi-people"></i>
                     <span>View All Users</span>
                 </a>
-                <a href="<?php echo BASE; ?>dashboard/classes" class="nav-item <?php echo $current_page == 'view-class.php' ? 'active' : ''; ?>">
+                <a href="<?php echo BASE.'dashboard/'.$rolePrefix; ?>/classes" class="nav-item <?php echo $current_page == 'view-class.php' ? 'active' : ''; ?>">
                     <i class="bi bi-book-fill"></i>
                     <span>View All Classes</span>
                 </a>
-                <a href="<?php echo BASE; ?>dashboard/courses" class="nav-item <?php echo $current_page == 'view-course.php' ? 'active' : ''; ?>">
+                <a href="<?php echo BASE.'dashboard/'.$rolePrefix; ?>/courses" class="nav-item <?php echo $current_page == 'view-course.php' ? 'active' : ''; ?>">
                     <i class="bi bi-journal-bookmark-fill"></i>
                     <span>Courses</span>
                 </a>
             <!-- END ADMIN DASHBOARD SELECTION -->
             <!-- TECHGURU DASHBOARD SELECTION -->
             <?php elseif ($_SESSION['role'] == 'TECHGURU'): ?>
-            <a href="<?php echo BASE; ?>dashboard/class" class="nav-item <?php echo $is_teaching_page ? 'active' : ''; ?>">
+            <a href="<?php echo BASE.'dashboard/'.$rolePrefix; ?>/class" class="nav-item <?php echo $is_teaching_page ? 'active' : ''; ?>">
                 <i class="bi bi-people"></i>
                 <span>Classes</span>
             </a>
-            <a href="<?php echo BASE; ?>class" class="nav-item <?php echo $current_page == 'certificates.php' ? 'active' : ''; ?>">
+            <a href="<?php echo BASE.'dashboard/'.$rolePrefix; ?>/certificates" class="nav-item <?php echo $current_page == 'certificates.php' ? 'active' : ''; ?>">
                 <i class="bi bi-award"></i>
                 <span>Certificates</span>
             </a>
@@ -104,31 +120,39 @@
             <!-- TECHKID DASHBOARD SELECTION -->
             <?php elseif ($_SESSION['role'] == 'TECHKID'): ?>
                 <!-- TechKid Links -->
-                <a href="<?php echo BASE; ?>dashboard/courses" class="nav-item <?php echo $current_page == 'courses.php' ? 'active' : ''; ?>">
-                    <i class="bi bi-book"></i>
-                    <span>My Courses</span>
+                <a href="<?php echo BASE.'dashboard/'.$rolePrefix; ?>/class" class="nav-item <?php echo $current_page == 'class.php' ? 'active' : ''; ?>">
+                    <i class="fas fa-users"></i>
+                    <span>My Class</span>
                 </a>
-                <a href="<?php echo BASE; ?>dashboard/tutors" class="nav-item <?php echo $current_page == 'tutors.php' ? 'active' : ''; ?>">
-                    <i class="bi bi-person-check"></i>
-                    <span>My Tutors</span>
+                <a href="<?php echo BASE.'dashboard/'.$rolePrefix; ?>/schedule" class="nav-item <?php echo $current_page == 'schedule.php' ? 'active' : ''; ?>">
+                    <i class="fa-solid fa-chalkboard-user"></i>
+                    <span>Schedule</span>
+                </a>
+                <a href="<?php echo BASE.'dashboard/'.$rolePrefix; ?>/files" class="nav-item <?php echo $current_page == 'files.php' ? 'active' : ''; ?>">
+                    <i class="fas fa-folder"></i>
+                    <span>Files</span>
+                </a>
+                <a href="<?php echo BASE.'dashboard/'.$rolePrefix; ?>/certificates" class="nav-item <?php echo $current_page == 'certificates.php' ? 'active' : ''; ?>">
+                    <i class="fa-solid fa-award"></i>
+                    <span>Certificates</span>
                 </a>
             <?php endif; ?>
             <!-- Common Bottom Links -->
-            <a href="<?php echo BASE; ?>dashboard/transactions" class="nav-item <?php echo $current_page == 'transactions.php' ? 'active' : ''; ?>">
+            <a href="<?php echo BASE.'dashboard/'.$rolePrefix.'/transactions'; ?>" class="nav-item <?php echo $current_page == 'transactions.php' ? 'active' : ''; ?>">
                 <i class="bi bi-cash"></i>
                 <span>Transactions</span>
             </a>
-            <a href="<?php echo BASE; ?>dashboard/notifications" class="nav-item <?php echo $current_page == 'notifications.php' ? 'active' : ''; ?>">
+            <a href="<?php echo BASE.'dashboard/'.$rolePrefix.'/notifications'; ?>" class="nav-item <?php echo $current_page == 'notifications.php' ? 'active' : ''; ?>">
                 <i class="bi bi-bell"></i>
                 <span>Notifications</span>
             </a>
             <!--  -->
             <?php else: ?>
-            <a href="<?php echo BASE; ?>profile" class="nav-item <?php echo $current_page == 'profile.php' ? 'active' : ''; ?>">
+            <a href="<?php echo BASE.'dashboard/'.$rolePrefix.'/profile'; ?>" class="nav-item <?php echo $current_page == 'profile.php' ? 'active' : ''; ?>">
                 <i class="bi bi-person"></i>
                 <span>Profile</span>
             </a>
-            <a href="<?php echo BASE; ?>settings" class="nav-item <?php echo $current_page == 'settings.php' ? 'active' : ''; ?>">
+            <a href="<?php echo BASE.'dashboard/'.$rolePrefix.'/settings'; ?>" class="nav-item <?php echo $current_page == 'settings.php' ? 'active' : ''; ?>">
                 <i class="bi bi-gear"></i>
                 <span>Settings</span>
             </a>
@@ -150,14 +174,14 @@
                             <span class="notification-badge"><?php echo $unread_count; ?></span>
                         <?php endif; ?>
                     </a>
-                    <div class="dropdown-menu notification-dropdown">
+                    <ul class="dropdown-menu dropdown-menu-end">
                         <div class="dropdown-header">Recent Notifications</div>
                         <div class="notification-list">
                             <?php if (empty($notifications)): ?>
-                                <div class="no-notifications">No notifications yet</div>
+                                <li><div class="no-notifications">No notifications yet</div></li>
                             <?php else: ?>
                                 <?php foreach ($notifications as $notification): ?>
-                                    <a href="<?php echo $notification['link']; ?>" class="notification-item <?php echo !$notification['is_read'] ? 'unread' : ''; ?>">
+                                    <li><a class="dropdown-item" href="<?php echo $notification['link']; ?>" class="notification-item <?php echo !$notification['is_read'] ? 'unread' : ''; ?>">
                                         <div class="notification-icon">
                                             <i class="bi <?php echo $notification['icon']; ?> <?php echo $notification['icon_color']; ?>"></i>
                                         </div>
@@ -166,12 +190,13 @@
                                             <div class="notification-time"><?php echo getTimeAgoNotif($notification['created_at']); ?></div>
                                         </div>
                                     </a>
+                                    </li>
                                 <?php endforeach; ?>
                             <?php endif; ?>
                         </div>
                         <div class="dropdown-divider"></div>
-                        <a href="<?php echo BASE; ?>dashboard/notifications" class="view-all">View All Notifications</a>
-                    </div>
+                        <li><a class="dropdown-item" href="<?php echo BASE.'dashboard/'.$rolePrefix; ?>/notifications" class="view-all">View All Notifications</a></li>
+                    </ul>
                 </div>
                 <div class="dropdown">
                     <div class="profile-toggle" data-bs-toggle="dropdown">
@@ -179,8 +204,8 @@
                         <i class="bi bi-chevron-down chevron-icon"></i>
                     </div>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="<?php echo BASE; ?>dashboard/profile">Profile</a></li>
-                        <li><a class="dropdown-item" href="<?php echo BASE; ?>dashboard/settings">Settings</a></li>
+                        <li><a class="dropdown-item" href="<?php echo BASE.'dashboard/'.$rolePrefix.'/profile'; ?>">Profile</a></li>
+                        <li><a class="dropdown-item" href="<?php echo BASE.'dashboard/'.$rolePrefix.'/settings'; ?>">Settings</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="<?php echo BASE; ?>user-logout">Logout</a></li>
                     </ul>

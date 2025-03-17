@@ -1,7 +1,5 @@
 <?php
 require_once 'main.php';
-require_once 'notifications_management.php';
-require_once 'class_management.php';
 
 /**
  * Get all courses with their subject and enrollment counts

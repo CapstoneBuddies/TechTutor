@@ -19,7 +19,7 @@
 
 	// Base URL configuration
 	if(strpos($_SERVER['HTTP_HOST'], 'localhost') !== false) {
-		define('BASE', '/capstone/');
+		define('BASE', '/capstone-1/');
 	} else {
 		define('BASE', '/');
 	}
@@ -76,15 +76,16 @@
 
 
 	/* IMPORTANT FUNCTIONS */
-	function log_error($message, $type = 'general') {
+	function log_error($message, $type = 1) {
 	    $logFiles = [
-	        'general' => LOG_PATH . 'error.log',
-	        'database' => LOG_PATH . 'database.log',
-	        'mail' => LOG_PATH . 'mail.log',
-	        'security' => LOG_PATH . 'security.log'
+	        1 => LOG_PATH . 'error.log',
+	        2 => LOG_PATH . 'database.log',
+	        3 => LOG_PATH . 'mail.log',
+	        3 => LOG_PATH . 'security.log',
+	        4 => LOG_PATH . 'analytics.log'
 	    ];
 
-	    $logFile = $logFiles[$type] ?? $logFiles['general']; // Default to general if type is invalid
+	    $logFile = $logFiles[$type] ?? $logFiles[1]; // Default to general if type is invalid
 	    $ip = $_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN'; // Get user IP
 	    $date = date('Y-m-d H:i:s');
 	    $logEntry = "({$date})::{$ip}::{$message}\n";

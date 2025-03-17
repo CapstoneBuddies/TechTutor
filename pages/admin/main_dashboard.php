@@ -1,5 +1,5 @@
 <?php 
-    require_once '../../backends/main.php';
+    require_once 'main.php';
     
     // Get current page from URL parameter, default to 1
     $techkids_page = isset($_GET['tkpage']) ? (int)$_GET['tkpage'] : 1;

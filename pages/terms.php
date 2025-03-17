@@ -1,53 +1,11 @@
 <?php 
-    require_once '../backends/config.php';
     require_once '../backends/main.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TechTutor | Terms and Conditions</title>
+<?php include ROOT_PATH . '/components/head.php'; ?>
 
-    <!-- Favicons -->
-    <link href="<?php echo BASE; ?>assets/img/stand_alone_logo.png" rel="icon">
-    <link href="<?php echo BASE; ?>assets/img/apple-touch-icon.png" rel="apple-touch-icon">
-
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com" rel="preconnect">
-    <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
-
-    <!-- Vendor CSS Files -->
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/css/main.css" rel="stylesheet">
-
-    <style>
-        .terms-container {
-            max-width: 800px;
-            margin: 80px auto;
-            padding: 40px;
-            background: #fff;
-            border-radius: 15px;
-            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.1);
-        }
-        .terms-header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-        .terms-content h3 {
-            color: var(--heading-color);
-            margin-top: 30px;
-        }
-        .terms-content p {
-            margin-bottom: 20px;
-            line-height: 1.6;
-        }
-    </style>
-</head>
-
-<body>
+<body data-user-role="<?php echo isset($_SESSION['role']) ? htmlspecialchars($_SESSION['role']) : ''; ?>">
     <div class="terms-container">
         <div class="terms-header">
             <h1>Terms and Conditions</h1>
@@ -68,21 +26,53 @@
             <h3>4. Privacy & Data</h3>
             <p>We respect your privacy and protect your personal information. Your contact information may be used for platform-related communications and connecting with tutors/students.</p>
 
-            <h3>5. Terms of Use</h3>
+            <h3>5. File Storage</h3>
+            <p>TechTutor uses Google Drive for secure file storage. By using our platform, you agree to:
+                <ul>
+                    <li>Respect storage quotas assigned to your account</li>
+                    <li>Only upload files related to learning activities</li>
+                    <li>Not share access credentials with others</li>
+                    <li>Understand that files may be monitored for compliance</li>
+                </ul>
+            </p>
+
+            <h3>6. Online Sessions</h3>
+            <p>Our virtual classroom sessions are powered by BigBlueButton. When participating in online sessions:
+                <ul>
+                    <li>Maintain professional conduct during all sessions</li>
+                    <li>Do not record sessions without explicit permission</li>
+                    <li>Ensure stable internet connection for quality experience</li>
+                    <li>Join sessions on time and follow session guidelines</li>
+                    <li>Report technical issues promptly to support</li>
+                </ul>
+            </p>
+
+            <h3>7. Terms of Use</h3>
             <p>By using our platform, you agree to:
                 <ul>
                     <li>Provide accurate information during registration</li>
                     <li>Maintain professional conduct during sessions</li>
                     <li>Respect intellectual property rights</li>
                     <li>Follow our community guidelines</li>
+                    <li>Not misuse platform resources or services</li>
                 </ul>
             </p>
 
-            <p class="text-muted mt-5"><em>Note: These terms are currently in development and may be updated. Please check back regularly for the final version.</em></p>
+            <h3>8. Service Availability</h3>
+            <p>While we strive for 100% uptime:
+                <ul>
+                    <li>Online sessions may be affected by technical issues</li>
+                    <li>File storage service may undergo maintenance</li>
+                    <li>Platform features may be updated or modified</li>
+                    <li>Service interruptions will be communicated when possible</li>
+                </ul>
+            </p>
+
+            <p class="text-muted mt-5">By continuing to use TechTutor, you acknowledge that you have read and agree to these terms and conditions. We reserve the right to update these terms as needed, with notifications of significant changes sent to all users.</p>
         </div>
     </div>
 
     <!-- Vendor JS Files -->
-    <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <?php include ROOT_PATH . '/components/footer.php'; ?>
 </body>
 </html>
