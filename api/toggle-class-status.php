@@ -94,7 +94,7 @@ try {
         $class_info['techguru_id'],
         'TECHGURU',
         $message,
-        "/dashboard/class/details?id={$class_id}",
+        "/dashboard/t/class/details?id={$class_id}",
         $class_id,
         $icon,
         $icon_color
@@ -105,7 +105,7 @@ try {
     // Log the action
     $admin_id = $_SESSION['user'];
     $log_message = "Admin (ID: {$admin_id}) changed class ID: {$class_id} status to {$status}";
-    log_error($log_message, 'general');
+    log_error($log_message, 'security');
 
     $conn->commit();
     echo json_encode(['success' => true]);

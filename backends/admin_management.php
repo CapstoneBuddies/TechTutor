@@ -326,3 +326,80 @@ function addSubject($courseId, $subjectName, $subjectDesc) {
 function editSubject() {
     return ['success' => false, 'message' => 'test'];
 }
+/** 
+ * Retrieving user profile details
+ */
+function getUserDetails($user_id) {
+    global $conn;
+    try {
+        $stmt = $conn->prepare("SELECT * FROM users WHERE uid = ?");
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute(); 
+
+        return $stmt->get_result()->fetch_assoc();
+    } catch (mysqli_sql_exception $m) {
+        log_error($m->getMessage(), 'database');
+        return [];
+    } catch (Exception $e) {
+        log_error($e->getMessage());
+        return [];
+    }
+}
+function updateUserRole($userId, $newRole) {
+    global $conn;
+
+    try {
+        // Update role in the database
+        $stmt = $conn->prepare("UPDATE users SET role = ? WHERE uid = ?");
+        $result = $stmt->execute([$newRole, $userId]);
+
+        if ($result) {
+            // Fetch user details for email notification & notification
+            $stmt = $conn->prepare("SELECT email, first_name, last_name FROM users WHERE uid = ?");
+            $stmt->execute([$userId]);
+            $user = $stmt->get_result()->fetch_assoc();
+
+            if ($user) {
+                // Email Notification
+                $subject = "Your Account Role Has Been Updated";
+
+                $body = "
+                    <div style='font-family: Arial, sans-serif; background-color: #f8f9fa; padding: 20px;'>
+                        <div style='max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0px 0px 10px rgba(0,0,0,0.1);'>
+                            <h2 style='color: #0d6efd; text-align: center;'>Role Update Notification</h2>
+                            <p>Dear <strong>{$user['first_name']} {$user['last_name']}</strong>,</p>
+                            <p>We would like to inform you that your role on <strong>TechTutor</strong> has been updated.</p>
+                            <p><strong>New Role:</strong> <span style='color: #198754;'>{$newRole}</span></p>
+                            <p>If you have any questions or concerns, please contact support.</p>
+                            <hr>
+                            <p style='font-size: 12px; text-align: center; color: #6c757d;'>This is an automated email, please do not reply.</p>
+                        </div>
+                    </div>
+                ";
+
+                $mailer = getMailerInstance();
+                $mailer->addAddress($user['email']);
+                $mailer->Subject = $subject;
+                $mailer->Body = $body;
+
+                // Try sending the email
+                if (!$mailer->send()) {
+                    throw new Exception("Failed to send email to {$user['email']}");
+                }
+
+                // Save notification to the database
+                $message = "Your role has been updated to <strong>{$newRole}</strong>.";
+                $link = BASE . "profile"; // Redirect to the user's profile
+                sendNotification($userId, $newRole, $message, $link, null, 'bi-person-badge-fill', 'text-warning');
+            }
+        }
+
+        return $result;
+    } catch (Exception $e) {
+        // Log the error
+        log_error($e->getMessage(), 'mail');
+        return false;
+    }
+}
+
+?>

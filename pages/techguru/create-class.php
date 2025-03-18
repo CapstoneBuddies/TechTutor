@@ -83,72 +83,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = $result['error'];
     }
 }
+
+$title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
+
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TechTutor | Create Class - <?php echo htmlspecialchars($subjectDetails['subject_name']); ?></title>
-    
-    <!-- Favicons -->
-    <link href="<?php echo IMG; ?>stand_alone_logo.png" rel="icon">
-    
-    <!-- Vendor CSS -->
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/clockpicker/dist/bootstrap-clockpicker.min.css" rel="stylesheet">
-    
-    <!-- Main CSS -->
-    <link href="<?php echo CSS; ?>techguru-common.css" rel="stylesheet">
-    
-    <style>
-        .clockpicker-popover {
-            z-index: 9999;
-        }
-        .input-group-addon {
-            cursor: pointer;
-            border: 1px solid #ced4da;
-            border-left: none;
-            background: #fff;
-            padding: 0.375rem 0.75rem;
-            border-top-right-radius: 0.25rem;
-            border-bottom-right-radius: 0.25rem;
-        }
-        /* Fix clockpicker placement */
-        .popover {
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1060;
-            display: none;
-            max-width: none; /* Override Bootstrap's max-width */
-            font-style: normal;
-            font-weight: 400;
-            line-height: 1.5;
-            text-align: left;
-            text-decoration: none;
-            text-shadow: none;
-            text-transform: none;
-            letter-spacing: normal;
-            word-break: normal;
-            word-spacing: normal;
-            white-space: normal;
-            line-break: auto;
-            font-size: 0.875rem;
-            background-color: #fff;
-            background-clip: padding-box;
-            border: 1px solid rgba(0, 0, 0, 0.2);
-            border-radius: 0.3rem;
-        }
-    </style>
-</head>
-
-<body>
-    <?php include ROOT_PATH . '/components/header.php'; ?>
-
+    <?php include ROOT_PATH . '/components/head.php'; ?>
+    <body data-base="<?php echo BASE; ?>">
+        <?php include ROOT_PATH . '/components/header.php'; ?>
     <main class="container py-4">
         <!-- Welcome Section -->
         <div class="row">
@@ -335,11 +279,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </div>
     </main>
+    </main> 
+    </div> 
 
-    <!-- Scripts -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="<?php echo BASE; ?>assets/vendor/clockpicker/dist/bootstrap-clockpicker.min.js"></script>
+    <?php include ROOT_PATH . '/components/footer.php'; ?>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Set default dates to today and a month from today

@@ -27,7 +27,7 @@ if (!in_array($currentPage, $noFooterPages)): ?>
                 <ul class="list-unstyled">
                     <li><a href="<?php echo BASE; ?>terms#terms-of-use">Terms of Service</a></li>
                     <li><a href="<?php echo BASE; ?>terms#data-protection">Privacy Policy</a></li>
-                    <li><a href="<?php echo BASE; ?>contact">Contact Us</a></li>
+                    <li><a href="<?php echo BASE; ?>#contact">Contact Us</a></li>
                 </ul>
             </div>
 
@@ -53,6 +53,12 @@ if (!in_array($currentPage, $noFooterPages)): ?>
 </footer>
 <?php endif; ?>
 
+<!-- Vendor JavaScript Section -->
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="<?php echo BASE; ?>assets/vendor/aos/aos.js"></script>
+<script src="<?php echo BASE; ?>assets/vendor/glightbox/js/glightbox.min.js"></script>
+<script src="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.js"></script>
 <!-- Footer JavaScript -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -69,7 +75,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-
 <?php
 // Load role-based JavaScript if available
 if (isset($_SESSION['role'])) {
@@ -78,10 +83,5 @@ if (isset($_SESSION['role'])) {
     if (file_exists($js_file)) {
         echo "<script src='" . BASE . "assets/js/{$role}.js' defer></script>";
     }
-}
-
-// Log page visit for analytics
-if (function_exists('log_error')) {
-    log_error("Page visited: " . $_SERVER['REQUEST_URI'], 4);
 }
 ?>

@@ -1,6 +1,6 @@
-ErrorDocument 404 /capstone-1/pages/error/404.php 
-ErrorDocument 403 /capstone-1/pages/error/403.php
-ErrorDocument 500 /capstone-1/pages/error/500.php
+ErrorDocument 404 /pages/error/404.php 
+ErrorDocument 403 /pages/error/403.php
+ErrorDocument 500 /pages/error/500.php
 
 RewriteEngine On
 
@@ -11,13 +11,14 @@ RewriteRule ^(.+)/$ %1 [R=301,L]
 # ----------------------------------
 # 🌐 General Page Routing
 # ----------------------------------
+RewriteRule ^sent$ backends/contact_handler.php [L]
 RewriteRule ^home$ backends/route.php [L]
 RewriteRule ^login$ pages/login.php [L]
 RewriteRule ^register$ pages/signup.php [L]
 RewriteRule ^verify$ pages/verify.php [L]
 RewriteRule ^forgot$ pages/forgot-password.php [L]
 RewriteRule ^terms$ pages/terms.php [L]
-RewriteRule ^reset-password$ pages/reset-password.php [L,QSA]
+RewriteRule ^reset$ pages/reset-password.php [L,QSA]
 RewriteRule ^dashboard/[sta]/profile$ pages/profile.php [L]
 RewriteRule ^dashboard/[sta]/settings$ pages/settings.php [L]
 RewriteRule ^dashboard/[sta]/transactions$ pages/transactions.php [L]
@@ -35,13 +36,6 @@ RewriteRule ^resend-verification-code$ backends/route.php [L]
 RewriteRule ^(.*)/?user-profile-update$ backends/route.php [L,QSA]
 RewriteRule ^(.*)/?user-deactivate$ backends/route.php [L]
 RewriteRule ^(.*)/?user-change-password$ backends/route.php [L]
-
-# ----------------------------------
-# 🛑 Admin-Specific Actions
-# ----------------------------------
-RewriteRule ^a/delete-user$ backends/route.php [L]
-RewriteRule ^a/restrict-user$ backends/route.php [L]
-RewriteRule ^a/activate-user$ backends/route.php [L]
 
 # ----------------------------------
 # 💰 Payment Routes
@@ -90,14 +84,20 @@ RewriteRule ^dashboard/t/class/edit$ pages/techguru/class-edit.php [L,QSA]
 # ----------------------------------
 # 🔧 Admin Routes
 # ----------------------------------
+RewriteRule ^a/delete-user$ backends/route.php [L]
+RewriteRule ^a/restrict-user$ backends/route.php [L]
+RewriteRule ^a/activate-user$ backends/route.php [L]
+RewriteRule ^update-role$ backends/admin/update_user_role.php [L]
 RewriteRule ^dashboard/a/users$ pages/admin/view-users.php [L]
+RewriteRule ^dashboard/a/users/details$ pages/admin/user-details.php [L,QSA]
 RewriteRule ^dashboard/a/courses$ pages/admin/view-course.php [L]
 RewriteRule ^dashboard/a/classes$ pages/admin/view-class.php [L]
-RewriteRule ^dashboard/a/class-details$ pages/admin/class-details.php [L,QSA]
+RewriteRule ^dashboard/a/classes/details$ pages/admin/class-details.php [L,QSA]
 
 # ----------------------------------
-# 🛠 Admin AJAX Actions
+# 🛠 AJAX Actions
 # ----------------------------------
+RewriteRule ^logs$ backends/logs.php [L]
 RewriteRule ^get-users$ backends/admin/get_users.php [L]
 RewriteRule ^toggle-user-status$ backends/admin/toggle_user_status.php [L]
 RewriteRule ^delete-users$ backends/admin/delete_user.php [L]

@@ -548,8 +548,7 @@ $title = 'Course Management';
                     })
                         .then((response) => response.json())
                         .then((data) => {
-                            toggleStatusModal.hide(); // Hide Modal
-
+                            toggleStatusModal.hide();
                             if (data.success) {
                                 showToast("success", data.message);
                                 setTimeout(() => location.reload(), 1000); // Refresh after success

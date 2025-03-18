@@ -12,25 +12,23 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 try {
     $name = $_POST['name'] ?? '';
     $email = $_POST['email'] ?? '';
-    $reply_email = $_POST['reply_email'] ?? '';
     $message = $_POST['message'] ?? '';
 
-    if (empty($name) || empty($email) || empty($reply_email) || empty($message)) {
+    if (empty($name) || empty($email) || empty($message)) {
         throw new Exception('All fields are required');
     }
 
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL) || !filter_var($reply_email, FILTER_VALIDATE_EMAIL)) {
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         throw new Exception('Invalid email format');
     }
 
-    $mail = getSecondaryMailInstance();
-    $mail->addAddress(SMTP_USER_2); // Send to platform admin
+    $mail = getMailerInstance();
+    $mail->addAddress('admin@techtutor.cfd'); // Send to platform admin
     $mail->Subject = "Contact Form Message from $name";
     $mail->Body = "
         <h3>New Contact Form Submission</h3>
         <p><strong>Name:</strong> $name</p>
         <p><strong>Email:</strong> $email</p>
-        <p><strong>Reply To:</strong> $reply_email</p>
         <p><strong>Message:</strong><br>$message</p>
     ";
 

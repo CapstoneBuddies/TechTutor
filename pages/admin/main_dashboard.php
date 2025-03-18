@@ -1,4 +1,4 @@
-<?php 
+<?php  
     require_once 'main.php';
     require_once 'user_management.php';
     
@@ -20,144 +20,14 @@
     // Calculate total pages
     $techkids_total_pages = ceil($techkidCount / $items_per_page);
     $techgurus_total_pages = ceil($techguruCount / $items_per_page);
+    $title = 'Admin Dashboard';
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title>TechTutor | Admin Dashboard</title>
-    <meta name="description" content="">
-    <meta name="keywords" content="">
-
-    <!-- Favicons -->
-    <link href="<?php echo IMG; ?>stand_alone_logo.png" rel="icon">
-    <link href="<?php echo IMG; ?>apple-touch-icon.png" rel="apple-touch-icon">
-
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com" rel="preconnect">
-    <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700;900&family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-
-    <!-- Vendor CSS Files -->
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/aos/aos.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/glightbox/css/glightbox.min.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
-
-    <!-- Main CSS Files -->
-    <link href="<?php echo CSS; ?>users.css" rel="stylesheet">
-    <link href="<?php echo CSS; ?>header.css" rel="stylesheet">
-    <style>
-        /* Responsive Styles */
-        @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-100%);
-                position: fixed;
-                z-index: 1000;
-                transition: transform 0.3s ease-in-out;
-            }
-            
-            .sidebar.active {
-                transform: translateX(0);
-            }
-            
-            .main-content {
-                margin-left: 0;
-                width: 100%;
-            }
-            
-            .toggle-sidebar {
-                display: block !important;
-            }
-            
-            .dashboard-cards {
-                grid-template-columns: 1fr;
-            }
-            
-            .table-responsive {
-                overflow-x: auto;
-            }
-        }
-
-        .toggle-sidebar {
-            display: none;
-            position: fixed;
-            top: 1rem;
-            left: 1rem;
-            z-index: 1001;
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            color: #333;
-        }
-
-        .table-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-
-        .view-all-btn {
-            padding: 0.5rem 1rem;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: background-color 0.3s;
-        }
-
-        .view-all-btn:hover {
-            background-color: #45a049;
-            color: white;
-        }
-
-        .dashboard-section {
-            background: white;
-            border-radius: 10px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .section-title {
-            color: #333;
-            font-size: 1.25rem;
-            margin-bottom: 1rem;
-            font-weight: 600;
-        }
-
-        .table-container {
-            margin-top: 1rem;
-        }
-
-        .status-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-
-        .status-active {
-            background-color: #e8f5e9;
-            color: #2e7d32;
-        }
-
-        .status-inactive {
-            background-color: #ffebee;
-            color: #c62828;
-        }
-    </style>
-</head>
-
-<body>
-    <?php include ROOT_PATH . '/components/header.php'; ?>
+    <?php include ROOT_PATH . '/components/head.php'; ?>
+    <link rel="stylesheet" href="<?php echo CSS; ?>dashboard.css">
+    <body data-base="<?php echo BASE; ?>">
+        <?php include ROOT_PATH . '/components/header.php'; ?>
 
     <div class="dashboard-content">
         <div class="container-fluid">
@@ -326,11 +196,7 @@
     </div>
 
     </main>
-</div>
-    <!-- JavaScript Section -->
-    <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="<?php echo BASE; ?>assets/vendor/aos/aos.js"></script>
-    <script src="<?php echo BASE; ?>assets/vendor/glightbox/js/glightbox.min.js"></script>
-    <script src="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.js"></script>
+    </div>
+    <?php include ROOT_PATH . '/components/footer.php'; ?>
 </body>
 </html>

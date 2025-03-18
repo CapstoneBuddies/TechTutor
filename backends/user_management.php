@@ -593,5 +593,4 @@ function updateProfile() {
         $stmt->close();
         return $response;
     }
-
 ?>

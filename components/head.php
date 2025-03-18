@@ -4,42 +4,41 @@
  * Includes all common meta tags, CSS, and JavaScript dependencies
  */
 
-// Include required files
-require_once ROOT_PATH . '/backends/db.php';
-
 // Get the current page name for dynamic title
 $current_page = basename($_SERVER['PHP_SELF'], '.php');
 
-if(!isset($title)) {
-    $page_title = ucwords(str_replace('_', ' ', $current_page));
-    $page_title = ucwords(str_replace('-', ' ', $page_title));
+if (!isset($title) || empty($title)) {
+    $page_title = ucwords(str_replace(['_', '-'], ' ', $current_page));
+} else {
+    $page_title = ucwords(str_replace(['_', '-'], ' ', $title));
 }
-else {
-    $page_title = $title;
-}
-
 
 // Default title fallback
 if ($current_page === 'index' || $current_page === 'default') {
     $page_title = 'Home';
 }
 
-// Log page visit for analytics
-log_error("Page visited: {$current_page} access", 4);
+// Log page visit if function exists
+if (function_exists('log_error')) {
+    $msg = "USER: ".$_SESSION['user']." Page visited: {$current_page} Level: ".($_SESSION['role'] != '' ? $_SESSION['role'] : 'INVALID');
+    log_error($msg, 5);
+} else {
+    error_log("Log function missing for page: {$current_page}");
+}
 ?>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TechTutor | <?php echo $page_title; ?></title>
-    
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com" rel="preconnect">
-    <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
- 
+
     <!-- Favicons -->
     <link href="<?php echo IMG; ?>stand_alone_logo.png" rel="icon">
     <link href="<?php echo IMG; ?>apple-touch-icon.png" rel="apple-touch-icon">
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect">
+    <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700;900&family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <!-- Vendor CSS Files -->
     <link href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
@@ -47,95 +46,51 @@ log_error("Page visited: {$current_page} access", 4);
     <link href="<?php echo BASE; ?>assets/vendor/aos/aos.css" rel="stylesheet">
     <link href="<?php echo BASE; ?>assets/vendor/glightbox/css/glightbox.min.css" rel="stylesheet">
     <link href="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
-
-    <!-- FONT AWESOME -->
-    <link rel="stylesheet" href="<?php echo BASE; ?>assets/vendor/fontawesome/css/all.min.css">
+    <link href="<?php echo BASE; ?>assets/vendor/fontawesome/css/all.min.css" rel="stylesheet">
 
     <!-- Base Custom CSS -->
     <link href="<?php echo CSS; ?>users.css" rel="stylesheet">
-        
-    <!-- Include header.css for styling -->
     <link rel="stylesheet" href="<?php echo CSS; ?>header.css">
-    <!-- Include responsive.css for mobile responsiveness -->
     <link rel="stylesheet" href="<?php echo CSS; ?>responsive.css">
-    
-    <!-- header -->
-    <script src="<?php echo JS; ?>header.js"></script>
-
 
     <?php
-    // Role-specific base CSS
+    // Role-specific CSS
     if (isset($_SESSION['role'])) {
         $role = strtolower($_SESSION['role']);
-        
-        // Load role-specific common CSS first
-        $role_common_css = ROOT_PATH . "/assets/css/{$role}-common.css";
-        if (file_exists($role_common_css)) {
-            echo "<link href='" . BASE . "assets/css/{$role}-common.css' rel='stylesheet'>";
+        $role_css_path = $_SERVER['DOCUMENT_ROOT']. BASE . "/assets/css/{$role}-common.css";
+        if (file_exists($role_css_path)) {
+            echo "<link rel='stylesheet' href='" . CSS . "{$role}-common.css'>";
         }
-        
-        // Then load role-specific CSS
-        $role_css = ROOT_PATH . "/assets/css/{$role}.css";
-        if (file_exists($role_css)) {
-            echo "<link href='" . BASE . "assets/css/{$role}.css' rel='stylesheet'>";
-        }
+        log_error($role_css_path);
     }
 
-    // Load dashboard CSS for dashboard pages
+    // Common CSS per role
     if (strpos($current_page, 'dashboard') !== false) {
-        // First load base dashboard styles
         echo "<link href='" . CSS . "dashboard.css' rel='stylesheet'>";
-        
-        // Then load role-specific dashboard styles if they exist
-        if (isset($_SESSION['role'])) {
-            $role = strtolower($_SESSION['role']);
-            $role_dashboard_css = ROOT_PATH . "/assets/css/{$role}-dashboard.css";
-            if (file_exists($role_dashboard_css)) {
-                echo "<link href='" . BASE . "assets/css/{$role}-dashboard.css' rel='stylesheet'>";
-            }
-        }
     }
 
-    // Finally load page-specific CSS (highest priority)
-    $page_css = ROOT_PATH . "/assets/css/{$current_page}.css";
-    if (file_exists($page_css)) {
+    // Page-specific CSS
+    $page_css_path = $_SERVER['DOCUMENT_ROOT'] .BASE. "assets/css/{$current_page}.css";
+    if (file_exists($page_css_path)) {
         echo "<link href='" . CSS . "{$current_page}.css' rel='stylesheet'>";
     }
     ?>
-    
+
     <!-- Common JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
-    <!-- <script src="<?php echo BASE; ?>assets/js/common.js" defer></script> -->
-    
+
     <?php
     // Role-specific JavaScript
     if (isset($_SESSION['role'])) {
-        $role = strtolower($_SESSION['role']);
-        
-        // Load role-specific common JS first
-        $role_common_js = ROOT_PATH . "/assets/js/{$role}-common.js";
-        if (file_exists($role_common_js)) {
-            echo "<script src='" . BASE . "assets/js/{$role}-common.js' defer></script>";
-        }
-        
-        // Then load role-specific JS
-        $role_js = ROOT_PATH . "/assets/js/{$role}.js";
-        if (file_exists($role_js)) {
+        $role_js_path = $_SERVER['DOCUMENT_ROOT'] . "/assets/js/{$role}.js";
+        if (file_exists($role_js_path)) {
             echo "<script src='" . BASE . "assets/js/{$role}.js' defer></script>";
         }
-        
-        // Finally load role-specific dashboard JS if on dashboard
-        if (strpos($current_page, 'dashboard') !== false) {
-            $role_dashboard_js = ROOT_PATH . "/assets/js/{$role}-dashboard.js";
-            if (file_exists($role_dashboard_js)) {
-                echo "<script src='" . BASE . "assets/js/{$role}-dashboard.js' defer></script>";
-            }
-        }
     }
-    
-    // Page-specific JavaScript (highest priority)
-    $page_js = ROOT_PATH . "/assets/js/{$current_page}.js";
-    if (file_exists($page_js)) {
+
+    // Page-specific JavaScript
+    $page_js_path = $_SERVER['DOCUMENT_ROOT'] . "/assets/js/{$current_page}.js";
+    if (file_exists($page_js_path)) {
         echo "<script src='" . BASE . "assets/js/{$current_page}.js' defer></script>";
     }
     ?>

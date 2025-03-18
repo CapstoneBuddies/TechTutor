@@ -23,30 +23,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['class_id'])) {
 // Get tutor's classes and stats
 $classes = getTechGuruClasses($_SESSION['user']);
 $stats = getClassStats($_SESSION['user']);
+$title = 'My Classes';
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TechTutor | My Classes</title>
-    
-    <!-- Favicons -->
-    <link href="<?php echo IMG; ?>stand_alone_logo.png" rel="icon">
-    
-    <!-- Vendor CSS -->
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Main CSS -->
-    <link href="<?php echo CSS; ?>users.css" rel="stylesheet">
-    <link href="<?php echo CSS; ?>techguru-common.css" rel="stylesheet">
-</head>
-
-<body>
-    <?php include ROOT_PATH . '/components/header.php'; ?>
+    <?php include ROOT_PATH . '/components/head.php'; ?>
+    <body data-base="<?php echo BASE; ?>">
+        <?php include ROOT_PATH . '/components/header.php'; ?>
 
     <main class="container py-4">
         <!-- Welcome Section -->
@@ -244,6 +227,8 @@ $stats = getClassStats($_SESSION['user']);
         </div>
         <?php endif; ?>
     </main>
+    </main> 
+    </div> 
 
     <!-- Delete Confirmation Modal -->
     <div class="modal fade" id="deleteModal" tabindex="-1">
@@ -267,8 +252,7 @@ $stats = getClassStats($_SESSION['user']);
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <?php include ROOT_PATH . '/components/footer.php'; ?>
     <script>
         function confirmDelete(classId) {
             document.getElementById('deleteClassId').value = classId;

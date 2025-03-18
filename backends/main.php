@@ -5,6 +5,10 @@
 	use PHPMailer\PHPMailer\PHPMailer;
 	use PHPMailer\PHPMailer\Exception;
 
+	if(isset($_SESSION['redirect'])) {
+		unset($_SESSION['redirect']);
+	}
+
 	$request_uri =  trim($_SERVER['REQUEST_URI'], "/");
 
 	$link = basename($request_uri);

@@ -64,11 +64,6 @@
             break;
     }
 ?>
-<!-- Include header.css for styling -->
-<link rel="stylesheet" href="<?php echo CSS; ?>header.css">
-<!-- Include responsive.css for mobile responsiveness -->
-<link rel="stylesheet" href="<?php echo CSS; ?>responsive.css">
-
 <div class="dashboard-container">
     <!-- Sidebar -->
     <nav class="sidebar collapsed">
@@ -112,7 +107,7 @@
                 <i class="bi bi-people"></i>
                 <span>Classes</span>
             </a>
-            <a href="<?php echo BASE.$role; ?>class" class="nav-item <?php echo $current_page == 'certificates.php' ? 'active' : ''; ?>">
+            <a href="<?php echo BASE.$role; ?>certificates" class="nav-item <?php echo $current_page == 'certificates.php' ? 'active' : ''; ?>">
                 <i class="bi bi-award"></i>
                 <span>Certificates</span>
             </a>
@@ -212,166 +207,92 @@
             </div>
         </div>
 
-<!-- Include header.js for sidebar functionality -->
-<script>
-    const BASE = '<?php echo BASE; ?>';
-    
-    document.addEventListener('DOMContentLoaded', function() {
-        try {
-            // Handle sidebar toggle
-            const sidebarToggle = document.getElementById('sidebarToggle');
-            const sidebar = document.querySelector('.sidebar');
-            const mainContent = document.querySelector('.main-content');
-            
-            if (!sidebarToggle || !sidebar || !mainContent) {
-                throw new Error('Required DOM elements not found for sidebar functionality');
+<script>    
+    document.addEventListener("DOMContentLoaded", function () {
+    const BASE = document.body.getAttribute("data-base") || "/";
+
+    // Sidebar Toggle
+    const sidebarToggle = document.getElementById("sidebarToggle");
+    const sidebar = document.querySelector(".sidebar");
+    const mainContent = document.querySelector(".main-content");
+
+    if (sidebarToggle && sidebar && mainContent) {
+        const overlay = document.createElement("div");
+        overlay.className = "sidebar-overlay";
+        document.body.appendChild(overlay);
+
+        sidebarToggle.addEventListener("click", function (e) {
+            e.preventDefault();
+            if (window.innerWidth <= 991) {
+                sidebar.classList.toggle("active");
+                overlay.classList.toggle("active");
+            } else {
+                sidebar.classList.toggle("collapsed");
+                mainContent.classList.toggle("expanded");
             }
-            
-            // Create overlay for mobile
-            const overlay = document.createElement('div');
-            overlay.className = 'sidebar-overlay';
-            document.body.appendChild(overlay);
-            
-            // Toggle sidebar
-            sidebarToggle.addEventListener('click', function(e) {
-                try {
-                    e.preventDefault();
-                    if (window.innerWidth <= 991) {
-                        // Mobile behavior
-                        sidebar.classList.toggle('active');
-                        overlay.classList.toggle('active');
-                    } else {
-                        // Desktop behavior
-                        sidebar.classList.toggle('collapsed');
-                        mainContent.classList.toggle('expanded');
-                    }
-                } catch (error) {
-                    console.error('Error toggling sidebar:', error);
-                    fetch(BASE + 'log-error.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            error: error.message,
-                            component: 'header',
-                            action: 'toggle_sidebar'
-                        })
-                    }).catch(err => console.error('Error logging to server:', err));
-                }
-            });
-            
-            // Close sidebar when clicking overlay (mobile only)
-            overlay.addEventListener('click', function() {
-                try {
-                    sidebar.classList.remove('active');
-                    overlay.classList.remove('active');
-                } catch (error) {
-                    console.error('Error closing sidebar:', error);
-                    fetch(BASE + 'log-error.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            error: error.message,
-                            component: 'header',
-                            action: 'close_sidebar'
-                        })
-                    }).catch(err => console.error('Error logging to server:', err));
-                }
-            });
-            
-            // Handle window resize
-            let resizeTimeout;
-            window.addEventListener('resize', function() {
-                try {
-                    // Debounce resize event
-                    clearTimeout(resizeTimeout);
-                    resizeTimeout = setTimeout(() => {
-                        if (window.innerWidth > 991) {
-                            sidebar.classList.remove('active');
-                            overlay.classList.remove('active');
-                        }
-                    }, 250);
-                } catch (error) {
-                    console.error('Error handling resize:', error);
-                    fetch(BASE + 'log-error.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            error: error.message,
-                            component: 'header',
-                            action: 'window_resize'
-                        })
-                    }).catch(err => console.error('Error logging to server:', err));
-                }
-            });
-            
-            // Handle notifications dropdown
-            const notificationIcon = document.querySelector('.notification-icon');
-            const notificationDropdown = document.querySelector('.notification-dropdown');
-            
-            if (notificationIcon && notificationDropdown) {
-                notificationIcon.addEventListener('click', function(e) {
-                    try {
-                        e.preventDefault();
-                        e.stopPropagation(); // Prevent event from bubbling up
-                        notificationDropdown.classList.toggle('show');
-                    } catch (error) {
-                        console.error('Error toggling notifications:', error);
-                        fetch(BASE + 'log-error.php', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ 
-                                error: error.message,
-                                component: 'header',
-                                action: 'toggle_notifications'
-                            })
-                        }).catch(err => console.error('Error logging to server:', err));
-                    }
-                });
+        });
+
+        overlay.addEventListener("click", function () {
+            sidebar.classList.remove("active");
+            overlay.classList.remove("active");
+        });
+
+        // Ensure sidebar behaves correctly on window resize
+        window.addEventListener("resize", function () {
+            if (window.innerWidth > 991) {
+                sidebar.classList.remove("active");
+                overlay.classList.remove("active");
             }
-            
-            // Close notifications dropdown when clicking outside
-            document.addEventListener('click', function(e) {
-                try {
-                    const target = e.target;
-                    if (!target.closest('.notification-icon') && !target.closest('.notification-dropdown')) {
-                        const dropdowns = document.querySelectorAll('.notification-dropdown');
-                        dropdowns.forEach(dropdown => {
-                            if (dropdown.classList.contains('show')) {
-                                dropdown.classList.remove('show');
-                            }
-                        });
-                    }
-                } catch (error) {
-                    console.error('Error closing notifications:', error);
-                    fetch(BASE + 'log-error.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            error: error.message,
-                            component: 'header',
-                            action: 'close_notifications'
-                        })
-                    }).catch(err => console.error('Error logging to server:', err));
-                }
-            });
-            
-            // Prevent notification dropdown from closing when clicking inside it
-            if (notificationDropdown) {
-                notificationDropdown.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                });
+        });
+    }
+
+    // Bootstrap Dropdown Initialization
+    const dropdownElements = document.querySelectorAll(".dropdown-toggle");
+    dropdownElements.forEach(el => new bootstrap.Dropdown(el));
+
+    // Notification Dropdown Handling
+    const notificationIcon = document.querySelector(".notification-icon");
+    const notificationDropdown = document.querySelector(".notification-dropdown");
+
+    if (notificationIcon && notificationDropdown) {
+        notificationIcon.addEventListener("click", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            notificationDropdown.classList.toggle("show");
+        });
+
+        document.addEventListener("click", function (e) {
+            if (!e.target.closest(".notification-icon") && !e.target.closest(".notification-dropdown")) {
+                notificationDropdown.classList.remove("show");
             }
-        } catch (error) {
-            console.error('Error initializing header functionality:', error);
-            fetch(BASE + 'log-error.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    error: error.message,
-                    component: 'header',
-                    action: 'initialization'
-                })
-            }).catch(err => console.error('Error logging to server:', err));
-        }
-    });
+        });
+
+        notificationDropdown.addEventListener("click", function (e) {
+            e.stopPropagation();
+        });
+    }
+
+    // Profile Dropdown Handling
+    const profileToggle = document.querySelector(".profile-toggle");
+    const profileDropdown = document.querySelector(".profile-toggle + .dropdown-menu");
+
+    if (profileToggle && profileDropdown) {
+        profileToggle.addEventListener("click", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            profileDropdown.classList.toggle("show");
+        });
+
+        document.addEventListener("click", function (e) {
+            if (!e.target.closest(".profile-toggle") && !e.target.closest(".dropdown-menu")) {
+                profileDropdown.classList.remove("show");
+            }
+        });
+
+        profileDropdown.addEventListener("click", function (e) {
+            e.stopPropagation();
+        });
+    }
+});
+
 </script>

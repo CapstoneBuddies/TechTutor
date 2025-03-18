@@ -8,29 +8,14 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
     exit();
 }
     $courses = getCourseDetails();
+    $title = "Teaching Subjects";
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TechTutor | Teaching Subjects</title>
-    
-    <!-- Favicons -->
-    <link href="<?php echo IMG; ?>stand_alone_logo.png" rel="icon">
-    
-    <!-- Vendor CSS -->
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Main CSS -->
-    <link href="<?php echo CSS; ?>techguru-common.css" rel="stylesheet">
-</head>
-
-<body>
-    <?php include ROOT_PATH . '/components/header.php'; ?>
+    <?php include ROOT_PATH . '/components/head.php'; ?>
+    <body data-base="<?php echo BASE; ?>">
+        <?php include ROOT_PATH . '/components/header.php'; ?>
 
     <main class="container py-4">
         <!-- Welcome Section -->
@@ -100,6 +85,8 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
             <?php endforeach; ?>
         </div>
     </main>
+    </main> 
+    </div> 
 
     <!-- No Results Message -->
     <div id="noResults" class="text-center py-5" style="display: none;">
@@ -109,7 +96,7 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
     </div>
 
     <!-- Scripts -->
-    <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <?php include ROOT_PATH . '/components/footer.php'; ?>
     <script>
         // Add event listener for real-time search
         document.getElementById('subjectSearch').addEventListener('input', searchSubjects);

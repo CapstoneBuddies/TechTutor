@@ -50,8 +50,8 @@ try {
     $expiry = date('Y-m-d H:i:s', strtotime('+24 hours'));
     
     // Update user with reset token and expiry
-    $stmt = $conn->prepare("UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE email = ?");
-    $stmt->bind_param("sss", $reset_token, $expiry, $email);
+    $stmt = $conn->prepare("INSERT INTO login_tokens(user_id, token, expiration_date, type) VALUES(?,?,?,'reset')");
+    $stmt->bind_param("iss", $user['uid'], $reset_token, $expiry);
     $stmt->execute();
     
     if ($stmt->affected_rows <= 0) {
@@ -61,7 +61,7 @@ try {
     }
     
     // Create reset link
-    $reset_link = BASE . "reset_password.php?token=" . $reset_token;
+    $reset_link = 'http://'.BASE . "reset?token=" . $reset_token;
     
     // Send notification to the user
     $message = "A password reset has been initiated for your account by an administrator.";
@@ -71,20 +71,39 @@ try {
     $admin_name = $_SESSION['first_name'] . ' ' . $_SESSION['last_name'];
     $user_name = $user['first_name'] . ' ' . $user['last_name'];
     $log_message = "Admin {$admin_name} initiated password reset for user {$user_name} (ID: {$user['uid']})";
-    error_log($log_message);
+    log_error($log_message,3);
     
     // Commit transaction
     $conn->commit();
     
     // Send email with reset link
     $subject = "TechTutor Password Reset";
-    $email_message = "Dear {$user['first_name']},\n\n";
-    $email_message .= "An administrator has requested a password reset for your TechTutor account.\n\n";
-    $email_message .= "To reset your password, please click on the link below or copy and paste it into your browser:\n\n";
-    $email_message .= $reset_link . "\n\n";
-    $email_message .= "This link will expire in 24 hours.\n\n";
-    $email_message .= "If you did not request this password reset, please contact our support team immediately.\n\n";
-    $email_message .= "Best regards,\nThe TechTutor Team";
+    $email_message = "
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9; }
+                h2 { color: #007bff; }
+                p { line-height: 1.6; }
+                a { color: #007bff; text-decoration: none; font-weight: bold; }
+                .footer { margin-top: 20px; font-size: 0.9em; color: #777; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <h2>Password Reset Request</h2>
+                <p>Dear <strong>{$user['first_name']}</strong>,</p>
+                <p>An administrator has requested a password reset for your <strong>TechTutor</strong> account.</p>
+                <p>To reset your password, please click the button below or copy and paste the link into your browser:</p>
+                <p><a href='{$reset_link}' target='_blank'>{$reset_link}</a></p>
+                <p><strong>Note:</strong> This link will expire in <span style='color: red;'>24 hours</span>.</p>
+                <p>If you did not request this password reset, please contact our support team immediately.</p>
+                <p class='footer'>Best regards,<br><strong>The TechTutor Team</strong></p>
+            </div>
+        </body>
+        </html>";
+
     
     // Get mailer instance from config.php
     $mailer = getMailerInstance();

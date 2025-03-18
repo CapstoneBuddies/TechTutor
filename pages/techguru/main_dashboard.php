@@ -1,4 +1,4 @@
-<?php 
+ <?php 
     require_once 'main.php';
     require_once ROOT_PATH.'/backends/student_management.php';
     require_once ROOT_PATH.'/backends/class_management.php';
@@ -15,26 +15,10 @@
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TechTutor | Dashboard</title>
-    
-    <!-- Favicons -->
-    <link href="<?php echo IMG; ?>stand_alone_logo.png" rel="icon">
-    
-    <!-- Vendor CSS -->
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Main CSS -->
-    <link href="<?php echo CSS; ?>dashboard.css" rel="stylesheet">
+    <?php include ROOT_PATH . '/components/head.php'; ?>
     <link href="<?php echo CSS; ?>techguru-dashboard.css" rel="stylesheet">
-</head>
-
-<body>
-    <?php include ROOT_PATH . '/components/header.php'; ?>
+    <body data-base="<?php echo BASE; ?>">
+        <?php include ROOT_PATH . '/components/header.php'; ?>
 
     <main class="container py-4">
         <div class="row">
@@ -42,7 +26,7 @@
             <div class="col-12">
                 <div class="dashboard-card">
                     <div class="welcome-section">
-                        <h2>Hello <span class="text-orange">Mr. <?php echo $_SESSION['last_name']; ?></span></h2>
+                        <h2>Hello, <span class="text-orange"> <?php echo $_SESSION['last_name']; ?></span></h2>
                         <div class="subtitle">Rating - <i class="bi bi-star-fill"></i> <?php echo $_SESSION['rating']; ?></div>
                     </div>
                 </div>
@@ -168,8 +152,10 @@
             </div>
         </div>
     </main>
+    </main> 
+    </div> 
 
     <!-- Scripts -->
-    <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <?php include ROOT_PATH . '/components/footer.php'; ?>
 </body>
 </html>

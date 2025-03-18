@@ -235,3 +235,23 @@
         font-size: 1.25rem;
     }
 }
+.notification-holder {
+    max-height: 70vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-radius: 10px;
+}
+.notification-holder::-webkit-scrollbar-track {
+    background: #F2F3F4; /* Track background */
+    border-radius: 10px;
+}
+
+.notification-holder::-webkit-scrollbar-thumb {
+    background: #0dcaf0; /* Thumb color */
+    border-radius: 10px;
+    border: 2px solid #F2F3F4; /* Adds padding effect */
+}
+
+.notification-holder::-webkit-scrollbar-thumb:hover {
+    background: #0ba8c7; /* Darker shade on hover */
+}

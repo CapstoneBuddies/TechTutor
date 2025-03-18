@@ -1,5 +1,6 @@
 <?php 
     require_once '../../backends/main.php';
+    require_once ROOT_PATH.'/backends/class_management.php';
     
     // Check if user is admin
     if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'ADMIN') {
@@ -7,123 +8,21 @@
         exit();
     }
 
-    try {
-        // Get classes data with pagination
-        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $items_per_page = 10;
-        $offset = ($page - 1) * $items_per_page;
+    // Get classes data with pagination
+    $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+    $items_per_page = 10;
 
-        // Query to get classes with related information based on existing schema
-        $query = "SELECT 
-                    c.class_id,
-                    c.class_name,
-                    s.subject_name,
-                    CONCAT(u.first_name, ' ', u.last_name) as techguru_name,
-                    (SELECT COUNT(*) FROM class_schedule cs WHERE cs.class_id = c.class_id AND cs.role = 'STUDENT') as enrolled_students,
-                    c.status
-                FROM class c
-                LEFT JOIN subject s ON c.subject_id = s.subject_id
-                LEFT JOIN users u ON c.tutor_id = u.uid
-                ORDER BY c.class_id DESC
-                LIMIT ? OFFSET ?";
+    $classData = getClassesWithPagination($page,$items_per_page);
+    $classes = $classData['classes'];
+    $total_pages = $classData['total_pages'];
 
-        $stmt = $conn->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Database query preparation failed: " . $conn->error);
-        }
-
-        $stmt->bind_param("ii", $items_per_page, $offset);
-        if (!$stmt->execute()) {
-            throw new Exception("Query execution failed: " . $stmt->error);
-        }
-
-        $classes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-
-        // Get total count for pagination
-        $count_query = "SELECT COUNT(*) as total FROM class";
-        $total_result = $conn->query($count_query);
-        if (!$total_result) {
-            throw new Exception("Count query failed: " . $conn->error);
-        }
-        $total_classes = $total_result->fetch_assoc()['total'];
-        $total_pages = ceil($total_classes / $items_per_page);
-
-    } catch (Exception $e) {
-        log_error("Error in view-class.php: " . $e->getMessage(), 'database');
-        $_SESSION['msg'] = "An error occurred while fetching classes. Please try again later.";
-        $classes = [];
-        $total_pages = 0;
-    }
+    $title = 'Class Management';
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title>TechTutor | Class Management</title>
-    <meta name="description" content="">
-    <meta name="keywords" content="">
-
-    <!-- Favicons -->
-    <link href="<?php echo IMG; ?>stand_alone_logo.png" rel="icon">
-    <link href="<?php echo IMG; ?>apple-touch-icon.png" rel="apple-touch-icon">
-
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com" rel="preconnect">
-    <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700;900&family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-
-    <!-- Vendor CSS Files -->
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/aos/aos.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/glightbox/css/glightbox.min.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
-
-    <!-- Main CSS Files -->
-    <link href="<?php echo CSS; ?>dashboard.css" rel="stylesheet">
-    <link href="<?php echo CSS; ?>header.css" rel="stylesheet">
-    <style>
-        .class-table th {
-            background-color: #f8f9fa;
-            font-weight: 600;
-        }
-
-        .status-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-
-        .status-active {
-            background-color: #e8f5e9;
-            color: #2e7d32;
-        }
-
-        .status-restricted {
-            background-color: #ffebee;
-            color: #c62828;
-        }
-
-        .action-buttons .btn {
-            padding: 0.25rem 0.75rem;
-            font-size: 0.875rem;
-            margin-right: 0.5rem;
-        }
-
-        .search-container {
-            margin-bottom: 1.5rem;
-        }
-
-        .pagination {
-            margin-top: 1.5rem;
-            justify-content: center;
-        }
-    </style>
-</head>
-<body>
-    <?php include ROOT_PATH . '/components/header.php'; ?>
+    <?php include ROOT_PATH . '/components/head.php'; ?>
+    <body data-base="<?php echo BASE; ?>">
+        <?php include ROOT_PATH . '/components/header.php'; ?>
 
     <main class="dashboard-content">
         <div class="container-fluid">
@@ -168,7 +67,7 @@
                                                     </span>
                                                 </td>
                                                 <td class="action-buttons">
-                                                    <a href="<?php echo BASE; ?>dashboard/classes/details?id=<?php echo $class['class_id']; ?>" class="btn btn-primary">
+                                                    <a href="classes/details?id=<?php echo $class['class_id']; ?>" class="btn btn-primary">
                                                         <i class="bi bi-eye"></i> View
                                                     </a>
                                                     <?php if ($class['status'] === 'active' || $class['status'] === 'restricted'): ?>
@@ -201,14 +100,10 @@
             </div>
         </div>
     </main>
+    </main> <!-- Ending All Main Content -->
+    </div>
 
-    <!-- JavaScript Section -->
-    <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="<?php echo BASE; ?>assets/vendor/aos/aos.js"></script>
-    <script src="<?php echo BASE; ?>assets/vendor/glightbox/js/glightbox.min.js"></script>
-    <script src="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.js"></script>
-    <script src="<?php echo JS; ?>dashboard.js"></script>
-
+    <?php include ROOT_PATH . '/components/footer.php'; ?>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Search functionality
@@ -225,7 +120,7 @@
 
             // Toggle class status
             document.querySelectorAll('.toggle-status').forEach(button => {
-                button.addEventListener('click', async function() {
+                button.addEventListener('click', async function () {
                     const classId = this.dataset.classId;
                     const currentStatus = this.dataset.currentStatus;
                     const newStatus = currentStatus === 'active' ? 'restricted' : 'active';
@@ -247,26 +142,72 @@
                         });
 
                         const data = await response.json();
+
                         if (data.success) {
                             // Update UI
                             const statusBadge = this.closest('tr').querySelector('.status-badge');
                             statusBadge.className = `status-badge status-${newStatus}`;
                             statusBadge.textContent = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
-                            
+
                             // Update button text and data
                             this.innerHTML = `<i class="bi bi-shield"></i> ${newStatus === 'active' ? 'Restrict' : 'Activate'}`;
                             this.dataset.currentStatus = newStatus;
+
+                            // Show success toast
+                            showToast('success', `Class successfully ${newStatus === 'active' ? 'activated' : 'restricted'}.`);
                         } else {
                             throw new Error(data.error || 'Failed to update class status');
                         }
                     } catch (error) {
                         console.error('Error:', error);
-                        alert('An error occurred while updating the class status. Please try again.');
+                        
+                        // Show error toast
+                        showToast('error', 'An error occurred while updating the class status. Please try again.');
+
                         log_error("Class status update failed: " + error.message);
                     }
                 });
             });
+
         });
+        function showToast(type, message) {
+            const toastContainer = document.createElement('div');
+            toastContainer.style.position = 'fixed';
+            toastContainer.style.top = '20px';
+            toastContainer.style.right = '20px';
+            toastContainer.style.zIndex = '9999';
+
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
+
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'}-fill me-2"></i>
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            `;
+
+            toastContainer.appendChild(toast);
+            document.body.appendChild(toastContainer);
+
+            const bsToast = new bootstrap.Toast(toast, {
+                animation: true,
+                autohide: true,
+                delay: 3000
+            });
+
+            bsToast.show();
+
+            toast.addEventListener('hidden.bs.toast', () => {
+                document.body.removeChild(toastContainer);
+            });
+        }
     </script>
 </body>
 </html>

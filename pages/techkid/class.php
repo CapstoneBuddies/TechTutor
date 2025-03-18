@@ -31,32 +31,9 @@
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<?php include ROOT_PATH . '/components/head.php'; ?>
-<style>
-.class-card {
-    transition: transform 0.2s;
-}
-.class-card:hover {
-    transform: translateY(-5px);
-}
-.tutor-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    object-fit: cover;
-}
-.notification-dot {
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    width: 10px;
-    height: 10px;
-    background-color: var(--bs-danger);
-    border-radius: 50%;
-}
-</style>
-<body data-bs-theme="<?php echo isset($_COOKIE['theme']) ? htmlspecialchars($_COOKIE['theme']) : 'light'; ?>">
-    <?php include ROOT_PATH . '/components/header.php'; ?>
+    <?php include ROOT_PATH . '/components/head.php'; ?>
+    <body data-base="<?php echo BASE; ?>">
+        <?php include ROOT_PATH . '/components/header.php'; ?>
 
     <div class="container-fluid py-4">
         <div class="row justify-content-center">

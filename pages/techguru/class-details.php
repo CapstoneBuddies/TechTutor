@@ -37,30 +37,13 @@ $completion_rate = $classDetails['total_students'] > 0
     ? ($classDetails['completed_students'] / $classDetails['total_students']) * 100 
     : 0;
 $rating = number_format($classDetails['average_rating'] ?? 0, 1);
+$title = htmlspecialchars($classDetails['class_name']);
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TechTutor | <?php echo htmlspecialchars($classDetails['class_name']); ?></title>
-    
-    <!-- Favicons -->
-    <link href="<?php echo IMG; ?>stand_alone_logo.png" rel="icon">
-    
-    <!-- Vendor CSS -->
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Main CSS -->
-    <link href="<?php echo CSS; ?>dashboard.css" rel="stylesheet">
-    <link href="<?php echo CSS; ?>techguru-common.css" rel="stylesheet">
-</head>
-
-<body>
-    <?php include ROOT_PATH . '/components/header.php'; ?>
+    <?php include ROOT_PATH . '/components/head.php'; ?>
+    <body data-base="<?php echo BASE; ?>">
+        <?php include ROOT_PATH . '/components/header.php'; ?>
 
     <main class="container py-4">
         <?php if (isset($_GET['created'])): ?>
@@ -255,9 +238,11 @@ $rating = number_format($classDetails['average_rating'] ?? 0, 1);
             </div>
         </div>
     </main>
+    </main> 
+    </div> 
 
     <!-- Scripts -->
-    <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <?php include ROOT_PATH . '/components/footer.php'; ?>
     <script>
         function startSession(scheduleId) {
             // TODO: Implement session start logic

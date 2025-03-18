@@ -81,17 +81,27 @@
             </div>
           </div>
         </div>
+        <div class="form-group">
+          <label for="gender">Gender</label>
+          <select class="form-control" id="gender" name="gender" required>
+            <option value="" selected disabled hidden>Select your gender</option>
+            <option value="M">Male</option>
+            <option value="F">Female</option>
+            <option value="U">Prefer Not to Say</option>
+          </select>
+          <div class="error-message">Please select your</div>
+        </div>
         
         <div class="form-group">
           <label for="role">I am a/an...</label>
           <select class="form-control" id="role" name="role" required>
             <?php if($role == 'tutor'):?>
-            <option value="" selected disabled hidden>Select your role</option>
-            <option value="TECHGURU">TechGuru</option>
-            <option value="TECHKID">TechKids</option>
-            <?php else: ?>
             <option value="" disabled hidden>Select your role</option>
             <option value="TECHGURU" selected>TechGuru</option>
+            <option value="TECHKID">TechKids</option>
+            <?php else: ?>
+            <option value="" selected disabled hidden>Select your role</option>
+            <option value="TECHGURU">TechGuru</option>
             <option value="TECHKID">TechKids</option>
             <?php endif; ?>
           </select>
@@ -137,6 +147,7 @@
       const signupForm = document.getElementById('signupForm');
       const firstnameInput = document.getElementById('firstname');
       const lastnameInput = document.getElementById('lastname');
+      const genderSelect = document.getElementById('gender');
       const roleSelect = document.getElementById('role');
       const emailInput = document.getElementById('email');
       const passwordInput = document.getElementById('password');
@@ -228,6 +239,7 @@
       // Real-time validation
       firstnameInput.addEventListener('input', () => validateField(firstnameInput));
       lastnameInput.addEventListener('input', () => validateField(lastnameInput));
+      genderSelect.addEventListener('change', () => validateField(genderSelect));
       roleSelect.addEventListener('change', () => validateField(roleSelect));
       emailInput.addEventListener('input', () => validateEmail(emailInput));
       passwordInput.addEventListener('input', () => {
@@ -244,12 +256,13 @@
         
         const isFirstNameValid = validateField(firstnameInput);
         const isLastNameValid = validateField(lastnameInput);
+        const isGenderValid = validateField(genderSelect);
         const isRoleValid = validateField(roleSelect);
         const isEmailValid = validateEmail(emailInput);
         const isPasswordValid = validatePassword(passwordInput);
         const isConfirmPasswordValid = validatePasswordConfirmation();
         
-        if (isFirstNameValid && isLastNameValid && isRoleValid && 
+        if (isFirstNameValid && isLastNameValid && isGenderValid && isRoleValid && 
             isEmailValid && isPasswordValid && isConfirmPasswordValid) {
           this.submit();
         } else {

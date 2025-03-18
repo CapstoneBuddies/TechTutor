@@ -407,23 +407,27 @@ function getClassFiles($class_id) {
  */
 function getClassDetails($class_id, $tutor_id = null) {
     global $conn;
-    
-    $query = "SELECT c.*, 
-                     s.subject_name, s.subject_desc, s.image AS subject_image,
-                     co.course_name, co.course_desc,
-                     u.first_name, u.last_name, u.profile_picture,
-                     COUNT(DISTINCT cs.user_id) AS total_students,
-                     SUM(CASE WHEN cs.status = 'completed' THEN 1 ELSE 0 END) AS completed_students,
-                     (SELECT AVG(r.rating) 
-                      FROM ratings r 
-                      WHERE r.tutor_id = c.tutor_id) AS average_rating,
-                     (SELECT COUNT(*) 
-                      FROM class_schedule 
-                      WHERE class_id = c.class_id AND role = 'STUDENT' AND status = 'completed') AS completed_sessions,
-                     (SELECT COUNT(*) 
-                      FROM class_schedule 
-                      WHERE class_id = c.class_id AND role = 'STUDENT') AS total_sessions,
-                     ROUND(
+
+    try {
+        $query = "SELECT 
+                    c.*,
+                    s.subject_name, s.subject_desc, s.image AS subject_image,
+                    co.course_name, co.course_desc,
+                    u.first_name, u.last_name AS techguru_name,
+                    u.email AS techguru_email,
+                    u.profile_picture AS techguru_profile,
+                    COUNT(DISTINCT cs.user_id) AS total_students,
+                    SUM(CASE WHEN cs.status = 'completed' THEN 1 ELSE 0 END) AS completed_students,
+                    (SELECT AVG(r.rating) 
+                     FROM ratings r 
+                     WHERE r.tutor_id = c.tutor_id) AS average_rating,
+                    (SELECT COUNT(*) 
+                     FROM class_schedule 
+                     WHERE class_id = c.class_id AND role = 'STUDENT' AND status = 'completed') AS completed_sessions,
+                    (SELECT COUNT(*) 
+                     FROM class_schedule 
+                     WHERE class_id = c.class_id AND role = 'STUDENT') AS total_sessions,
+                    ROUND(
                         (SELECT COUNT(*) 
                          FROM class_schedule 
                          WHERE class_id = c.class_id AND role = 'STUDENT' AND status = 'completed') 
@@ -432,36 +436,48 @@ function getClassDetails($class_id, $tutor_id = null) {
                            FROM class_schedule 
                            WHERE class_id = c.class_id AND role = 'STUDENT'), 0
                         ) * 100, 2) AS completion_rate,
-                     CASE 
+                    CASE 
                         WHEN c.end_date < NOW() THEN 'completed'
                         WHEN c.start_date > NOW() THEN 'upcoming'
                         WHEN c.status = 'inactive' THEN 'inactive'
                         ELSE 'ongoing'
-                     END AS status
-              FROM class c
-              JOIN subject s ON c.subject_id = s.subject_id
-              JOIN course co ON s.course_id = co.course_id
-              JOIN users u ON c.tutor_id = u.uid
-              LEFT JOIN class_schedule cs ON c.class_id = cs.class_id AND cs.role = 'STUDENT'
-              WHERE c.class_id = ? " . 
-              ($tutor_id !== null ? "AND c.tutor_id = ? " : "") . 
-              "GROUP BY c.class_id";
+                    END AS status
+                  FROM class c
+                  JOIN subject s ON c.subject_id = s.subject_id
+                  JOIN course co ON s.course_id = co.course_id
+                  JOIN users u ON c.tutor_id = u.uid
+                  LEFT JOIN class_schedule cs ON c.class_id = cs.class_id AND cs.role = 'STUDENT'
+                  WHERE c.class_id = ? " . 
+                  ($tutor_id !== null ? "AND c.tutor_id = ? " : "") . 
+                  "GROUP BY c.class_id";
 
-    try {
         $stmt = $conn->prepare($query);
+        if (!$stmt) {
+            throw new Exception("Database query preparation failed: " . $conn->error);
+        }
+
         if ($tutor_id !== null) {
             $stmt->bind_param("ii", $class_id, $tutor_id);
         } else {
             $stmt->bind_param("i", $class_id);
         }
+
         $stmt->execute();
-        $result = $stmt->get_result();
-        return $result->fetch_assoc();
+        $class = $stmt->get_result()->fetch_assoc();
+
+        if (!$class) {
+            log_error("Class not found: " . $class_id);
+            return null;
+        }
+
+        return $class;
     } catch (Exception $e) {
-        error_log("Error getting class details: " . $e->getMessage());
+        log_error("Error fetching class details: " . $e->getMessage());
         return null;
     }
 }
+
+
 
 
 /**
@@ -545,7 +561,7 @@ function updateClassStatus($class_id, $tutor_id = null, $new_status) {
         return true;
     } catch (Exception $e) {
         $conn->rollback();
-        log_error("Error updating class status: " . $e->getMessage());
+        log_error("Error updating class status: " . $e->getMessage(),'database');
         return false;
     }
 }
@@ -631,4 +647,101 @@ function updateClass($data) {
         return ['success' => false, 'error' => $e->getMessage()];
     }
 }
+function getClassesWithPagination($page = 1, $items_per_page = 10) {
+    global $conn;
+
+    try {
+        $offset = ($page - 1) * $items_per_page;
+
+        // Query to get paginated class data
+        $query = "SELECT 
+                    c.class_id,
+                    c.class_name,
+                    s.subject_name,
+                    CONCAT(u.first_name, ' ', u.last_name) as techguru_name,
+                    (SELECT COUNT(*) FROM class_schedule cs WHERE cs.class_id = c.class_id AND cs.role = 'STUDENT') as enrolled_students,
+                    c.status
+                FROM class c
+                LEFT JOIN subject s ON c.subject_id = s.subject_id
+                LEFT JOIN users u ON c.tutor_id = u.uid
+                ORDER BY c.class_id DESC
+                LIMIT ? OFFSET ?";
+
+        $stmt = $conn->prepare($query);
+        if (!$stmt) {
+            throw new Exception("Database query preparation failed: " . $conn->error);
+        }
+
+        $stmt->bind_param("ii", $items_per_page, $offset);
+        if (!$stmt->execute()) {
+            throw new Exception("Query execution failed: " . $stmt->error);
+        }
+
+        $classes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        // Get total class count
+        $count_query = "SELECT COUNT(*) as total FROM class";
+        $total_result = $conn->query($count_query);
+        if (!$total_result) {
+            throw new Exception("Count query failed: " . $conn->error);
+        }
+
+        $total_classes = $total_result->fetch_assoc()['total'];
+        $total_pages = ceil($total_classes / $items_per_page);
+
+        return [
+            'classes' => $classes,
+            'total_pages' => $total_pages
+        ];
+    } catch (Exception $e) {
+        log_error("Error in getClassesWithPagination(): " . $e->getMessage(), 2);
+        return [
+            'classes' => [],
+            'total_pages' => 0
+        ];
+    }
+}
+function getEnrolledStudents($class_id) {
+    global $conn;
+
+    try {
+        // Ensure the enrollments table exists
+        $create_enrollments_table = "
+            CREATE TABLE IF NOT EXISTS `enrollments` (
+                `enrollment_id` INT PRIMARY KEY AUTO_INCREMENT,
+                `class_id` INT NOT NULL,
+                `student_id` INT NOT NULL,
+                `enrollment_date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                `status` ENUM('active', 'completed', 'dropped') NOT NULL DEFAULT 'active',
+                FOREIGN KEY (class_id) REFERENCES class(class_id) ON DELETE CASCADE,
+                FOREIGN KEY (student_id) REFERENCES users(uid) ON DELETE CASCADE,
+                UNIQUE KEY `unique_enrollment` (`class_id`, `student_id`)
+            )";
+        $conn->query($create_enrollments_table);
+        
+        // Fetch enrolled students
+        $students_query = "SELECT 
+                            u.*,
+                            e.enrollment_date,
+                            e.status as enrollment_status
+                        FROM enrollments e
+                        JOIN users u ON e.student_id = u.uid
+                        WHERE e.class_id = ?
+                        ORDER BY e.enrollment_date DESC";
+
+        $stmt = $conn->prepare($students_query);
+        if (!$stmt) {
+            throw new Exception("Database query preparation failed: " . $conn->error);
+        }
+
+        $stmt->bind_param("i", $class_id);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    } catch (Exception $e) {
+        log_error("Error fetching enrolled students: " . $e->getMessage(),'database');
+        return [];
+    }
+}
+
+
 ?>

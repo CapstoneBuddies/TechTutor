@@ -14,7 +14,7 @@
 <!DOCTYPE html>
 <html lang="en">
     <?php include ROOT_PATH . '/components/head.php'; ?>
-    <body>
+    <body data-base="<?php echo BASE; ?>">
         <?php include ROOT_PATH . '/components/header.php'; ?>
         <main class="dashboard-content">
             <div class="container-fluid">
@@ -85,7 +85,7 @@
                 </div>
             </div>
         </main>
-        </main>
+        </main> <!-- Ending All Main Content -->
         </div>
         <!-- Reset Password Modal -->
         <div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordModalLabel">
@@ -148,12 +148,6 @@
             </div>
         </div>
     <?php include ROOT_PATH . '/components/footer.php'; ?>
-    <!-- JavaScript Section -->
-    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
-    <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="<?php echo BASE; ?>assets/vendor/aos/aos.js"></script>
-    <script src="<?php echo BASE; ?>assets/vendor/glightbox/js/glightbox.min.js"></script>
-    <script src="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const mainContent = document.querySelector('.dashboard-content');
@@ -174,12 +168,15 @@
             const resetPasswordForm = document.getElementById('resetPasswordForm');
             const userEmailInput = document.getElementById('userEmail');
             const emailAutocomplete = document.getElementById('emailAutocomplete');
+            const resetPasswordModalEl = document.getElementById('resetPasswordModal');
             
             // Modals
             const restrictUserModal = new bootstrap.Modal(document.getElementById('restrictUserModal'));
             const deleteUserModal = new bootstrap.Modal(document.getElementById('deleteUserModal'));
             const confirmRestrictBtn = document.getElementById('confirmRestrictBtn');
             const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+            const resetPasswordModal = bootstrap.Modal.getInstance(resetPasswordModalEl) || new bootstrap.Modal(resetPasswordModalEl);
+
 
             // Actions
             const getUsers =  "<?php echo BASE.'get-users'; ?>";
@@ -323,15 +320,20 @@
                     if (user.uid != <?php echo $_SESSION['user']; ?>) {
                         const restrictBtnText = user.status == 1 ? 'Restrict' : 'Activate';
                         const restrictBtnClass = user.status == 1 ? 'btn-warning' : 'btn-success';
-                        const restrictBtnIcon = user.status == 1 ? 'bi-slash-circle' : 'bi-check-circle';
+                        const restrictBtnIcon = user.status == 1 ? 'fas fa-ban' : 'fas fa-check-circle';
                         
                         actionsCell.innerHTML = `
-                            <button class="btn ${restrictBtnClass} restrict-user" data-user-id="${user.uid}" data-status="${user.status}">
-                                <i class="bi ${restrictBtnIcon}"></i> ${restrictBtnText}
+                            <button class="btn ${restrictBtnClass} restrict-user" data-user-id="${user.uid}" data-status="${user.status}" data-bs-toggle="tooltip" title='${restrictBtnText}'>
+                                <i class="${restrictBtnIcon}"></i> 
                             </button>
-                            <button class="btn btn-danger delete-user" data-user-id="${user.uid}">
-                                <i class="bi bi-trash"></i> Delete
+                            <button class="btn btn-danger delete-user" data-user-id="${user.uid}" data-bs-toggle="tooltip" title='Delete'>
+                                <i class="bi bi-trash"></i> 
                             </button>
+                            <a href="users/details?id=${user.uid}" class="btn btn-info view-user" data-bs-toggle="tooltip" title='View'>
+                                <i class="bi bi-eye"></i> 
+                            </a>
+
+                            
                         `;
                     } else {
                         actionsCell.innerHTML = `<span class="text-muted">Current User</span>`;
@@ -447,11 +449,14 @@
                 })
                 .then(response => response.json())
                 .then(data => {
+                        resetPasswordModal.hide();
+                        setTimeout(() => {
+                            document.body.classList.remove('modal-open');
+                            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                        }, 300);
                     if (data.success) {
                         showToast('success', 'Password reset link has been sent to the user.');
                         userEmailInput.value = '';
-                        const resetPasswordModal = bootstrap.Modal.getInstance(document.getElementById('resetPasswordModal'));
-                        resetPasswordModal.hide();
                     } else {
                         showToast('error', data.message || 'Failed to send password reset.');
                     }
@@ -587,7 +592,7 @@
             const bsToast = new bootstrap.Toast(toast, {
                 animation: true,
                 autohide: true,
-                delay: 3000
+                delay: 2000
             });
 
             bsToast.show();

@@ -21,7 +21,7 @@
 	if(strpos($_SERVER['HTTP_HOST'], 'localhost') !== false) {
 		define('BASE', '/capstone-1/');
 	} else {
-		define('BASE', '/');
+		define('BASE', 'https://techtutor.cfd/');
 	}
 
 	define('CSS', BASE.'assets/css/');
@@ -30,6 +30,7 @@
 	define('CLASS_IMG', BASE.'assets/img/class/');
 	define('SUBJECT_IMG', BASE.'assets/img/subjects/');
 	define('USER_IMG', BASE.'assets/img/users/');
+	define('BACKEND', ROOT_PATH.'/backends/');
 
 	// Define LOG_PATH based on fixed ROOT_PATH
 	define('LOG_PATH', ROOT_PATH . '/logs/');
@@ -81,14 +82,27 @@
 	        1 => LOG_PATH . 'error.log',
 	        2 => LOG_PATH . 'database.log',
 	        3 => LOG_PATH . 'mail.log',
-	        3 => LOG_PATH . 'security.log',
-	        4 => LOG_PATH . 'analytics.log'
+	        4 => LOG_PATH . 'security.log',
+	        5 => LOG_PATH . 'analytics.log',
+	        6 => LOG_PATH . 'front.log'
 	    ];
+	    $logAliases = [
+	        'general'   => 1,
+	        'database'  => 2,
+	        'mail'      => 3,
+	        'security'  => 4,
+	        'analytics' => 5,
+	        'front' => 6,
+	    ];
+	    // If type is a string and exists in aliases, convert it to the corresponding number
+	    if (is_string($type) && isset($logAliases[$type])) {
+	        $type = $logAliases[$type];
+	    }
 
 	    $logFile = $logFiles[$type] ?? $logFiles[1]; // Default to general if type is invalid
 	    $ip = $_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN'; // Get user IP
 	    $date = date('Y-m-d H:i:s');
-	    $logEntry = "({$date})::{$ip}::{$message}\n";
+	    $logEntry = "[({$date})::{$ip}] {$message}\n";
 
 	    file_put_contents($logFile, $logEntry, FILE_APPEND);
 	}
@@ -99,19 +113,6 @@
 	function getMailerInstance() {
 	    global $mail;
 	    return clone $mail; // Returns a fresh copy of $mail
-	}
-	function getSecondaryMailInstance() {
-	    $mail = new PHPMailer(true);
-		$mail->isSMTP();										 
-		$mail->Host	 = SMTP_HOST;				 
-		$mail->SMTPAuth = true;							 
-		$mail->Username = SMTP_USER_2;				 
-		$mail->Password = SMTP_PASSWORD_2;					 
-		$mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;							 
-		$mail->Port	 = SMTP_PORT; 
-		$mail->setFrom(SMTP_USER_2, SMTP_HOST);
-		$mail->isHTML(true);
-	    return $mail;
 	}
 
 	// Sending of Email Verification
@@ -134,7 +135,7 @@
 			$mail->send();
 			return true;
 		} catch (Exception $e) {
-			log_error("Mailer Error: " . $mail->ErrorInfo,'mail.log');
+			log_error("Mailer Error: " . $mail->ErrorInfo,'mail');
 			return false;
 		}
 	}
@@ -149,14 +150,14 @@
 			<p>Please note, this code is valid for the next 3 minutes. If you do not enter the code in time, it will expire, and you will need to request a new one.</p>
 			<p>If you did not request this verification code or believe this is an error, please ignore this email.</p>
 			<p>Thank you for being part of our community!</p>
-			<p>Best regards,<br>Your Company Name</p>
+			<p>Best regards,<br>Techtutor</p>
 			";
 			$mail->send();
 			return true;
 		}
 		catch (Exception $e) {
 			$_SESSION['msg'] = "An error occurred, Please try again later!";
-			log_error("Mailer Error: " . $mail->ErrorInfo, 'mail.log');
+			log_error("Mailer Error: " . $mail->ErrorInfo, 'mail');
 			return false;
 		}
 	}

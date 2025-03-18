@@ -48,7 +48,7 @@
                             </div>
                             <?php else: ?>
                         </div>
-                        <div class="notification-list">
+                        <div class="notification-list notification-holder shadow-lg">
                             <?php foreach ($notifications as $notification): ?>
                                 <div class="notification-item <?php echo !$notification['is_read'] ? 'unread' : ''; ?>" 
                                      data-notification-id="<?php echo $notification['notification_id']; ?>">

@@ -1,6 +1,32 @@
 <?php
-http_response_code(404);
 require_once "../../backends/config.php";
+
+// Get the requested URI
+$requestUri = trim($_SERVER['REQUEST_URI'], '/');
+
+$rolePaths = [
+    'ADMIN' => 'dashboard/a/',
+    'TECHGURU' => 'dashboard/t/',
+    'TECHKID' => 'dashboard/s/',
+];
+
+// Check if user is logged in and has a role
+if (isset($_SESSION['role']) && isset($rolePaths[$_SESSION['role']]) && !isset($_SESSION['redirect'])) {
+    $expectedPath = $rolePaths[$_SESSION['role']];
+    
+    // If user accessed "dashboard/" without the correct role subdirectory
+    if (strpos($requestUri, 'dashboard/') === 0 && strpos($requestUri, $expectedPath) === false) {
+        // Extract the page name after "dashboard/"
+        $page = substr($requestUri, strlen('dashboard/'));
+
+        // Redirect to correct dashboard path
+        $_SESSION['redirect'] = 'redirect';
+        header("Location: " . BASE . $expectedPath . $page);
+        exit();
+    }
+}
+
+http_response_code(404);
 log_error("User accessed 404 page", 3); // Ensure log file exists
 
 ?>

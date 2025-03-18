@@ -67,23 +67,45 @@ try {
     $admin_name = $_SESSION['first_name'] . ' ' . $_SESSION['last_name'];
     $user_name = $user['first_name'] . ' ' . $user['last_name'];
     $log_message = "Admin {$admin_name} {$status_text} user {$user_name} (ID: {$user_id})";
-    error_log($log_message);
+    log_error($log_message,'security');
     
     // Commit transaction
     $conn->commit();
     
     // Send email notification
     $subject = "TechTutor Account Status Update";
-    $email_message = "Dear {$user['first_name']},\n\n";
-    $email_message .= "Your TechTutor account has been {$status_text} by an administrator.\n\n";
-    
-    if ($new_status == 0) {
-        $email_message .= "If you believe this is an error, please contact our support team for assistance.\n\n";
-    } else {
-        $email_message .= "You can now log in to your account and access all features.\n\n";
-    }
-    
-    $email_message .= "Best regards,\nThe TechTutor Team";
+    $email_message = "
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9; }
+                .header { font-size: 20px; font-weight: bold; color: #2c3e50; margin-bottom: 10px; }
+                .content { font-size: 16px; }
+                .footer { margin-top: 20px; font-size: 14px; color: #777; }
+                .btn { display: inline-block; background: #007bff; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 10px; }
+                .btn:hover { background: #0056b3; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <p class='header'>Hello, {$user['first_name']},</p>
+                
+                <p class='content'>
+                    We wanted to inform you that your <strong>TechTutor account</strong> has been <strong>{$status_text}</strong> by an administrator.
+                </p>
+                
+                " . ($new_status == 0 
+                    ? "<p class='content'>If you believe this was done in error, please don't hesitate to contact our <a href='mailto:support@techtutor.cfd'>support team</a> for assistance.</p>" 
+                    : "<p class='content'>You can now log in and enjoy full access to all features.</p>
+                       <a href='" . BASE . "login' class='btn'>Login to Your Account</a>") . "
+                
+                <p class='footer'>Best regards,<br><strong>The TechTutor Team</strong></p>
+            </div>
+        </body>
+        </html>";
+
     
     // Get mailer instance from config.php
     $mailer = getMailerInstance();
@@ -94,15 +116,14 @@ try {
     try {
         $mailer->send();
     } catch (Exception $e) {
-        error_log("Failed to send status update email: " . $e->getMessage());
+        log_error("Failed to send status update email: " . $e->getMessage(),'mail');
         // Continue execution even if email fails
     }
-    
     echo json_encode(['success' => true, 'message' => "User has been {$status_text} successfully"]);
 } catch (Exception $e) {
     if (isset($conn) && $conn->connect_errno === 0) {
         $conn->rollback();
     }
-    error_log("Error in toggle_user_status.php: " . $e->getMessage());
+    log_error("Error in toggle_user_status.php: " . $e->getMessage(),'security');
     echo json_encode(['success' => false, 'message' => 'An error occurred while updating user status']);
 }
