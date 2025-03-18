@@ -12,6 +12,7 @@
     $tutor_id = $_SESSION['user'];
     $students_data = getStudentByTutor($tutor_id);
     $classes_data = getTechGuruClasses($tutor_id);
+    $title = 'Main Dashboard';
 ?>
 <!DOCTYPE html>
 <html lang="en">

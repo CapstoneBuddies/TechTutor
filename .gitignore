@@ -5,5 +5,4 @@
 /logs/*
 !/logs/.gitkeep
 
-#old files
-/old_files/*
+

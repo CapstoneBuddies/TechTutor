@@ -10,9 +10,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 try {
-    $name = $_POST['name'] ?? '';
-    $email = $_POST['email'] ?? '';
-    $message = $_POST['message'] ?? '';
+    $name = trim($_POST['name'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $message = trim($_POST['message'] ?? '');
 
     if (empty($name) || empty($email) || empty($message)) {
         throw new Exception('All fields are required');
@@ -22,8 +22,9 @@ try {
         throw new Exception('Invalid email format');
     }
 
+    // ✅ Send to Admin
     $mail = getMailerInstance();
-    $mail->addAddress('admin@techtutor.cfd'); // Send to platform admin
+    $mail->addAddress('admin@techtutor.cfd');
     $mail->Subject = "Contact Form Message from $name";
     $mail->Body = "
         <h3>New Contact Form Submission</h3>
@@ -33,7 +34,24 @@ try {
     ";
 
     if (!$mail->send()) {
-        throw new Exception('Failed to send email');
+        throw new Exception('Failed to send email to admin');
+    }
+
+    // ✅ Send a receipt to the user
+    $mail->clearAddresses(); // Remove previous recipient
+    $mail->addAddress($email);
+    $mail->Subject = "We Received Your Message - TechTutor";
+    $mail->Body = "
+        <h3>Thank You for Contacting Us!</h3>
+        <p>Dear $name,</p>
+        <p>We have received your message and our team will respond as soon as possible.</p>
+        <p><strong>Your Message:</strong><br>$message</p>
+        <p>For urgent inquiries, you may contact us at <a href='mailto:support@techtutor.cfd'>support@techtutor.cfd</a>.</p>
+        <p>Best regards,<br>The TechTutor Team</p>
+    ";
+
+    if (!$mail->send()) {
+        log_error("Failed to send receipt email: " . $mail->ErrorInfo, 'mail');
     }
 
     echo json_encode(['status' => 'success', 'message' => 'Message sent successfully']);

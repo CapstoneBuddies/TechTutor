@@ -183,4 +183,43 @@ function sendNotification($recipient_id, $recipient_role, $message, $link = null
         return false;
     }
 }
+// Function to send enrollment email
+function sendEnrollmentEmail($to, $name, $class_name, $tutor_name) {
+    $mail = getMailerInstance();
+    try {
+        $mail->addAddress($to, $name);
+        $mail->Subject = "Enrollment Confirmation - $class_name";
+        $mail->Body = '
+        <div style="max-width: 600px; margin: auto; font-family: Arial, sans-serif; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+            <div style="background: #0dcaf0; padding: 20px; text-align: center; color: white;">
+                <h2 style="margin: 0; font-size: 22px;">Enrollment Confirmation</h2>
+            </div>
+            <div style="padding: 20px; background: #f9f9f9;">
+                <p style="font-size: 16px; color: #333;">Dear <strong>' . htmlspecialchars($name) . '</strong>,</p>
+                <p style="font-size: 16px; color: #555;">
+                    🎉 You have successfully enrolled in <strong>' . htmlspecialchars($class_name) . '</strong> with 
+                    <strong>' . htmlspecialchars($tutor_name) . '</strong>.
+                </p>
+                <p style="font-size: 16px; color: #555;">
+                    📅 Check your dashboard for class details and schedule.
+                </p>
+                <div style="text-align: center; margin: 20px 0;">
+                    <a href="' . BASE . 'dashboard/class" 
+                       style="background: #0dcaf0; color: white; padding: 10px 20px; text-decoration: none; font-size: 16px; border-radius: 5px;">
+                        Go to My Classes
+                    </a>
+                </div>
+            </div>
+            <div style="background: #ddd; padding: 10px; text-align: center; font-size: 14px; color: #666;">
+                Best regards,<br>
+                <strong>The TechTutor Team</strong>
+            </div>
+        </div>';
+
+        $mail->send();
+    } catch (Exception $e) {
+        log_error("Failed to send enrollment email: " . $e->getMessage(), 'mail');
+        return;
+    }
+}
 ?>

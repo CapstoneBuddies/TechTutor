@@ -69,6 +69,8 @@ RewriteRule ^dashboard/s/class$ pages/techkid/class.php [L]
 RewriteRule ^dashboard/s/schedule$ pages/techkid/schedule.php [L]
 RewriteRule ^dashboard/s/files$ pages/techkid/files.php [L]
 RewriteRule ^dashboard/s/certificates$ pages/techkid/certificate.php [L]
+RewriteRule ^dashboard/s/enrollments$ pages/techkid/enroll-class.php [L]
+RewriteRule ^dashboard/s/enrollments/class$ pages/techkid/class-details.php [L]
 
 # ----------------------------------
 # 👨‍🏫 TechGuru (Tutors) Routes
@@ -117,3 +119,4 @@ RewriteRule ^toggle-subject$ backends/admin/course_handler.php [L,QSA]
 # 🌍 API Endpoints
 # ----------------------------------
 RewriteRule ^api/toggle-class-status$ api/toggle-class-status.php [L]
+RewriteRule ^api/enroll-class$ api/enroll-class.php [L]

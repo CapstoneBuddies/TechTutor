@@ -61,7 +61,6 @@ if (function_exists('log_error')) {
         if (file_exists($role_css_path)) {
             echo "<link rel='stylesheet' href='" . CSS . "{$role}-common.css'>";
         }
-        log_error($role_css_path);
     }
 
     // Common CSS per role

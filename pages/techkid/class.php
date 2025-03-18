@@ -19,9 +19,6 @@
     try {
         // Get student's classes using centralized function
         $classes = getStudentClasses($_SESSION['user']);
-        
-        // Get currently active class if any
-        $active_class = getCurrentActiveClass($_SESSION['user']);
 
         // Get unread notifications for the student
         $unread_notifications = getUserNotifications($_SESSION['user'], $_SESSION['role'], true);
@@ -45,7 +42,7 @@
                         <p class="text-muted mb-0">Track your learning progress and upcoming sessions</p>
                     </div>
                     <div class="d-flex gap-2">
-                        <a href="enroll-class" class="btn btn-primary">
+                        <a href="enrollments" class="btn btn-primary">
                             <i class="bi bi-plus-lg me-2"></i>Enroll in New Class
                         </a>
                     </div>
@@ -95,7 +92,7 @@
                                 <i class="bi bi-calendar text-muted" style="font-size: 48px;"></i>
                                 <h3 class="h5 mt-3">No Upcoming Classes</h3>
                                 <p class="text-muted mb-3">Ready to start learning?</p>
-                                <a href="enroll-class" class="btn btn-primary">
+                                <a href="enrollments" class="btn btn-primary">
                                     <i class="bi bi-plus-lg me-2"></i>Browse Available Classes
                                 </a>
                             </div>
@@ -176,6 +173,8 @@
             </div>
         </div>
     </div>
+    </main>
+    </div>
 
     <!-- Class Details Modal -->
     <div class="modal fade" id="classDetailsModal" tabindex="-1">
@@ -187,45 +186,6 @@
                 </div>
                 <div class="modal-body" id="classDetailsContent">
                     <!-- Content will be loaded dynamically -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Notifications Modal -->
-    <div class="modal fade" id="notificationsModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Notifications</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="list-group list-group-flush">
-                        <?php foreach ($unread_notifications as $notification): ?>
-                        <div class="list-group-item notification-item" 
-                             data-notification-id="<?php echo $notification['notification_id']; ?>">
-                            <div class="d-flex">
-                                <div class="flex-shrink-0">
-                                    <i class="<?php echo $notification['icon']; ?>" 
-                                       style="color: <?php echo $notification['color']; ?>"></i>
-                                </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <h6 class="mb-1"><?php echo htmlspecialchars($notification['title']); ?></h6>
-                                    <p class="mb-1 small"><?php echo htmlspecialchars($notification['message']); ?></p>
-                                    <small class="text-muted">
-                                        <?php echo $notification['time_ago']; ?>
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" onclick="markAllNotificationsRead()">
-                        Mark All as Read
-                    </button>
                 </div>
             </div>
         </div>

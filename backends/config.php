@@ -21,7 +21,7 @@
 	if(strpos($_SERVER['HTTP_HOST'], 'localhost') !== false) {
 		define('BASE', '/capstone-1/');
 	} else {
-		define('BASE', 'https://techtutor.cfd/');
+		define('BASE', '/');
 	}
 
 	define('CSS', BASE.'assets/css/');

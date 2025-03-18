@@ -132,17 +132,115 @@ function getStudentLearningStats($student_id) {
     ];
 }
 function getStudentClasses($student_id) {
-    return [];
+    global $conn;
+
+    try {
+        $stmt = $conn->prepare("
+            SELECT 
+                c.class_id,
+                c.class_name,
+                c.class_desc,
+                c.thumbnail,
+                c.status,
+                s.subject_name,
+                co.course_name,
+                u.first_name AS tutor_first_name,
+                u.last_name AS tutor_last_name,
+                u.profile_picture AS tutor_avatar
+            FROM class c
+            JOIN subject s ON c.subject_id = s.subject_id
+            JOIN course co ON s.course_id = co.course_id
+            JOIN users u ON c.tutor_id = u.uid
+            JOIN class_schedule cs ON c.class_id = cs.class_id
+            WHERE cs.user_id = ? AND cs.role = 'STUDENT' 
+            ORDER BY c.created_at DESC
+        ");
+
+        $stmt->bind_param("i", $student_id);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+    } catch (Exception $e) {
+        log_error("Error fetching student classes: " . $e->getMessage(), 'database');
+        return [];
+    }
 }
-function getCurrentActiveClass($student_id) {
-    return [];
+
+function getCurrentActiveClass() { //Need to change this to grab class in session
+    global $conn;
+
+    try {
+        $stmt = $conn->prepare("
+            SELECT 
+                c.class_id,
+                c.class_name,
+                c.class_desc AS description,
+                c.thumbnail,
+                c.status,
+                s.subject_name,
+                co.course_name,
+                u.first_name AS tutor_first_name,
+                u.last_name AS tutor_last_name,
+                u.profile_picture AS tutor_avatar,
+                (
+                    SELECT COUNT(*) 
+                    FROM class_schedule cs 
+                    WHERE cs.class_id = c.class_id 
+                    AND cs.role = 'STUDENT'
+                ) AS enrolled_students
+            FROM class c
+            JOIN subject s ON c.subject_id = s.subject_id
+            JOIN course co ON s.course_id = co.course_id
+            JOIN users u ON c.tutor_id = u.uid
+            WHERE c.status = 'active'
+            ORDER BY c.created_at DESC
+        ");
+
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+    } catch (Exception $e) {
+        log_error("Error fetching active classes: " . $e->getMessage(), 'database');
+        return [];
+    }
 }
 function getStudentFiles($student_id) {
     return [];
 }
 function getStudentSchedule($student_id) {
-    return [];
+    global $conn;
+
+    try {
+        $stmt = $conn->prepare("
+            SELECT 
+                cs.schedule_id,
+                cs.class_id AS id,
+                cs.session_date,
+                cs.start_time,
+                cs.end_time,
+                TIMESTAMPDIFF(MINUTE, cs.start_time, cs.end_time) AS duration,
+                cs.status,
+                c.class_name AS title,
+                s.subject_name AS topic,
+                CONCAT(u.first_name,' ',u.first_name) AS tutor_name,
+                u.profile_picture AS tutor_avatar
+            FROM class_schedule cs
+            JOIN class c ON cs.class_id = c.class_id
+            JOIN subject s ON c.subject_id = s.subject_id
+            JOIN users u ON c.tutor_id = u.uid
+            WHERE cs.user_id = ? AND cs.role = 'STUDENT'
+            ORDER BY cs.session_date ASC, cs.start_time ASC
+        ");
+        $stmt->bind_param("i", $student_id);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+    } catch (Exception $e) {
+        log_error("Error fetching student schedule: " . $e->getMessage(), 'database');
+        return [];
+    }
 }
+
 function getStudentCertificates($student_id) {
     return [];
 }

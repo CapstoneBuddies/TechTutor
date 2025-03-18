@@ -48,7 +48,7 @@
                     <i class="bi bi-clock"></i>
                     Today's Schedule
                 </h2>
-                <?php if (empty($schedule['today'])): ?>
+                <?php if (empty($schedule)): ?>
                 <div class="content-card">
                     <div class="card-body text-center py-4">
                         <i class="bi bi-calendar2-check text-muted" style="font-size: 48px;"></i>
@@ -57,12 +57,14 @@
                     </div>
                 </div>
                 <?php else: ?>
-                    <?php foreach ($schedule['today'] as $class): ?>
+                    <?php foreach ($schedule as $class): ?>
                     <div class="content-card schedule-card mb-3">
                         <div class="card-body">
                             <div class="time-indicator">
                                 <div class="time">
-                                    <?php echo date('h:i A', strtotime($class['start_time'])); ?>
+                                    Date: <?php echo date('F j, Y', strtotime($class['session_date'])); ?> <br/>
+                                    Time: <?php echo date('h:i A', strtotime($class['start_time'])); ?> - <?php echo date('h:i A', strtotime($class['end_time'])); ?>
+                                    
                                 </div>
                                 <div class="duration">
                                     <?php echo $class['duration']; ?> mins
@@ -71,7 +73,7 @@
                             <div class="class-info">
                                 <h3 class="class-title"><?php echo $class['title']; ?></h3>
                                 <div class="tutor-info">
-                                    <img src="<?php echo $class['tutor_avatar']; ?>" alt="Tutor" class="tutor-avatar">
+                                    <img src="<?php echo USER_IMG.$class['tutor_avatar']; ?>" alt="Tutor" class="tutor-avatar">
                                     <span class="tutor-name">with <?php echo $class['tutor_name']; ?></span>
                                 </div>
                                 <div class="class-topic">

@@ -84,11 +84,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password']) && 
                     // Send email confirmation
                     if ($user['role'] !== 'ADMIN') {
                         $subject = "TechTutor Password Reset Confirmation";
-                        $email_message = "Dear {$user['first_name']},\n\n";
-                        $email_message .= "Your TechTutor account password has been successfully reset.\n\n";
-                        $email_message .= "If you did not perform this action, please contact us at support@techtutor.cfd immediately.\n\n";
-                        $email_message .= "Best regards,\nThe TechTutor Team";
+                        $email_message = "
+                            <div style='font-family: Arial, sans-serif; color: #333; background-color: #f8f9fa; padding: 20px; border-radius: 8px;'>
+                                <h2 style='color: #0dcaf0; text-align: center;'>Password Reset Confirmation</h2>
+                                <p>Dear <strong>{$user['first_name']}</strong>,</p>
+                                
+                                <p>Your <strong>TechTutor</strong> account password has been successfully reset.</p>
+                                
+                                <p>If you did not perform this action, please contact us immediately at  
+                                    <a href='mailto:support@techtutor.cfd' style='color: #0dcaf0; text-decoration: none; font-weight: bold;'>support@techtutor.cfd</a>.
+                                </p>
 
+                                <p style='margin-top: 20px; font-size: 14px;'>Best regards,</p>
+                                <p style='font-weight: bold; font-size: 16px;'>The TechTutor Team</p>
+                            </div>
+                        ";
                         $mailer = getMailerInstance();
                         $mailer->addAddress($user['email']);
                         $mailer->Subject = $subject;
@@ -97,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password']) && 
                         try {
                             $mailer->send();
                         } catch (Exception $e) {
-                            log_error("Failed to send password reset confirmation email: " . $e->getMessage(), 'email.log');
+                            log_error("Failed to send password reset confirmation email: " . $e->getMessage(), 'mail');
                         }
                     }
                 } else {
@@ -116,56 +126,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password']) && 
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title>TechTutor | Reset Password</title>
-    <meta name="description" content="">
-    <meta name="keywords" content="">
-
-    <!-- Favicons -->
-    <link href="<?php echo IMG; ?>stand_alone_logo.png" rel="icon">
-    <link href="<?php echo IMG; ?>apple-touch-icon.png" rel="apple-touch-icon">
-
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com" rel="preconnect">
-    <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700;900&family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-
-    <!-- Vendor CSS Files -->
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/aos/aos.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/glightbox/css/glightbox.min.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
-
-    <!-- Main CSS Files -->
-    <link href="<?php echo CSS; ?>main.css" rel="stylesheet">
-    
-    <style>
-        .reset-password-container {
-            max-width: 500px;
-            margin: 50px auto;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-            background-color: #fff;
-        }
-        
-        .password-strength {
-            height: 5px;
-            margin-top: 10px;
-            border-radius: 5px;
-            transition: all 0.3s ease;
-        }
-        
-        .password-feedback {
-            font-size: 0.8rem;
-            margin-top: 5px;
-        }
-    </style>
-</head>
-<body>
+    <?php include ROOT_PATH . '/components/head.php'; ?>
+    <body data-base="<?php echo BASE; ?>">
     <div class="container">
         <div class="reset-password-container">
             <div class="text-center mb-4">
@@ -222,11 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password']) && 
         </div>
     </div>
     
-    <!-- JavaScript Section -->
-    <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="<?php echo BASE; ?>assets/vendor/aos/aos.js"></script>
-    <script src="<?php echo BASE; ?>assets/vendor/glightbox/js/glightbox.min.js"></script>
-    <script src="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.js"></script>
+    <?php include ROOT_PATH . '/components/footer.php'; ?>
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {

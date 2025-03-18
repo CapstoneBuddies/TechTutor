@@ -413,7 +413,7 @@ function getClassDetails($class_id, $tutor_id = null) {
                     c.*,
                     s.subject_name, s.subject_desc, s.image AS subject_image,
                     co.course_name, co.course_desc,
-                    u.first_name, u.last_name AS techguru_name,
+                    CONCAT(u.first_name,' ',u.last_name) AS techguru_name,
                     u.email AS techguru_email,
                     u.profile_picture AS techguru_profile,
                     COUNT(DISTINCT cs.user_id) AS total_students,
