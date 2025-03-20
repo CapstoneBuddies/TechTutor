@@ -1,6 +1,6 @@
 <?php 
 require_once '../../backends/main.php';
-require_once ROOT_PATH.'/backends/class_management.php';
+require_once BACKEND.'class_management.php';
 
 // Ensure user is logged in and is a TechKid
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHKID') {
@@ -124,7 +124,7 @@ $title = htmlspecialchars($classDetails['class_name']);
                 <!-- Enrollment Statistics -->
                 <div class="dashboard-card mb-4">
                     <h3>Class Stats</h3>
-                    <p><strong>Total Enrolled:</strong> <?php echo $classDetails['enrolled_students']; ?> students</p>
+                    <p><strong>Total Enrolled:</strong> <?php echo $classDetails['total_students']; ?> students</p>
                     <p><strong>Completion Rate:</strong> <?php echo number_format($classDetails['completion_rate'] ?? 0, 1); ?>%</p>
                 </div>
             </div>
@@ -146,7 +146,7 @@ $title = htmlspecialchars($classDetails['class_name']);
                 return;
             }
 
-            fetch("<?php echo BASE; ?>api/enroll-class.php", {
+            fetch("<?php echo BASE; ?>api/enroll-class", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"

@@ -2,10 +2,11 @@
 /backends/.env
 
 # Logs
-/logs/*
-!/logs/.gitkeep
 /logs/deleted_accounts/*
 !/logs/deleted_accounts/.gitkeep
+/logs/*
+!/logs/.gitkeep
+#
 
 # Users
 /assets/img/users/*

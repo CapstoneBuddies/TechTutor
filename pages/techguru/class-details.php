@@ -28,7 +28,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'updateStatus') {
 }
 
 // Get related data
-$schedules = getClassSchedules($class_id);
+$schedules = getClassSchedules($class_id,'TECHGURU');
 $students = getClassStudents($class_id);
 $files = getClassFiles($class_id);
 
@@ -144,13 +144,19 @@ $title = htmlspecialchars($classDetails['class_name']);
                                             <?php echo ucfirst($schedule['status']); ?>
                                         </span>
                                     </td>
-                                    <td>
                                         <?php if ($schedule['status'] === 'confirmed'): ?>
-                                        <button class="btn btn-sm btn-primary" onclick="startSession(<?php echo $schedule['schedule_id']; ?>)">
-                                            Start Session
+                                    <td>
+                                        <button class="btn btn-sm btn-primary" onclick="joinMeeting(<?php echo $schedule['schedule_id']; ?>)">
+                                             Join Meeting
                                         </button>
-                                        <?php endif; ?>
                                     </td>
+                                        <?php elseif ($schedule['status'] === 'pending'): ?>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary" onclick="startSession(<?php echo $schedule['schedule_id']; ?>)">
+                                             Start Session
+                                        </button>
+                                    </td>
+                                        <?php endif; ?>
                                 </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -245,9 +251,60 @@ $title = htmlspecialchars($classDetails['class_name']);
     <?php include ROOT_PATH . '/components/footer.php'; ?>
     <script>
         function startSession(scheduleId) {
-            // TODO: Implement session start logic
-            alert('Starting session...');
+            if (!confirm("Are you sure you want to start this session?")) return;
+
+            // Show loading indicator
+            showLoading(true);
+
+            fetch(BASE+'create-meeting', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `schedule_id=${scheduleId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                showLoading(false);
+                if (data.success) {
+                    showToast('success',"Meeting room was successfully generated");
+                    setTimeout( () => location.reload(), 2000);
+                } else {
+                    alert("Error: " + data.message);
+                }
+            })
+            .catch(error => {
+                showLoading(false);
+                console.error('Error:', error);
+                alert("Failed to start the meeting. Please try again.");
+            });
         }
+        function joinMeeting(scheduleId) {
+            showLoading(true); // Show loading spinner
+
+            fetch(BASE+'join-meeting', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `schedule_id=${scheduleId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                showLoading(false); // Hide loading
+
+                if (data.success) {
+                    window.location.href = data.data.join_url; // Redirect to meeting
+                } else {
+                    showToast('error', data.message || 'Failed to join meeting.');
+                }
+            })
+            .catch(error => {
+                showLoading(false);
+                console.error('Error joining meeting:', error);
+                showToast('error', 'An error occurred. Please try again.');
+            });
+        }
+
+
 
         function uploadMaterial() {
             // TODO: Implement material upload logic

@@ -1,7 +1,7 @@
 <?php 
     require_once 'main.php';
-    require_once 'student_management.php';
-    require_once 'transactions_management.php';
+    require_once BACKEND.'student_management.php';
+    require_once BACKEND.'transactions_management.php';
 
     
     $enrolled_courses = [];

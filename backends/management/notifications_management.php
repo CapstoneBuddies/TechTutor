@@ -222,4 +222,122 @@ function sendEnrollmentEmail($to, $name, $class_name, $tutor_name) {
         return;
     }
 }
+
+// Function to send Class Session link
+function sendClassSessionLink($scheduleId) {
+    global $conn;
+
+    try {
+        // Fetch meeting details
+        $stmt = $conn->prepare("
+            SELECT m.meeting_uid, m.attendee_pw, c.class_name, CONCAT(u.first_name,' ',u.last_name) AS 'tutor',
+            u.email
+            FROM meetings m
+            JOIN class_schedule cs ON m.schedule_id = cs.schedule_id
+            JOIN class c ON cs.class_id = c.class_id
+            JOIN users u ON c.tutor_id = u.uid
+            WHERE m.schedule_id = ?
+        ");
+        $stmt->bind_param("i", $scheduleId);
+        $stmt->execute();
+        $meeting = $stmt->get_result()->fetch_assoc();
+
+        if (!$meeting) {
+            throw new Exception("Meeting not found for this session.");
+        }
+
+        // Fetch enrolled students
+        $stmt = $conn->prepare("
+            SELECT u.uid, u.email, CONCAT(u.first_name, ' ', u.last_name) AS student_name
+            FROM enrollments ce
+            JOIN users u ON ce.student_id = u.uid
+            WHERE ce.schedule_id = ?
+        ");
+        $stmt->bind_param("i", $scheduleId);
+        $stmt->execute();
+        $students = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        if (empty($students)) {
+            throw new Exception("No students enrolled in this session.");
+        }
+
+        // Initialize meeting class to generate join links
+        $meeting = new MeetingManagement();
+
+        // Loop through each student and send the meeting link
+        foreach ($students as $student) {
+            $joinUrl = $meeting->getJoinUrl($meeting['meeting_uid'], $student['student_name'], $meeting['attendee_pw']);
+
+            // Send email notification (using PHPMailer)
+            $mail = getMailerInstance();
+            $subject = "Class Session Link - {$meeting['class_name']}";
+            $body = "
+            <!DOCTYPE html>
+            <html lang='en'>
+            <head>
+                <meta charset='UTF-8'>
+                <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                <title>Class Session Invitation</title>
+            </head>
+            <body style='font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px;'>
+
+                <table style='max-width: 600px; margin: auto; background: #ffffff; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);'>
+                    <!-- Header -->
+                    <tr>
+                        <td style='text-align: center;'>
+                            <h2 style='color: #0052cc; margin-bottom: 10px;'>📚 TechTutor Class Session</h2>
+                            <p style='color: #555;'>Your class session is starting soon!</p>
+                        </td>
+                    </tr>
+
+                    <!-- Body -->
+                    <tr>
+                        <td style='padding: 20px 0;'>
+                            <p style='font-size: 16px; color: #333;'>Hello <strong>{$student['student_name']}</strong>,</p>
+                            <p style='font-size: 16px; color: #333;'>
+                                You have a scheduled class for <strong>{$meeting['class_name']}</strong>.
+                            </p>
+                            <p style='font-size: 16px; color: #333;'>Click below to join:</p>
+                            <div style='text-align: center; margin: 20px 0;'>
+                                <a href='{$joinUrl}' style='background-color: #0052cc; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 5px; font-size: 16px; display: inline-block;'>Join Now</a>
+                            </div>
+                            <p style='font-size: 14px; color: #666;'>If the button doesn’t work, copy and paste this link into your browser:</p>
+                            <p style='word-wrap: break-word; background: #f1f1f1; padding: 10px; border-radius: 5px; font-size: 14px; color: #333;'>{$joinUrl}</p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style='text-align: center; padding-top: 20px;'>
+                            <p style='font-size: 14px; color: #888;'>Best regards,<br><strong>TechTutor Team</strong></p>
+                        </td>
+                    </tr>
+                </table>
+
+            </body>
+            </html>
+            ";
+            $mail->setFrom($meeting['email'], $meeting['tutor']);
+            $mail->addAddress($student['email'],$student['student_name']);
+            $mail->Subject = $subject;
+            $mail->Body = $body;
+            $mail->send();
+            // Insert system notification
+            $stmt = $conn->prepare("
+                INSERT INTO notifications (recipient_id, recipient_role, class_id, message, icon, icon_color)
+                VALUES (?, 'TECHKID', ?, ?, 'bi-camera-video-fill', 'text-primary')
+            ");
+            $notifMessage = "Your class <b>{$meeting['class_name']}</b> is starting soon! <a href='{$joinUrl}'>Join now</a>";
+            $stmt->bind_param("iis", $student['uid'], $scheduleId, $notifMessage);
+            $stmt->execute();
+        }
+
+        return ['success' => true, 'message' => 'Session links sent successfully.'];
+
+    } catch (Exception $e) {
+        log_error("Failed to send class session link: " . $e->getMessage(), "meeting");
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
 ?>

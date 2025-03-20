@@ -84,7 +84,8 @@
 	        3 => LOG_PATH . 'mail.log',
 	        4 => LOG_PATH . 'security.log',
 	        5 => LOG_PATH . 'analytics.log',
-	        6 => LOG_PATH . 'front.log'
+	        6 => LOG_PATH . 'front.log',
+	        7 => LOG_PATH . 'meeting.log'
 	    ];
 	    $logAliases = [
 	        'general'   => 1,
@@ -93,6 +94,7 @@
 	        'security'  => 4,
 	        'analytics' => 5,
 	        'front' => 6,
+	        'meeting' => 7
 	    ];
 	    // If type is a string and exists in aliases, convert it to the corresponding number
 	    if (is_string($type) && isset($logAliases[$type])) {

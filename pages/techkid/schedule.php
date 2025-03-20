@@ -1,6 +1,6 @@
 <?php 
     require_once '../../backends/main.php';
-    require_once ROOT_PATH.'/backends/student_management.php';
+    require_once BACKEND.'student_management.php';
 
     $schedule = [];
     try {

@@ -70,7 +70,7 @@ RewriteRule ^dashboard/s/schedule$ pages/techkid/schedule.php [L]
 RewriteRule ^dashboard/s/files$ pages/techkid/files.php [L]
 RewriteRule ^dashboard/s/certificates$ pages/techkid/certificate.php [L]
 RewriteRule ^dashboard/s/enrollments$ pages/techkid/enroll-class.php [L]
-RewriteRule ^dashboard/s/enrollments/class$ pages/techkid/class-details.php [L]
+RewriteRule ^dashboard/s/enrollments/class$ pages/techkid/class-details.php [L,QSA]
 
 # ----------------------------------
 # 👨‍🏫 TechGuru (Tutors) Routes
@@ -105,15 +105,17 @@ RewriteRule ^toggle-user-status$ backends/admin/toggle_user_status.php [L]
 RewriteRule ^delete-user$ backends/admin/delete_user.php [L]
 RewriteRule ^send-password-reset$ backends/admin/send_password_reset.php [L]
 RewriteRule ^get-user-emails$ backends/admin/get_user_emails.php [L]
-
+#Admin 
 RewriteRule ^add-course$ backends/admin/course_handler.php [L]
 RewriteRule ^edit-course$ backends/admin/course_handler.php [L]
 RewriteRule ^delete-course$ backends/admin/course_handler.php [L]
-
 RewriteRule ^add-subject$ backends/admin/course_handler.php [L]
 RewriteRule ^edit-subject$ backends/admin/course_handler.php [L]
 RewriteRule ^delete-subject$ backends/admin/course_handler.php [L]
 RewriteRule ^toggle-subject$ backends/admin/course_handler.php [L,QSA]
+#BBB
+RewriteRule ^create-meeting$ backends/api/create_meeting.php [L,QSA]
+RewriteRule ^join-meeting$ backends/api/join_meeting.php [L,QSA]
 
 # ----------------------------------
 # 🌍 API Endpoints

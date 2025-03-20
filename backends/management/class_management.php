@@ -247,17 +247,26 @@ function generateClassSchedules($start_date, $end_date, $days, $time_slots) {
  * @param int $class_id Class ID
  * @return array Array of schedules with user details
  */
-function getClassSchedules($class_id) {
+function getClassSchedules($class_id, $role = null) {
     global $conn;
     
     $sql = "SELECT cs.*, u.first_name, u.last_name, u.profile_picture, u.role
             FROM class_schedule cs
             LEFT JOIN users u ON cs.user_id = u.uid
-            WHERE cs.class_id = ?
-            ORDER BY cs.session_date ASC, cs.start_time ASC";
+            WHERE cs.class_id = ?";
+    // Add condition for role if provided
+    if ($role !== null) {
+        $sql .= " AND u.role = ? ";
+    }
+    $sql .= "ORDER BY cs.session_date ASC, cs.start_time ASC";
             
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $class_id);
+    if (isset($role)) {
+        $stmt->bind_param("is", $class_id, $role);
+    }
+    else {
+        $stmt->bind_param("i", $class_id);
+    }
     $stmt->execute();
     
     return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
