@@ -29,10 +29,10 @@ RewriteRule ^dashboard/[sta]/notifications$ pages/notifications.php [L]
 # ----------------------------------
 RewriteRule ^user-login$ backends/route.php [L]
 RewriteRule ^user-register$ backends/route.php [L]
-RewriteRule ^user-logout$ backends/route.php [L]
 RewriteRule ^verify_code$ backends/route.php [L]
 RewriteRule ^forgot-password$ backends/route.php [L]
 RewriteRule ^resend-verification-code$ backends/route.php [L]
+RewriteRule ^(.*)/?user-logout$ backends/route.php [L]
 RewriteRule ^(.*)/?user-profile-update$ backends/route.php [L,QSA]
 RewriteRule ^(.*)/?user-deactivate$ backends/route.php [L]
 RewriteRule ^(.*)/?user-change-password$ backends/route.php [L]
@@ -49,7 +49,7 @@ RewriteRule ^process-card-payment$ backends/route.php [L]
 # ----------------------------------
 # 🔔 Notifications & Transactions
 # ----------------------------------
-RewriteRule ^mark-notification-read$ backends/route.php [L]
+#RewriteRule ^$  [L]
 RewriteRule ^get-transactions$ backends/route.php [L]
 RewriteRule ^get-transaction-details$ backends/route.php [L]
 RewriteRule ^export-transactions$ backends/route.php [L]
@@ -102,7 +102,7 @@ RewriteRule ^dashboard/a/classes/details$ pages/admin/class-details.php [L,QSA]
 RewriteRule ^logs$ backends/logs.php [L]
 RewriteRule ^get-users$ backends/admin/get_users.php [L]
 RewriteRule ^toggle-user-status$ backends/admin/toggle_user_status.php [L]
-RewriteRule ^delete-users$ backends/admin/delete_user.php [L]
+RewriteRule ^delete-user$ backends/admin/delete_user.php [L]
 RewriteRule ^send-password-reset$ backends/admin/send_password_reset.php [L]
 RewriteRule ^get-user-emails$ backends/admin/get_user_emails.php [L]
 
@@ -118,5 +118,8 @@ RewriteRule ^toggle-subject$ backends/admin/course_handler.php [L,QSA]
 # ----------------------------------
 # 🌍 API Endpoints
 # ----------------------------------
-RewriteRule ^api/toggle-class-status$ api/toggle-class-status.php [L]
-RewriteRule ^api/enroll-class$ api/enroll-class.php [L]
+RewriteRule ^api/toggle-class-status$ backends/api/toggle-class-status.php [L]
+RewriteRule ^api/enroll-class$ backends/api/enroll-class.php [L]
+RewriteRule ^mark-notification-read$ backends/api/mark-notification-read.php [L]
+RewriteRule ^delete-notification$ backends/api/delete-notif.php [L]
+RewriteRule ^mark-all-notifications-read$ backends/api/mark-all-notif-read.php [L]

@@ -264,7 +264,7 @@
                 
                 users.forEach(user => {
                     const row = document.createElement('tr');
-                    
+
                     // Name cell with profile picture
                     const nameCell = document.createElement('td');
                     nameCell.className = 'user-name-cell';
@@ -273,79 +273,92 @@
                         <span>${user.first_name} ${user.last_name}</span>
                     `;
                     row.appendChild(nameCell);
-                    
+
                     // Email cell
                     const emailCell = document.createElement('td');
                     emailCell.textContent = user.email;
                     row.appendChild(emailCell);
-                    
-                    // Classes created (for TECHGURU)
+
+                    // Classes Created (for TECHGURU)
                     const classesCreatedCell = document.createElement('td');
-                    if (currentRole === 'TECHGURU') {
-                        classesCreatedCell.className = 'techguru-column text-center';
-                    }
-                    else {
-                        classesCreatedCell.className = 'techguru-column d-none';
+                    classesCreatedCell.className = 'techguru-column text-center';
+                    if (currentRole !== 'TECHGURU') {
+                        classesCreatedCell.classList.add('d-none');
                     }
                     classesCreatedCell.textContent = user.num_classes || 0;
                     row.appendChild(classesCreatedCell);
-                    
-                    // Enrolled classes (for TECHKID)
+
+                    // Enrolled Classes (for TECHKID)
                     const enrolledClassesCell = document.createElement('td');
-                    if (currentRole === 'TECHKID') {
-                        enrolledClassesCell.className = 'techkid-column text-center';
-                    }
-                    else {
-                        enrolledClassesCell.className = 'techkid-column d-none';
+                    enrolledClassesCell.className = 'techkid-column text-center';
+                    if (currentRole !== 'TECHKID') {
+                        enrolledClassesCell.classList.add('d-none');
                     }
                     enrolledClassesCell.textContent = user.num_classes || 0;
                     row.appendChild(enrolledClassesCell);
-                    
+
                     // Status cell
                     const statusCell = document.createElement('td');
                     const statusText = user.status == 1 ? 'Active' : 'Inactive';
                     const statusClass = user.status == 1 ? 'bg-success' : 'bg-danger';
                     statusCell.innerHTML = `<span class="status-badge ${statusClass}">${statusText}</span>`;
                     row.appendChild(statusCell);
-                    
+
                     // Last login cell
                     const lastLoginCell = document.createElement('td');
                     lastLoginCell.textContent = user.last_login ? formatDate(user.last_login) : 'Never';
                     row.appendChild(lastLoginCell);
-                    
+
                     // Actions cell
                     const actionsCell = document.createElement('td');
-                    
-                    // Don't allow actions on current user
+
+                    // Don't allow actions on the current user
                     if (user.uid != <?php echo $_SESSION['user']; ?>) {
                         const restrictBtnText = user.status == 1 ? 'Restrict' : 'Activate';
                         const restrictBtnClass = user.status == 1 ? 'btn-warning' : 'btn-success';
                         const restrictBtnIcon = user.status == 1 ? 'fas fa-ban' : 'fas fa-check-circle';
-                        
+
                         actionsCell.innerHTML = `
                             <button class="btn ${restrictBtnClass} restrict-user" data-user-id="${user.uid}" data-status="${user.status}" data-bs-toggle="tooltip" title='${restrictBtnText}'>
                                 <i class="${restrictBtnIcon}"></i> 
                             </button>
-                            <button class="btn btn-danger delete-user" data-user-id="${user.uid}" data-bs-toggle="tooltip" title='Delete'>
-                                <i class="bi bi-trash"></i> 
-                            </button>
                             <a href="users/details?id=${user.uid}" class="btn btn-info view-user" data-bs-toggle="tooltip" title='View'>
                                 <i class="bi bi-eye"></i> 
                             </a>
-
-                            
                         `;
                     } else {
                         actionsCell.innerHTML = `<span class="text-muted">Current User</span>`;
                     }
-                    
+
                     row.appendChild(actionsCell);
                     usersTableBody.appendChild(row);
                 });
-                
+
+                // Show/hide role-specific columns dynamically
+                updateRoleColumns();
+
                 // Add event listeners for action buttons
                 addActionButtonListeners();
             }
+
+            // Function to ensure role-specific columns are properly displayed
+            function updateRoleColumns() {
+                const techguruColumns = document.querySelectorAll('.techguru-column');
+                const techkidColumns = document.querySelectorAll('.techkid-column');
+
+                if (currentRole === 'TECHGURU') {
+                    techguruColumns.forEach(col => col.classList.remove('d-none'));
+                } else {
+                    techguruColumns.forEach(col => col.classList.add('d-none'));
+                }
+
+                if (currentRole === 'TECHKID') {
+                    techkidColumns.forEach(col => col.classList.remove('d-none'));
+                } else {
+                    techkidColumns.forEach(col => col.classList.add('d-none'));
+                }
+            }
+
             
             // Function to add event listeners to action buttons
             function addActionButtonListeners() {
@@ -392,6 +405,7 @@
             
             // Function to toggle user status (restrict/activate)
             function toggleUserStatus(userId) {
+                showLoading(true);
                 fetch(userStatus, {
                     method: 'POST',
                     headers: {
@@ -563,44 +577,6 @@
                 }
             }
         });
-        function showToast(type, message) {
-            const toastContainer = document.createElement('div');
-            toastContainer.style.position = 'fixed';
-            toastContainer.style.top = '20px';
-            toastContainer.style.right = '20px';
-            toastContainer.style.zIndex = '9999';
-
-            const toast = document.createElement('div');
-            toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
-            toast.setAttribute('role', 'alert');
-            toast.setAttribute('aria-live', 'assertive');
-            toast.setAttribute('aria-atomic', 'true');
-
-            toast.innerHTML = `
-                <div class="d-flex">
-                    <div class="toast-body">
-                        <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'}-fill me-2"></i>
-                        ${message}
-                    </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
-            `;
-
-            toastContainer.appendChild(toast);
-            document.body.appendChild(toastContainer);
-
-            const bsToast = new bootstrap.Toast(toast, {
-                animation: true,
-                autohide: true,
-                delay: 2000
-            });
-
-            bsToast.show();
-
-            toast.addEventListener('hidden.bs.toast', () => {
-                document.body.removeChild(toastContainer);
-            });
-        }
     </script>
     </body>
 </html>

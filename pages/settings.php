@@ -224,7 +224,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Are you sure you want to delete your account? This action cannot be undone.</p>
+                    <p><i class=""></i>  Are you sure you want to delete your account? This action cannot be undone.</p>
                     <form id="deleteAccountForm">
                         <div class="mb-3">
                             <label for="deleteConfirmPassword" class="form-label">Enter your password to confirm</label>
@@ -275,7 +275,7 @@
             $.ajax({
                 url: '<?php echo BASE; ?>user-deactivate',
                 type: 'POST',
-                data: { password: password },
+                data: { userId: <?php echo $_SESSION['user']; ?> },
                 dataType: 'json',
                 success: function(response) {
                     if (response.status === 'success') {

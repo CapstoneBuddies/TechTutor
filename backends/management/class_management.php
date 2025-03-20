@@ -744,4 +744,54 @@ function getEnrolledStudents($class_id) {
 }
 
 
+/**
+ * Update class schedules
+ * 
+ * @param int $class_id The ID of the class
+ * @param array $schedules Array of new schedules
+ * @param int $tutor_id The ID of the tutor
+ * @return array Success status and message
+ */
+function updateClassSchedules($class_id, $schedules, $tutor_id) {
+    global $conn;
+    
+    try {
+        $conn->begin_transaction();
+        log_error("was called");
+        // Verify class ownership
+        $verify = $conn->prepare("SELECT tutor_id FROM class WHERE class_id = ?");
+        $verify->bind_param("i", $class_id);
+        $verify->execute();
+        $result = $verify->get_result()->fetch_assoc();
+        
+        if (!$result || $result['tutor_id'] != $tutor_id) {
+            throw new Exception("Unauthorized schedule update attempt");
+        }
+        // Delete existing schedules
+        $delete = $conn->prepare("DELETE FROM class_schedule WHERE class_id = ? AND role = 'TUTOR'");
+        $delete->bind_param("i", $class_id);
+        $delete->execute();
+        // Insert new schedules
+        $insert = $conn->prepare("INSERT INTO class_schedule (class_id, user_id, role, session_date, start_time, end_time, status) VALUES (?, ?, 'TUTOR', ?, ?, ?, 'confirmed')");
+        
+        foreach ($schedules as $schedule) {
+            $insert->bind_param("iisss", 
+                $class_id,
+                $tutor_id,
+                $schedule['session_date'],
+                $schedule['start_time'],
+                $schedule['end_time']
+            );
+            $insert->execute();
+        }
+
+        $conn->commit();
+        return ['success' => true, 'message' => 'Schedule updated successfully'];
+    } catch (Exception $e) {
+        $conn->rollback();
+        log_error("Schedule update failed: " . $e->getMessage());
+        return ['success' => false, 'error' => 'Failed to update schedule'];
+    }
+}
+
 ?>

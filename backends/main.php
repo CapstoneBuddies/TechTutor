@@ -1,6 +1,6 @@
 <?php 
 	require_once 'db.php';
-	require_once 'notifications_management.php';
+	require_once 'management/notifications_management.php';
 		
 	use PHPMailer\PHPMailer\PHPMailer;
 	use PHPMailer\PHPMailer\Exception;

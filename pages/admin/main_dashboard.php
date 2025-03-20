@@ -1,6 +1,6 @@
 <?php  
     require_once 'main.php';
-    require_once 'user_management.php';
+    require_once BACKEND.'user_management.php';
     
     // Get current page from URL parameter, default to 1
     $techkids_page = isset($_GET['tkpage']) ? (int)$_GET['tkpage'] : 1;

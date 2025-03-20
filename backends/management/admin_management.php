@@ -25,7 +25,7 @@ function getCoursesWithCounts() {
         $result = $conn->query($query);
         return $result->fetch_all(MYSQLI_ASSOC);
     } catch (Exception $e) {
-        log_error("Error getting courses with counts: " . $e->getMessage());
+        log_error("Error getting courses with counts: " . $e->getMessage(), 'database');
         return [];
     }
 }
@@ -62,7 +62,7 @@ function getAdminClassDetails($class_id) {
         $stmt->execute();
         return $stmt->get_result()->fetch_assoc();
     } catch (Exception $e) {
-        log_error("Error getting admin class details: " . $e->getMessage());
+        log_error("Error getting admin class details: " . $e->getMessage(), 'database');
         return null;
     }
 }
@@ -95,7 +95,7 @@ function getSubjectsWithCounts() {
         $result = $conn->query($query);
         return $result->fetch_all(MYSQLI_ASSOC);
     } catch (Exception $e) {
-        log_error("Error getting subjects with counts: " . $e->getMessage());
+        log_error("Error getting subjects with counts: " . $e->getMessage(), 'database');
         return [];
     }
 }
@@ -113,7 +113,7 @@ function getAllCourses() {
         $result = $conn->query($query);
         return $result->fetch_all(MYSQLI_ASSOC);
     } catch (Exception $e) {
-        log_error("Error getting courses: " . $e->getMessage());
+        log_error("Error getting courses: " . $e->getMessage(), 'database');
         return [];
     }
 }
@@ -260,13 +260,13 @@ function addCourse($courseName, $courseDesc = '') {
         $courseId = $conn->insert_id;
         
         // Log the action
-        log_error("New course added: $courseName (ID: $courseId)", "INFO");
+        log_error("New course added: $courseName (ID: $courseId)", "security");
         
         $conn->commit();
         return ['success' => true, 'message' => 'Course added successfully'];
     } catch (Exception $e) {
         $conn->rollback();
-        log_error("Error adding course: " . $e->getMessage());
+        log_error("Error adding course: " . $e->getMessage(), 'database');
         return ['success' => false, 'message' => 'Failed to add course'];
     }
 }
@@ -313,13 +313,13 @@ function addSubject($courseId, $subjectName, $subjectDesc) {
         $subjectId = $conn->insert_id;
         
         // Log the action
-        log_error("New subject added: $subjectName in course ID: $courseId (Subject ID: $subjectId)", "INFO");
+        log_error("New subject added: $subjectName in course ID: $courseId (Subject ID: $subjectId)", "security");
         
         $conn->commit();
         return ['success' => true, 'message' => 'Subject added successfully'];
     } catch (Exception $e) {
         $conn->rollback();
-        log_error("Error adding subject: " . $e->getMessage());
+        log_error("Error adding subject: " . $e->getMessage(), 'database');
         return ['success' => false, 'message' => 'Failed to add subject'];
     }
 }

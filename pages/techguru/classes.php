@@ -1,6 +1,6 @@
 <?php 
 require_once '../../backends/main.php';
-require_once ROOT_PATH.'/backends/class_management.php';
+require_once BACKEND.'class_management.php';
 
 // Ensure user is logged in and is a TechGuru
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
@@ -128,12 +128,12 @@ $title = 'My Classes';
                                             <td>
                                                 <?php 
                                                     $status_class = '';
-                                                    if ($class['is_active']) {
+                                                    if ($class['status']) {
                                                         $status_class = 'bg-success';
                                                         $status_text = 'Active';
                                                     } else {
                                                         $status_class = 'bg-secondary';
-                                                        $status_text = 'Completed';
+                                                        $status_text = 'Pending';
                                                     }
                                                 ?>
                                                 <span class="badge <?php echo $status_class; ?>">
@@ -150,7 +150,7 @@ $title = 'My Classes';
                                                        class="btn btn-sm btn-outline-secondary">
                                                         <i class="bi bi-pencil"></i>
                                                     </a>
-                                                    <?php if ($class['is_active']): ?>
+                                                    <?php if ($class['status']): ?>
                                                         <button type="button" 
                                                                 class="btn btn-sm btn-outline-danger"
                                                                 onclick="confirmDelete(<?php echo $class['class_id']; ?>)">

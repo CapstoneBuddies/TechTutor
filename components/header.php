@@ -3,38 +3,6 @@
         session_start();
     }
     
-    // Since this is a shared component, we need to use ROOT_PATH for consistent access
-    require_once ROOT_PATH . '/backends/db.php';
-    
-    // Helper function for time ago
-    function getTimeAgoNotif($timestamp) {
-        $datetime = new DateTime($timestamp);
-        $now = new DateTime();
-        $interval = $now->diff($datetime);
-        
-        if ($interval->y > 0) return $interval->y . ' year' . ($interval->y > 1 ? 's' : '') . ' ago';
-        if ($interval->m > 0) return $interval->m . ' month' . ($interval->m > 1 ? 's' : '') . ' ago';
-        if ($interval->d > 0) return $interval->d . ' day' . ($interval->d > 1 ? 's' : '') . ' ago';
-        if ($interval->h > 0) return $interval->h . ' hour' . ($interval->h > 1 ? 's' : '') . ' ago';
-        if ($interval->i > 0) return $interval->i . ' minute' . ($interval->i > 1 ? 's' : '') . ' ago';
-        return 'Just now';
-    }
-    
-    // Fetch role-specific notifications
-    $notification_query = "SELECT * FROM notifications WHERE recipient_id = ? OR recipient_role = ? OR recipient_role = 'ALL' ORDER BY created_at DESC LIMIT 10";
-    $stmt = $conn->prepare($notification_query);
-    $stmt->bind_param("is", $_SESSION['user'], $_SESSION['role']);
-    $stmt->execute();
-    $notifications = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    
-    // Count unread notifications
-    $unread_count = 0;
-    foreach ($notifications as $notification) {
-        if (!$notification['is_read']) {
-            $unread_count++;
-        }
-    }
-
     // Check if current page is teaching-related
     $current_page = basename($_SERVER['PHP_SELF']);
     $teaching_pages = [
@@ -65,6 +33,11 @@
     }
 ?>
 <div class="dashboard-container">
+    <!-- Mobile Toggle Button -->
+     <a class="mobile-toggle d-md-none" style="cursor: pointer;">
+        <img src="<?php echo IMG; ?>circle-logo.png" alt="Logo" class="logo">
+    </a>
+    
     <!-- Sidebar -->
     <nav class="sidebar collapsed">
         <div class="logo-container" id="sidebarToggle">
@@ -73,10 +46,12 @@
             </a>
         </div>
         <div class="user-info">
+            <a href="<?php echo BASE.$role; ?>profile">
             <img src="<?php echo $_SESSION['profile']; ?>" alt="User Avatar" class="user-avatar">
             <div class="user-details">
                 <p class="user-name"><?php echo $_SESSION['name']; ?> | <?php echo ucfirst(strtolower($_SESSION['role'])); ?></p>
             </div>
+            </a>
         </div>
         
         <nav class="sidebar-nav">
@@ -152,147 +127,116 @@
                 <span>Settings</span>
             </a>
             <?php endif; ?>
+            <div>
+                <a href="<?php echo BASE; ?>user-logout" class="nav-item logout-btn">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
+            
         </nav>
     </nav>
 
     <main class="main-content expanded">
-        <!-- Top Bar -->
-        <div class="top-bar">
-            <div class="top-bar-left">
-                <!-- Menu toggle button will be inserted by JavaScript -->
-            </div>
-            <div class="top-bar-right">
-                <div class="dropdown">
-                    <a href="#" class="notification-icon" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-bell"></i>
-                        <?php if ($unread_count > 0): ?>
-                            <span class="notification-badge"><?php echo $unread_count; ?></span>
-                        <?php endif; ?>
-                    </a>
-                    <div class="dropdown-menu notification-dropdown">
-                        <div class="dropdown-header">Recent Notifications</div>
-                        <div class="notification-list">
-                            <?php if (empty($notifications)): ?>
-                                <div class="no-notifications">No notifications yet</div>
-                            <?php else: ?>
-                                <?php foreach ($notifications as $notification): ?>
-                                    <a href="<?php echo $notification['link']; ?>" class="notification-item <?php echo !$notification['is_read'] ? 'unread' : ''; ?>">
-                                        <div class="notification-icon">
-                                            <i class="bi <?php echo $notification['icon']; ?> <?php echo $notification['icon_color']; ?>"></i>
-                                        </div>
-                                        <div class="notification-content">
-                                            <div class="notification-message"><?php echo htmlspecialchars($notification['message']); ?></div>
-                                            <div class="notification-time"><?php echo getTimeAgoNotif($notification['created_at']); ?></div>
-                                        </div>
-                                    </a>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </div>
-                        <div class="dropdown-divider"></div>
-                        <a href="<?php echo BASE.$role; ?>notifications" class="view-all">View All Notifications</a>
-                    </div>
-                </div>
-                <div class="dropdown">
-                    <div class="profile-toggle" data-bs-toggle="dropdown">
-                        <img src="<?php echo $_SESSION['profile']; ?>" alt="Profile" class="profile-img">
-                        <i class="bi bi-chevron-down chevron-icon"></i>
-                    </div>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="<?php echo BASE.$role; ?>profile">Profile</a></li>
-                        <li><a class="dropdown-item" href="<?php echo BASE.$role; ?>settings">Settings</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="<?php echo BASE; ?>user-logout">Logout</a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
+        
 
-<script>    
-    document.addEventListener("DOMContentLoaded", function () {
-    const BASE = document.body.getAttribute("data-base") || "/";
+<script>
+    const BASE = '<?php echo BASE; ?>';
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            // Handle sidebar toggle
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const mobileToggle = document.querySelector('.mobile-toggle');
+            const sidebar = document.querySelector('.sidebar');
+            const mainContent = document.querySelector('.main-content');
+            const logoContainer = document.querySelector('.logo-container');
+            let isLogoHidden = false;
 
-    // Sidebar Toggle
-    const sidebarToggle = document.getElementById("sidebarToggle");
-    const sidebar = document.querySelector(".sidebar");
-    const mainContent = document.querySelector(".main-content");
-
-    if (sidebarToggle && sidebar && mainContent) {
-        const overlay = document.createElement("div");
-        overlay.className = "sidebar-overlay";
-        document.body.appendChild(overlay);
-
-        sidebarToggle.addEventListener("click", function (e) {
-            e.preventDefault();
-            if (window.innerWidth <= 991) {
-                sidebar.classList.toggle("active");
-                overlay.classList.toggle("active");
-            } else {
-                sidebar.classList.toggle("collapsed");
-                mainContent.classList.toggle("expanded");
+            // Function to handle sidebar toggle
+            function toggleSidebar() {
+                if (window.innerWidth <= 770) {
+                    sidebar.classList.toggle('show');
+                } else {
+                    sidebar.classList.toggle('collapsed');
+                    mainContent.classList.toggle('expanded');
+                }
             }
-        });
 
-        overlay.addEventListener("click", function () {
-            sidebar.classList.remove("active");
-            overlay.classList.remove("active");
-        });
+            // Function to log using the project's standard log_error
+            function logAction(message, action, isError = false) {
+                const data = new FormData();
+                data.append('error', isError ? message : '');
+                data.append('message', !isError ? message : '');
+                data.append('component', 'header');
+                data.append('action', action);
 
-        // Ensure sidebar behaves correctly on window resize
-        window.addEventListener("resize", function () {
-            if (window.innerWidth > 991) {
-                sidebar.classList.remove("active");
-                overlay.classList.remove("active");
+                fetch(BASE + 'logs', {
+                    method: 'POST',
+                    body: data
+                }).catch(err => console.error('Error logging to server:', err));
             }
-        });
-    }
 
-    // Bootstrap Dropdown Initialization
-    const dropdownElements = document.querySelectorAll(".dropdown-toggle");
-    dropdownElements.forEach(el => new bootstrap.Dropdown(el));
-
-    // Notification Dropdown Handling
-    const notificationIcon = document.querySelector(".notification-icon");
-    const notificationDropdown = document.querySelector(".notification-dropdown");
-
-    if (notificationIcon && notificationDropdown) {
-        notificationIcon.addEventListener("click", function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            notificationDropdown.classList.toggle("show");
-        });
-
-        document.addEventListener("click", function (e) {
-            if (!e.target.closest(".notification-icon") && !e.target.closest(".notification-dropdown")) {
-                notificationDropdown.classList.remove("show");
+            // Desktop sidebar toggle
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', function(e) {
+                    try {
+                        if (window.innerWidth > 775) {
+                            toggleSidebar();
+                        }
+                    } catch (error) {
+                        console.error('Error toggling logo:', error);
+                        logAction(error.message, 'toggle_logo_error', true);
+                    }
+                });
             }
-        });
 
-        notificationDropdown.addEventListener("click", function (e) {
-            e.stopPropagation();
-        });
-    }
-
-    // Profile Dropdown Handling
-    const profileToggle = document.querySelector(".profile-toggle");
-    const profileDropdown = document.querySelector(".profile-toggle + .dropdown-menu");
-
-    if (profileToggle && profileDropdown) {
-        profileToggle.addEventListener("click", function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            profileDropdown.classList.toggle("show");
-        });
-
-        document.addEventListener("click", function (e) {
-            if (!e.target.closest(".profile-toggle") && !e.target.closest(".dropdown-menu")) {
-                profileDropdown.classList.remove("show");
+            // Mobile sidebar toggle
+            if (mobileToggle) {
+                mobileToggle.addEventListener('click', function(e) {
+                    toggleSidebar();
+                // Toggle logo container visibility
+                logoContainer.classList.toggle('hidden');
+                isLogoHidden = !isLogoHidden;
+                console.log(logoContainer.classList);
+                });
             }
-        });
 
-        profileDropdown.addEventListener("click", function (e) {
-            e.stopPropagation();
-        });
-    }
-});
+            // Close sidebar when clicking outside on mobile
+            document.addEventListener('click', function(e) {
+                if (window.innerWidth <= 770 && 
+                    !sidebar.contains(e.target) && 
+                    !mobileToggle.contains(e.target) &&
+                    sidebar.classList.contains('show')) {
+                    toggleSidebar();
+                }
+            });
+            sidebar.addEventListener("mouseenter", function() {
+                sidebar.classList.remove("collapsed");
+                mainContent.classList.remove("expanded");
+            });
+            sidebar.addEventListener("mouseleave", function() {
+                sidebar.classList.add("collapsed");
+                mainContent.classList.add("expanded");
+            });
 
+            // Handle window resize
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 770) {
+                    sidebar.classList.remove('show');
+                }
+                if (window.innerWidth <= 991) {
+                    sidebar.classList.add("collapsed");
+                    mainContent.classList.add("expanded");
+                }
+                else {
+                    sidebar.classList.remove("collapsed");
+                    mainContent.classList.remove("expanded");
+                }
+            });
+        } catch (error) {
+            console.error('Error initializing header functionality:', error);
+            logAction(error.message, 'initialization_error', true);
+        }
+    });
 </script>

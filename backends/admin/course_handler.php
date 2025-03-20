@@ -1,6 +1,6 @@
 <?php
 require_once '../main.php';
-require_once '../admin_management.php';
+require_once BACKEND.'admin_management.php';
 
 // Check if user is logged in and has admin role
 if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'ADMIN') {
@@ -68,7 +68,7 @@ try {
                 exit();
             } catch (Exception $e) {
                 $conn->rollback();
-                log_error("Error deleting course: " . $e->getMessage());
+                log_error("Error deleting course: " . $e->getMessage(),'security');
                 http_response_code(500);
                 echo json_encode(['success' => false, 'message' => 'Failed to delete course']);
                 exit();

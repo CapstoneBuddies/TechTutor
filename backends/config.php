@@ -30,7 +30,7 @@
 	define('CLASS_IMG', BASE.'assets/img/class/');
 	define('SUBJECT_IMG', BASE.'assets/img/subjects/');
 	define('USER_IMG', BASE.'assets/img/users/');
-	define('BACKEND', ROOT_PATH.'/backends/');
+	define('BACKEND', ROOT_PATH.'/backends/management/');
 
 	// Define LOG_PATH based on fixed ROOT_PATH
 	define('LOG_PATH', ROOT_PATH . '/logs/');

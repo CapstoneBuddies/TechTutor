@@ -20,7 +20,12 @@ if ($current_page === 'index' || $current_page === 'default') {
 
 // Log page visit if function exists
 if (function_exists('log_error')) {
-    $msg = "USER: ".$_SESSION['user']." Page visited: {$current_page} Level: ".($_SESSION['role'] != '' ? $_SESSION['role'] : 'INVALID');
+    if(isset($_SESSION['user']) && isset($_SESSION['role'])) {
+        $msg = "USER: ".$_SESSION['user']." Page visited: {$current_page} Level: ".($_SESSION['role'] != '' ? $_SESSION['role'] : 'INVALID');    
+    }
+    else {
+        $msg = "Page visited: {$current_page} ACCESSED LEVEL: INVALID/UNAUTHORIZED";
+    }
     log_error($msg, 5);
 } else {
     error_log("Log function missing for page: {$current_page}");
@@ -47,10 +52,12 @@ if (function_exists('log_error')) {
     <link href="<?php echo BASE; ?>assets/vendor/glightbox/css/glightbox.min.css" rel="stylesheet">
     <link href="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
     <link href="<?php echo BASE; ?>assets/vendor/fontawesome/css/all.min.css" rel="stylesheet">
+    <link href="<?php echo BASE; ?>assets/vendor/clockpicker/dist/bootstrap-clockpicker.min.css" rel="stylesheet">
 
     <!-- Base Custom CSS -->
     <link href="<?php echo CSS; ?>users.css" rel="stylesheet">
     <link rel="stylesheet" href="<?php echo CSS; ?>header.css">
+    <link rel="stylesheet" href="<?php echo CSS; ?>footer.css">
     <link rel="stylesheet" href="<?php echo CSS; ?>responsive.css">
 
     <?php
@@ -76,8 +83,6 @@ if (function_exists('log_error')) {
     ?>
 
     <!-- Common JavaScript -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
-
     <?php
     // Role-specific JavaScript
     if (isset($_SESSION['role'])) {

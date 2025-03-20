@@ -1,5 +1,5 @@
 <?php
-require_once '../backends/main.php';
+require_once '../../backends/main.php';
 
 // Check if user is admin
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'ADMIN') {

@@ -1,7 +1,7 @@
 <?php 
 require_once '../../backends/main.php';
-require_once ROOT_PATH.'/backends/class_management.php';
-require_once ROOT_PATH.'/backends/student_management.php';
+require_once BACKEND.'class_management.php';
+require_once BACKEND.'student_management.php';
 
 // Ensure user is logged in and is a TechGuru
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
         
         // Redirect to class details page
-        header("Location: ".BASE."dashboard/class/details?id={$result['class_id']}&created=1");
+        header("Location: ".BASE."dashboard/t/class/details?id={$result['class_id']}&created=1");
         exit();
     } else {
         $error = $result['error'];

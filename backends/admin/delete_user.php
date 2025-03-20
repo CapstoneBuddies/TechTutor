@@ -1,6 +1,6 @@
 <?php
 require_once '../../backends/main.php';
-require_once ROOT_PATH.'/backends/user_management.php';
+require_once BACKEND.'user_management.php';
 
 // Check if user is admin
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'ADMIN') {
@@ -21,6 +21,8 @@ if ($user_id == $_SESSION['user']) {
     echo json_encode(['success' => false, 'message' => 'You cannot delete your own account']);
     exit();
 }
+
+$filePath = BASE.'logs/deletedeleted_accounts/';
 
 try {
     global $conn;
@@ -130,7 +132,7 @@ try {
     $admin_name = $_SESSION['first_name'] . ' ' . $_SESSION['last_name'];
     $user_name = $user['first_name'] . ' ' . $user['last_name'];
     $log_message = "Admin {$admin_name} deleted user {$user_name} (ID: {$user_id})";
-    error_log($log_message);
+    log_error($log_message,'security');
     
     // Commit transaction
     $conn->commit();
@@ -140,6 +142,6 @@ try {
     if (isset($conn) && $conn->connect_errno === 0) {
         $conn->rollback();
     }
-    error_log("Error in delete_user.php: " . $e->getMessage());
+    log_error("Error in delete_user.php: " . $e->getMessage());
     echo json_encode(['success' => false, 'message' => 'An error occurred while deleting user']);
 }

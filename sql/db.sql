@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS `subject` (
     `course_id` INT,
     `subject_name` VARCHAR(255) NOT NULL,
     `subject_desc` TEXT,
-    `image` VARCHAR(255) DEFAULT 'defaul.jpg',
+    `image` VARCHAR(255) DEFAULT 'default.jpg',
     `is_active` BOOLEAN NOT NULL DEFAULT TRUE,
     FOREIGN KEY (course_id) REFERENCES course(course_id)
 );

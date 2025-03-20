@@ -12,7 +12,8 @@
     }
 
     // Fetch notifications using the new function
-    $notifications = getUserNotifications($_SESSION['user'], $_SESSION['role']);
+    $notifications = fetchUserNotifications($_SESSION['user'], $_SESSION['role']);
+    $notif_id = [];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -67,7 +68,7 @@
                                                 </small>
                                             <?php endif; ?>
                                             <small class="notification-time">
-                                                <?php echo getTimeAgoNotif($notification['created_at']); ?>
+                                                <?php echo getTimeAgo($notification['created_at']); ?>
                                             </small>
                                         </div>
                                         <p class="notification-message">
@@ -98,6 +99,9 @@
                                         <span class="badge bg-primary">New</span>
                                     </div>
                                     <?php endif; ?>
+                                    <button class="btn btn-delete-notif" data-notification-id="<?php echo $notification['notification_id']; ?>">
+                                        <i class="fa-solid fa-circle-xmark"></i>
+                                    </button>
                                 </div>
                             <?php endforeach; ?>
                         </div>
@@ -117,10 +121,21 @@
         <script src="<?php echo BASE; ?>assets/js/notifications.js"></script>
         
         <script>
+            function getUnreadNotificationIds() {
+                return Array.from(document.querySelectorAll('.notification-item.unread'))
+                            .map(item => item.dataset.notificationId);
+            }
             // Mark all notifications as read
             function markAllAsRead() {
-                fetch('mark-all-notifications-read', {
-                    method: 'POST'
+                fetch("<?php echo BASE.'mark-all-notifications-read'; ?>", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        user_id: <?php echo $_SESSION['user']; ?>,
+                        notifIDs: getUnreadNotificationIds()
+                     })
                 })
                 .then(response => response.json())
                 .then(data => {
@@ -128,6 +143,7 @@
                         document.querySelectorAll('.notification-item.unread').forEach(item => {
                             item.classList.remove('unread');
                             item.querySelector('.notification-status')?.remove();
+                            setTimeout(() => location.reload(), 1000);
                         });
                         // Update the notification badge in the header
                         const badge = document.querySelector('.notification-badge');
@@ -142,6 +158,44 @@
             var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
                 return new bootstrap.Tooltip(tooltipTriggerEl);
             });
+            document.addEventListener("DOMContentLoaded", function () {
+                // Attach event listener to all delete buttons
+                document.querySelectorAll(".btn-delete-notif").forEach(button => {
+                    button.addEventListener("click", function () {
+                        deleteNotif(this);
+                    });
+                });
+            });
+
+            function deleteNotif(button) {
+                const notifItem = button.closest(".notification-item"); // Get the parent notification div
+                const notifId = button.getAttribute("data-notification-id"); // Get the notification ID
+
+                if (notifItem) {
+                    // Apply transition effect
+                    notifItem.classList.add("notif-hide");
+
+                    // Send an AJAX request to delete notification from the database
+                    fetch("<?php echo BASE.'delete-notification'; ?>", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                        body: `notification_id=${notifId}`
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Remove the notification from DOM after transition
+                            setTimeout(() => {
+                                notifItem.remove();
+                            }, 400);
+                        } else {
+                            console.error("Failed to delete notification.");
+                        }
+                    })
+                    .catch(error => console.error("Error:", error));
+                }
+            }
+
         </script>
     </body>
 </html>

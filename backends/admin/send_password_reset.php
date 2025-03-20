@@ -1,6 +1,6 @@
 <?php
 require_once '../../backends/main.php';
-require_once ROOT_PATH.'/backends/user_management.php';
+require_once BACKEND.'user_management.php';
 
 // Check if user is admin
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'ADMIN') {
@@ -114,7 +114,7 @@ try {
     try {
         $mailer->send();
     } catch (Exception $e) {
-        error_log("Failed to send password reset email: " . $e->getMessage());
+        log_error("Failed to send password reset email: " . $e->getMessage(),'mail');
         // Continue execution even if email fails, as we've already set the token
         echo json_encode(['success' => true, 'message' => 'Password reset link generated, but email could not be sent']);
         exit();

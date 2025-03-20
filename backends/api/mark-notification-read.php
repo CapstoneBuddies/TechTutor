@@ -6,8 +6,7 @@
  * individual notifications as read when clicked.
  */
 
-require_once 'main.php';
-require_once 'notifications_management.php';
+require_once '../main.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['user'])) {
@@ -27,7 +26,7 @@ $notification_id = (int)$_POST['notification_id'];
 
 try {
     // Call the centralized function to mark notification as read
-    $success = markNotificationAsRead($notification_id);
+    $success = markNotificationsAsRead($notification_id);
     
     if ($success) {
         http_response_code(200);

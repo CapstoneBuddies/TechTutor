@@ -1,7 +1,7 @@
  <?php 
     require_once 'main.php';
-    require_once ROOT_PATH.'/backends/student_management.php';
-    require_once ROOT_PATH.'/backends/class_management.php';
+    require_once BACKEND.'student_management.php';
+    require_once BACKEND.'class_management.php';
 
     // Check if user is logged in
     if (!isset($_SESSION['user'])) {

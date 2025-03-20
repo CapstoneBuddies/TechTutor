@@ -51,14 +51,17 @@ if (!in_array($currentPage, $noFooterPages)): ?>
         </div>
     </div>
 </footer>
+
 <?php endif; ?>
 
 <!-- Vendor JavaScript Section -->
-<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<script src="<?php echo BASE; ?>assets/vendor/jQuery/jquery-3.6.4.min.js"></script>
 <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="<?php echo BASE; ?>assets/vendor/aos/aos.js"></script>
 <script src="<?php echo BASE; ?>assets/vendor/glightbox/js/glightbox.min.js"></script>
 <script src="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.js"></script>
+<script src="<?php echo BASE; ?>assets/vendor/clockpicker/dist/bootstrap-clockpicker.min.js"></script>
+
 <!-- Footer JavaScript -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -73,6 +76,17 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+    const loadingIndicator = document.createElement("div");
+    loadingIndicator.id = "loadingIndicator";
+    loadingIndicator.className = "d-none"; // Initially hidden
+    loadingIndicator.innerHTML = `
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    `;
+
+    // Append before </body>
+    document.body.appendChild(loadingIndicator);
 });
 
 function showToast(type, message) {
@@ -104,7 +118,7 @@ function showToast(type, message) {
     const bsToast = new bootstrap.Toast(toast, {
         animation: true,
         autohide: true,
-        delay: 3000
+        delay: 1000
     });
 
     bsToast.show();
@@ -112,6 +126,17 @@ function showToast(type, message) {
     toast.addEventListener('hidden.bs.toast', () => {
         document.body.removeChild(toastContainer);
     });
+}
+
+// Helper function to show/hide loading indicator
+function showLoading(show) {
+    const loadingIndicator = document.getElementById("loadingIndicator");
+    if (loadingIndicator) {
+        loadingIndicator.classList.remove("d-none");
+    }
+    else {
+        loadingIndicator.classList.add("d-none");
+    }
 }
 </script>
 <?php

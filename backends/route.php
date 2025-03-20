@@ -1,6 +1,6 @@
 <?php 
 	require_once "main.php";
-	require_once 'user_management.php';
+	require_once 'management/user_management.php';
 
 	if($link == 'user-login') {
 		login();
@@ -95,8 +95,8 @@
 			exit;
 		}
 
-		require_once 'paymongo_config.php';
-		require_once 'payment_handlers.php';
+		require_once 'handler/paymongo_config.php';
+		require_once 'handler/payment_handlers.php';
 		
 		if ($link == 'create-payment') {
 			handleCreatePayment($conn);
@@ -108,43 +108,7 @@
 	elseif ($link == 'home') {
 		header("location: ".BASE);
 	}
-	elseif ($link == 'mark-notification-read') {
-		require_once 'notifications_management.php';
-		
-		// Check if user is logged in
-		if (!isset($_SESSION['user'])) {
-			http_response_code(401);
-			echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-			exit();
-		}
-
-		// Validate input
-		if (!isset($_POST['notification_id']) || !is_numeric($_POST['notification_id'])) {
-			http_response_code(400);
-			echo json_encode(['success' => false, 'message' => 'Invalid notification ID']);
-			exit();
-		}
-
-		$notification_id = (int)$_POST['notification_id'];
-
-		try {
-			// Call the centralized function to mark notification as read
-			$success = markNotificationAsRead($notification_id);
-			
-			if ($success) {
-				http_response_code(200);
-				echo json_encode(['success' => true]);
-			} else {
-				http_response_code(500);
-				echo json_encode(['success' => false, 'message' => 'Failed to mark notification as read']);
-			}
-		} catch (Exception $e) {
-			log_error("Error in mark-notification-read route: " . $e->getMessage());
-			http_response_code(500);
-			echo json_encode(['success' => false, 'message' => 'Server error']);
-		}
-		exit();
-	}
+	
 	else {
 		// If no route matches, return 404
 		http_response_code(404);

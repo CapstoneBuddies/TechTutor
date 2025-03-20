@@ -139,15 +139,14 @@
 }
 
 .notification-content {
-    margin-left: 2.5rem;
     position: relative;
 }
 
 .notification-icon {
     position: absolute;
-    left: -2rem;
     top: 0.25rem;
     font-size: 1.25rem;
+    align-items: center;
 }
 
 .notification-message {
@@ -254,4 +253,20 @@
 
 .notification-holder::-webkit-scrollbar-thumb:hover {
     background: #0ba8c7; /* Darker shade on hover */
+}
+.btn-delete-notif {
+    opacity: 0;
+    visibility: hidden;
+    color: darkred;
+    outline: red;
+}
+.notification-item:hover .btn-delete-notif {
+    opacity: 1;
+    visibility: visible;
+    transition: transform 0.4s ease-out, opacity 0.4s ease-out;
+}
+.notif-hide {
+    transition: transform 0.4s ease-out, opacity 0.4s ease-out;
+    transform: translateX(-100%);
+    opacity: 0;
 }

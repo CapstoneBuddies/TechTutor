@@ -4,5 +4,17 @@
 # Logs
 /logs/*
 !/logs/.gitkeep
+/logs/deleted_accounts/*
+!/logs/deleted_accounts/.gitkeep
 
+# Users
+/assets/img/users/*
+!/assets/img/users/default.jpg
 
+# Class
+/assets/img/class/*
+!/assets/img/class/default.jpg
+
+# Subjects
+/assets/img/subjects/*
+!/assets/img/subjects/default.jpg

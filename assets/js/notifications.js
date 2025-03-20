@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!notificationId) return;
             
             try {
-                const response = await fetch(BASE + 'mark-notification-read', {
+                const response = await fetch(BASE+'mark-notification-read', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Remove unread class and update badge count
                     this.classList.remove('unread');
                     const badge = document.querySelector('.notification-badge');
+                    const badges = document.querySelector('.badge');
                     if (badge) {
                         const currentCount = parseInt(badge.textContent);
                         if (currentCount > 1) {
@@ -30,6 +31,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             badge.remove();
                         }
                     }
+                    // setTimeout(() => location.reload(), 2000);
+                    badges.remove();
                 }
             } catch (error) {
                 console.error('Error marking notification as read:', error);
