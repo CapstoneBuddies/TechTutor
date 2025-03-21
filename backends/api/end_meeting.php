@@ -1,6 +1,5 @@
 <?php
-require_once '../config.php';
-require_once '../main.php';
+require_once '../../main.php';
 require_once '../meeting_management.php';
 
 header('Content-Type: application/json');
@@ -17,10 +16,10 @@ try {
         throw new Exception('Schedule ID is required');
     }
 
-    $pdo = getConnection();
+    $conn = getConnection();
     
     // Get meeting details and verify ownership
-    $stmt = $pdo->prepare("
+    $stmt = $conn->prepare("
         SELECT 
             m.*,
             c.tutor_id,
@@ -53,11 +52,11 @@ try {
     }
 
     // Begin transaction
-    $pdo->beginTransaction();
+    $conn->begin_transaction();
 
     try {
         // Update meeting status
-        $stmt = $pdo->prepare("
+        $stmt = $conn->prepare("
             UPDATE meetings 
             SET is_running = false, 
                 end_time = CURRENT_TIMESTAMP 
@@ -66,7 +65,7 @@ try {
         $stmt->execute([$meeting['meeting_uid']]);
 
         // Update schedule status
-        $stmt = $pdo->prepare("
+        $stmt = $conn->prepare("
             UPDATE class_schedule 
             SET status = 'completed' 
             WHERE schedule_id = ?
@@ -74,7 +73,7 @@ try {
         $stmt->execute([$scheduleId]);
 
         // Create notifications for students
-        $stmt = $pdo->prepare("
+        $stmt = $conn->prepare("
             INSERT INTO notifications (
                 recipient_id, recipient_role, class_id,
                 message, icon, icon_color
@@ -94,14 +93,14 @@ try {
             "meeting"
         );
 
-        $pdo->commit();
+        $conn->commit();
 
         echo json_encode([
             'success' => true,
             'message' => 'Meeting ended successfully'
         ]);
     } catch (Exception $e) {
-        $pdo->rollBack();
+        $conn->rollBack();
         throw $e;
     }
 } catch (Exception $e) {

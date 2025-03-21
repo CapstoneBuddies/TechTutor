@@ -80,6 +80,7 @@ function getSubjectsWithCounts() {
             s.subject_id,
             s.subject_name,
             s.subject_desc,
+            s.image,
             s.is_active,
             c.course_id,
             c.course_name,
@@ -166,7 +167,7 @@ function updateSubjectStatus($subject_id, $is_active) {
                 $tutor['uid'],
                 'TECHGURU',
                 "Subject '{$subject['subject_name']}' in course '{$subject['course_name']}' has been {$status}",
-                "class-details.php?subject_id={$subject_id}",
+                "class/details?subject_id={$subject_id}",
                 null,
                 $is_active ? 'bi-check-circle' : 'bi-x-circle',
                 $is_active ? 'text-success' : 'text-danger'
@@ -277,9 +278,10 @@ function addCourse($courseName, $courseDesc = '') {
  * @param int $courseId ID of the course
  * @param string $subjectName Name of the subject
  * @param string $subjectDesc Description of the subject
+ * @param string $subjectImage Cover Image of the subject
  * @return array Operation result with success status and message
  */
-function addSubject($courseId, $subjectName, $subjectDesc) {
+function addSubject($courseId, $subjectName, $subjectDesc, $subjectImage) {
     global $conn;
     
     try {
@@ -312,6 +314,48 @@ function addSubject($courseId, $subjectName, $subjectDesc) {
         
         $subjectId = $conn->insert_id;
         
+        // Save image filename to the db
+         if (isset($_FILES['subjectImage']) && $_FILES['subjectImage']['error'] === UPLOAD_ERR_OK) {
+            $file = $_FILES['subjectImage'];
+            $fileName = $file['name'];
+            $fileSize = $file['size'];
+            $fileTmp = $file['tmp_name'];
+            log_error(print_r($_FILES['subjectImage'],true).' fileTemp:'.$fileTmp);
+            // Get file extension
+            $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            
+            // Allowed extensions
+            $allowedExt = array('jpg', 'jpeg', 'png', 'gif');
+            
+            // Validate file type and size
+            if (!in_array($fileExt, $allowedExt)) {
+                $response['message'] = 'Invalid file type. Allowed types: ' . implode(', ', $allowedExt);
+                echo json_encode($response);
+                exit();
+            }
+            
+            if ($fileSize > 5242880) { // 5MB in bytes
+                $response['message'] = 'File size too large. Maximum size: 5MB';
+                echo json_encode($response);
+                exit();
+            }
+            
+            // Create new filename with user ID
+            $newFileName = $subjectId . '.' . $fileExt;
+            $uploadPath = ROOT_PATH . '/assets/img/subjects/' . $newFileName;
+            if (move_uploaded_file($fileTmp, $uploadPath)) {
+                $stmt->prepare("UPDATE subject SET image = ? WHERE subject_id = ?");
+                $stmt->bind_param('si',$newFileName,$subjectId);
+                if(!$stmt->execute()) {
+                    throw new Exception("Subject ID:{$subjectId}, Cover Image failed to save");
+                }
+            } else {
+                log_error("Failed to move uploaded file from $fileTmp to $uploadPath", 'database');
+                $response['message'] = 'Failed to upload Subject Cover Photo';
+                echo json_encode($response);
+                exit();
+            }
+         }
         // Log the action
         log_error("New subject added: $subjectName in course ID: $courseId (Subject ID: $subjectId)", "security");
         
@@ -319,6 +363,9 @@ function addSubject($courseId, $subjectName, $subjectDesc) {
         return ['success' => true, 'message' => 'Subject added successfully'];
     } catch (Exception $e) {
         $conn->rollback();
+        if (file_exists($uploadPath)) {
+            unlink($uploadPath);
+        }
         log_error("Error adding subject: " . $e->getMessage(), 'database');
         return ['success' => false, 'message' => 'Failed to add subject'];
     }
@@ -399,6 +446,84 @@ function updateUserRole($userId, $newRole) {
         // Log the error
         log_error($e->getMessage(), 'mail');
         return false;
+    }
+}
+function updateCover($subjectId, $file) {
+    global $conn;
+    // Validate inputs
+    if (!$subjectId || !$file || $file['error'] !== UPLOAD_ERR_OK) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Invalid subject ID or file upload']);
+        return false;
+    }
+
+    $uploadDir = ROOT_PATH . '/assets/img/subjects/'; // Adjust path if needed
+
+    // Ensure directory exists
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0777, true);
+    }
+
+    try {
+        $fileName = $file['name'];
+        $fileSize = $file['size'];
+        $fileTmp = $file['tmp_name'];
+
+        // Get file extension
+        $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+        // Allowed extensions
+        $allowedExt = ['jpg', 'jpeg', 'png', 'gif'];
+
+        // Validate file type and size
+        if (!in_array($fileExt, $allowedExt)) {
+            log_error("Invalid file extension");
+            http_response_code(400);
+            return ['success' => false, 'message' => 'Invalid file type. Allowed types: ' . implode(', ', $allowedExt)];
+        }
+
+        if ($fileSize > 5242880) { // 5MB limit
+            http_response_code(400);
+            return ['success' => false, 'message' => 'File size too large. Maximum: 5MB'];
+        }
+
+        // Create a unique filename
+        $newFileName = "{$subjectId}." . $fileExt;
+        $uploadPath = $uploadDir . $newFileName;
+
+        // delete current file
+        $stmt= $conn->prepare("SELECT image FROM subject WHERE subject_id = ?");
+        $stmt->bind_param('i',$subjectId);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc()['image'];
+        if (file_exists($uploadDir.$result)) {
+            if (!unlink($uploadDir.$result)) {
+                http_response_code(500);
+                return ['success' => false, 'message' => 'Failed to delete existing file'];
+            }
+        }
+
+        // Move the file to the upload directory
+        if (!move_uploaded_file($fileTmp, $uploadPath)) {
+            http_response_code(500);
+            return ['success' => false, 'message' => 'Failed to upload image'];
+        }
+
+        // Update database with new image filename
+        $stmt = $conn->prepare("UPDATE subject SET image = ? WHERE subject_id = ?");
+        $stmt->bind_param("si", $newFileName, $subjectId);
+        
+        if ($stmt->execute()) {
+            return ['success' => true, 'message' => 'Subject cover updated successfully'];
+        } else {
+            http_response_code(500);
+            return ['success' => false, 'message' => 'Failed to update subject cover in database'];
+        }
+
+        $stmt->close();
+    } catch (Exception $e) {
+        http_response_code(500);
+        return ['success' => false, 'message' => 'Failed to process the cover update'];
     }
 }
 

@@ -55,7 +55,7 @@ function generateVerificationToken($user_id) {
     $stmt = $conn->prepare("INSERT INTO login_tokens (user_id, type, token, expiration_date) VALUES (?, 'email_verification', ?, ?)");
     $stmt->bind_param("iss", $user_id, $hashed_token, $expires_at);
     if (!$stmt->execute()) {
-        log_error($stmt->error, 'database_error.log');
+        log_error($stmt->error, 'database_error');
         return null;
     }
     return $token;
@@ -92,30 +92,36 @@ function checkVCodeStatus($user_id) {
 /**
  * Verify email token
  */
-function verifyEmailToken($token) {
+function verifyEmailToken($token, $type = 'email_verification') {
     global $conn;
 
     try {
-        $stmt = $conn->prepare("SELECT user_id, token FROM login_tokens WHERE type = 'email_verification' AND expiration_date > NOW()");
+        $stmt = $conn->prepare("SELECT user_id, token FROM login_tokens WHERE type = ? AND expiration_date > NOW()");
+        $stmt->bind_param('s',$type);
         $stmt->execute();
         $result = $stmt->get_result();
 
         while ($row = $result->fetch_assoc()) {
             if (password_verify($token, $row['token'])) {
-                $user_id = $row['user_id'];
+                if ($type === 'email_verification') {
+                    $user_id = $row['user_id'];
 
-                // Update user verification status
-                $update_stmt = $conn->prepare("UPDATE users SET is_verified = 1 WHERE uid = ?");
-                $update_stmt->bind_param("i", $user_id);
-                $update_stmt->execute();
+                    // Update user verification status
+                    $update_stmt = $conn->prepare("UPDATE users SET is_verified = 1 WHERE uid = ?");
+                    $update_stmt->bind_param("i", $user_id);
+                    $update_stmt->execute();
 
-                // Delete the verification token
-                $delete_stmt = $conn->prepare("DELETE FROM login_tokens WHERE user_id = ? AND type = 'email_verification'");
-                $delete_stmt->bind_param("i", $user_id);
-                $delete_stmt->execute();
+                    // Delete the verification token
+                    $delete_stmt = $conn->prepare("DELETE FROM login_tokens WHERE user_id = ? AND type = 'email_verification'");
+                    $delete_stmt->bind_param("i", $user_id);
+                    $delete_stmt->execute();
 
-                $_SESSION['msg'] = "Email verified successfully! You can now log in.";
-                return true;
+                    $_SESSION['msg'] = "Email verified successfully! You can now log in.";
+                    return true;
+                }
+                else {
+                    return ['result' => true, 'user_id' => $row['user_id']];
+                }
             }
         }
         $_SESSION['msg'] = "Invalid or expired token.";
@@ -270,7 +276,7 @@ function generatePasswordResetToken($user_id) {
     $stmt = $conn->prepare("INSERT INTO login_tokens (user_id, type, token, expiration_date) VALUES (?, 'reset', ?, ?)");
     $stmt->bind_param("iss", $user_id, $hashed_token, $expires_at);
     if (!$stmt->execute()) {
-        log_error($stmt->error, 'database_error.log');
+        log_error($stmt->error, 'database_error');
         return null;
     }
     return $token;
@@ -310,7 +316,7 @@ function forgotPassword() {
 
         // Generate verification token
         $token = generatePasswordResetToken($user_id);
-        $reset_link = "https://".$_SERVER['SERVER_NAME']."/reset-password?token=" . $token . "&email=" . urlencode($email);
+        $reset_link = "https://".$_SERVER['SERVER_NAME']."/reset?token=" . $token . "&email=" . urlencode($email);
 
         // Email setup
         $mail = getMailerInstance();
@@ -319,7 +325,7 @@ function forgotPassword() {
         
         // Styled email body (HTML format)
         $mail->isHTML(true);
-        $mail->AddEmbeddedImage(__DIR__.'/../assets/img/stand_alone_logo.png','logo','TechTutor Logo');
+        $mail->AddEmbeddedImage(ROOT_PATH.'/assets/img/stand_alone_logo.png','logo','TechTutor Logo');
         $mail->Body = "
             <div style='font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 10px; padding: 20px;'>
                 <div style='text-align: center;'>
@@ -463,7 +469,7 @@ function updateProfile() {
                 $stmt = $conn->prepare("UPDATE users SET profile_picture = ? WHERE uid = ?");
                 $stmt->bind_param("si", $newFileName, $userId);
                 if (!$stmt->execute()) {
-                    error_log("Failed to update profile picture in database: " . $stmt->error);
+                    log_error("Failed to update profile picture in database: " . $stmt->error,'database');
                     $response['message'] = 'Failed to update profile picture in database';
                     echo json_encode($response);
                     exit();

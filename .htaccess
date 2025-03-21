@@ -113,6 +113,7 @@ RewriteRule ^add-subject$ backends/admin/course_handler.php [L]
 RewriteRule ^edit-subject$ backends/admin/course_handler.php [L]
 RewriteRule ^delete-subject$ backends/admin/course_handler.php [L]
 RewriteRule ^toggle-subject$ backends/admin/course_handler.php [L,QSA]
+RewriteRule ^update-subject-cover$ backends/admin/course_handler.php [L]
 #BBB
 RewriteRule ^create-meeting$ backends/api/create_meeting.php [L,QSA]
 RewriteRule ^join-meeting$ backends/api/join_meeting.php [L,QSA]

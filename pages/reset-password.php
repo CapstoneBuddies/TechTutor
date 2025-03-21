@@ -1,5 +1,6 @@
 <?php
 require_once '../backends/main.php';
+require_once BACKEND.'user_management.php';
 
 $token = isset($_GET['token']) ? trim($_GET['token']) : '';
 $error = '';
@@ -9,20 +10,11 @@ $success = '';
 if (empty($token)) {
     $error = 'Invalid or missing reset token. Please request a new password reset link.';
 } else {
-    // Verify token and check if it's not expired
-    global $conn;
-    $stmt = $conn->prepare("SELECT u.uid, u.email, u.first_name, u.last_name, u.role FROM users u 
-                           INNER JOIN login_tokens l ON u.uid = l.user_id 
-                           WHERE l.token = ? AND l.type = 'reset' AND l.expiration_date > NOW() AND u.status = 1");
-    $stmt->bind_param("s", $token);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($result->num_rows === 0) {
+
+    $result = verifyEmailToken($token, 'reset');
+
+    if (!$result['result']) {
         $error = 'Invalid reset token. Please request a new password reset link.';
-    } else {
-        $user = $result->fetch_assoc();
-        // No need to check expiry separately as it's handled in the SQL query
     }
 }
 
@@ -42,21 +34,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password']) && 
         // Hash the new password
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
         if (!$hashed_password) {
-            log_error('Password hashing failed', 'security.log');
+            log_error('Password hashing failed', 'security');
             $error = 'An error occurred while securing your password. Please try again.';
         } else {
             try {
                 $conn->begin_transaction();
 
-                // Get user ID from token
-                $stmt = $conn->prepare("SELECT user_id FROM login_tokens WHERE token = ? AND type = 'reset' AND expiration_date > NOW()");
-                $stmt->bind_param("s", $token);
-                $stmt->execute();
-                $result = $stmt->get_result();
+                $user_id = $result['user_id'];
                 
-                if ($result->num_rows > 0) {
-                    $row = $result->fetch_assoc();
-                    $user_id = $row['user_id'];
+                if (isset($result['user_id'])) {
 
                     // Update user's password
                     $stmt = $conn->prepare("UPDATE users SET password = ? WHERE uid = ?");
@@ -64,8 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password']) && 
                     $stmt->execute();
 
                     // Delete reset token
-                    $stmt = $conn->prepare("DELETE FROM login_tokens WHERE token = ? AND type = 'reset'");
-                    $stmt->bind_param("s", $token);
+                    $stmt = $conn->prepare("DELETE FROM login_tokens WHERE user_id = ? AND type = 'reset'");
+                    $stmt->bind_param("s", $user_id);
                     $stmt->execute();
 
                     $conn->commit();
@@ -116,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password']) && 
                 }
             } catch (Exception $e) {
                 $conn->rollback();
-                log_error($e->getMessage(), 'database.log');
+                log_error($e->getMessage(), 'database');
                 $error = 'An error occurred while resetting your password. Please try again later.';
             }
         }

@@ -75,9 +75,6 @@ try {
             }
             break;
 
-
-
-
         case 'toggle-subject':
             $subjectId = $_POST['subject_id'] ?? null;
             $status = $_POST['status'] ?? null;
@@ -96,12 +93,13 @@ try {
             exit();
             break;
 
-
         case 'add-subject':
             $courseId = $_POST['course_id'] ?? '';
             $subjectName = $_POST['subject_name'] ?? '';
             $subjectDesc = $_POST['subject_desc'] ?? '';
-            $result = addSubject($courseId, $subjectName, $subjectDesc);
+            $subjectImage = $_FILES['subjectImage'] ?? '';
+            log_error(print_r($_POST,true));
+            $result = addSubject($courseId, $subjectName, $subjectDesc, $subjectImage);
             break;
 
         case 'edit-subject':
@@ -114,7 +112,6 @@ try {
                 echo json_encode(['success' => false, 'message' => 'Subject ID and name are required']);
                 exit();
             }
-
             $stmt = $conn->prepare("UPDATE subject SET subject_name = ?, subject_desc = ? WHERE subject_id = ?");
             $stmt->bind_param("ssi", $subjectName, $subjectDesc, $subjectId);
             $result = ['success' => $stmt->execute(), 'message' => 'Subject updated successfully'];
@@ -123,12 +120,20 @@ try {
         case 'delete-subject':
             break;
 
+        case 'update-subject-cover':
+            $subjectID = $_POST['subject_id'] ?? '';
+            $file = $_FILES['subjectImage'] ?? '';
+            $result = updateCover($subjectID, $file);
+            http_response_code($result['success'] ? 200 : 400);
+            echo json_encode($result);
+            exit();
+            break;
+
         default:
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => 'Invalid action']);
             exit();
     }
-
     http_response_code($result['success'] ? 200 : 400);
     echo json_encode($result);
 } catch (Exception $e) {

@@ -1,6 +1,5 @@
 <?php
-require_once '../backends/config.php';
-require_once ROOT_PATH . '/backends/main.php';
+require_once  '..//backends/main.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['user'])) {

@@ -60,9 +60,8 @@
                 <span>Dashboard</span>
             </a>
             <?php if( $current_page != 'profile.php' && $current_page != 'settings.php' ) : ?>
-            <!-- ADMIN DASHBOARD SELECTION -->
             <?php if ($_SESSION['role'] == 'ADMIN'): ?>
-                <!-- Admin Links -->
+            <!-- ADMIN DASHBOARD SELECTION -->
                 <a href="<?php echo BASE.$role; ?>users" class="nav-item <?php echo $current_page == 'view-users.php' ? 'active' : ''; ?>">
                     <i class="bi bi-people"></i>
                     <span>View All Users</span>
@@ -76,8 +75,8 @@
                     <span>Courses</span>
                 </a>
             <!-- END ADMIN DASHBOARD SELECTION -->
-            <!-- TECHGURU DASHBOARD SELECTION -->
             <?php elseif ($_SESSION['role'] == 'TECHGURU'): ?>
+            <!-- TECHGURU DASHBOARD SELECTION -->
             <a href="<?php echo BASE.$role; ?>class" class="nav-item <?php echo $is_teaching_page ? 'active' : ''; ?>">
                 <i class="bi bi-people"></i>
                 <span>Classes</span>
@@ -87,23 +86,23 @@
                 <span>Certificates</span>
             </a>
             <!-- END TECHGURU DASHBOARD SELECTION -->
-            <!-- TECHKID DASHBOARD SELECTION -->
             <?php elseif ($_SESSION['role'] == 'TECHKID'): ?>
+            <!-- TECHKID DASHBOARD SELECTION -->
                 <!-- TechKid Links -->
                 <a href="<?php echo BASE.$role; ?>class" class="nav-item <?php echo $current_page == 'class.php' ? 'active' : ''; ?>">
-                    <i class="bi bi-person-check"></i>
+                    <i class="fas fa-chalkboard-teacher"></i>
                     <span>My Classes</span>
                 </a>
                 <a href="<?php echo BASE.$role; ?>schedule" class="nav-item <?php echo $current_page == 'schedule.php' ? 'active' : ''; ?>">
-                    <i class="bi bi-calendar"></i>
+                    <i class="fas fa-calendar-alt"></i>
                     <span>My Schedule</span>
                 </a>
                 <a href="<?php echo BASE.$role; ?>files" class="nav-item <?php echo $current_page == 'files.php' ? 'active' : ''; ?>">
-                    <i class="bi bi-person-check"></i>
+                    <i class="fas fa-file-alt"></i>
                     <span>My Files</span>
                 </a>
                 <a href="<?php echo BASE.$role; ?>certificates" class="nav-item <?php echo $current_page == 'certificates.php' ? 'active' : ''; ?>">
-                    <i class="bi bi-person-check"></i>
+                    <i class="fas fa-certificate"></i>
                     <span>My Certificates</span>
                 </a>
             <?php endif; ?>

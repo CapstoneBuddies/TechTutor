@@ -17,6 +17,25 @@ $title = 'Course Management';
 <!DOCTYPE html>
 <html lang="en">
     <?php include ROOT_PATH . '/components/head.php'; ?>
+    <style>
+ .subject-image{
+    margin-bottom: 30px;
+    width: 300px;
+    height: 200px;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border: 3px solid #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+.subject-image-icon {
+    height: 50px;
+    width: 50px;
+    aspect-ratio: 16 / 9;
+}
+.add-subject-image, .edit-subject-image {
+    margin-left: 15%;
+}
+    </style>
     <body data-base="<?php echo BASE; ?>">
         <?php include ROOT_PATH . '/components/header.php'; ?>
         <main class="dashboard-content">
@@ -164,6 +183,12 @@ $title = 'Course Management';
                                         <option value="0">Inactive</option>
                                     </select>
                                 </div>
+                                <div class="input-group">
+                                    <button class="btn btn-sm btn-primary action-btn updateSubjectCoverBtn">
+                                        <i class="fas fa-edit"></i> Update Subject's Cover
+                                    </button>
+                                </div>
+
                             </div>
                         </div>
                         <div class="table-responsive">
@@ -182,6 +207,7 @@ $title = 'Course Management';
                                     <?php foreach ($subjects as $subject): ?>
                                     <tr>
                                         <td class="text-start tooltip-cell" data-bs-toggle="tooltip" data-bs-placement="top" title="<?php echo htmlspecialchars($subject['subject_desc']); ?>">
+                                            <img class="shadow subject-image-icon" src="<?php echo SUBJECT_IMG.htmlspecialchars($subject['image']); ?>" alt="<?php echo htmlspecialchars($subject['subject_name']); ?>">
                                             <?php echo htmlspecialchars($subject['subject_name']); ?>
                                         </td>
 
@@ -252,6 +278,18 @@ $title = 'Course Management';
                     </div>
                     <form id="addSubjectForm">
                         <div class="modal-body">
+                            <div class="mb-3">
+                                <img src="<?php echo SUBJECT_IMG.'default.jpg';?>" alt="Subject Image" class="subject-image add-subject-image img-fluid">
+                                <label for="subjectImage" class="form-label">
+                                    <input type="file" class="form-control" id="subjectImage" name="subjectImage" accept="image/*" onchange="previewImage(this, 'add')">
+                                </label>
+                                <div id="imagePreview" class="mt-2" style="display: none;">
+                                    <small class="text-success">
+                                        <i class="bi bi-check-circle"></i>
+                                        New Image Added
+                                    </small>
+                                </div>
+                            </div>
                             <div class="mb-3">
                                 <label for="subjectCourse" class="form-label">Course</label>
                                 <select class="form-select" id="subjectCourse" name="course_id" required>
@@ -349,31 +387,87 @@ $title = 'Course Management';
             </div>
         </div>
 
+        <!-- Update Subject Cover Modal -->
+        <div class="modal fade" id="updateSubjectCoverModal" tabindex="-1" aria-labelledby="updateSubjectCoverModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="updateSubjectCoverModalLabel">Update Subject Image</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form id="updateSubjectCoverForm" enctype="multipart/form-data">
+                        <div class="modal-body">
+                            <!-- Image Preview -->
+                            <div class="mb-3 text-center">
+                                <img src="" alt="Subject Image" class="subject-image edit-subject-image img-fluid" id="curImage" style="max-height: 200px; object-fit: cover;">
+                                <div id="edit-imagePreview" class="mt-2" style="display: none;">
+                                    <small class="text-success">
+                                        <i class="bi bi-check-circle"></i>
+                                        New Image Added
+                                    </small>
+                                </div>
+                            </div>
+
+
+                            <!-- Select Subject Dropdown -->
+                            <div class="mb-3">
+                                <label for="imageSubject" class="form-label">Subject Name:</label>
+                                <select class="form-select" id="imageSubject" name="subject_id" required>
+                                    <option value="">Select Subject</option>
+                                    <?php foreach ($subjects as $subject): ?>
+                                        <option value="<?php echo $subject['subject_id']; ?>" data-image="<?php echo SUBJECT_IMG . $subject['image']; ?>">
+                                            <?php echo htmlspecialchars($subject['subject_name']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <!-- File Input for Image Upload -->
+                            <div class="mb-3">
+                                <label for="subjectImage" class="form-label">Upload New Image:</label>
+                                <input type="file" class="form-control" id="subjectImage" name="subjectImage" accept="image/*" onchange="previewImage(this,'edit')">
+                            </div>
+
+                            <!-- Remove Image Button -->
+                            <div class="mb-3 text-center">
+                                <button type="button" class="btn btn-danger" id="removeImageBtn">Remove Image</button>
+                            </div>
+                        </div>
+
+                        <!-- Modal Footer -->
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Update Subject Cover</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+
 
         <?php include ROOT_PATH . '/components/footer.php'; ?>
         <!-- Bootstrap Bundle with Popper -->
-        <script src="<?php echo BASE; ?>assets/js/header.js" defer></script>
         <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
         <script>
+            // Links
+            const addCourse = BASE+"add-course";
+            const editCourse = BASE+"edit-course";
+            const deleteCourse = BASE+"delete-course";
+            const addSubject = BASE+"add-subject";
+            const editSubject = BASE+"edit-subject";
+            const deleteSubject = BASE+"delete-subject";
+            const subjectStatus = BASE+"toggle-subject";
+            const updateCover = BASE+"update-subject-cover";
             document.addEventListener("DOMContentLoaded", function () {
                 const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
                 tooltipTriggerList.forEach((tooltipTriggerEl) => {
                     new bootstrap.Tooltip(tooltipTriggerEl);
                 });
 
-                // Links
-                const addCourse = "<?php echo BASE.'add-course'; ?>";
-                const editCourse = "<?php echo BASE.'edit-course'; ?>";
-                const deleteCourse = "<?php echo BASE.'delete-course'; ?>";
-                const addSubject = "<?php echo BASE.'add-subject'; ?>";
-                const editSubject = "<?php echo BASE.'edit-subject'; ?>";
-                const deleteSubject = "<?php echo BASE.'delete-subject'; ?>";
-                const subjectStatus = "<?php echo BASE.'toggle-subject'; ?>";
-
                 // Elements
                 let addSubjectModalElement = document.getElementById("addSubjectModal");
                 let editModalElement = document.getElementById('editModal');
-
                 // Modals
                 let addSubjectModal = new bootstrap.Modal(addSubjectModalElement);
                 let editModal = new bootstrap.Modal(editModalElement);
@@ -435,11 +529,12 @@ $title = 'Course Management';
 
                 // Open edit modal
                 function openEditModal(type, id, name, desc) {
-                    document.getElementById('editModalLabel').textContent = `Edit ${type.charAt(0).toUpperCase() + type.slice(1)}`;
+                    document.getElementById('editModalLabel').textContent = `Edit ${type.charAt(0).toUpperCase() + type.slice(1)} Information`;
                     document.getElementById('editType').value = type;
                     document.getElementById('editId').value = id;
                     document.getElementById('editName').value = name;
                     document.getElementById('editDesc').value = desc.replace(/"/g, '&quot;') || ''; // Prevent quote breaking
+
                     editModal.show();
                 }
                 window.openEditModal = openEditModal;
@@ -582,6 +677,82 @@ $title = 'Course Management';
                 // Add event listeners for filters
                 document.getElementById("courseFilter").addEventListener("change", filterSubjects);
                 document.getElementById("statusFilter").addEventListener("change", filterSubjects);
+                
+                // TEST
+                document.querySelectorAll(".updateSubjectCoverBtn").forEach(function (button) {
+                    button.addEventListener("click", function () {
+                        document.querySelector("#curImage").setAttribute("src", "<?php echo SUBJECT_IMG;?>default.jpg");
+                        $('#updateSubjectCoverModal').modal("show");
+                    });
+                });
+
+                // Update image preview when selecting a subject
+                document.querySelector("#imageSubject").addEventListener("change", function () {
+                    const selectedOption = this.selectedOptions[0];
+                    const imageUrl = selectedOption.getAttribute("data-image");
+
+                    if (imageUrl) {
+                        document.querySelector("#curImage").setAttribute("src", imageUrl);
+                        document.querySelector("#curImage").style.display = "block";
+                    } else {
+                        document.querySelector("#curImage").setAttribute("src", "<?php echo SUBJECT_IMG;?>default.jpg"); // Set to default if no image found
+                    }
+                });
+
+                // Preview selected image file
+                document.querySelector("#subjectImage").addEventListener("change", function () {
+                    const file = this.files[0];
+
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function (e) {
+                            document.querySelector("#curImage").setAttribute("src", e.target.result);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+
+                // Remove Image - Resets the file input and image preview
+                document.querySelector("#removeImageBtn").addEventListener("click", function () {
+                    document.querySelector("#subjectImage").value = ""; // Reset file input
+                    document.querySelector("#curImage").setAttribute("src", "<?php echo SUBJECT_IMG.'default.jpg'; ?>"); // Reset preview image
+                });
+
+                // Form Submission
+                document.querySelector("#updateSubjectCoverForm").addEventListener("submit", function (e) {
+                    e.preventDefault();
+
+                    const formData = new FormData(this); // This automatically includes the form data
+                    formData.append("action", "update-subject-cover"); // Append the action
+
+                    // If you want to override or ensure the subject ID is correctly appended (optional):
+                    formData.append("subject_id", document.querySelector("#imageSubject").value); // Append subject ID     
+
+                    fetch(updateCover, {
+                        method: 'POST',
+                        body: formData,
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if(data.success) {
+                            showToast("success", "Subject cover updated successfully!");
+                            setTimeout(function () {
+                                location.reload();
+                            }, 1000);
+                        }
+                        else {
+                            showToast("error", data.message || "Failed to update subject cover.");
+                        }
+                    })
+                    .catch(error => {
+                            showToast("error", "An error occurred while updating the subject cover.");
+                    });
+                });
+
+
+
+
+
             });
             // Updated remove course function to use modal
             function removeCourse(courseId) {
@@ -590,6 +761,37 @@ $title = 'Course Management';
                     window.deleteCourseModal.show();
                 } else {
                     console.error("Delete course modal not found.");
+                }
+            }
+            function previewImage(input, action) {
+                if (input.files && input.files[0]) {
+                    const file = input.files[0];
+                    // Check file size (max 5MB)
+                    if (file.size > 5 * 1024 * 1024) {
+                        alert('File size must be less than 5MB');
+                        input.value = '';
+                        return;
+                    }
+                    
+                    // Check file type
+                    if (!file.type.match('image.*')) {
+                        alert('Please select an image file');
+                        input.value = '';
+                        return;
+                    }
+
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        if(action === 'add') {
+                            document.querySelector('.add-subject-image').src = e.target.result;
+                            document.getElementById('imagePreview').style.display = 'block';
+                        }
+                        else {
+                            document.querySelector('.edit-subject-image').src = e.target.result;
+                            document.getElementById('edit-imagePreview').style.display = 'block'; 
+                        }
+                    };
+                    reader.readAsDataURL(file);
                 }
             }
         </script>

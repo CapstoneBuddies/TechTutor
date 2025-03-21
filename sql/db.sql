@@ -97,9 +97,14 @@ CREATE TABLE IF NOT EXISTS `enrollments` (
 CREATE TABLE IF NOT EXISTS `meetings` (
     `meeting_id` INT PRIMARY KEY AUTO_INCREMENT,
     `meeting_uid` VARCHAR(50) UNIQUE NOT NULL,
+    `schedule_id` INT NOT NULL,
     `meeting_name` VARCHAR(255) NOT NULL,
-    `createtime` BIGINT NOT NULL,
-    `is_running` BOOLEAN NOT NULL DEFAULT TRUE
+    `attendee_pw` VARCHAR(255) NULL,
+    `moderator_pw` VARCHAR(255) NULL,
+    `is_running` BOOLEAN NOT NULL DEFAULT TRUE,
+    `createtime` BIGINT NOT NULL, 
+    `end_time` TIMESTAMP NULL,
+    FOREIGN KEY (schedule_id) REFERENCES class_schedule(schedule_id)
 );
 
 CREATE TABLE IF NOT EXISTS `file_management` (
