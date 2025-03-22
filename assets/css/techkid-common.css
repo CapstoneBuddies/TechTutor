@@ -1,4 +1,4 @@
-/* TechKid Dashboard Specific Styles */
+/* TechKid Dashboard Specific Styles */ 
 :root {
     --primary-color: #0052cc;
     --secondary-color: #00b37a;
@@ -343,5 +343,97 @@
     
     .badge-name {
         font-size: 11px;
+    }
+}
+.dashboard-content.bg {
+    background-color: #F5F5F5;
+    border-radius: 5%;
+}
+.dashboard-content {
+    padding: 2rem;
+}
+.search-section .input-group {
+    width: 300px;
+}
+.content-card {
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    overflow: hidden;
+    background-color: #FFFAFA;
+}
+.bg-snow {
+    background-color: #FFFAFA;
+}
+.card-img-top {
+    height: 200px;
+    object-fit: cover;
+}
+.class-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: transform 0.2s;
+}
+.class-card:hover {
+    transform: translateY(-2px);
+}
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+.status-badge.enrolled {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+.status-badge.not-enrolled {
+    background-color: #f5f5f5;
+    color: #757575;
+}
+.schedule-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.schedule-item {
+    padding: 1rem;
+    border-radius: 8px;
+    background-color: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.tutor-avatar {
+    object-fit: cover;
+}
+.rating {
+    font-size: 12px;
+}
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+.fc-header-toolbar {
+    margin-bottom: 1rem !important;
+}
+.fc-day-today {
+    background-color: #e3f2fd !important;
+}
+.fc-event {
+    cursor: pointer;
+}
+@media (max-width: 768px) {
+    .search-section {
+        width: 100%;
+        margin-top: 1rem;
+    }
+    .search-section .input-group {
+        width: 100%;
+    }
+    .schedule-item .d-flex {
+        flex-direction: column;
+        text-align: center;
+    }
+    .schedule-info {
+        margin: 1rem 0;
     }
 }

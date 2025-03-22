@@ -132,10 +132,11 @@ function showToast(type, message) {
 function showLoading(show) {
     const loadingIndicator = document.getElementById("loadingIndicator");
     if (loadingIndicator) {
-        loadingIndicator.classList.remove("d-none");
-    }
-    else {
-        loadingIndicator.classList.add("d-none");
+        if (show) {
+            loadingIndicator.classList.remove("d-none");
+        } else {
+            loadingIndicator.classList.add("d-none");
+        }
     }
 }
 </script>

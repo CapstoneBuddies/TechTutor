@@ -1,4 +1,4 @@
-ErrorDocument 404 /pages/error/404.php 
+ErrorDocument 404 /pages/error/404.php
 ErrorDocument 403 /pages/error/403.php
 ErrorDocument 500 /pages/error/500.php
 
@@ -82,6 +82,7 @@ RewriteRule ^dashboard/t/subjects/class$ pages/techguru/subject-details.php [L,Q
 RewriteRule ^dashboard/t/subjects/class/create$ pages/techguru/create-class.php [L,QSA]
 RewriteRule ^dashboard/t/class/details$ pages/techguru/class-details.php [L,QSA]
 RewriteRule ^dashboard/t/class/edit$ pages/techguru/class-edit.php [L,QSA]
+RewriteRule ^dashboard/t/class/details/schedules$ pages/techguru/manage-schedule.php [L,QSA]
 
 # ----------------------------------
 # 🔧 Admin Routes
@@ -117,6 +118,7 @@ RewriteRule ^update-subject-cover$ backends/admin/course_handler.php [L]
 #BBB
 RewriteRule ^create-meeting$ backends/api/create_meeting.php [L,QSA]
 RewriteRule ^join-meeting$ backends/api/join_meeting.php [L,QSA]
+RewriteRule ^schedule-delete$ backends/api/schedule_delete.php [L]
 
 # ----------------------------------
 # 🌍 API Endpoints

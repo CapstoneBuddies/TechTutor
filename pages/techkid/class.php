@@ -20,6 +20,7 @@
         // Get student's classes using centralized function
         $classes = getStudentClasses($_SESSION['user']);
 
+
         // Get unread notifications for the student
         $unread_notifications = getUserNotifications($_SESSION['user'], $_SESSION['role'], true);
     } catch (Exception $e) {
@@ -32,281 +33,191 @@
     <body data-base="<?php echo BASE; ?>">
         <?php include ROOT_PATH . '/components/header.php'; ?>
 
-    <div class="container-fluid py-4">
-        <div class="row justify-content-center">
-            <div class="col-12 col-xl-10">
-                <!-- Page Header -->
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div>
-                        <h1 class="h3 mb-2">My Classes</h1>
-                        <p class="text-muted mb-0">Track your learning progress and upcoming sessions</p>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <a href="enrollments" class="btn btn-primary">
-                            <i class="bi bi-plus-lg me-2"></i>Enroll in New Class
-                        </a>
-                    </div>
-                </div>
-
-                <?php if ($active_class): ?>
-                <!-- Active Class Section -->
-                <div class="card shadow-sm mb-4">
+        <div class="dashboard-content bg">
+            <!-- Header Section with Title and Search -->
+            <div class="content-section mb-4">
+                <div class="content-card bg-snow">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h2 class="h5 mb-0">
-                                <i class="bi bi-camera-video-fill me-2"></i>Currently Active Class
-                            </h2>
-                            <span class="badge bg-success">Live Now</span>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-8">
-                                <h3 class="h4"><?php echo htmlspecialchars($active_class['title']); ?></h3>
-                                <div class="d-flex align-items-center mb-3">
-                                    <img src="<?php echo !empty($active_class['tutor_avatar']) ? BASE . $active_class['tutor_avatar'] : BASE . 'assets/images/default-avatar.jpg'; ?>" 
-                                         alt="Tutor" 
-                                         class="tutor-avatar me-2">
-                                    <span class="text-muted">with <?php echo htmlspecialchars($active_class['tutor_name']); ?></span>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h1 class="page-title mb-0">Classes</h1>
+                            <div class="search-section">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0">
+                                        <i class="bi bi-search text-muted"></i>
+                                    </span>
+                                    <input type="text" class="form-control border-start-0" placeholder="Search">
                                 </div>
-                                <p class="text-muted"><?php echo htmlspecialchars($active_class['description']); ?></p>
-                            </div>
-                            <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                                <a href="<?php echo htmlspecialchars($active_class['meeting_url']); ?>" class="btn btn-primary btn-lg">
-                                    <i class="bi bi-camera-video-fill me-2"></i>Join Class Now
-                                </a>
                             </div>
                         </div>
                     </div>
                 </div>
-                <?php endif; ?>
+            </div>
 
-                <div class="row">
-                    <!-- Upcoming Classes -->
-                    <div class="col-md-8">
-                        <h2 class="h5 mb-3">
-                            <i class="bi bi-calendar-check me-2"></i>Upcoming Classes
-                        </h2>
-                        
-                        <?php if (empty($classes['upcoming'])): ?>
-                        <div class="card shadow-sm">
-                            <div class="card-body text-center py-5">
-                                <i class="bi bi-calendar text-muted" style="font-size: 48px;"></i>
-                                <h3 class="h5 mt-3">No Upcoming Classes</h3>
-                                <p class="text-muted mb-3">Ready to start learning?</p>
-                                <a href="enrollments" class="btn btn-primary">
-                                    <i class="bi bi-plus-lg me-2"></i>Browse Available Classes
-                                </a>
-                            </div>
-                        </div>
-                        <?php else: ?>
-                            <?php foreach ($classes['upcoming'] as $class): ?>
-                            <div class="card shadow-sm class-card mb-3">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <span class="badge bg-primary">Upcoming</span>
-                                        <span class="text-muted">
-                                            <?php echo date('l, M d, Y | h:i A', strtotime($class['start_time'])); ?>
-                                        </span>
-                                    </div>
-                                    <h3 class="h5 mb-2"><?php echo htmlspecialchars($class['title']); ?></h3>
-                                    <div class="d-flex align-items-center mb-3">
-                                        <img src="<?php echo !empty($class['tutor_avatar']) ? BASE . $class['tutor_avatar'] : BASE . 'assets/images/default-avatar.jpg'; ?>" 
-                                             alt="Tutor" 
-                                             class="tutor-avatar me-2">
-                                        <span class="text-muted">with <?php echo htmlspecialchars($class['tutor_name']); ?></span>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div class="text-muted">
-                                            <i class="bi bi-book me-2"></i><?php echo htmlspecialchars($class['topic']); ?>
-                                        </div>
-                                        <button class="btn btn-outline-primary btn-sm" 
-                                                onclick="showClassDetails('<?php echo $class['id']; ?>')">
-                                            View Details
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </div>
-
-                    <!-- Completed Classes -->
-                    <div class="col-md-4">
-                        <h2 class="h5 mb-3">
-                            <i class="bi bi-check-circle me-2"></i>Completed Classes
-                        </h2>
-                        
-                        <?php if (empty($classes['completed'])): ?>
-                        <div class="card shadow-sm">
-                            <div class="card-body text-center py-4">
-                                <p class="text-muted mb-0">No completed classes yet</p>
-                            </div>
-                        </div>
-                        <?php else: ?>
-                            <?php foreach ($classes['completed'] as $class): ?>
-                            <div class="card shadow-sm class-card mb-3">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <span class="badge bg-success">Completed</span>
-                                        <span class="text-muted">
-                                            <?php echo date('M d, Y', strtotime($class['completion_date'])); ?>
-                                        </span>
-                                    </div>
-                                    <h3 class="h5 mb-2"><?php echo htmlspecialchars($class['title']); ?></h3>
-                                    <div class="d-flex align-items-center mb-3">
-                                        <img src="<?php echo !empty($class['tutor_avatar']) ? BASE . $class['tutor_avatar'] : BASE . 'assets/images/default-avatar.jpg'; ?>" 
-                                             alt="Tutor" 
-                                             class="tutor-avatar me-2">
-                                        <span class="text-muted"><?php echo htmlspecialchars($class['tutor_name']); ?></span>
-                                    </div>
-                                    <?php if ($class['recording_url']): ?>
-                                    <a href="<?php echo htmlspecialchars($class['recording_url']); ?>" 
-                                       class="btn btn-outline-primary btn-sm w-100">
-                                        <i class="bi bi-play-circle me-2"></i>Watch Recording
+            <!-- Programming Classes Section -->
+            <div class="content-section mb-4">
+                <div class="content-card bg-snow">
+                    <div class="card-body">
+                        <h2 class="section-title mb-4">Programming Classes</h2>
+                        <div class="row g-4">
+                            <?php 
+                            $enrolled_classes = getStudentClasses($_SESSION['user']);
+                            $programming_classes = array_filter($enrolled_classes, function($class) {
+                                return strpos(strtolower($class['subject_name']), 'programming') !== false;
+                            });
+                            
+                            if (empty($programming_classes)): ?>
+                            <div class="col-12">
+                                <div class="text-center py-5">
+                                    <i class="bi bi-laptop text-muted" style="font-size: 48px;"></i>
+                                    <h3 class="mt-3">No Classes Enrolled</h3>
+                                    <p class="text-muted mb-4">You haven't enrolled in any programming classes yet.</p>
+                                    <a href="enrollments" class="btn btn-primary">
+                                        <i class="bi bi-plus-lg me-2"></i>Browse Available Classes
                                     </a>
-                                    <?php endif; ?>
                                 </div>
                             </div>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
+                            <?php else:
+                                foreach ($programming_classes as $class): 
+                            ?>
+                            <div class="col-md-4">
+                                <div class="class-card h-100">
+                                    <div class="card-body">
+                                        <img src="<?php echo !empty($class['thumbnail']) ? BASE . $class['thumbnail'] : BASE . 'assets/images/programming.jpg'; ?>" 
+                                             class="card-img-top rounded mb-3" 
+                                             alt="<?php echo htmlspecialchars($class['class_name']); ?>">
+                                        <h3><?php echo htmlspecialchars($class['class_name']); ?></h3>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="status-badge enrolled">Enrolled</span>
+                                            <a href="class-details.php?id=<?php echo $class['class_id']; ?>" class="stretched-link">
+                                                <i class="bi bi-arrow-right"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <?php 
+                                endforeach;
+                            endif;
+                            ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schedule and Calendar Section -->
+            <div class="row g-4">
+                <!-- Available Schedule -->
+                <div class="col-lg-8">
+                    <div class="content-card bg-snow h-100">
+                        <div class="card-body">
+                            <h2 class="section-title mb-4">Available Schedule</h2>
+                            <div class="schedule-list">
+                                <?php 
+                                $schedule = getStudentSchedule($_SESSION['user']);
+                                if (!empty($schedule)):
+                                    foreach ($schedule as $session): 
+                                ?>
+                                <div class="schedule-item">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="tutor-info d-flex align-items-center gap-2">
+                                            <img src="<?php echo !empty($session['tutor_avatar']) ? BASE . $session['tutor_avatar'] : BASE . 'assets/images/default-avatar.jpg'; ?>" 
+                                                 class="tutor-avatar rounded-circle" 
+                                                 alt="<?php echo htmlspecialchars($session['tutor_name']); ?>"
+                                                 width="40" height="40">
+                                            <div>
+                                                <h6 class="mb-0"><?php echo htmlspecialchars($session['tutor_name']); ?></h6>
+                                                <div class="rating">
+                                                    <?php for($i = 1; $i <= 5; $i++): ?>
+                                                    <i class="bi bi-star-fill text-warning"></i>
+                                                    <?php endfor; ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="schedule-info flex-grow-1">
+                                            <p class="mb-1">
+                                                <?php echo date('h:i A', strtotime($session['start_time'])); ?> - 
+                                                <?php echo date('h:i A', strtotime($session['end_time'])); ?>
+                                            </p>
+                                            <p class="text-muted mb-0">Incoming class session</p>
+                                        </div>
+                                        <div class="schedule-action">
+                                            <?php if (strtotime($session['start_time']) <= time() && strtotime($session['end_time']) >= time()): ?>
+                                            <button class="btn btn-primary">Join Class</button>
+                                            <?php else: ?>
+                                            <button class="btn btn-secondary" disabled>Not Available</button>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php 
+                                    endforeach;
+                                else:
+                                ?>
+                                <div class="text-center py-5">
+                                    <i class="bi bi-calendar-x text-muted" style="font-size: 48px;"></i>
+                                    <h3 class="h5 mt-3">No Classes Scheduled</h3>
+                                    <p class="text-muted mb-4">Ready to start your learning journey?</p>
+                                    <a href="enrollments" class="btn btn-primary">
+                                        <i class="bi bi-plus-lg me-2"></i>Browse Available Classes
+                                    </a>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                            <?php if (!empty($schedule)): ?>
+                            <div class="text-center mt-4">
+                                <a href="#" class="text-primary">View All</a>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calendar -->
+                <div class="col-lg-4">
+                    <div class="content-card bg-snow h-100">
+                        <div class="card-body">
+                            <h2 class="section-title mb-4">Calendar</h2>
+                            <div id="calendar"></div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-    </main>
-    </div>
 
-    <!-- Class Details Modal -->
-    <div class="modal fade" id="classDetailsModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Class Details</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body" id="classDetailsContent">
-                    <!-- Content will be loaded dynamically -->
-                </div>
-            </div>
-        </div>
-    </div>
+        <?php include ROOT_PATH . '/components/footer.php'; ?>
 
-    <?php include ROOT_PATH . '/components/footer.php'; ?>
-
-    <script>
-        const classDetailsModal = new bootstrap.Modal(document.getElementById('classDetailsModal'));
-        const notificationsModal = new bootstrap.Modal(document.getElementById('notificationsModal'));
-        
-        function showClassDetails(classId) {
-            fetch(`<?php echo BASE; ?>backends/api/get-class-details.php?id=${classId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        document.getElementById('classDetailsContent').innerHTML = `
-                            <div class="text-center mb-4">
-                                <img src="${data.class.thumbnail || '<?php echo BASE; ?>assets/images/default-class.jpg'}" 
-                                     class="img-fluid rounded mb-3" 
-                                     style="max-height: 200px; object-fit: cover;" 
-                                     alt="${data.class.title}">
-                                <h4>${data.class.title}</h4>
-                            </div>
-                            <div class="mb-4">
-                                <h6>Class Description</h6>
-                                <p>${data.class.description}</p>
-                            </div>
-                            <div class="mb-4">
-                                <h6>Schedule</h6>
-                                <p class="mb-1">
-                                    <i class="bi bi-calendar me-2"></i>${data.class.date}
-                                </p>
-                                <p class="mb-0">
-                                    <i class="bi bi-clock me-2"></i>${data.class.time}
-                                </p>
-                            </div>
-                            <div>
-                                <h6>Tutor</h6>
-                                <div class="d-flex align-items-center">
-                                    <img src="${data.class.tutor_avatar || '<?php echo BASE; ?>assets/images/default-avatar.jpg'}" 
-                                         class="tutor-avatar me-2" 
-                                         alt="Tutor">
-                                    <div>
-                                        <p class="mb-1">${data.class.tutor_name}</p>
-                                        <p class="text-muted mb-0 small">${data.class.tutor_role}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                        classDetailsModal.show();
-                    } else {
-                        showToast('error', data.message || 'Failed to load class details');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showToast('error', 'Failed to load class details');
-                });
-        }
-
-        function showNotifications() {
-            notificationsModal.show();
-        }
-
-        // Mark individual notification as read
-        document.querySelectorAll('.notification-item').forEach(item => {
-            item.addEventListener('click', function() {
-                const notificationId = this.dataset.notificationId;
-                fetch('<?php echo BASE; ?>backends/api/mark-notification-read.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Initialize calendar
+                const calendarEl = document.getElementById('calendar');
+                const calendar = new FullCalendar.Calendar(calendarEl, {
+                    initialView: 'dayGridMonth',
+                    headerToolbar: {
+                        left: '',
+                        center: 'title',
+                        right: 'prev,next'
                     },
-                    body: JSON.stringify({
-                        notification_id: notificationId,
-                        user_id: <?php echo $_SESSION['user']; ?>
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        this.classList.add('opacity-50');
+                    events: <?php 
+                        $events = !empty($schedule) ? array_map(function($session) {
+                            return [
+                                'title' => $session['title'],
+                                'start' => $session['session_date'] . 'T' . $session['start_time'],
+                                'end' => $session['session_date'] . 'T' . $session['end_time'],
+                                'className' => 'bg-primary'
+                            ];
+                        }, $schedule) : [];
+                        echo json_encode($events);
+                    ?>,
+                    height: 'auto',
+                    dayMaxEvents: true,
+                    eventClick: function(info) {
+                        // Show event details when clicked
+                        const event = info.event;
+                        alert(`Class: ${event.title}\nTime: ${event.start.toLocaleTimeString()} - ${event.end.toLocaleTimeString()}`);
                     }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showToast('error', 'Failed to mark notification as read');
                 });
+                calendar.render();
             });
-        });
-
-        // Mark all notifications as read
-        function markAllNotificationsRead() {
-            fetch('<?php echo BASE; ?>backends/api/mark-all-notifications-read.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    user_id: <?php echo $_SESSION['user']; ?>
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    document.querySelectorAll('.notification-item').forEach(item => {
-                        item.classList.add('opacity-50');
-                    });
-                    document.querySelector('.notification-dot')?.remove();
-                    setTimeout(() => {
-                        notificationsModal.hide();
-                        location.reload();
-                    }, 1000);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showToast('error', 'Failed to mark all notifications as read');
-            });
-        }
-    </script>
-</body>
+        </script>
+    </body>
 </html>

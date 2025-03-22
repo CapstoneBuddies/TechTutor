@@ -119,18 +119,37 @@ function getTutorRatings($tutor_id) {
     $stmt->execute();
     return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 }
-function getEnrolledCoursesForStudent($student_id) {
-    return [];
+
+function getAllCourses() {
+    global $conn;
+    
+    try {
+        $query = "SELECT 
+                    c.*, 
+                    (SELECT COUNT(*) FROM subject s 
+                     WHERE s.course_id = c.course_id AND s.is_active = 1) as subject_count
+                  FROM course c 
+                  ORDER BY c.course_name";
+        
+        $result = $conn->query($query);
+        return $result->fetch_all(MYSQLI_ASSOC);
+    } catch (Exception $e) {
+        log_error("Error getting courses: " . $e->getMessage(), 'database');
+        return [];
+    }
 }
+
 function getUpcomingClassSchedules($student_id) {
     return [];
 }
+
 function getStudentLearningStats($student_id) {
     return [
         'hours_spent' => 0,
         'completed_classes' => 0
     ];
 }
+
 function getStudentClasses($student_id) {
     global $conn;
 
@@ -166,7 +185,7 @@ function getStudentClasses($student_id) {
     }
 }
 
-function getCurrentActiveClass() { //Need to change this to grab class in session
+function getCurrentActiveClass() {
     global $conn;
 
     try {
@@ -177,16 +196,20 @@ function getCurrentActiveClass() { //Need to change this to grab class in sessio
                 c.class_desc AS description,
                 c.thumbnail,
                 c.status,
+                c.is_free,
+                c.price,
+                s.subject_id,
                 s.subject_name,
+                co.course_id,
                 co.course_name,
                 u.first_name AS tutor_first_name,
                 u.last_name AS tutor_last_name,
                 u.profile_picture AS tutor_avatar,
                 (
                     SELECT COUNT(*) 
-                    FROM class_schedule cs 
-                    WHERE cs.class_id = c.class_id 
-                    AND cs.role = 'STUDENT'
+                    FROM enrollments e
+                    WHERE e.class_id = c.class_id 
+                    AND e.status = 'active'
                 ) AS enrolled_students
             FROM class c
             JOIN subject s ON c.subject_id = s.subject_id
@@ -204,9 +227,11 @@ function getCurrentActiveClass() { //Need to change this to grab class in sessio
         return [];
     }
 }
+
 function getStudentFiles($student_id) {
     return [];
 }
+
 function getStudentSchedule($student_id) {
     global $conn;
 
@@ -243,6 +268,50 @@ function getStudentSchedule($student_id) {
 
 function getStudentCertificates($student_id) {
     return [];
+}
+
+/**
+ * Get all courses with their active subjects
+ * @return array Array of courses with their subjects
+ */
+function getCoursesWithSubjects() {
+    global $conn;
+    try {
+        $stmt = $conn->prepare("
+            SELECT 
+                c.course_id,
+                c.course_name,
+                s.subject_id,
+                s.subject_name
+            FROM course c
+            LEFT JOIN subject s ON c.course_id = s.course_id
+            WHERE s.is_active = 1
+            ORDER BY c.course_name, s.subject_name
+        ");
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $courses = [];
+        
+        while ($row = $result->fetch_assoc()) {
+            if (!isset($courses[$row['course_id']])) {
+                $courses[$row['course_id']] = [
+                    'name' => $row['course_name'],
+                    'subjects' => []
+                ];
+            }
+            if ($row['subject_id']) {
+                $courses[$row['course_id']]['subjects'][] = [
+                    'id' => $row['subject_id'],
+                    'name' => $row['subject_name']
+                ];
+            }
+        }
+        
+        return $courses;
+    } catch (Exception $e) {
+        log_error($e->getMessage());
+        return [];
+    }
 }
 
 ?>

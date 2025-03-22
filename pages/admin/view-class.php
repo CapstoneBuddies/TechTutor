@@ -143,7 +143,7 @@
                         });
 
                         const data = await response.json();
-
+                        showLoading(false);
                         if (data.success) {
                             // Update UI
                             const statusBadge = this.closest('tr').querySelector('.status-badge');
@@ -160,6 +160,7 @@
                             throw new Error(data.error || 'Failed to update class status');
                         }
                     } catch (error) {
+                        showLoading(false);
                         console.error('Error:', error);
                         
                         // Show error toast

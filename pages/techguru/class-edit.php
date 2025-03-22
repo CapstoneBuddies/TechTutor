@@ -13,8 +13,7 @@ $class_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 // Get class details or redirect if invalid
 $classDetails = getClassDetails($class_id, $_SESSION['user']);
-$classSchedule = getClassSchedules($class_id);
-if (!$classDetails && !$classSchedule) {
+if (!$classDetails) {
     header('Location: ./');
     exit();
 }
@@ -38,25 +37,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
     // Update the class
     $result = updateClass($classData);
-    if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
-        $data = $_POST['schedules'];
-        $schedules = [];
-
-        for ($i = 0; $i < count($data); $i += 3) {
-            $date = $data[$i]['date'];
-            $start = $data[$i + 1]['start'];
-            $end = $data[$i + 2]['end'];
-
-            // Group them into the desired format
-            $schedules[] = ['session_date'=>$date, 'start_time'=>$start, 'end_time'=>$end];
-        }
-        if (!empty($schedules)) {
-            $result = updateClassSchedules($class_id, $schedules, $_SESSION['user']);
-            if (!$result['success']) {
-                $error = $result['error'];
-            }
-        }
-    }
     if ($result['success']) {
         // Redirect to class details page
         header("Location: details?id={$class_id}&updated=1");
@@ -125,50 +105,22 @@ $title = $classDetails['class_name'];
                                 <textarea class="form-control no-resize" id="description" name="description" rows="4" required><?php echo htmlspecialchars($classDetails['class_desc']); ?></textarea>
                             </div>
                         </div>
-
-                        <!-- Schedule Editing Section -->
+                        <!-- Schedule Information (Read-only) -->
                         <div class="mb-4">
                             <h3>Class Schedule</h3>
-                            <div id="scheduleContainer">
-                                <?php foreach ($classSchedule as $schedule): ?>
-                                <div class="schedule-item mb-3">
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <label class="form-label">Date</label>
-                                            <input type="date" id="schedule_date" class="form-control" name="schedules[][date]" value="<?php echo $schedule['session_date']; ?>" required>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label">Start Time</label>
-                                            <div class="input-group clockpicker" data-placement="bottom" data-align="left" data-autoclose="true">
-                                                <input type="text" class="form-control" name="schedules[][start]" value="<?php echo $schedule['start_time']; ?>" required>
-                                                <span class="input-group-addon">
-                                                    <span class="bi bi-clock"></span>
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label">End Time</label>
-                                            <div class="input-group clockpicker" data-placement="bottom" data-align="left" data-autoclose="true">
-                                                <input type="text" class="form-control" name="schedules[][end]" value="<?php echo $schedule['end_time']; ?>" required>
-                                                <span class="input-group-addon">
-                                                    <span class="bi bi-clock"></span>
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-2 d-flex align-items-end">
-                                            <button type="button" class="btn btn-danger btn-sm remove-schedule" data-bs-toggle="tooltip" title="Remove class schedule">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <?php endforeach; ?>
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>
+                                Once a class schedule is established, it cannot be modified directly. To make any changes, please navigate to the <a href="./details/schedules?id=<?php echo htmlspecialchars($class_id)?>">Manage Schedule</a> section.
                             </div>
-                            <button type="button" class="btn btn-primary btn-sm" id="addSchedule">
-                                <i class="bi bi-plus-circle"></i> Add Schedule
-                            </button>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <p><strong>Start Date:</strong> <?php echo date('F j, Y', strtotime($classDetails['start_date'])); ?></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>End Date:</strong> <?php echo date('F j, Y', strtotime($classDetails['end_date'])); ?></p>
+                                </div>
+                            </div>
                         </div>
-
                         <!-- Pricing -->
                         <div class="mb-4">
                             <h3>Pricing</h3>

@@ -230,9 +230,9 @@ $title = htmlspecialchars($classDetails['class_name']);
                 <div class="dashboard-card">
                     <h3>Quick Actions</h3>
                     <div class="d-grid gap-2 mt-3">
-                        <button class="btn btn-primary" onclick="manageSchedule()">
+                        <a href="details/schedules?id=<?php echo htmlspecialchars($class_id); ?>" class="btn btn-primary">
                             <i class="bi bi-calendar-check"></i> Manage Schedule
-                        </button>
+                        </a>
                         <button class="btn btn-info" onclick="messageStudents()">
                             <i class="bi bi-chat-dots"></i> Message Students
                         </button>
@@ -250,6 +250,29 @@ $title = htmlspecialchars($classDetails['class_name']);
     <!-- Scripts -->
     <?php include ROOT_PATH . '/components/footer.php'; ?>
     <script>
+         document.addEventListener('DOMContentLoaded', function() {
+            function uploadMaterial() {
+                // TODO: Implement material upload logic
+                alert('Opening upload dialog...');
+            }
+
+            function deleteMaterial(fileUuid) {
+                if (confirm('Are you sure you want to delete this material?')) {
+                    // TODO: Implement delete logic
+                    alert('Deleting material...');
+                }
+            }
+
+            function messageStudents() {
+                // TODO: Implement messaging
+                alert('Opening message composer...');
+            }
+
+            function viewAnalytics() {
+                // TODO: Implement analytics view
+                alert('Opening analytics dashboard...');
+            }
+         });
         function startSession(scheduleId) {
             if (!confirm("Are you sure you want to start this session?")) return;
 
@@ -279,7 +302,6 @@ $title = htmlspecialchars($classDetails['class_name']);
         }
         function joinMeeting(scheduleId) {
             showLoading(true); // Show loading spinner
-
             fetch(BASE+'join-meeting', {
                 method: 'POST',
                 headers: {
@@ -290,7 +312,6 @@ $title = htmlspecialchars($classDetails['class_name']);
             .then(response => response.json())
             .then(data => {
                 showLoading(false); // Hide loading
-
                 if (data.success) {
                     window.location.href = data.data.join_url; // Redirect to meeting
                 } else {
@@ -302,35 +323,6 @@ $title = htmlspecialchars($classDetails['class_name']);
                 console.error('Error joining meeting:', error);
                 showToast('error', 'An error occurred. Please try again.');
             });
-        }
-
-
-
-        function uploadMaterial() {
-            // TODO: Implement material upload logic
-            alert('Opening upload dialog...');
-        }
-
-        function deleteMaterial(fileUuid) {
-            if (confirm('Are you sure you want to delete this material?')) {
-                // TODO: Implement delete logic
-                alert('Deleting material...');
-            }
-        }
-
-        function manageSchedule() {
-            // TODO: Implement schedule management
-            alert('Opening schedule manager...');
-        }
-
-        function messageStudents() {
-            // TODO: Implement messaging
-            alert('Opening message composer...');
-        }
-
-        function viewAnalytics() {
-            // TODO: Implement analytics view
-            alert('Opening analytics dashboard...');
         }
     </script>
 </body>

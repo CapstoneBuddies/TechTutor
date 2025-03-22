@@ -31,6 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $endTimes = $_POST['endTime'];
     $pricingType = $_POST['pricingType'];
     $price = isset($_POST['price']) ? floatval($_POST['price']) : 0;
+    $classCover = $_FILES['classCover'] ?? null;
     
     // Convert time format from HH:MM to HH:MM:SS for database
     $timeSlots = [];
@@ -57,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'class_size' => $maxStudents,
         'is_free' => $pricingType === 'free' ? 1 : 0,
         'price' => $pricingType === 'free' ? 0 : $price,
-        'thumbnail' => 'default.jpg',
+        'thumbnail' => $classCover ? $classCover['name'] : 'default.jpg',
         'schedules' => $schedules
     ];
     
@@ -127,7 +128,7 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
         <div class="row mt-4">
             <div class="col-md-8">
                 <div class="dashboard-card">
-                    <form id="createClassForm" method="POST" action="">
+                    <form id="createClassForm" method="POST" action="" enctype="multipart/form-data">
                         <!-- Basic Information -->
                         <div class="mb-4">
                             <h3>Basic Information</h3>
@@ -144,6 +145,10 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                             <div class="mb-3">
                                 <label for="description" class="form-label">Class Description</label>
                                 <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
+                            </div>
+                            <div class="mb-4">
+                                <label for="classCover" class="form-label">Class Cover/Thumbnail</label>
+                                <input type="file" class="form-control" id="classCover" name="classCover" accept="image/*" required>
                             </div>
                         </div>
 

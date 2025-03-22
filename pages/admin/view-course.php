@@ -220,12 +220,15 @@ $title = 'Course Management';
                                             </span>
                                         </td>
                                         <td>
-                                            <button class="btn btn-sm btn-primary action-btn" onclick="openEditModal('subject', <?php echo $subject['subject_id']; ?>, '<?php echo addslashes($subject['subject_name']); ?>', '<?php echo addslashes($subject['subject_desc']); ?>')">
+                                            <button class="btn btn-sm btn-primary action-btn" onclick="openEditModal('subject', <?php echo $subject['subject_id']; ?>, '<?php echo addslashes($subject['subject_name']); ?>', '<?php echo addslashes($subject['subject_desc']); ?>')" data-bs-toggle="modal" title="Click to edit subject information">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
 
-                                            <button class="btn btn-sm <?php echo $subject['is_active'] ? 'btn-danger' : 'btn-success'; ?> action-btn" onclick="toggleSubjectStatus(<?php echo $subject['subject_id']; ?>, <?php echo $subject['is_active'] ? 1 : 0; ?>)">
-                                                <i class="bi <?php echo $subject['is_active'] ? 'bi-x-circle' : 'bi-check-circle'; ?>"></i>
+                                            <button class="btn btn-sm <?php echo $subject['is_active'] ? 'btn-danger' : 'btn-success'; ?> action-btn" onclick="toggleSubjectStatus(<?php echo $subject['subject_id']; ?>, <?php echo $subject['is_active'] ? 1 : 0; ?>)" data-bs-toggle="modal" title="Click to restrict subject">
+                                                <i class="bi <?php echo $subject['is_active'] ? 'bi bi-lock-fill' : 'bi-unlock-fill'; ?>"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-danger action-btn" onclick="removeSubject(<?php echo $subject['subject_id']; ?>)" data-bs-toggle="modal" title="Click to delete subject">
+                                                <i class="bi bi-trash"></i>
                                             </button>
                                         </td>
                                     </tr>
@@ -367,6 +370,25 @@ $title = 'Course Management';
                 </div>
             </div>
         </div>
+        <!-- Delete Subject Confirmation Modal -->
+        <div class="modal fade" id="deleteSubjectModal" tabindex="-1" aria-labelledby="deleteSubjectModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteSubjectModalLabel">Delete Course</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to delete this subject? This action cannot be undone.</p>
+                        <p class="text-danger"><strong>Note:</strong> This will delete all classes under this subject.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-danger" id="confirmDeleteSubject">Delete Subject</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Change Subject Status Modal -->
         <div class="modal fade" id="toggleStatusModal" tabindex="-1" aria-labelledby="toggleStatusModalLabel" aria-hidden="true">
@@ -456,7 +478,7 @@ $title = 'Course Management';
             const deleteCourse = BASE+"delete-course";
             const addSubject = BASE+"add-subject";
             const editSubject = BASE+"edit-subject";
-            const deleteSubject = BASE+"delete-subject";
+            const deleteSubject = BASE+"delete-subject"; 
             const subjectStatus = BASE+"toggle-subject";
             const updateCover = BASE+"update-subject-cover";
             document.addEventListener("DOMContentLoaded", function () {
@@ -468,10 +490,11 @@ $title = 'Course Management';
                 // Elements
                 let addSubjectModalElement = document.getElementById("addSubjectModal");
                 let editModalElement = document.getElementById('editModal');
+                let deleteCourseModalElement = document.getElementById("deleteCourseModal");
+                let deleteSubjectModalElement = document.getElementById("deleteSubjectModal")
                 // Modals
                 let addSubjectModal = new bootstrap.Modal(addSubjectModalElement);
                 let editModal = new bootstrap.Modal(editModalElement);
-                let deleteCourseModalElement = document.getElementById("deleteCourseModal");
 
                 // Add Course Form Submit
                 document.getElementById('addCourseForm').addEventListener('submit', function(e) {
@@ -479,13 +502,14 @@ $title = 'Course Management';
 
                     const formData = new FormData(this);
                     formData.append('action', 'add-course');
-
+                    showLoading(true);
                     fetch(addCourse, {
                         method: 'POST',
                         body: formData
                     })
                     .then(response => response.json())
                     .then(data => {
+                        showLoading(false);
                         if (data.success) {
                             addSubjectModal.hide(); // Hide the modal properly
                             showToast('success', 'A new course was successfully added.');
@@ -495,6 +519,7 @@ $title = 'Course Management';
                         }
                     })
                     .catch(error => {
+                        showLoading(false);
                         console.error('Error:', error);
                         showToast('error', 'An error occurred while adding the course');
                     });
@@ -506,13 +531,14 @@ $title = 'Course Management';
 
                     const formData = new FormData(this); // Get form data directly
                     formData.append('action', 'add-subject');
-
+                    showLoading(true);
                     fetch(addSubject, {
                         method: 'POST',
                         body: formData
                     })
                     .then(response => response.json())
                     .then(data => {
+                        showLoading(false);
                         if (data.success) {
                             addSubjectModal.hide(); // Close modal properly
                             showToast('success', 'A new subject was successfully added.');
@@ -522,6 +548,7 @@ $title = 'Course Management';
                         }
                     })
                     .catch(error => {
+                        showLoading(false);
                         console.error('Error:', error);
                         showToast('error', 'An error occurred while adding the subject');
                     });
@@ -555,13 +582,14 @@ $title = 'Course Management';
 
                     // Determine fetch URL dynamically
                     const fetchUrl = type === 'course' ? editCourse : editSubject;
-
+                    showLoading(true);
                     fetch(fetchUrl, {
                         method: 'POST',
                         body: formData
                     })
                     .then(response => response.json())
                     .then(data => {
+                        showLoading(false);
                         if (data.success) {
                             editModal.hide(); // Hide modal properly
                             showToast('success', `You have successfully updated the ${type} information.`);
@@ -571,6 +599,7 @@ $title = 'Course Management';
                         }
                     })
                     .catch(error => {
+                        showLoading(false);
                         console.error('Error:', error);
                         showToast('error', `An error occurred while updating the ${type}`);
                     });
@@ -589,7 +618,7 @@ $title = 'Course Management';
                     const formData = new URLSearchParams();
                     formData.append("action", "delete-course");
                     formData.append("course_id", courseToDelete);
-
+                    showLoading(true);
                     fetch(deleteCourse, {
                         method: "POST",
                         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -597,6 +626,7 @@ $title = 'Course Management';
                     })
                     .then(response => response.json())
                     .then(data => {
+                        showLoading(false);
                         deleteCourseModal.hide();
                         if (data.success) {
                             showToast('success', "Course deleted successfully!");
@@ -606,8 +636,46 @@ $title = 'Course Management';
                         }
                     })
                     .catch(error => {
+                        showLoading(false);
                         console.error("Error:", error);
                         showToast('error', "An error occurred while deleting the course.");
+                    });
+                });
+
+                // Remove Subject
+                if (deleteSubjectModalElement) {
+                    window.deleteSubjectModal = new bootstrap.Modal(deleteSubjectModalElement);
+                }
+                document.getElementById("confirmDeleteSubject").addEventListener("click", function () {
+                    if (!subjectToDelete) {
+                        showToast('error', "Error: No subject selected for deletion.");
+                        return;
+                    }
+
+                    const formData = new URLSearchParams();
+                    formData.append("action", "delete-subject");
+                    formData.append("subject_id", subjectToDelete);
+                    showLoading(true);
+                    fetch(deleteSubject, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                        body: formData.toString()
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        showLoading(false);
+                        deleteSubjectModal.hide();
+                        if (data.success) {
+                            showToast('success', "Subject was deleted successfully!");
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            showToast('error', data.message || "Error deleting subject.");
+                        }
+                    })
+                    .catch(error => {
+                        showLoading(false);
+                        console.error("Error:", error);
+                        showToast('error', "An error occurred while deleting the subject.");
                     });
                 });
 
@@ -636,13 +704,14 @@ $title = 'Course Management';
                     formData.append("action", "toggle-subject");
                     formData.append("subject_id", subjectToToggle);
                     formData.append("status", currentStatus === 1 ? 0 : 1); // Flip the status
-
+                    showLoading(true);
                     fetch(subjectStatus, {
                         method: "POST",
                         body: formData,
                     })
                         .then((response) => response.json())
                         .then((data) => {
+                            showLoading(false);
                             toggleStatusModal.hide();
                             if (data.success) {
                                 showToast("success", data.message);
@@ -652,6 +721,7 @@ $title = 'Course Management';
                             }
                         })
                         .catch((error) => {
+                            showLoading(false);
                             console.error("Error:", error);
                             showToast("error", "An error occurred while updating the subject status");
                             toggleStatusModal.hide();
@@ -727,13 +797,14 @@ $title = 'Course Management';
 
                     // If you want to override or ensure the subject ID is correctly appended (optional):
                     formData.append("subject_id", document.querySelector("#imageSubject").value); // Append subject ID     
-
+                    showLoading(true);
                     fetch(updateCover, {
                         method: 'POST',
                         body: formData,
                     })
                     .then(response => response.json())
                     .then(data => {
+                        showLoading(false);
                         if(data.success) {
                             showToast("success", "Subject cover updated successfully!");
                             setTimeout(function () {
@@ -741,12 +812,22 @@ $title = 'Course Management';
                             }, 1000);
                         }
                         else {
+                            console.log("I RUN?");
                             showToast("error", data.message || "Failed to update subject cover.");
+                            setTimeout(function () {
+                                location.reload();
+                            }, 1000);
                         }
                     })
                     .catch(error => {
-                            showToast("error", "An error occurred while updating the subject cover.");
-                    });
+                        showLoading(false);
+                        showToast("error", "An error occurred while updating the subject cover.");
+                    })
+                    .finally(() => {
+                    setTimeout(() => {
+                        showLoading(false);
+                    }, 900);
+                });
                 });
 
 
@@ -761,6 +842,15 @@ $title = 'Course Management';
                     window.deleteCourseModal.show();
                 } else {
                     console.error("Delete course modal not found.");
+                }
+            }
+            // Updated remove course function to use modal
+            function removeSubject(subjectId) {
+                subjectToDelete = subjectId;
+                if (window.deleteSubjectModal) {
+                    window.deleteSubjectModal.show();
+                } else {
+                    console.error("Delete subject modal not found.");
                 }
             }
             function previewImage(input, action) {

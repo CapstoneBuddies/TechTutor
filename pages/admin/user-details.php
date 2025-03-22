@@ -155,7 +155,6 @@
                 let updateRole = "<?php echo BASE; ?>update-role";
 
                 showLoading(true);
-
                 fetch(updateRole, {
                     method: "POST",
                     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -163,6 +162,7 @@
                 })
                 .then(response => response.json())
                 .then(data => {
+                    showLoading(false);
                     updateRoleModal.hide();
                     if (data.success) {
                         showToast('success',"Role updated successfully!");
@@ -172,6 +172,7 @@
                     }
                 })
                 .catch((error) => {
+                    showLoading(false);
                     console.error("Error:", error);
                     showToast("error", "An error occurred while updating the user's role");
                 })

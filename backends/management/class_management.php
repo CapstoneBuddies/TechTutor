@@ -169,7 +169,7 @@ function createClass($data) {
         // Insert class schedules if provided
         if (!empty($data['schedules'])) {
             $scheduleStmt = $conn->prepare("INSERT INTO class_schedule (class_id, user_id, role, session_date, start_time, end_time, status) 
-                                            VALUES (?, ?, 'TUTOR', ?, ?, ?, 'confirmed')");
+                                            VALUES (?, ?, 'TUTOR', ?, ?, ?, 'pending')");
 
             foreach ($data['schedules'] as $schedule) {
                 $scheduleStmt->bind_param("iisss", 
@@ -219,7 +219,7 @@ function getSubjectByName($subject_name) {
  * @param array $time_slots Array of time slots with start and end times
  * @return array Generated schedules
  */
-function generateClassSchedules($start_date, $end_date, $days, $time_slots) {
+function generateClassSchedules($start_date, $end_date, $days, $time_slots) { 
     $schedules = [];
     $current_date = new DateTime($start_date);
     $end = new DateTime($end_date);
@@ -250,10 +250,11 @@ function generateClassSchedules($start_date, $end_date, $days, $time_slots) {
 function getClassSchedules($class_id, $role = null) {
     global $conn;
     
-    $sql = "SELECT cs.*, u.first_name, u.last_name, u.profile_picture, u.role
+    $sql = "SELECT cs.*, u.first_name, u.last_name, u.profile_picture, u.role, c.class_name
             FROM class_schedule cs
             LEFT JOIN users u ON cs.user_id = u.uid
-            WHERE cs.class_id = ?";
+            LEFT JOIN class c ON cs.class_id = c.class_id
+            WHERE cs.class_id = ? ";
     // Add condition for role if provided
     if ($role !== null) {
         $sql .= " AND u.role = ? ";

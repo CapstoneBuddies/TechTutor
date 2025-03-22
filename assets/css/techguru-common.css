@@ -4,14 +4,22 @@
 .dashboard-card {
     background: #fff;
     border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
     padding: 1.5rem;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
-    margin-bottom: 1rem;
+}
+
+.content-card {
+    background: #fff;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+    padding: 1.5rem;
 }
 
 /* Welcome Section */
 .welcome-section {
-    padding: 1.5rem 0;
+    padding: 2rem;
 }
 
 .welcome-section h2 {
@@ -19,9 +27,34 @@
     margin: 0;
 }
 
+.welcome-section .text-orange {
+    color: #ff6b00;
+}
+
 .welcome-section .subtitle {
     color: #666;
     margin-top: 0.5rem;
+}
+
+/* Education Container */
+.education-container {
+    padding: 1.5rem;
+}
+
+/* Topic Section */
+.topic-section {
+    background: #fff;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    height: 100%;
+}
+
+.topic-header {
+    color: #012970;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
 }
 
 /* Breadcrumb Navigation */
@@ -359,4 +392,212 @@
     background-clip: padding-box;
     border: 1px solid rgba(0, 0, 0, 0.2);
     border-radius: 0.3rem;
+}
+.thumbnail {
+    width: 100px; /* Set width for thumbnail */
+    height: auto; /* Maintain aspect ratio */
+    border-radius: 5px; /* Optional: Add rounded corners */
+    border: 1px solid #ccc; /* Optional: Add a border */
+    object-fit: cover; /* Ensure the image covers the area */
+}
+/* TechGuru Courses Styles */
+
+/* Main Content Styles */
+.courses-container {
+    padding: 1.5rem;
+}
+
+/* Course Card Styles */
+.course-card {
+    background: #fff;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    overflow: hidden;
+    height: 100%;
+}
+
+.course-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
+}
+
+.course-card .card-img-top {
+    height: 180px;
+    object-fit: cover;
+}
+
+.course-card .card-body {
+    padding: 1.5rem;
+}
+
+.course-card .card-title {
+    color: #012970;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+.course-card .card-text {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.course-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-top: 1px solid #f0f0f0;
+    margin-top: auto;
+}
+
+.course-stat {
+    display: flex;
+    align-items: center;
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.course-stat i {
+    color: #012970;
+    margin-right: 0.5rem;
+    font-size: 1rem;
+}
+
+/* Search Bar Styles */
+.search-container {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    padding: 1rem;
+    margin-bottom: 2rem;
+}
+
+.search-bar {
+    max-width: 400px;
+}
+
+.search-bar input {
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    padding: 0.5rem 1rem;
+}
+
+.search-bar .btn-primary {
+    background-color: #012970;
+    border: none;
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+}
+
+.search-bar .btn-primary:hover {
+    background-color: #0244b5;
+}
+
+/* Page Header */
+.page-header {
+    color: #012970;
+    font-weight: 600;
+    margin-bottom: 0;
+}
+
+/* View Details Button */
+.btn-view-details {
+    background-color: #012970;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: background-color 0.2s ease;
+}
+
+.btn-view-details:hover {
+    background-color: #0244b5;
+    color: #fff;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .courses-container {
+        padding: 1rem;
+    }
+    
+    .course-card .card-img-top {
+        height: 160px;
+    }
+    
+    .search-bar {
+        width: 100%;
+        max-width: none;
+    }
+}
+.form-check-input {
+    width: 1.2rem;
+    height: 1.2rem;
+    cursor: pointer;
+    border: 2px solid #dee2e6;
+}
+.form-check-input:checked {
+    background-color: var(--bs-danger);
+    border-color: var(--bs-danger);
+}
+.schedule-counter {
+    font-size: 0.9rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.25rem;
+    background-color: #f8f9fa;
+}
+.delete-mode .delete-column {
+    display: table-cell !important;
+}
+.delete-mode .actions-column {
+    display: none !important;
+}
+.form-check {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+}
+.select-all-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+}
+.form-check-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin: 0;
+    white-space: nowrap;
+}
+.schedule-entry {
+    position: relative;
+    padding-right: 3rem;
+}
+.delete-schedule-btn {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+    color: var(--bs-danger);
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.delete-schedule-btn:hover {
+    color: var(--bs-danger-dark);
+}
+.first-schedule .delete-schedule-btn {
+    display: none;
 }

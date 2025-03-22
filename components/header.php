@@ -12,7 +12,7 @@
         'create-class.php',
         'subjects.php',
         'subject-details.php',
-        'subjects.php'
+        'manage-schedule.php',
     ];
     $is_teaching_page = in_array($current_page, $teaching_pages);
 
@@ -136,7 +136,7 @@
         </nav>
     </nav>
 
-    <main class="main-content expanded">
+    <main class="main-content expanded ">
         
 
 <script>

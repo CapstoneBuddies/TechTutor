@@ -28,7 +28,7 @@ try {
         FROM class_schedule cs
         JOIN class c ON cs.class_id = c.class_id
         JOIN users u ON c.tutor_id = u.uid
-        WHERE cs.schedule_id = ? AND cs.status = 'confirmed'
+        WHERE cs.schedule_id = ? AND cs.status = 'pending'
     ");
     $stmt->execute([$scheduleId]);
     $schedule = $stmt->get_result()->fetch_assoc();

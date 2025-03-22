@@ -270,3 +270,7 @@
     transform: translateX(-100%);
     opacity: 0;
 }
+.error-page {
+    viewport-fit: cover;
+    min-height: 50vh;
+}

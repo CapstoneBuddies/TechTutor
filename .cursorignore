@@ -1,0 +1,15 @@
+# Add directories or file patterns to ignore during indexing (e.g. foo/ or *.csv)
+
+node_modules/
+vendor/
+.gitignore
+.git/
+.DS_Store
+sql/class_management_updates.sql
+sql/enrollments.sql
+sql/db.txt
+sql/old_db.sql
+sql/old_db1.sql
+sql/paymongo_transactions.sql
+sql/transactions.sql
+sql/updates(2025-03-18).sql

@@ -86,7 +86,9 @@
         <div class="row">
             <!-- Enrolled Courses -->
             <div class="col-md-12">
-                <h5 class="section-title mb-4">My Enrolled Courses</h5>
+                <div class="card h-100">
+                <div class="card-body">
+                <h5 class="card-title section-title mb-4">My Enrolled Courses</h5>
                 <div class="row">
                     <?php if (empty($enrolled_courses)): ?>
                     <div class="col-12">
@@ -111,6 +113,8 @@
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </div>
+                </div>
+            </div>
             </div>
         </div>
 

@@ -415,6 +415,7 @@
                 })
                 .then(response => response.json())
                 .then(data => {
+                    showLoading(false);
                     if (data.success) {
                         loadUsers();
                         showToast('success', "User status was successfully updated.");
@@ -423,6 +424,7 @@
                     }
                 })
                 .catch(error => {
+                    showLoading(false);
                     console.error('Error updating user status:', error);
                     showToast('error', data.message || 'An error occurred. Please try again.');
                 });
@@ -430,6 +432,7 @@
             
             // Function to delete user
             function deleteUser(userId) {
+                showLoading(true);
                 fetch(deleteUserLink, {
                     method: 'POST',
                     headers: {
@@ -439,6 +442,7 @@
                 })
                 .then(response => response.json())
                 .then(data => {
+                    showLoading(false);
                     if (data.success) {
                         loadUsers();
                         showToast('success' ,data.message || 'User was successfully deleted.');
@@ -447,6 +451,7 @@
                     }
                 })
                 .catch(error => {
+                    showLoading(false);
                     console.error('Error deleting user:', error);
                     showToast('error', 'An error occurred. Please try again.');
                 });
@@ -454,6 +459,7 @@
             
             // Function to send password reset
             function sendPasswordReset(email) {
+                showLoading(true);
                 fetch(passwordReset, {
                     method: 'POST',
                     headers: {
@@ -463,11 +469,12 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-                        resetPasswordModal.hide();
-                        setTimeout(() => {
-                            document.body.classList.remove('modal-open');
-                            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-                        }, 300);
+                    showLoading(false);
+                    resetPasswordModal.hide();
+                    setTimeout(() => {
+                        document.body.classList.remove('modal-open');
+                        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                    }, 300);
                     if (data.success) {
                         showToast('success', 'Password reset link has been sent to the user.');
                         userEmailInput.value = '';
@@ -476,6 +483,7 @@
                     }
                 })
                 .catch(error => {
+                    showLoading(false);
                     console.error('Error sending password reset:', error);
                     showToast('error', 'An error occurred. Please try again.');
                 });
@@ -483,6 +491,7 @@
             
             // Function to fetch user emails for autocomplete
             function fetchUserEmails(query) {
+                showLoading(true);
                 fetch(getUserEmail, {
                     method: 'POST',
                     headers: {
@@ -492,6 +501,7 @@
                 })
                 .then(response => response.json())
                 .then(data => {
+                    showLoading(false);
                     if (data.success && data.users.length > 0) {
                         showEmailAutocomplete(data.users);
                     } else {
@@ -500,6 +510,7 @@
                     }
                 })
                 .catch(error => {
+                    showLoading(false);
                     console.error('Error fetching user emails:', error);
                     showToast('error', 'An error occured while getting the user emails');
                     emailAutocomplete.classList.add('d-none');

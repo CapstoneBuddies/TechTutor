@@ -109,7 +109,10 @@ $title = 'My Classes';
                                                     <?php echo htmlspecialchars($class['subject_name']); ?>
                                                 </div>
                                             </td>
-                                            <td><?php echo htmlspecialchars($class['class_name']); ?></td>
+                                            <td>
+                                                <img class="thumbnail" src ="<?php echo htmlspecialchars(CLASS_IMG.$class['thumbnail']); ?>">
+                                                <?php echo htmlspecialchars($class['class_name']); ?>
+                                            </td>
                                             <td>
                                                 <div class="d-flex align-items-center">
                                                     <i class="bi bi-calendar me-2"></i>
