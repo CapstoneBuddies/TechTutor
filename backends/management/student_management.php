@@ -313,5 +313,9 @@ function getCoursesWithSubjects() {
         return [];
     }
 }
+    function getEnrolledCoursesForStudent($studentId) {
+        global $conn;
+        return [];
 
+    }
 ?>
