@@ -14,11 +14,11 @@ function getCoursesWithCounts() {
             c.course_desc,
             COUNT(DISTINCT s.subject_id) as subject_count,
             COUNT(DISTINCT cl.tutor_id) as tutor_count,
-            COUNT(DISTINCT cs.user_id) as student_count
+            COUNT(DISTINCT e.student_id) as student_count
         FROM course c
         LEFT JOIN subject s ON c.course_id = s.course_id
         LEFT JOIN class cl ON s.subject_id = cl.subject_id
-        LEFT JOIN class_schedule cs ON cl.class_id = cs.class_id AND cs.role = 'STUDENT'
+        LEFT JOIN enrollments e ON cl.class_id = e.class_id AND e.status = 'active'
         GROUP BY c.course_id, c.course_name, c.course_desc
         ORDER BY c.course_name";
         
@@ -48,12 +48,12 @@ function getAdminClassDetails($class_id) {
             u.first_name as tutor_first_name,
             u.last_name as tutor_last_name,
             u.email as tutor_email,
-            COUNT(DISTINCT cs.user_id) as enrolled_students
+            COUNT(DISTINCT e.student_id) as enrolled_students
         FROM class c
         JOIN subject s ON c.subject_id = s.subject_id
         JOIN course co ON s.course_id = co.course_id
         JOIN users u ON c.tutor_id = u.uid
-        LEFT JOIN class_schedule cs ON c.class_id = cs.class_id AND cs.role = 'STUDENT'
+        LEFT JOIN enrollments e ON c.class_id = e.class_id AND e.status = 'active'
         WHERE c.class_id = ?
         GROUP BY c.class_id";
         
@@ -85,11 +85,11 @@ function getSubjectsWithCounts() {
             c.course_id,
             c.course_name,
             COUNT(DISTINCT cl.tutor_id) as tutor_count,
-            COUNT(DISTINCT cs.user_id) as student_count
+            COUNT(DISTINCT e.student_id) as student_count
         FROM subject s
         LEFT JOIN course c ON s.course_id = c.course_id
         LEFT JOIN class cl ON s.subject_id = cl.subject_id
-        LEFT JOIN class_schedule cs ON cl.class_id = cs.class_id AND cs.role = 'STUDENT'
+        LEFT JOIN enrollments e ON cl.class_id = e.class_id AND e.status = 'active'
         GROUP BY s.subject_id, s.subject_name, s.subject_desc, s.is_active, c.course_id, c.course_name
         ORDER BY c.course_name, s.subject_name";
         

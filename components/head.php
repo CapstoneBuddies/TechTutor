@@ -60,7 +60,7 @@ if (function_exists('log_error')) {
     <link rel="stylesheet" href="<?php echo CSS; ?>users.css">
     <link rel="stylesheet" href="<?php echo CSS; ?>header.css">
     <link rel="stylesheet" href="<?php echo CSS; ?>footer.css">
-    <link rel="stylesheet" href="<?php echo CSS; ?>responsive.css">
+    <!-- <link rel="stylesheet" href="<?php echo CSS; ?>responsive.css"> -->
 
     <?php
     // Role-specific CSS

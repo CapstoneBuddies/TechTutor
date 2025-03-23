@@ -11,9 +11,10 @@ function getStudentByTutor($tutor_id) {
                                   DATE_FORMAT(cs.start_time, '%h:%i %p') AS formatted_start_time, 
                                   DATE_FORMAT(cs.end_time, '%h:%i %p') AS formatted_end_time 
                            FROM users u 
-                           JOIN class_schedule cs ON u.uid = cs.user_id 
-                           JOIN class c ON cs.class_id = c.class_id 
-                           WHERE cs.role = 'STUDENT' AND c.tutor_id = ? 
+                           JOIN enrollments e ON u.uid = e.student_id
+                           JOIN class c ON e.class_id = c.class_id 
+                           JOIN class_schedule cs ON c.class_id = cs.class_id AND u.uid = cs.user_id
+                           WHERE c.tutor_id = ? 
                            ORDER BY c.class_name, cs.session_date, u.last_name, u.first_name");
     $stmt->bind_param("i", $tutor_id);
     $stmt->execute();
@@ -34,10 +35,11 @@ function getStudentByTutor($tutor_id) {
 function getStudentByClass($class_id) {
     global $conn;
 
-    $stmt = $conn->prepare("SELECT u.first_name, u.last_name, u.profile_picture, u.email, u.status 
+    $stmt = $conn->prepare("SELECT u.first_name, u.last_name, u.profile_picture, u.email, u.status,
+                                  e.enrollment_date, e.status as enrollment_status
                            FROM users u 
-                           JOIN class_schedule cs ON u.uid = cs.user_id 
-                           WHERE cs.role = 'STUDENT' AND cs.class_id = ?");
+                           JOIN enrollments e ON u.uid = e.student_id
+                           WHERE e.class_id = ?");
     
     $stmt->bind_param("i", $class_id);
     $stmt->execute();
@@ -160,19 +162,34 @@ function getStudentClasses($student_id) {
                 c.class_name,
                 c.class_desc,
                 c.thumbnail,
-                c.status,
+                c.status as class_status,
                 s.subject_name,
+                s.subject_id,
                 co.course_name,
+                co.course_id,
                 u.first_name AS tutor_first_name,
                 u.last_name AS tutor_last_name,
-                u.profile_picture AS tutor_avatar
-            FROM class c
+                u.profile_picture AS tutor_avatar,
+                e.status as enrollment_status,
+                e.enrollment_date,
+                (
+                    SELECT COUNT(*) 
+                    FROM class_schedule cs 
+                    WHERE cs.class_id = c.class_id 
+                    AND cs.status = 'completed'
+                ) as completed_sessions,
+                (
+                    SELECT COUNT(*) 
+                    FROM class_schedule cs 
+                    WHERE cs.class_id = c.class_id
+                ) as total_sessions
+            FROM enrollments e
+            JOIN class c ON e.class_id = c.class_id
             JOIN subject s ON c.subject_id = s.subject_id
             JOIN course co ON s.course_id = co.course_id
             JOIN users u ON c.tutor_id = u.uid
-            JOIN class_schedule cs ON c.class_id = cs.class_id
-            WHERE cs.user_id = ? AND cs.role = 'STUDENT' 
-            ORDER BY c.created_at DESC
+            WHERE e.student_id = ?
+            ORDER BY e.enrollment_date DESC
         ");
 
         $stmt->bind_param("i", $student_id);
@@ -239,22 +256,28 @@ function getStudentSchedule($student_id) {
         $stmt = $conn->prepare("
             SELECT 
                 cs.schedule_id,
-                cs.class_id AS id,
+                cs.class_id,
                 cs.session_date,
                 cs.start_time,
                 cs.end_time,
                 TIMESTAMPDIFF(MINUTE, cs.start_time, cs.end_time) AS duration,
-                cs.status,
-                c.class_name AS title,
-                s.subject_name AS topic,
-                CONCAT(u.first_name,' ',u.first_name) AS tutor_name,
-                u.profile_picture AS tutor_avatar
-            FROM class_schedule cs
-            JOIN class c ON cs.class_id = c.class_id
+                cs.status as schedule_status,
+                c.class_name,
+                c.thumbnail,
+                s.subject_name,
+                CONCAT(u.first_name,' ',u.last_name) AS tutor_name,
+                u.profile_picture AS tutor_avatar,
+                e.status as enrollment_status
+            FROM enrollments e
+            JOIN class c ON e.class_id = c.class_id
+            JOIN class_schedule cs ON c.class_id = cs.class_id
             JOIN subject s ON c.subject_id = s.subject_id
             JOIN users u ON c.tutor_id = u.uid
-            WHERE cs.user_id = ? AND cs.role = 'STUDENT'
+            WHERE e.student_id = ? 
+            AND e.status = 'active'
+            AND cs.session_date >= CURDATE()
             ORDER BY cs.session_date ASC, cs.start_time ASC
+            LIMIT 10
         ");
         $stmt->bind_param("i", $student_id);
         $stmt->execute();
@@ -318,8 +341,8 @@ function getEnrolledSubjectsForStudent($studentId) {
     try {
         $stmt = $conn->prepare("
             SELECT 
-                s.subject_id,
-                s.subject_name,
+                s.*,
+                c.course_name,
                 e.enrollment_date,
                 e.status
             FROM enrollments e
@@ -337,6 +360,9 @@ function getEnrolledSubjectsForStudent($studentId) {
             $enrolledSubjects[] = [
                 'subject_id' => $row['subject_id'],
                 'subject_name' => $row['subject_name'],
+                'subject_desc' => $row['subject_desc'],
+                'image' => $row['image'],
+                'is_active' => $row['is_active'],
                 'course_name' => $row['course_name'],
                 'enrollment_date' => $row['enrollment_date'],
                 'status' => $row['status']
@@ -347,6 +373,166 @@ function getEnrolledSubjectsForStudent($studentId) {
     } catch (Exception $e) {
         log_error($e->getMessage());
         return [];
+    }
+}
+
+/**
+ * Get meeting details for a student's class session
+ * @param int $schedule_id The schedule ID
+ * @param int $student_id The student's ID
+ * @return array|null Meeting details or null if not found
+ */
+function getStudentMeetingDetails($schedule_id, $student_id) {
+    global $conn;
+    
+    try {
+        $stmt = $conn->prepare("
+            SELECT 
+                cs.schedule_id,
+                cs.session_date,
+                cs.start_time,
+                cs.end_time,
+                cs.status as schedule_status,
+                c.class_id,
+                c.class_name,
+                c.thumbnail,
+                s.subject_name,
+                CONCAT(u.first_name,' ',u.last_name) AS tutor_name,
+                u.profile_picture AS tutor_avatar,
+                m.meeting_uid,
+                m.attendee_pw,
+                e.status as enrollment_status
+            FROM class_schedule cs
+            JOIN class c ON cs.class_id = c.class_id
+            JOIN subject s ON c.subject_id = s.subject_id
+            JOIN users u ON c.tutor_id = u.uid
+            JOIN enrollments e ON c.class_id = e.class_id AND e.student_id = ?
+            LEFT JOIN meetings m ON cs.schedule_id = m.schedule_id
+            WHERE cs.schedule_id = ?
+            AND e.status = 'active'
+        ");
+        
+        $stmt->bind_param("ii", $student_id, $schedule_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        return $result->fetch_assoc();
+    } catch (Exception $e) {
+        log_error("Error getting meeting details: " . $e->getMessage(), "student");
+        return null;
+    }
+}
+
+/**
+ * Get student's active class with next session
+ * @param int $student_id The student's ID
+ * @return array|null Active class details or null if not found
+ */
+function getStudentActiveClass($student_id) {
+    global $conn;
+    
+    try {
+        $stmt = $conn->prepare("
+            SELECT 
+                c.class_id,
+                c.class_name,
+                c.thumbnail,
+                CONCAT(u.first_name, ' ', u.last_name) as tutor_name,
+                u.profile_picture as tutor_avatar,
+                MIN(cs.session_date) as next_session_date,
+                MIN(cs.start_time) as next_session_time
+            FROM enrollments e
+            JOIN class c ON e.class_id = c.class_id
+            JOIN users u ON c.tutor_id = u.uid
+            LEFT JOIN class_schedule cs ON c.class_id = cs.class_id
+            WHERE e.student_id = ?
+            AND e.status = 'active'
+            AND cs.session_date >= CURDATE()
+            AND cs.status != 'completed'
+            GROUP BY c.class_id
+            ORDER BY next_session_date ASC, next_session_time ASC
+            LIMIT 1
+        ");
+        
+        $stmt->bind_param("i", $student_id);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_assoc();
+    } catch (Exception $e) {
+        log_error("Error getting active class: " . $e->getMessage(), "student");
+        return null;
+    }
+}
+
+/**
+ * Get student's upcoming schedule
+ * @param int $student_id The student's ID
+ * @return array List of upcoming sessions
+ */
+function getStudentUpcomingSchedule($student_id) {
+    global $conn;
+    
+    try {
+        $stmt = $conn->prepare("
+            SELECT 
+                cs.schedule_id,
+                cs.session_date,
+                cs.start_time,
+                cs.end_time,
+                cs.status,
+                c.class_id,
+                c.class_name,
+                c.thumbnail,
+                CONCAT(u.first_name, ' ', u.last_name) as tutor_name,
+                u.profile_picture as tutor_avatar
+            FROM class_schedule cs
+            JOIN class c ON cs.class_id = c.class_id
+            JOIN users u ON c.tutor_id = u.uid
+            JOIN enrollments e ON c.class_id = e.class_id
+            WHERE e.student_id = ?
+            AND e.status = 'active'
+            AND cs.session_date >= CURDATE()
+            ORDER BY cs.session_date ASC, cs.start_time ASC
+            LIMIT 10
+        ");
+        
+        $stmt->bind_param("i", $student_id);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    } catch (Exception $e) {
+        log_error("Error getting upcoming schedule: " . $e->getMessage(), "student");
+        return [];
+    }
+}
+
+/**
+ * Check if a student is already enrolled in a class
+ * @param int $student_id The student's ID
+ * @param int $class_id The class ID
+ * @return array|null Returns enrollment details if enrolled, null otherwise
+ */
+function checkStudentEnrollment($student_id, $class_id) {
+    global $conn;
+    
+    try {
+        $stmt = $conn->prepare("
+            SELECT 
+                e.enrollment_id,
+                e.status,
+                c.class_name,
+                c.class_id
+            FROM enrollments e
+            JOIN class c ON e.class_id = c.class_id
+            WHERE e.student_id = ? 
+            AND e.class_id = ?
+            AND e.status != 'dropped'
+        ");
+        
+        $stmt->bind_param("ii", $student_id, $class_id);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_assoc();
+    } catch (Exception $e) {
+        log_error("Error checking enrollment: " . $e->getMessage(), "student");
+        return null;
     }
 }
 

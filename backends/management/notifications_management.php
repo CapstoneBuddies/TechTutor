@@ -82,7 +82,7 @@ function fetchUserNotifications($user_id, $role) {
                      LEFT JOIN users u ON n.recipient_id = u.uid 
                      LEFT JOIN class c ON n.class_id = c.class_id 
                      WHERE n.recipient_id = ? 
-                     OR n.class_id IN (SELECT class_id FROM class_schedule WHERE user_id = ? AND role = 'STUDENT') 
+                     OR n.class_id IN (SELECT class_id FROM enrollments WHERE student_id = ? AND status = 'active') 
                      OR n.recipient_role = 'ALL' 
                      ORDER BY n.created_at DESC";
             $stmt = $conn->prepare($query);
@@ -301,7 +301,7 @@ function sendClassSessionLink($scheduleId) {
                             <div style='text-align: center; margin: 20px 0;'>
                                 <a href='{$joinUrl}' style='background-color: #0052cc; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 5px; font-size: 16px; display: inline-block;'>Join Now</a>
                             </div>
-                            <p style='font-size: 14px; color: #666;'>If the button doesn’t work, copy and paste this link into your browser:</p>
+                            <p style='font-size: 14px; color: #666;'>If the button doesn't work, copy and paste this link into your browser:</p>
                             <p style='word-wrap: break-word; background: #f1f1f1; padding: 10px; border-radius: 5px; font-size: 14px; color: #333;'>{$joinUrl}</p>
                         </td>
                     </tr>

@@ -151,4 +151,38 @@
 	    $normalizedStatus = normalizeStatus($status);
 	    return 'status-badge status-' . $normalizedStatus;
 	}
+
+	/**
+	 * Calculate human readable time difference between two timestamps
+	 * 
+	 * @param int $from_time Unix timestamp from which the difference begins
+	 * @param int $to_time Unix timestamp to end the time difference
+	 * @return string Human readable time difference
+	 */
+	function human_time_diff($from_time, $to_time) {
+	    $diff = abs($to_time - $from_time);
+	    
+	    $intervals = array(
+	        'year'   => 31536000,
+	        'month'  => 2592000,
+	        'week'   => 604800,
+	        'day'    => 86400,
+	        'hour'   => 3600,
+	        'minute' => 60,
+	        'second' => 1
+	    );
+	    
+	    foreach ($intervals as $unit => $seconds) {
+	        $count = floor($diff / $seconds);
+	        if ($count > 0) {
+	            if ($count == 1) {
+	                return "1 " . $unit;
+	            } else {
+	                return $count . " " . $unit . "s";
+	            }
+	        }
+	    }
+	    
+	    return "just now";
+	}
 ?>

@@ -33,17 +33,18 @@
     }
 ?>
 <div class="dashboard-container">
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay"></div>
+    
     <!-- Mobile Toggle Button -->
-     <a class="mobile-toggle d-md-none" style="cursor: pointer;">
+    <a class="mobile-toggle d-md-none" style="cursor: pointer;">
         <img src="<?php echo IMG; ?>circle-logo.png" alt="Logo" class="logo">
     </a>
     
     <!-- Sidebar -->
     <nav class="sidebar collapsed">
-        <div class="logo-container" id="sidebarToggle">
-            <a style="cursor: pointer;">
-                <img src="<?php echo IMG; ?>circle-logo.png" alt="Logo" class="logo">
-            </a>
+        <div class="logo-container">
+            <img src="<?php echo IMG; ?>circle-logo.png" alt="Logo" class="logo">
         </div>
         <div class="user-info">
             <a href="<?php echo BASE.$role; ?>profile">
@@ -145,20 +146,68 @@
     document.addEventListener('DOMContentLoaded', function() {
         try {
             // Handle sidebar toggle
-            const sidebarToggle = document.getElementById('sidebarToggle');
             const mobileToggle = document.querySelector('.mobile-toggle');
             const sidebar = document.querySelector('.sidebar');
             const mainContent = document.querySelector('.main-content');
             const logoContainer = document.querySelector('.logo-container');
+            const sidebarOverlay = document.querySelector('.sidebar-overlay');
             let isLogoHidden = false;
+            let lastNotificationId = 0; // Track last notification ID
 
-            // Function to handle sidebar toggle
+            // Function to check for new notifications
+            async function checkNewNotifications() {
+                try {
+                    const response = await fetch(BASE + 'check-notifications', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: `last_id=${lastNotificationId}`
+                    });
+                    
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    
+                    const data = await response.json();
+                    if (data.notifications && data.notifications.length > 0) {
+                        // Show a simple notification message
+                        showToast('success', 'You have new notifications! Visit the notifications page to view them.');
+                        
+                        // Update last notification ID
+                        data.notifications.forEach(notification => {
+                            lastNotificationId = Math.max(lastNotificationId, notification.id);
+                        });
+                        
+                        // Update notification count if element exists
+                        const notifCount = document.querySelector('.notification-count');
+                        if (notifCount) {
+                            notifCount.textContent = data.unread_count || '0';
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error checking notifications:', error);
+                    logAction(error.message, 'notification_check_error', true);
+                }
+            }
+
+            // Initial check for notifications
+            checkNewNotifications();
+
+            // Set up periodic checking (every 30 seconds)
+            setInterval(checkNewNotifications, 30000);
+
+            // Function to handle sidebar toggle for mobile only
             function toggleSidebar() {
                 if (window.innerWidth <= 770) {
                     sidebar.classList.toggle('show');
-                } else {
-                    sidebar.classList.toggle('collapsed');
-                    mainContent.classList.toggle('expanded');
+                    sidebarOverlay.classList.toggle('show');
+                }
+            }
+
+            // Function to close mobile sidebar
+            function closeMobileSidebar() {
+                if (window.innerWidth <= 770) {
+                    sidebar.classList.remove('show');
+                    sidebarOverlay.classList.remove('show');
                 }
             }
 
@@ -176,63 +225,56 @@
                 }).catch(err => console.error('Error logging to server:', err));
             }
 
-            // Desktop sidebar toggle
-            if (sidebarToggle) {
-                sidebarToggle.addEventListener('click', function(e) {
-                    try {
-                        if (window.innerWidth > 775) {
-                            toggleSidebar();
-                        }
-                    } catch (error) {
-                        console.error('Error toggling logo:', error);
-                        logAction(error.message, 'toggle_logo_error', true);
-                    }
-                });
-            }
-
             // Mobile sidebar toggle
             if (mobileToggle) {
                 mobileToggle.addEventListener('click', function(e) {
                     toggleSidebar();
-                // Toggle logo container visibility
-                logoContainer.classList.toggle('hidden');
-                isLogoHidden = !isLogoHidden;
-                console.log(logoContainer.classList);
+                    // Toggle logo container visibility
+                    logoContainer.classList.toggle('hidden');
+                    isLogoHidden = !isLogoHidden;
                 });
             }
 
-            // Close sidebar when clicking outside on mobile
+            // Close sidebar when clicking overlay
+            if (sidebarOverlay) {
+                sidebarOverlay.addEventListener('click', closeMobileSidebar);
+            }
+
+            // Close sidebar when clicking outside
             document.addEventListener('click', function(e) {
                 if (window.innerWidth <= 770 && 
                     !sidebar.contains(e.target) && 
                     !mobileToggle.contains(e.target) &&
                     sidebar.classList.contains('show')) {
-                    toggleSidebar();
+                    closeMobileSidebar();
                 }
-            });
-            sidebar.addEventListener("mouseenter", function() {
-                sidebar.classList.remove("collapsed");
-                mainContent.classList.remove("expanded");
-            });
-            sidebar.addEventListener("mouseleave", function() {
-                sidebar.classList.add("collapsed");
-                mainContent.classList.add("expanded");
             });
 
             // Handle window resize
             window.addEventListener('resize', function() {
                 if (window.innerWidth > 770) {
-                    sidebar.classList.remove('show');
+                    closeMobileSidebar();
                 }
                 if (window.innerWidth <= 991) {
                     sidebar.classList.add("collapsed");
                     mainContent.classList.add("expanded");
                 }
-                else {
+            });
+
+            // Remove hover effects on mobile
+            if (window.innerWidth <= 770) {
+                sidebar.removeEventListener("mouseenter", null);
+                sidebar.removeEventListener("mouseleave", null);
+            } else {
+                sidebar.addEventListener("mouseenter", function() {
                     sidebar.classList.remove("collapsed");
                     mainContent.classList.remove("expanded");
-                }
-            });
+                });
+                sidebar.addEventListener("mouseleave", function() {
+                    sidebar.classList.add("collapsed");
+                    mainContent.classList.add("expanded");
+                });
+            }
         } catch (error) {
             console.error('Error initializing header functionality:', error);
             logAction(error.message, 'initialization_error', true);

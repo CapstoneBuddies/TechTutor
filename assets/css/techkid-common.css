@@ -136,40 +136,116 @@
 .schedule-list {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 1rem;
+}
+
+.date-group {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.date-header {
+    color: var(--text-color);
+    padding: 1rem;
+    margin: 0;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .schedule-item {
-    display: flex;
-    align-items: center;
-    padding: 15px;
+    padding: 1rem;
     background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.schedule-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .schedule-time {
-    min-width: 120px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--primary-color);
+    min-width: 80px;
+    background: var(--bg-color);
+    border-radius: 6px;
+    padding: 0.5rem;
 }
 
-.schedule-details {
+.session-info {
     flex: 1;
-    min-width: 0;
 }
 
-.course-name {
+.session-duration {
+    min-width: 140px;
+}
+
+.today-session-item {
+    padding: 1rem;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.today-session-item.active {
+    border-color: var(--primary-color);
+    background: rgba(0, 82, 204, 0.05);
+}
+
+.stat-card {
+    background: #fff;
+    border: 1px solid var(--border-color);
+    transition: transform 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+}
+
+/* Calendar Styles */
+.fc {
+    background: #fff;
+    padding: 1rem;
+    border-radius: 12px;
+    height: 100%;
+}
+
+.fc .fc-toolbar.fc-header-toolbar {
+    margin-bottom: 1.5rem;
+}
+
+.fc .fc-toolbar-title {
+    font-size: 1.25rem;
     font-weight: 600;
-    font-size: 14px;
-    margin-bottom: 5px;
-    color: var(--text-color);
 }
 
-.tutor-name {
-    font-size: 12px;
-    color: #666;
+.fc .fc-button-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.fc .fc-button-primary:hover {
+    background-color: #0046ad;
+    border-color: #0046ad;
+}
+
+.fc .fc-button-primary:disabled {
+    background-color: #ccc;
+    border-color: #ccc;
+}
+
+.fc .fc-daygrid-day.fc-day-today {
+    background-color: rgba(0, 82, 204, 0.05);
+}
+
+.fc .fc-event {
+    border: none;
+    padding: 2px 4px;
+    font-size: 0.875rem;
+}
+
+.fc .fc-event-title {
+    font-weight: 500;
 }
 
 /* Badge Grid Styles */
@@ -263,6 +339,19 @@
     .badge-grid {
         grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
     }
+    
+    /* Table responsiveness */
+    .table-responsive-custom {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .table-responsive-custom table {
+        width: 100%;
+        min-width: 500px;
+    }
 }
 
 @media (max-width: 768px) {
@@ -285,23 +374,109 @@
         margin-top: -30px;
     }
     
-    .schedule-item {
+    .schedule-item .d-flex {
         flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
     }
     
     .schedule-time {
-        min-width: auto;
+        width: 100%;
+        text-align: center;
     }
     
-    .schedule-item .btn {
-        align-self: flex-end;
-        margin-top: 10px;
+    .session-duration {
+        width: 100%;
+        text-align: left;
+        margin-top: 0.5rem;
+    }
+    
+    .session-action {
+        width: 100%;
+        margin-top: 1rem;
+    }
+    
+    .session-action .btn {
+        width: 100%;
+    }
+    
+    .fc .fc-toolbar {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .fc .fc-toolbar-title {
+        font-size: 1.125rem;
     }
     
     .badge-grid {
         grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    }
+    
+    /* Form adjustments */
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    
+    .form-control {
+        font-size: 16px;
+    }
+    
+    /* Modal adjustments */
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+    
+    .modal-content {
+        padding: 1rem;
+    }
+    
+    .modal-header {
+        padding: 0.5rem 1rem;
+    }
+    
+    .modal-body {
+        padding: 1rem;
+    }
+    
+    .modal-footer {
+        padding: 0.5rem;
+        flex-direction: column;
+    }
+    
+    .modal-footer .btn {
+        margin: 0.25rem 0;
+    }
+    
+    /* Class and course specific */
+    .class-card, .course-card {
+        margin-bottom: 1rem;
+    }
+    
+    .class-card .card-body, 
+    .course-card .card-body {
+        padding: 1rem;
+    }
+    
+    .class-grid, .course-grid {
+        display: block;
+    }
+    
+    /* Profile adjustments */
+    .profile-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .profile-avatar {
+        margin-bottom: 1rem;
+    }
+    
+    .profile-info {
+        width: 100%;
+    }
+    
+    .profile-tabs .nav-link {
+        padding: 0.5rem;
     }
 }
 
@@ -320,8 +495,20 @@
         font-size: 11px;
     }
     
+    .date-header {
+        font-size: 1rem;
+    }
+    
     .schedule-time {
-        font-size: 12px;
+        padding: 0.375rem;
+    }
+    
+    .schedule-time .h5 {
+        font-size: 1rem;
+    }
+    
+    .stat-card .h2 {
+        font-size: 1.5rem;
     }
     
     .course-name {
@@ -344,96 +531,382 @@
     .badge-name {
         font-size: 11px;
     }
+    
+    /* Button adjustments */
+    .btn {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    .action-buttons .btn {
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Card and grid adjustments */
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .row {
+        margin-left: -10px;
+        margin-right: -10px;
+    }
+    
+    .col, [class*="col-"] {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    
+    /* Class specific mobile adjustments */
+    .class-info-card {
+        padding: 1rem;
+    }
+    
+    .resource-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .resource-info {
+        width: 100%;
+    }
+    
+    .schedule-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .schedule-info {
+        width: 100%;
+        margin-top: 0.5rem;
+    }
 }
+
 .dashboard-content.bg {
     background-color: #F5F5F5;
     border-radius: 5%;
 }
+
 .dashboard-content {
     padding: 2rem;
 }
+
 .search-section .input-group {
     width: 300px;
 }
+
 .content-card {
     border-radius: 12px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     overflow: hidden;
     background-color: #FFFAFA;
 }
+
 .bg-snow {
     background-color: #FFFAFA;
 }
+
 .card-img-top {
     height: 200px;
     object-fit: cover;
 }
+
 .class-card {
     background: white;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     transition: transform 0.2s;
 }
+
 .class-card:hover {
     transform: translateY(-2px);
 }
+
 .status-badge {
     padding: 6px 12px;
     border-radius: 4px;
     font-size: 14px;
 }
+
 .status-badge.enrolled {
     background-color: #e8f5e9;
     color: #2e7d32;
 }
+
 .status-badge.not-enrolled {
     background-color: #f5f5f5;
     color: #757575;
 }
+
 .schedule-list {
     display: flex;
     flex-direction: column;
     gap: 1rem;
 }
+
 .schedule-item {
     padding: 1rem;
     border-radius: 8px;
     background-color: white;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
+
 .tutor-avatar {
     object-fit: cover;
 }
+
 .rating {
     font-size: 12px;
 }
+
 .section-title {
     font-size: 1.25rem;
     font-weight: 600;
     color: #2c3e50;
 }
+
 .fc-header-toolbar {
     margin-bottom: 1rem !important;
 }
+
 .fc-day-today {
     background-color: #e3f2fd !important;
 }
+
 .fc-event {
     cursor: pointer;
 }
-@media (max-width: 768px) {
-    .search-section {
-        width: 100%;
-        margin-top: 1rem;
-    }
-    .search-section .input-group {
-        width: 100%;
-    }
-    .schedule-item .d-flex {
-        flex-direction: column;
-        text-align: center;
-    }
-    .schedule-info {
-        margin: 1rem 0;
-    }
+
+/* Meeting Page Styles */
+.class-info {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.meeting-container {
+    background: #fff;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.meeting-guidelines {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    text-align: left;
+}
+
+.meeting-guidelines ul li {
+    margin-bottom: 0.5rem;
+}
+
+.session-info {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.tutor-info img {
+    object-fit: cover;
+    width: 32px;
+    height: 32px;
+}
+
+/* Meeting Error State */
+.meeting-error {
+    text-align: center;
+    padding: 3rem 1rem;
+}
+
+.meeting-error i {
+    font-size: 48px;
+    color: var(--danger-color, #dc3545);
+    margin-bottom: 1rem;
+}
+
+.meeting-error h3 {
+    margin-bottom: 1rem;
+    color: var(--text-color);
+}
+
+.meeting-error p {
+    color: #666;
+    margin-bottom: 1.5rem;
+}
+
+/* Meeting Join Button */
+.btn-join {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-join:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 82, 204, 0.2);
+}
+
+.btn-join i {
+    margin-right: 0.5rem;
+}
+
+/* Enrollment Page Styles */
+.enrollment-header {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin-bottom: 2rem;
+}
+
+.enrollment-info {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.tutor-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.stat-card {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.stat-card .value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 0.25rem;
+}
+
+.stat-card .label {
+    font-size: 0.875rem;
+    color: #666;
+}
+
+.schedule-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.schedule-table th {
+    background: #f8f9fa;
+    padding: 0.75rem;
+    font-weight: 600;
+    color: var(--text-color);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.schedule-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+    color: #666;
+}
+
+.tutor-profile {
+    text-align: center;
+    padding: 1.5rem;
+}
+
+.tutor-profile img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    margin-bottom: 1rem;
+    object-fit: cover;
+}
+
+.tutor-profile h4 {
+    margin-bottom: 1rem;
+    color: var(--text-color);
+}
+
+/* Class Details Page Styles */
+.class-header {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin-bottom: 2rem;
+}
+
+.class-info-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin-bottom: 1.5rem;
+}
+
+.session-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.session-table th {
+    background: #f8f9fa;
+    padding: 0.75rem;
+    font-weight: 600;
+    color: var(--text-color);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.session-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+    color: #666;
+    vertical-align: middle;
+}
+
+.resource-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.resource-item:hover {
+    background: #f8f9fa;
+}
+
+.resource-item i {
+    font-size: 1.25rem;
+    color: var(--primary-color);
+    margin-right: 1rem;
+}
+
+.resource-info {
+    flex: 1;
+}
+
+.resource-name {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.resource-meta {
+    font-size: 0.875rem;
+    color: #666;
 }

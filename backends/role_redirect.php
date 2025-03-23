@@ -22,6 +22,7 @@ $roleDashboards = [
 
 // Redirect based on user role
 if (isset($roleDashboards[$_SESSION['role']])) {
+    $title = "Main Dashboard";
     include_once $roleDashboards[$_SESSION['role']];
 } else {
     header("Location: login");

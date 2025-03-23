@@ -1,6 +1,6 @@
 /* 
- * TechTutor Responsive Design
- * This file contains responsive design rules for all pages
+ * Global Responsive Design
+ * This file contains global responsive design rules
  */
 
 /* Base responsive rules */
@@ -21,79 +21,18 @@ img {
     height: auto;
 }
 
-/* Table responsiveness */
+/* Global table responsiveness */
 @media (max-width: 768px) {
-    .table-responsive-custom {
+    .table-responsive {
         display: block;
         width: 100%;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
     }
-    
-    .table-responsive-custom table {
-        width: 100%;
-        min-width: 500px; /* Ensures tables don't get too squished */
-    }
-    
-    /* Optional: Make certain tables stack on mobile */
-    .table-stack-mobile thead {
-        display: none;
-    }
-    
-    .table-stack-mobile tbody tr {
-        display: block;
-        margin-bottom: 1rem;
-        border: 1px solid #dee2e6;
-        border-radius: 0.25rem;
-    }
-    
-    .table-stack-mobile tbody td {
-        display: flex;
-        justify-content: space-between;
-        text-align: right;
-        border-bottom: 1px solid #dee2e6;
-        padding: 0.75rem;
-    }
-    
-    .table-stack-mobile tbody td:last-child {
-        border-bottom: none;
-    }
-    
-    .table-stack-mobile tbody td::before {
-        content: attr(data-label);
-        font-weight: bold;
-        text-align: left;
-        padding-right: 0.5rem;
-    }
 }
 
-/* Card and grid adjustments */
-@media (max-width: 576px) {
-    .card {
-        margin-bottom: 1rem;
-    }
-    
-    .row {
-        margin-left: -10px;
-        margin-right: -10px;
-    }
-    
-    .col, [class*="col-"] {
-        padding-left: 10px;
-        padding-right: 10px;
-    }
-}
-
-/* Form responsiveness */
+/* Global form responsiveness */
 @media (max-width: 768px) {
-    .form-group {
-        margin-bottom: 1rem;
-    }
-    
-    .form-control {
-        font-size: 16px; /* Prevents iOS zoom on focus */
-    }
-    
     .form-row {
         display: block;
     }
@@ -105,769 +44,65 @@ img {
     }
 }
 
-/* Button responsiveness */
+/* Global button responsiveness */
 @media (max-width: 576px) {
-    .btn {
-        padding: 0.375rem 0.75rem;
-        font-size: 0.875rem;
-        display: block;
-        width: 100%;
-        margin-bottom: 0.5rem;
-    }
-    
     .btn-group .btn {
         display: inline-block;
         width: auto;
         margin-bottom: 0;
     }
-    
-    .action-buttons .btn {
-        margin-bottom: 0.5rem;
-    }
 }
 
-/* Modal responsiveness */
+/* Global modal responsiveness */
 @media (max-width: 576px) {
     .modal-dialog {
         margin: 0.5rem;
     }
-    
-    .modal-content {
-        padding: 1rem;
-    }
-    
-    .modal-header {
-        padding: 0.5rem 1rem;
-    }
-    
-    .modal-body {
-        padding: 1rem;
-    }
-    
-    .modal-footer {
-        padding: 0.5rem;
-        flex-direction: column;
-    }
-    
-    .modal-footer .btn {
-        margin: 0.25rem 0;
-    }
 }
 
-/* Dashboard specific responsiveness */
-@media (max-width: 992px) {
-    .dashboard-content {
-        padding: 15px;
-    }
-    
-    .stats-card {
-        margin-bottom: 1rem;
-    }
-    
-    .welcome-section {
-        padding: 1.5rem;
-    }
-}
-
+/* Global navigation responsiveness */
 @media (max-width: 768px) {
-    .dashboard-content {
-        padding: 10px;
+    .navbar-nav {
+        padding: 1rem 0;
     }
     
-    .welcome-section {
+    .navbar-collapse {
+        background: #fff;
         padding: 1rem;
-    }
-    
-    .welcome-section h1 {
-        font-size: 1.5rem;
-    }
-    
-    .stats-grid {
-        grid-template-columns: 1fr;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     }
 }
 
-/* Course and class cards responsiveness */
-@media (max-width: 768px) {
-    .course-card, .class-card {
-        margin-bottom: 1rem;
-    }
-    
-    .course-card .card-body, 
-    .class-card .card-body {
-        padding: 1rem;
-    }
-    
-    .course-grid, .class-grid {
-        display: block;
-    }
-}
-
-/* Profile page responsiveness */
-@media (max-width: 768px) {
-    .profile-header {
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-    }
-    
-    .profile-avatar {
-        margin-bottom: 1rem;
-    }
-    
-    .profile-info {
-        width: 100%;
-    }
-    
-    .profile-tabs .nav-link {
-        padding: 0.5rem;
-    }
-}
-
-/* Admin page specific responsiveness */
-@media (max-width: 768px) {
-    .admin-controls {
-        flex-direction: column;
-    }
-    
-    .admin-controls .search-bar {
-        width: 100%;
-        margin-bottom: 1rem;
-    }
-    
-    .admin-controls .filter-controls {
-        width: 100%;
-    }
-    
-    .user-card {
-        margin-bottom: 1rem;
-    }
-}
-
-/* Notification responsiveness */
+/* Global grid system responsiveness */
 @media (max-width: 576px) {
-    .notification-dropdown {
-        width: 280px;
-    }
-    
-    .notification-item {
-        padding: 10px !important;
+    .container {
+        padding-left: 15px;
+        padding-right: 15px;
     }
 }
 
-/* Login and signup responsiveness */
+/* Global utility classes */
 @media (max-width: 768px) {
-    .auth-container {
-        padding: 1.5rem;
+    .text-md-center {
+        text-align: center !important;
     }
     
-    .auth-form {
-        padding: 1.5rem;
+    .mt-md-3 {
+        margin-top: 1rem !important;
+    }
+    
+    .mb-md-3 {
+        margin-bottom: 1rem !important;
     }
 }
 
-/* Fix for fixed position elements on iOS */
-@supports (-webkit-overflow-scrolling: touch) {
-    .fixed-top, .sticky-top {
-        position: absolute;
-    }
-    
-    .modal {
-        position: absolute;
-    }
-    
-    .modal-backdrop {
-        position: absolute;
-    }
-}
-
-/* Admin Dashboard Responsive Styles */
-@media (max-width: 992px) {
-    .admin-controls {
-        flex-direction: column;
-        gap: 1rem;
-    }
-    
-    .admin-controls .search-bar {
-        width: 100%;
-    }
-    
-    .admin-controls .filter-controls {
-        width: 100%;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-    
-    .admin-stats {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (max-width: 768px) {
-    .admin-stats {
-        grid-template-columns: 1fr;
-    }
-    
-    .admin-table {
-        font-size: 0.875rem;
-    }
-    
-    .admin-table th,
-    .admin-table td {
-        padding: 0.5rem;
-    }
-    
-    .admin-actions {
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-    
-    .admin-actions .btn {
-        width: 100%;
-        margin: 0;
-    }
-    
-    .admin-filters {
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-    
-    .admin-filters .form-select {
-        width: 100%;
-    }
-    
-    .admin-search {
-        width: 100%;
-    }
-    
-    .admin-search .input-group {
-        width: 100%;
-    }
-    
-    .admin-search .form-control {
-        width: 100%;
-    }
-}
-
-@media (max-width: 576px) {
-    .admin-card {
-        margin: 0 -1rem;
-        border-radius: 0;
-    }
-    
-    .admin-card .card-header {
-        padding: 1rem;
-    }
-    
-    .admin-card .card-body {
-        padding: 1rem;
-    }
-    
-    .admin-stats .stat-card {
-        padding: 1rem;
-    }
-    
-    .admin-stats .stat-icon {
-        width: 40px;
-        height: 40px;
-    }
-    
-    .admin-stats .stat-icon i {
-        font-size: 1.25rem;
-    }
-    
-    .admin-stats .stat-details h3 {
-        font-size: 0.75rem;
-    }
-    
-    .admin-stats .stat-number {
-        font-size: 1.25rem;
-    }
-    
-    .admin-table {
-        font-size: 0.75rem;
-    }
-    
-    .admin-table th,
-    .admin-table td {
-        padding: 0.375rem;
-    }
-    
-    .admin-modal .modal-dialog {
-        margin: 0.5rem;
-    }
-    
-    .admin-modal .modal-content {
-        padding: 1rem;
-    }
-    
-    .admin-modal .modal-header,
-    .admin-modal .modal-body,
-    .admin-modal .modal-footer {
-        padding: 0.75rem;
-    }
-}
-
-/* View Users Page Mobile Responsive Styles */
-@media (max-width: 768px) {
-    /* Card Layout */
-    .dashboard-content {
-        padding: 0 !important;
-    }
-
-    .card {
-        border: none !important;
-        border-radius: 0 !important;
-        margin: 0 !important;
-    }
-
-    .card-header {
-        padding: 1rem;
-        border-bottom: 1px solid #eee;
-        background-color: #fff !important;
-    }
-
-    .card-body {
-        padding: 0 !important;
-    }
-
-    /* Mobile Section Layout */
-    .mobile-section {
-        padding: 0.75rem;
-        width: 400px;
-    }
-
-    /* Filter Section */
-    .filter-section {
-        margin-bottom: 0.75rem;
-        width: 100%;
-    }
-
-    .user-filter-buttons {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        margin: 0;
-        padding: 0;
-        width: 100%;
-    }
-
-    .user-filter-buttons .btn {
-        width: 100%;
-        height: 40px;
-        padding: 0 1rem;
-        font-size: 0.875rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 6px;
-        margin: 0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    /* Action Section */
-    .action-section {
-        margin: 0.75rem 0;
-        width: 100%;
-    }
-
-    .reset-password-btn {
-        width: 100%;
-        height: 40px;
-        padding: 0 1rem;
-        font-size: 0.875rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        border-radius: 6px;
-        margin: 0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    /* Search Section */
-    .search-section {
-        margin-bottom: 0.75rem;
-        width: 100%;
-    }
-
-    .search-container {
-        width: 100%;
-    }
-
-    .search-container .input-group {
-        width: 100%;
-        border: 1px solid #dee2e6;
-        border-radius: 6px;
-        height: 40px;
-    }
-
-    .search-container .input-group-text {
-        padding: 0 0.75rem;
-        font-size: 0.875rem;
-    }
-
-    .search-container .form-control {
-        height: 38px;
-        padding: 0 0.75rem;
-        font-size: 0.875rem;
-    }
-
-    /* Table Section */
-    .table-section {
-        margin: 0;
-        padding: 0 0.75rem;
-        width: 400px;
-    }
-
-    .table-responsive {
-        margin: 0;
-        border: none;
-        width: 100%;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .table {
-        margin: 0;
-        width: 100%;
-        min-width: 600px;
-    }
-
-    .table thead {
-        background-color: #f8f9fa;
-    }
-
-    .table th {
-        font-size: 0.75rem;
-        padding: 0.75rem;
-        white-space: nowrap;
-        border-bottom: 1px solid #dee2e6;
-        font-weight: 600;
-        color: #495057;
-        vertical-align: middle;
-    }
-
-    .table td {
-        padding: 0.75rem;
-        font-size: 0.875rem;
-        vertical-align: middle;
-        border-bottom: 1px solid #eee;
-    }
-
-    .table tr:last-child td {
-        border-bottom: none;
-    }
-
-    /* User Info Cell */
-    .user-name-cell {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        min-width: 180px;
-    }
-
-    .user-avatar {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        object-fit: cover;
-    }
-
-    .user-name-cell span {
-        font-weight: 500;
-        color: #2c3e50;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    /* Status Badge */
-    .status-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 500;
-        min-width: 80px;
-        text-align: center;
-    }
-
-    /* Action Buttons */
-    .action-buttons {
-        display: flex;
-        gap: 0.5rem;
-        min-width: 100px;
-    }
-
-    .action-buttons .btn {
-        padding: 0.375rem 0.75rem;
-        font-size: 0.75rem;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 4px;
-    }
-
-    .action-buttons .btn i {
-        font-size: 0.875rem;
-    }
-
-    /* Loading and No Results */
-    #loadingIndicator,
-    #noResults {
-        margin: 1rem;
-        padding: 1rem;
-        text-align: center;
-        background-color: #fff;
-        border-radius: 8px;
-    }
-
-    /* Hide specific columns on mobile */
-    .techguru-column,
-    .techkid-column {
-        display: none !important;
-    }
-}
-
-/* Tablet Adjustments */
-@media (min-width: 769px) {
-    .mobile-section {
-        padding: 1.5rem;
-    }
-
-    .filter-section {
-        margin-bottom: 1.5rem;
-    }
-
-    .user-filter-buttons {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-
-    .user-filter-buttons .btn {
-        width: auto;
-    }
-
-    .action-section {
-        display: flex;
-        justify-content: flex-end;
-    }
-
-    .reset-password-btn {
-        width: auto;
-    }
-
-    .search-container {
-        max-width: 400px;
-    }
-
-    .table-section {
-        margin: 0;
-    }
-}
-
-/* Desktop Adjustments */
-@media (min-width: 992px) {
-    .mobile-section {
-        padding: 1.5rem;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .filter-section {
-        flex-grow: 1;
-        margin-bottom: 0;
-    }
-
-    .action-section {
-        margin-bottom: 0;
-    }
-
-    .search-section {
-        margin-bottom: 0;
-        width: 300px;
-    }
-
-    .card {
-        border-radius: 12px;
-        margin: 1rem;
-    }
-    .table {
-        width: 100%;
-    }
-}
-
-@media (max-width: 376px) {
-    .mobile-section {
-        width: 350px;
-    }
-
-    /* Adjust button sizes */
-    .user-filter-buttons .btn {
-        height: 35px;
-        padding: 0 0.75rem;
-        font-size: 0.8125rem;
-    }
-
-    .reset-password-btn {
-        height: 35px;
-        padding: 0 0.75rem;
-        font-size: 0.8125rem;
-    }
-
-    /* Adjust search box */
-    .search-container .input-group {
-        height: 35px;
-    }
-
-    .search-container .input-group-text {
-        padding: 0 0.5rem;
-        font-size: 0.8125rem;
-    }
-
-    .search-container .form-control {
-        height: 33px;
-        padding: 0 0.5rem;
-        font-size: 0.8125rem;
-    }
-
-    /* Table adjustments */
-    .table th {
-        font-size: 0.6875rem;
-        padding: 0.5rem;
-    }
-
-    .table td {
-        padding: 0.5rem;
-        font-size: 0.8125rem;
-    }
-
-    .user-name-cell {
-        gap: 0.5rem;
-        min-width: 160px;
-    }
-
-    .user-avatar {
-        width: 28px;
-        height: 28px;
-    }
-
-    .status-badge {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.6875rem;
-        min-width: 70px;
-    }
-
-    .action-buttons .btn {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.6875rem;
-    }
-
-    .action-buttons .btn i {
-        font-size: 0.8125rem;
-    }
-}
-
-@media (max-width: 321px) {
-    .mobile-section {
-        width: 300px;
-    }
-
-    .table-section {
-        overflow: hidden; /* Allow horizontal scrolling */
-/*        width: 100%;*/
-    }
-
-    .table-responsive {
-        overflow-x: auto;
-        white-space: nowrap;
-        max-width: 100%;
-    }
-
-    .table td:first-child, 
-    .table th:first-child {
-        position: sticky;
-        left: 0;
-        background-color: #fff;
-        z-index: 1;
-    }
-
-    .user-filter-buttons .btn {
-        height: 32px;
-        padding: 0 0.5rem;
-        font-size: 0.75rem;
-    }
-
-    .reset-password-btn {
-        height: 32px;
-        padding: 0 0.5rem;
-        font-size: 0.75rem;
-    }
-
-    /* Smaller search box */
-    .search-container .input-group {
-        height: 32px;
-    }
-
-    .search-container .input-group-text {
-        padding: 0 0.375rem;
-        font-size: 0.75rem;
-    }
-
-    .search-container .form-control {
-        height: 30px;
-        padding: 0 0.375rem;
-        font-size: 0.75rem;
-    }
-
-    /* Table adjustments */
-    .table th {
-        font-size: 0.625rem;
-        padding: 0.375rem;
-    }
-
-    .table td {
-        padding: 8px;
-        font-size: 0.75rem;
-    }
-
-    .user-name-cell {
-        gap: 0.375rem;
-        min-width: 140px;
-    }
-
-    .user-avatar {
-        width: 24px;
-        height: 24px;
-    }
-
-    .status-badge {
-        padding: 0.125rem 0.375rem;
-        font-size: 0.625rem;
-        min-width: 60px;
-    }
-
-    .action-buttons {
-        gap: 0.375rem;
-        min-width: 90px;
-    }
-
-    .action-buttons .btn {
-        padding: 0.25rem 0.375rem;
-        font-size: 0.625rem;
-    }
-
-    .action-buttons .btn i {
-        font-size: 0.75rem;
+/* Global accessibility */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }

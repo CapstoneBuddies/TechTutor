@@ -75,8 +75,7 @@ CREATE TABLE IF NOT EXISTS `class` (
 CREATE TABLE IF NOT EXISTS `class_schedule` (
     `schedule_id` INT PRIMARY KEY AUTO_INCREMENT,
     `class_id` INT NOT NULL,
-    `user_id` INT NOT NULL,  -- Can be student or tutor
-    `role` ENUM('TUTOR', 'STUDENT') NOT NULL,
+    `user_id` INT NOT NULL,  -- tutor
     `session_date` DATE NOT NULL,
     `start_time` TIME NOT NULL,
     `end_time` TIME NOT NULL,

@@ -7,7 +7,15 @@ function getUserByRole($role, $page = 1, $limit = 8) {
     
     $offset = ($page - 1) * $limit;
 
-    $stmt = $conn->prepare("SELECT u.uid, u.first_name, u.last_name, u.email, u.profile_picture, IF(u.role = 'TECHKID', (SELECT COUNT(*) FROM class_schedule cs WHERE cs.user_id = u.uid AND cs.role = 'STUDENT'), (SELECT COUNT(*) FROM class c WHERE c.tutor_id = u.uid)) AS `num_classes`, u.status, u.last_login FROM users u WHERE u.role = ? AND u.status IN (0,1) ORDER BY u.last_name, u.first_name  LIMIT ? OFFSET ?;");
+    $stmt = $conn->prepare("SELECT u.uid, u.first_name, u.last_name, u.email, u.profile_picture, 
+                           IF(u.role = 'TECHKID', 
+                              (SELECT COUNT(*) FROM enrollments e WHERE e.student_id = u.uid), 
+                              (SELECT COUNT(*) FROM class c WHERE c.tutor_id = u.uid)) AS `num_classes`, 
+                           u.status, u.last_login 
+                           FROM users u 
+                           WHERE u.role = ? AND u.status IN (0,1) 
+                           ORDER BY u.last_name, u.first_name 
+                           LIMIT ? OFFSET ?");
 
     $stmt->bind_param("sii", $role, $limit, $offset);
     $stmt->execute();
@@ -239,7 +247,7 @@ function searchUsersByRole($role, $search) {
     
     $stmt = $conn->prepare("SELECT u.*, 
                            IF(u.role = 'TECHKID', 
-                              (SELECT COUNT(*) FROM class_schedule cs WHERE cs.user_id = u.uid AND cs.role = 'STUDENT'), 
+                              (SELECT COUNT(*) FROM enrollments e WHERE e.student_id = u.uid), 
                               (SELECT COUNT(*) FROM class c WHERE c.tutor_id = u.uid)) AS `num_classes`,
                            u.status, u.last_login 
                            FROM users u 
