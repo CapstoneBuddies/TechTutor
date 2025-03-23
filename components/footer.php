@@ -15,10 +15,10 @@ if (!in_array($currentPage, $noFooterPages)): ?>
             <!-- Branding & Description -->
             <div class="col-md-6">
                 <h5>
-                    <img src="<?php echo BASE; ?>assets/img/stand_alone_logo.png" alt="TechTutor" width="30" class="me-2">
+                    <img src="<?php echo IMG; ?>stand_alone_logo.png" alt="TechTutor" width="30" class="me-2">
                     TechTutor
                 </h5>
-                <p class="text-muted">Empowering students through personalized online tutoring</p>
+                <p class="text-muted"><?php echo $_SERVER['HTTP_HOST'];?> Empowering students through personalized online tutoring</p>
             </div>
 
             <!-- Quick Links -->

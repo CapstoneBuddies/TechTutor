@@ -24,16 +24,16 @@ try {
         throw new Exception('Invalid class ID.');
     }
 
-    if (empty($data['selected_sessions']) || !is_array($data['selected_sessions'])) {
-        throw new Exception('No sessions selected.');
-    }
-
     $class_id = (int) $data['class_id'];
     $student_id = $_SESSION['user'];
-    $selected_sessions = array_map('intval', $data['selected_sessions']);
 
     // Check if class exists and is active
-    $stmt = $conn->prepare("SELECT class_id FROM class WHERE class_id = ? AND status = 'active'");
+    $stmt = $conn->prepare("SELECT c.class_id, c.class_name, c.class_size, c.is_free, c.price, 
+                             u.first_name, u.last_name, u.email, 
+                             (SELECT COUNT(*) FROM enrollments WHERE class_id = c.class_id AND status = 'active') as enrolled_count 
+                             FROM class c 
+                             JOIN users u ON c.tutor_id = u.uid 
+                             WHERE c.class_id = ? AND c.status = 'active'");
     $stmt->bind_param("i", $class_id);
     $stmt->execute();
     $class = $stmt->get_result()->fetch_assoc();
@@ -42,54 +42,48 @@ try {
         throw new Exception('Class is not available for enrollment.');
     }
 
-    // Track successful enrollments
-    $enrolled_sessions = [];
-
-    foreach ($selected_sessions as $schedule_id) {
-        // Check if session exists
-        $stmt = $conn->prepare("SELECT session_date, start_time, end_time, status FROM class_schedule WHERE schedule_id = ? AND class_id = ?");
-        $stmt->bind_param("ii", $schedule_id, $class_id);
-        $stmt->execute();
-        $session = $stmt->get_result()->fetch_assoc();
-
-        if (!$session) {
-            throw new Exception("Invalid session selected.");
-        }
-
-        // Check if student is already enrolled in this session
-        $stmt = $conn->prepare("SELECT 1 FROM class_schedule WHERE session_date = ? AND start_time = ? AND end_time = ? AND user_id = ? AND role = 'STUDENT'");
-        $stmt->bind_param("sssi", $session['session_date'], $session['start_time'], $session['end_time'], $student_id);
-        $stmt->execute();
-
-        if ($stmt->get_result()->num_rows > 0) {
-            throw new Exception("You are already enrolled in one of the selected sessions.");
-        }
-
-        // Enroll the student in the session
-        $stmt = $conn->prepare("INSERT INTO class_schedule (class_id, user_id, role, session_date, start_time, end_time, status) 
-                                SELECT class_id, ?, 'STUDENT', session_date, start_time, end_time, 'confirmed' 
-                                FROM class_schedule WHERE schedule_id = ?");
-        $stmt->bind_param("ii", $student_id, $schedule_id);
-        $stmt->execute();
-
-        $enrolled_sessions[] = $schedule_id;
+    // Check if class size limit is reached
+    if ($class['class_size'] && $class['enrolled_count'] >= $class['class_size']) {
+        throw new Exception('This class has reached its maximum capacity.');
     }
 
-    // Get class details for notification
-    $stmt = $conn->prepare("SELECT c.class_name, u.first_name, u.last_name, u.email FROM class c 
-                            JOIN users u ON c.tutor_id = u.uid WHERE c.class_id = ?");
-    $stmt->bind_param("i", $class_id);
+    // Check if student is already enrolled in this class
+    $stmt = $conn->prepare("SELECT enrollment_id FROM enrollments WHERE class_id = ? AND student_id = ? AND status != 'dropped'");
+    $stmt->bind_param("ii", $class_id, $student_id);
     $stmt->execute();
-    $classDetails = $stmt->get_result()->fetch_assoc();
+    
+    if ($stmt->get_result()->num_rows > 0) {
+        throw new Exception('You are already enrolled in this class.');
+    }
+
+    // Begin transaction
+    $conn->begin_transaction();
+
+    // Enroll the student in the class
+    $stmt = $conn->prepare("INSERT INTO enrollments (class_id, student_id, status) VALUES (?, ?, 'active')");
+    $stmt->bind_param("ii", $class_id, $student_id);
+    $result = $stmt->execute();
+
+    if (!$result) {
+        throw new Exception('Failed to enroll in the class. Please try again.');
+    }
 
     // Send notification to student
-    sendNotification($student_id, 'TECHKID', "You have been enrolled in '{$classDetails['class_name']}'", BASE . "dashboard/s/class", $class_id, 'bi-mortarboard', 'text-success');
+    sendNotification(
+        $student_id, 
+        'TECHKID', 
+        "You have been enrolled in '{$class['class_name']}'", 
+        BASE . "dashboard/s/class", 
+        $class_id, 
+        'bi-mortarboard', 
+        'text-success'
+    );
 
     // Send notification to tutor
     sendNotification(
         null, 
         'TECHGURU', 
-        "A new student enrolled in '{$classDetails['class_name']}'", 
+        "A new student enrolled in '{$class['class_name']}'", 
         BASE . "dashboard/t/class", 
         $class_id, 
         'bi-person-plus', 
@@ -97,11 +91,26 @@ try {
     );
 
     // Send email confirmation to student
-    sendEnrollmentEmail($_SESSION['email'], $_SESSION['name'], $classDetails['class_name'], $classDetails['first_name'] . ' ' . $classDetails['last_name']);
+    sendEnrollmentEmail($_SESSION['email'], $_SESSION['name'], $class['class_name'], $class['first_name'] . ' ' . $class['last_name']);
 
-    echo json_encode(['success' => true, 'message' => 'Successfully enrolled in the selected sessions.']);
+    // If class is paid, handle payment (placeholder for future implementation)
+    if (!$class['is_free']) {
+        // Log this enrollment for payment processing
+        log_error("Paid class enrollment: Student ID {$student_id} enrolled in class ID {$class_id} for ₱{$class['price']}", "info");
+    }
+
+    // Commit transaction
+    $conn->commit();
+
+    log_error("Successful enrollment: Student ID {$student_id} enrolled in class ID {$class_id}", "info");
+    echo json_encode(['success' => true, 'message' => 'Successfully enrolled in the class.']);
 
 } catch (Exception $e) {
+    // Rollback transaction if error occurs
+    if ($conn->errno != 0) {
+        $conn->rollback();
+    }
+    
     log_error("Enrollment Error: " . $e->getMessage(), 'database');
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);

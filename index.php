@@ -30,6 +30,7 @@
 
   <!-- Main CSS File -->
   <link href="assets/css/main.css" rel="stylesheet">
+  <link href="assets/css/footer.css" rel="stylesheet">
   
   <!-- Additional CSS for Landing Page -->
   <style>
@@ -267,7 +268,8 @@
   <script src="assets/vendor/aos/aos.js"></script>
   <script src="assets/vendor/glightbox/js/glightbox.min.js"></script>
   <script src="assets/vendor/swiper/swiper-bundle.min.js"></script>
-  
+  <script src="https://cdn.jsdelivr.net/npm/@srexi/purecounterjs/dist/purecounter_vanilla.js"></script>
+
   <!-- Main JS File -->
   <script src="assets/js/main.js"></script>
   <script src="assets/js/contact.js"></script>

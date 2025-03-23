@@ -143,7 +143,7 @@
                 </h2>
                 <div class="content-card">
                     <div class="list-group list-group-flush">
-                        <a href="<?php echo BASE; ?>techkid/class" class="list-group-item list-group-item-action">
+                        <a href="class" class="list-group-item list-group-item-action">
                             <i class="bi bi-camera-video me-2"></i>
                             My Classes
                         </a>

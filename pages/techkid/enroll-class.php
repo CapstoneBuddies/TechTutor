@@ -1,349 +1,298 @@
 <?php 
 require_once '../../backends/main.php';
-require_once BACKEND.'student_management.php';
+require_once BACKEND.'class_management.php';
 
-if (!isset($_SESSION)) {
-    session_start();
-}
-
-// Check if user is logged in and is a TECHKID
-if (!isset($_SESSION['user']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHKID') {
+// Ensure user is logged in and is a TechKid
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHKID') {
     header('Location: ' . BASE . 'login');
-    exit;
+    exit();
 }
 
-$available_classes = getCurrentActiveClass();
-$courses = getCoursesWithSubjects();
+// Get class ID from URL
+$class_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+
+// Fetch class details
+$classDetails = getClassDetails($class_id);
+if (!$classDetails) {
+    header('Location: ./');
+    exit();
+}
+
+// Fetch available schedules for enrollment
+$schedules = getClassSchedules($class_id);
+$title = htmlspecialchars($classDetails['class_name']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
     <?php include ROOT_PATH . '/components/head.php'; ?>
-    <link href="<?php echo CSS; ?>techkid-common.css" rel="stylesheet">
     <body data-base="<?php echo BASE; ?>">
         <?php include ROOT_PATH . '/components/header.php'; ?>
 
-        <div class="dashboard-content">
-            <!-- Header Section with Title and Search -->
-            <div class="content-section mb-4">
-                <div class="content-card">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h1 class="page-title mb-0">Available Classes</h1>
-                            <div class="search-section">
-                                <div class="input-group">
-                                    <span class="input-group-text bg-white border-end-0">
-                                        <i class="bi bi-search text-muted"></i>
-                                    </span>
-                                    <input type="text" class="form-control border-start-0" id="searchInput" placeholder="Search classes...">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Filter Section -->
-            <div class="content-section mb-4">
-                <div class="content-card">
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <h6 class="mb-3">Filter by Type</h6>
-                            <div class="d-flex flex-wrap gap-2">
-                                <button class="btn btn-outline-primary active" data-filter="all">
-                                    All Classes
-                                </button>
-                                <button class="btn btn-outline-success" data-filter="free">
-                                    Free Classes
-                                </button>
-                                <button class="btn btn-outline-info" data-filter="paid">
-                                    Paid Classes
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <h6 class="mb-3">Filter by Course & Subject</h6>
-                            <div class="d-flex flex-wrap gap-2">
-                                <?php foreach ($courses as $course_id => $course): ?>
-                                <div class="dropdown">
-                                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <?php echo htmlspecialchars($course['name']); ?>
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end">
-                                        <li>
-                                            <button class="dropdown-item" type="button" data-filter="course-<?php echo $course_id; ?>">
-                                                All <?php echo htmlspecialchars($course['name']); ?>
-                                            </button>
-                                        </li>
-                                        <?php if (!empty($course['subjects'])): ?>
-                                            <li><hr class="dropdown-divider"></li>
-                                            <?php foreach ($course['subjects'] as $subject): ?>
-                                            <li>
-                                                <button class="dropdown-item" type="button" data-filter="subject-<?php echo $subject['id']; ?>">
-                                                    <?php echo htmlspecialchars($subject['name']); ?>
-                                                </button>
-                                            </li>
-                                            <?php endforeach; ?>
-                                        <?php endif; ?>
-                                    </ul>
-                                </div>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Classes Grid -->
-            <div class="row g-4" id="classesGrid">
-                <?php if (empty($available_classes)): ?>
-                <div class="col-12">
-                    <div class="content-card">
-                        <div class="card-body text-center py-5">
-                            <i class="bi bi-calendar2-x text-muted" style="font-size: 48px;"></i>
-                            <h3 class="mt-3">No Classes Available</h3>
-                            <p class="text-muted">Check back later for new classes</p>
-                        </div>
-                    </div>
-                </div>
-                <?php else: 
-                    foreach ($available_classes as $class): 
-                ?>
-                <div class="col-md-6 col-lg-4" 
-                     data-name="<?php echo strtolower(htmlspecialchars($class['class_name'])); ?>"
-                     data-price="<?php echo $class['is_free'] ? 'free' : 'paid'; ?>"
-                     data-course="course-<?php echo htmlspecialchars($class['course_id']); ?>"
-                     data-subject="subject-<?php echo htmlspecialchars($class['subject_id']); ?>">
-                    <div class="content-card h-100">
+        <main class="container py-4">
+            <div class="dashboard-content bg">
+                <!-- Header Section -->
+                <div class="content-section mb-4">
+                    <div class="content-card bg-snow">
                         <div class="card-body">
-                            <div class="position-relative">
-                                <img src="<?php echo !empty($class['thumbnail']) ? CLASS_IMG . $class['thumbnail'] : CLASS_IMG . 'default.jpg'; ?>" 
-                                     class="card-img-top rounded mb-3" 
-                                     alt="<?php echo htmlspecialchars($class['class_name']); ?>">
-                                <?php if ($class['enrolled_students'] >= 5): ?>
-                                <div class="position-absolute top-0 start-0 m-2">
-                                    <span class="badge bg-warning">
-                                        <i class="bi bi-fire"></i> Popular
-                                    </span>
-                                </div>
-                                <?php endif; ?>
-                            </div>
-                            
-                            <div class="d-flex justify-content-between align-items-start mb-3">
-                                <span class="badge bg-primary">
-                                    <?php echo htmlspecialchars($class['subject_name']); ?>
-                                </span>
-                                <span class="badge <?php echo $class['is_free'] ? 'bg-success' : 'bg-info'; ?>">
-                                    <?php echo $class['is_free'] ? 'Free' : '₱' . number_format($class['price'], 2); ?>
-                                </span>
-                            </div>
-                            
-                            <h5 class="card-title mb-2">
-                                <?php echo htmlspecialchars($class['class_name']); ?>
-                            </h5>
-                            
-                            <p class="text-muted small mb-3">
-                                <?php echo htmlspecialchars($class['course_name']); ?>
-                            </p>
-                            
-                            <div class="tutor-info d-flex align-items-center mb-3">
-                                <img src="<?php echo !empty($class['tutor_avatar']) ? USER_IMG . $class['tutor_avatar'] : USER_IMG . 'default.jpg'; ?>" 
-                                     class="tutor-avatar rounded-circle me-2" 
-                                     alt="<?php echo htmlspecialchars($class['tutor_first_name'] . ' ' . $class['tutor_last_name']); ?>"
-                                     width="32" height="32">
+                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
                                 <div>
-                                    <p class="mb-0 fw-medium">
-                                        <?php echo htmlspecialchars($class['tutor_first_name'] . ' ' . $class['tutor_last_name']); ?>
-                                    </p>
+                                    <a href="./" class="btn btn-outline-primary btn-sm mb-2">
+                                        <i class="bi bi-arrow-left"></i> Back
+                                    </a>
+                                    <h1 class="page-title mb-1"><?php echo htmlspecialchars($classDetails['class_name']); ?></h1>
+                                    <div class="d-flex flex-wrap align-items-center gap-2">
+                                        <span class="text-muted small">
+                                            <strong>Subject:</strong> <?php echo htmlspecialchars($classDetails['subject_name']); ?>
+                                        </span>
+                                        <span class="text-muted">•</span>
+                                        <span class="text-muted small">
+                                            <strong>Course:</strong> <?php echo htmlspecialchars($classDetails['course_name']); ?>
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
-                            
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="text-muted small">
-                                    <i class="bi bi-people me-1"></i>
-                                    <?php echo $class['enrolled_students']; ?> enrolled
-                                </span>
-                                <a href="enrollments/class?id=<?php echo $class['class_id']; ?>" 
-                                   class="btn btn-primary btn-sm">
-                                    View Details
-                                </a>
+                                <div class="d-flex flex-column align-items-start align-items-md-end gap-2">
+                                    <?php if ($classDetails['is_free']): ?>
+                                        <span class="badge bg-success">Free Class</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-info">₱<?php echo number_format($classDetails['price'], 2); ?></span>
+                                    <?php endif; ?>
+                                    <button type="button" class="btn btn-primary w-100" onclick="enrollInClass()">
+                                        <i class="bi bi-check-circle"></i> Enroll in Class
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <?php 
-                    endforeach;
-                endif; 
-                ?>
+
+                <!-- Main Content -->
+                <div class="row g-4">
+                    <!-- Left Column - Main Content -->
+                    <div class="col-12 col-lg-8">
+                        <!-- Class Information -->
+                        <div class="content-card bg-snow mb-4">
+                            <div class="card-body">
+                                <h2 class="section-title mb-4">Class Information</h2>
+                                <div class="class-info">
+                                    <p class="text-muted"><?php echo nl2br(htmlspecialchars($classDetails['class_desc'])); ?></p>
+                                    <div class="row g-3 mt-2">
+                                        <div class="col-6">
+                                            <p class="small mb-1"><strong>Start Date</strong></p>
+                                            <p class="text-muted mb-0"><?php echo date('F d, Y', strtotime($classDetails['start_date'])); ?></p>
+                                        </div>
+                                        <div class="col-6">
+                                            <p class="small mb-1"><strong>End Date</strong></p>
+                                            <p class="text-muted mb-0"><?php echo date('F d, Y', strtotime($classDetails['end_date'])); ?></p>
+                                        </div>
+                                        <div class="col-6">
+                                            <p class="small mb-1"><strong>Class Size</strong></p>
+                                            <p class="text-muted mb-0"><?php echo $classDetails['total_students']; ?>/<?php echo $classDetails['class_size'] ? $classDetails['class_size'] : 'Unlimited'; ?></p>
+                                        </div>
+                                        <div class="col-6">
+                                            <p class="small mb-1"><strong>Status</strong></p>
+                                            <span class="badge bg-<?php echo $classDetails['status'] === 'active' ? 'success' : 'warning'; ?>"><?php echo ucfirst($classDetails['status']); ?></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Class Schedule -->
+                        <div class="content-card bg-snow">
+                            <div class="card-body">
+                                <h2 class="section-title mb-4">Class Schedule</h2>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th class="small">Date</th>
+                                                <th class="small">Time</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($schedules as $schedule): ?>
+                                            <tr>
+                                                <td class="small"><?php echo date('F d, Y', strtotime($schedule['session_date'])); ?></td>
+                                                <td class="small"><?php echo date('h:i A', strtotime($schedule['start_time'])) . ' - ' . date('h:i A', strtotime($schedule['end_time'])); ?></td>
+                                            </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column - Tutor Info -->
+                    <div class="col-12 col-lg-4">
+                        <!-- Tutor Details -->
+                        <div class="content-card bg-snow mb-4">
+                            <div class="card-body">
+                                <h2 class="section-title mb-4">Instructor</h2>
+                                <div class="text-center">
+                                    <img src="<?php echo !empty($classDetails['tutor_avatar']) ? USER_IMG . $classDetails['tutor_avatar'] : USER_IMG . 'default.jpg'; ?>" 
+                                        class="rounded-circle mb-3" width="80" height="80" style="object-fit: cover;">
+                                    <h4 class="mb-3"><?php echo htmlspecialchars($classDetails['techguru_name']); ?></h4>
+                                    
+                                    <!-- Tutor Stats -->
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <div class="p-3 border rounded">
+                                                <div class="h5 text-primary mb-1">
+                                                    <?php echo number_format($classDetails['average_rating'] ?? 0, 1); ?>
+                                                </div>
+                                                <div class="small text-muted">Rating</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="p-3 border rounded">
+                                                <div class="h5 text-success mb-1">
+                                                    <?php echo number_format($classDetails['completion_rate'] ?? 0); ?>%
+                                                </div>
+                                                <div class="small text-muted">Completion</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Class Stats -->
+                        <div class="content-card bg-snow">
+                            <div class="card-body">
+                                <h2 class="section-title mb-4">Class Stats</h2>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <p class="small text-muted mb-1">Total Students</p>
+                                        <h4 class="mb-0"><?php echo $classDetails['total_students']; ?></h4>
+                                    </div>
+                                    <div class="h3 text-muted">
+                                        <i class="bi bi-people"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
+        </main>
 
-        <?php include ROOT_PATH . '/components/footer.php'; ?>
-
+        <!-- Enrollment Script -->
         <script>
-            // Search and filter functionality
-            const searchInput = document.getElementById('searchInput');
-            const filterButtons = document.querySelectorAll('[data-filter]');
-            const classCards = document.querySelectorAll('#classesGrid > div[data-name]');
-            
-            let currentFilter = 'all';
-            
-            // Search functionality
-            searchInput.addEventListener('input', filterClasses);
-            
-            // Filter buttons
-            filterButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    const filter = this.dataset.filter;
-                    
-                    // Remove active class from all buttons in the same group
-                    if (filter === 'all' || filter === 'free' || filter === 'paid') {
-                        document.querySelectorAll('[data-filter="all"], [data-filter="free"], [data-filter="paid"]')
-                            .forEach(btn => btn.classList.remove('active'));
+            function enrollInClass() {
+                if (!confirm("Are you sure you want to enroll in this class? You will be enrolled in all sessions.")) {
+                    return;
+                }
+                showLoading(true);
+                fetch(`${BASE}api/enroll-class`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        class_id: <?php echo $class_id; ?>
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    showLoading(false);
+                    if (data.success) {
+                        showToast('success', "Successfully enrolled in the class!");
+                        setTimeout(() => location.href = `${BASE}dashboard/s/class`, 1500);
                     } else {
-                        document.querySelectorAll('[data-filter^="course-"], [data-filter^="subject-"]')
-                            .forEach(btn => btn.classList.remove('active'));
+                        showToast('error', data.message || "Failed to enroll in the class. Please try again.");
                     }
-                    
-                    this.classList.add('active');
-                    currentFilter = filter;
-                    filterClasses();
-                });
-            });
-            
-            function filterClasses() {
-                const searchTerm = searchInput.value.toLowerCase();
-                
-                classCards.forEach(card => {
-                    const name = card.dataset.name;
-                    const price = card.dataset.price;
-                    const course = card.dataset.course;
-                    const subject = card.dataset.subject;
-                    
-                    const matchesSearch = name.includes(searchTerm);
-                    const matchesFilter = currentFilter === 'all' || 
-                                        currentFilter === price || 
-                                        currentFilter === course ||
-                                        currentFilter === subject;
-                    
-                    card.style.display = matchesSearch && matchesFilter ? '' : 'none';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('error', "An unexpected error occurred. Please try again.");
                 });
             }
-
-            // Initialize Bootstrap dropdowns
-            document.addEventListener('DOMContentLoaded', function() {
-                var dropdownElementList = [].slice.call(document.querySelectorAll('[data-bs-toggle="dropdown"]'));
-                var dropdownList = dropdownElementList.map(function(dropdownToggleEl) {
-                    return new bootstrap.Dropdown(dropdownToggleEl);
-                });
-            });
         </script>
 
         <style>
             .dashboard-content {
-                padding: 2rem;
                 background-color: #F5F5F5;
-            }
-            .search-section .input-group {
-                width: 300px;
+                min-height: calc(100vh - 60px);
+                padding: 1.5rem;
+                border-radius: 12px;
             }
             .content-card {
-                border-radius: 12px;
+                background: #fff;
+                border-radius: 10px;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.05);
                 overflow: hidden;
-                background-color: #FFFFFF;
-                transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
             }
-            .content-card:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            .card-body {
+                padding: 1.5rem;
             }
-            .card-img-top {
-                height: 160px;
-                width: 100%;
-                object-fit: cover;
-                object-position: center;
+            .page-title {
+                font-size: 1.5rem;
+                font-weight: 600;
+                margin: 0;
             }
-            .tutor-avatar {
-                width: 32px;
-                height: 32px;
-                object-fit: cover;
-                object-position: center;
+            .section-title {
+                font-size: 1.25rem;
+                font-weight: 600;
+                margin: 0;
             }
-            .btn-outline-primary.active {
-                background-color: var(--bs-primary);
-                color: white;
+            .table {
+                margin-bottom: 0;
             }
-            .btn-outline-success.active {
-                background-color: var(--bs-success);
-                color: white;
+            .table th {
+                font-weight: 600;
+                color: var(--text-color);
+                border-top: none;
             }
-            .btn-outline-info.active {
-                background-color: var(--bs-info);
-                color: white;
+            .table td {
+                color: #666;
             }
-            .btn-outline-secondary.active {
-                background-color: var(--bs-secondary);
-                color: white;
+            .badge {
+                padding: 0.5em 1em;
+                font-weight: 500;
             }
-            .dropdown {
-                position: relative;
-                display: inline-block;
-            }
-            .dropdown-menu {
-                display: none;
-                position: absolute;
+            .bg-snow {
                 background-color: #fff;
-                min-width: 200px;
-                max-height: 300px;
-                overflow-y: auto;
-                box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-                z-index: 9999;
-                padding: 0.5rem 0;
-                margin: 0.125rem 0 0;
-                border: 1px solid rgba(0, 0, 0, 0.15);
-                border-radius: 0.375rem;
             }
-            .dropdown-menu.show {
-                display: block;
-            }
-            .dropdown-item {
-                display: block;
-                width: 100%;
-                padding: 0.5rem 1rem;
-                clear: both;
-                font-weight: 400;
-                color: #212529;
-                text-align: inherit;
-                text-decoration: none;
-                white-space: nowrap;
-                background-color: transparent;
-                border: 0;
-                cursor: pointer;
-            }
-            .dropdown-item:hover,
-            .dropdown-item:focus {
-                color: #1e2125;
-                background-color: #f8f9fa;
-            }
-            .dropdown-divider {
-                height: 0;
-                margin: 0.5rem 0;
-                overflow: hidden;
-                border-top: 1px solid #e9ecef;
+            .tutor-stats .border {
+                border-color: var(--border-color) !important;
             }
             @media (max-width: 768px) {
-                .search-section {
-                    width: 100%;
-                    margin-top: 1rem;
+                .dashboard-content {
+                    padding: 1rem;
                 }
-                .search-section .input-group {
-                    width: 100%;
+                .card-body {
+                    padding: 1rem;
                 }
-                .card-img-top {
-                    height: 140px;
+                .page-title {
+                    font-size: 1.25rem;
+                }
+                .section-title {
+                    font-size: 1.1rem;
+                }
+                .table {
+                    font-size: 0.875rem;
+                }
+                .badge {
+                    font-size: 0.875rem;
+                }
+                .btn-primary.w-100 {
+                    padding: 0.5rem 1rem;
+                }
+                .row {
+                    margin-left: -0.5rem;
+                    margin-right: -0.5rem;
+                }
+                .col-12, .col-lg-4, .col-lg-8 {
+                    padding-left: 0.5rem;
+                    padding-right: 0.5rem;
+                }
+                .mb-4 {
+                    margin-bottom: 1rem !important;
                 }
             }
         </style>
+
+        <?php include ROOT_PATH . '/components/footer.php'; ?>
     </body>
 </html>

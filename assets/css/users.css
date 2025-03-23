@@ -27,7 +27,7 @@
 .table {
     margin-bottom: 0;
     width: 100%;
-    table-layout: fixed;
+    min-width: 800px; /* Ensure minimum width for all columns */
 }
 
 .table th {
@@ -37,11 +37,42 @@
     font-size: 0.875rem;
     color: #6c757d;
     text-align: center;
+    white-space: nowrap;
+    padding: 0.75rem 0.5rem;
 }
 
 .table td {
     vertical-align: middle;
     text-align: center;
+    white-space: nowrap;
+    padding: 0.75rem 0.5rem;
+}
+
+.table-container {
+    margin-top: 1rem;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    position: relative;
+}
+
+.table-container::-webkit-scrollbar {
+    height: 6px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
 }
 
 /* Status Badges */
@@ -232,6 +263,43 @@
         width: 3rem;
         height: 3rem;
         font-size: 1.25rem;
+    }
+
+    .table-container {
+        margin: 0 -1.25rem;
+        padding: 0 1.25rem;
+        position: relative;
+    }
+
+    .table {
+        position: relative;
+    }
+
+    .table th:first-child,
+    .table td:first-child {
+        left: 0;
+        background: #fff;
+        z-index: 1;
+    }
+
+    .table th:first-child {
+        background: #f8f9fa;
+        z-index: 2;
+    }
+
+    .table td:first-child {
+        box-shadow: 2px 0 5px -2px rgba(0,0,0,0.1);
+    }
+
+    .table th:first-child {
+        box-shadow: 2px 0 5px -2px rgba(0,0,0,0.1);
+    }
+
+    /* Ensure the table can scroll horizontally */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        width: 100%;
     }
 }
 .notification-holder {

@@ -2,6 +2,18 @@ ErrorDocument 404 /pages/error/404.php
 ErrorDocument 403 /pages/error/403.php
 ErrorDocument 500 /pages/error/500.php
 
+<IfModule mod_headers.c>
+    # Allow CORS for all resources (images, JS, CSS, etc.)
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+    Header set Access-Control-Allow-Headers "Origin, Content-Type, X-Auth-Token"
+    
+    # Allow for image content specifically (images, etc.)
+    <FilesMatch "\.(jpg|jpeg|png|gif|bmp|svg|webp)$">
+        Header set Access-Control-Allow-Origin "*"
+    </FilesMatch>
+</IfModule>
+
 RewriteEngine On
 
 # 🔹 Remove trailing slashes except for root "/"
@@ -69,8 +81,8 @@ RewriteRule ^dashboard/s/class$ pages/techkid/class.php [L]
 RewriteRule ^dashboard/s/schedule$ pages/techkid/schedule.php [L]
 RewriteRule ^dashboard/s/files$ pages/techkid/files.php [L]
 RewriteRule ^dashboard/s/certificates$ pages/techkid/certificate.php [L]
-RewriteRule ^dashboard/s/enrollments$ pages/techkid/enroll-class.php [L]
-RewriteRule ^dashboard/s/enrollments/class$ pages/techkid/class-details.php [L,QSA]
+RewriteRule ^dashboard/s/enrollments$ pages/techkid/enrollments.php [L]
+RewriteRule ^dashboard/s/enrollments/class$ pages/techkid/enroll-class.php [L,QSA]
 
 # ----------------------------------
 # 👨‍🏫 TechGuru (Tutors) Routes

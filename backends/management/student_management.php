@@ -313,9 +313,41 @@ function getCoursesWithSubjects() {
         return [];
     }
 }
-    function getEnrolledCoursesForStudent($studentId) {
-        global $conn;
+function getEnrolledSubjectsForStudent($studentId) {
+    global $conn;
+    try {
+        $stmt = $conn->prepare("
+            SELECT 
+                s.subject_id,
+                s.subject_name,
+                e.enrollment_date,
+                e.status
+            FROM enrollments e
+            JOIN class cl ON e.class_id = cl.class_id
+            JOIN subject s ON cl.subject_id = s.subject_id
+            JOIN course c ON s.course_id = c.course_id
+            WHERE e.student_id = ?
+            ORDER BY e.enrollment_date DESC
+        ");
+        $stmt->execute([$studentId]);
+        $result = $stmt->get_result();
+        
+        $enrolledSubjects = [];
+        while ($row = $result->fetch_assoc()) {
+            $enrolledSubjects[] = [
+                'subject_id' => $row['subject_id'],
+                'subject_name' => $row['subject_name'],
+                'course_name' => $row['course_name'],
+                'enrollment_date' => $row['enrollment_date'],
+                'status' => $row['status']
+            ];
+        }
+        
+        return $enrolledSubjects;
+    } catch (Exception $e) {
+        log_error($e->getMessage());
         return [];
-
     }
+}
+
 ?>

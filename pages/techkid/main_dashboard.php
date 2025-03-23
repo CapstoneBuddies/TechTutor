@@ -4,14 +4,14 @@
     require_once BACKEND.'transactions_management.php';
 
     
-    $enrolled_courses = [];
+    $enrolled_subjects = [];
     $schedules = [];
     $transactions = [];
     $stats = [];
     
     try {
         // Get enrolled courses using centralized function
-        $enrolled_courses = getEnrolledCoursesForStudent($_SESSION['user']);
+        $enrolled_subjects = getEnrolledSubjectsForStudent($_SESSION['user']);
         
         // Get upcoming class schedules using centralized function
         $schedules = getUpcomingClassSchedules($_SESSION['user']);
@@ -48,8 +48,8 @@
                         <i class="bi bi-book"></i>
                     </div>
                     <div class="stat-details">
-                        <h3>Enrolled Courses</h3>
-                        <p class="stat-number"><?php echo count($enrolled_courses); ?></p>
+                        <h3>Enrolled Subjects</h3>
+                        <p class="stat-number"><?php echo count($enrolled_subjects); ?></p>
                     </div>
                 </div>
                 <div class="stat-card">
@@ -88,22 +88,22 @@
             <div class="col-md-12">
                 <div class="card h-100">
                 <div class="card-body">
-                <h5 class="card-title section-title mb-4">My Enrolled Courses</h5>
+                <h5 class="card-title section-title mb-4">My Enrolled Subjects</h5>
                 <div class="row">
-                    <?php if (empty($enrolled_courses)): ?>
+                    <?php if (empty($enrolled_subjects)): ?>
                     <div class="col-12">
-                        <p class="text-muted">No courses enrolled yet</p>
+                        <p class="text-muted">No subjects enrolled yet</p>
                     </div>
                     <?php else: ?>
-                        <?php foreach ($enrolled_courses as $course): ?>
+                        <?php foreach ($enrolled_subjects as $subjects): ?>
                         <div class="col-md-4 mb-4">
                             <div class="card h-100">
                                 <div class="card-body">
-                                    <img src="<?php echo $course['image']; ?>" alt="<?php echo $course['name']; ?>" class="img-fluid mb-3">
-                                    <h5 class="card-title"><?php echo $course['name']; ?></h5>
+                                    <img src="<?php echo $subjects['image']; ?>" alt="<?php echo $subjects['name']; ?>" class="img-fluid mb-3">
+                                    <h5 class="card-title"><?php echo $subjects['subject_name']; ?></h5>
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <span class="text-muted"><?php echo $course['status']; ?></span>
-                                        <a href="<?php echo BASE; ?>pages/techkid/course.php?id=<?php echo $course['id']; ?>" class="btn btn-primary btn-sm">
+                                        <span class="text-muted"><?php echo $subjects['is_active']; ?></span>
+                                        <a href="<?php echo BASE; ?>pages/techkid/course.php?id=<?php echo $subjects['id']; ?>" class="btn btn-primary btn-sm">
                                             Continue
                                         </a>
                                     </div>

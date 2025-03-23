@@ -38,9 +38,9 @@
             <div class="content-section mb-4">
                 <div class="content-card bg-snow">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
                             <h1 class="page-title mb-0">Classes</h1>
-                            <div class="search-section">
+                            <div class="search-section w-100 w-md-auto">
                                 <div class="input-group">
                                     <span class="input-group-text bg-white border-end-0">
                                         <i class="bi bi-search text-muted"></i>
@@ -53,11 +53,10 @@
                 </div>
             </div>
 
-            <!-- Programming Classes Section -->
             <div class="content-section mb-4">
                 <div class="content-card bg-snow">
                     <div class="card-body">
-                        <h2 class="section-title mb-4">Programming Classes</h2>
+                        <h2 class="section-title mb-4">Enrolled Classes</h2>
                         <div class="row g-4">
                             <?php 
                             $enrolled_classes = getStudentClasses($_SESSION['user']);
@@ -79,13 +78,13 @@
                             <?php else:
                                 foreach ($programming_classes as $class): 
                             ?>
-                            <div class="col-md-4">
+                            <div class="col-12 col-sm-6 col-md-4">
                                 <div class="class-card h-100">
                                     <div class="card-body">
-                                        <img src="<?php echo !empty($class['thumbnail']) ? BASE . $class['thumbnail'] : BASE . 'assets/images/programming.jpg'; ?>" 
                                              class="card-img-top rounded mb-3" 
+                                        <img src="<?php echo !empty($class['thumbnail']) ? CLASS_IMG . $class['thumbnail'] : CLASS_IMG . 'default.jpg'; ?>" 
                                              alt="<?php echo htmlspecialchars($class['class_name']); ?>">
-                                        <h3><?php echo htmlspecialchars($class['class_name']); ?></h3>
+                                        <h3 class="h5 mb-3"><?php echo htmlspecialchars($class['class_name']); ?></h3>
                                         <div class="d-flex justify-content-between align-items-center">
                                             <span class="status-badge enrolled">Enrolled</span>
                                             <a href="class-details.php?id=<?php echo $class['class_id']; ?>" class="stretched-link">
@@ -107,7 +106,7 @@
             <!-- Schedule and Calendar Section -->
             <div class="row g-4">
                 <!-- Available Schedule -->
-                <div class="col-lg-8">
+                <div class="col-12 col-lg-8">
                     <div class="content-card bg-snow h-100">
                         <div class="card-body">
                             <h2 class="section-title mb-4">Available Schedule</h2>
@@ -118,7 +117,7 @@
                                     foreach ($schedule as $session): 
                                 ?>
                                 <div class="schedule-item">
-                                    <div class="d-flex align-items-center gap-3">
+                                    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-3">
                                         <div class="tutor-info d-flex align-items-center gap-2">
                                             <img src="<?php echo !empty($session['tutor_avatar']) ? BASE . $session['tutor_avatar'] : BASE . 'assets/images/default-avatar.jpg'; ?>" 
                                                  class="tutor-avatar rounded-circle" 
@@ -133,18 +132,18 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="schedule-info flex-grow-1">
+                                        <div class="schedule-info flex-grow-1 text-center text-md-start">
                                             <p class="mb-1">
                                                 <?php echo date('h:i A', strtotime($session['start_time'])); ?> - 
                                                 <?php echo date('h:i A', strtotime($session['end_time'])); ?>
                                             </p>
                                             <p class="text-muted mb-0">Incoming class session</p>
                                         </div>
-                                        <div class="schedule-action">
+                                        <div class="schedule-action w-100 w-md-auto">
                                             <?php if (strtotime($session['start_time']) <= time() && strtotime($session['end_time']) >= time()): ?>
-                                            <button class="btn btn-primary">Join Class</button>
+                                            <button class="btn btn-primary w-100 w-md-auto">Join Class</button>
                                             <?php else: ?>
-                                            <button class="btn btn-secondary" disabled>Not Available</button>
+                                            <button class="btn btn-secondary w-100 w-md-auto" disabled>Not Available</button>
                                             <?php endif; ?>
                                         </div>
                                     </div>
@@ -173,7 +172,7 @@
                 </div>
 
                 <!-- Calendar -->
-                <div class="col-lg-4">
+                <div class="col-12 col-lg-4">
                     <div class="content-card bg-snow h-100">
                         <div class="card-body">
                             <h2 class="section-title mb-4">Calendar</h2>

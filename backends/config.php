@@ -18,7 +18,7 @@
 	$dotenv->load();
 
 	// Base URL configuration
-	if(strpos($_SERVER['HTTP_HOST'], 'localhost') !== false) {
+	if(strpos($_SERVER['HTTP_HOST'], 'localhost') !== false || strpos($_SERVER['HTTP_HOST'], '192.168.') !== false || strpos($_SERVER['HTTP_HOST'], '127.0.0.1') !== false) {
 		define('BASE', '/capstone-1/');
 	} else {
 		define('BASE', '/');
@@ -85,7 +85,8 @@
 	        4 => LOG_PATH . 'security.log',
 	        5 => LOG_PATH . 'analytics.log',
 	        6 => LOG_PATH . 'front.log',
-	        7 => LOG_PATH . 'meeting.log'
+	        7 => LOG_PATH . 'meeting.log',
+	        8 => LOG_PATH . 'info.log'
 	    ];
 	    $logAliases = [
 	        'general'   => 1,
@@ -94,7 +95,8 @@
 	        'security'  => 4,
 	        'analytics' => 5,
 	        'front' => 6,
-	        'meeting' => 7
+	        'meeting' => 7,
+	        'info' => 8
 	    ];
 	    // If type is a string and exists in aliases, convert it to the corresponding number
 	    if (is_string($type) && isset($logAliases[$type])) {

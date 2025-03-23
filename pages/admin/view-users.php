@@ -17,69 +17,72 @@
     <body data-base="<?php echo BASE; ?>">
         <?php include ROOT_PATH . '/components/header.php'; ?>
         <main class="dashboard-content">
-            <div class="container-fluid">
-                <div class="row">
-                    <div class="col-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="card-title">User Management</h5>
-                            </div>
-                            <div class="card-body">
-                                <!-- Filter Buttons -->
-                                <div class="row mb-3">
-                                    <div class="col-md-8">
-                                        <div class="user-filter-buttons">
-                                            <button class="btn btn-outline-primary role-filter <?php echo !isset($_GET['role']) || $_GET['role'] === 'all' ? 'active' : ''; ?>" data-role="all">All Users</button>
-                                            <button class="btn btn-outline-primary role-filter <?php echo isset($_GET['role']) && $_GET['role'] === 'ADMIN' ? 'active' : ''; ?>" data-role="ADMIN">Admins</button>
-                                            <button class="btn btn-outline-primary role-filter <?php echo isset($_GET['role']) && $_GET['role'] === 'TECHGURU' ? 'active' : ''; ?>" data-role="TECHGURU">Tech Gurus</button>
-                                            <button class="btn btn-outline-primary role-filter <?php echo isset($_GET['role']) && $_GET['role'] === 'TECHKID' ? 'active' : ''; ?>" data-role="TECHKID">Tech Kids</button>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4 text-end">
-                                        <button class="btn btn-warning reset-password-btn" data-bs-toggle="modal" data-bs-target="#resetPasswordModal"><i class="bi bi-key"></i> Reset Password</button>
-                                    </div>
-                                </div>
-                                <!-- Search Box -->
-                                <div class="row mb-3">
-                                    <div class="col-md-6">
-                                        <div class="search-container">
-                                            <div class="input-group">
-                                                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                                <input type="text" class="form-control" id="searchInput" placeholder="Search by name..." />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- Users Table -->
-                                <div class="table-responsive">
-                                    <table class="table table-hover" id="usersTable">
-                                        <thead>
-                                            <tr>
-                                                <th>Name</th>
-                                                <th>Email</th>
-                                                <th class="techguru-column d-none">Classes Created</th>
-                                                <th class="techkid-column d-none">Enrolled Classes</th>
-                                                <th>Status</th>
-                                                <th>Last Login</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="usersTableBody">
-                                            <!-- User data will be loaded here via AJAX -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <!-- Loading Indicator -->
-                                <div id="loadingIndicator" class="text-center my-4 d-none">
-                                    <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Loading...</span>
-                                    </div>
-                                </div>
-                                <!-- No Results Message -->
-                                <div id="noResults" class="alert alert-info text-center my-4 d-none">
-                                    No users found matching your criteria.
+            <div class="container-fluid p-0">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">User Management</h5>
+                    </div>
+                    <div class="card-body px-0">
+                        <!-- Filter and Reset Password Section -->
+                        <div class="mobile-section">
+                            <div class="filter-section mb-3">
+                                <div class="user-filter-buttons">
+                                    <button class="btn btn-outline-primary role-filter <?php echo !isset($_GET['role']) || $_GET['role'] === 'all' ? 'active' : ''; ?>" data-role="all">All Users</button>
+                                    <button class="btn btn-outline-primary role-filter <?php echo isset($_GET['role']) && $_GET['role'] === 'ADMIN' ? 'active' : ''; ?>" data-role="ADMIN">Admins</button>
+                                    <button class="btn btn-outline-primary role-filter <?php echo isset($_GET['role']) && $_GET['role'] === 'TECHGURU' ? 'active' : ''; ?>" data-role="TECHGURU">Tech Gurus</button>
+                                    <button class="btn btn-outline-primary role-filter <?php echo isset($_GET['role']) && $_GET['role'] === 'TECHKID' ? 'active' : ''; ?>" data-role="TECHKID">Tech Kids</button>
                                 </div>
                             </div>
+
+                            <div class="action-section mb-3">
+                                <button class="btn btn-warning reset-password-btn w-100" data-bs-toggle="modal" data-bs-target="#resetPasswordModal">
+                                    <i class="bi bi-key"></i> Reset Password
+                                </button>
+                            </div>
+
+                            <!-- Search Box -->
+                            <div class="search-section mb-3">
+                                <div class="search-container">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                        <input type="text" class="form-control" id="searchInput" placeholder="Search by name..." />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Users Table -->
+                        <div class="table-section">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0" id="usersTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Email</th>
+                                            <th class="techguru-column d-none">Classes Created</th>
+                                            <th class="techkid-column d-none">Enrolled Classes</th>
+                                            <th>Status</th>
+                                            <th>Last Login</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="usersTableBody">
+                                        <!-- User data will be loaded here via AJAX -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Loading Indicator -->
+                        <div id="loadingIndicator" class="text-center my-4 d-none">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+
+                        <!-- No Results Message -->
+                        <div id="noResults" class="alert alert-info text-center mx-3 my-4 d-none">
+                            No users found matching your criteria.
                         </div>
                     </div>
                 </div>
@@ -102,8 +105,8 @@
                                 <input type="email" class="form-control" id="userEmail" placeholder="Start typing user email..." required>
                                 <div id="emailAutocomplete" class="autocomplete-items d-none"></div>
                             </div>
-                            <div class="d-flex justify-content-end">
-                                <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                            <div class="d-flex flex-column flex-md-row justify-content-end gap-2">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                                 <button type="submit" class="btn btn-primary">Send Reset Link</button>
                             </div>
                         </form>
@@ -123,8 +126,10 @@
                         <p id="restrictUserMessage">Are you sure you want to restrict this user?</p>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-warning" id="confirmRestrictBtn">Confirm</button>
+                        <div class="d-flex flex-column flex-md-row justify-content-end gap-2 w-100">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-warning" id="confirmRestrictBtn">Confirm</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -141,8 +146,10 @@
                         <p>Are you sure you want to delete this user? This action cannot be undone.</p>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+                        <div class="d-flex flex-column flex-md-row justify-content-end gap-2 w-100">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+                        </div>
                     </div>
                 </div>
             </div>
