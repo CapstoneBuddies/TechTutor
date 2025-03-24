@@ -94,15 +94,15 @@
                         <label class="form-label">Phone</label>
                         <div class="phone-input-container">
                             <select class="form-select country-code item-disable" name="countryCode" disabled style="max-width: 120px;">
-                                <option value="+63" <?php echo substr($user['phone'] ?? '', 0, 3) === '+63' ? 'selected' : ''; ?>>+63 (PH)</option>
-                                <option value="+1" <?php echo substr($user['phone'] ?? '', 0, 2) === '+1' ? 'selected' : ''; ?>>+1 (US/CA)</option>
-                                <option value="+44" <?php echo substr($user['phone'] ?? '', 0, 3) === '+44' ? 'selected' : ''; ?>>+44 (UK)</option>
-                                <option value="+81" <?php echo substr($user['phone'] ?? '', 0, 3) === '+81' ? 'selected' : ''; ?>>+81 (JP)</option>
-                                <option value="+82" <?php echo substr($user['phone'] ?? '', 0, 3) === '+82' ? 'selected' : ''; ?>>+82 (KR)</option>
-                                <option value="+86" <?php echo substr($user['phone'] ?? '', 0, 3) === '+86' ? 'selected' : ''; ?>>+86 (CN)</option>
+                                <option value="+63" <?php echo substr($user['contact_number'] ?? '', 0, 3) === '+63' ? 'selected' : ''; ?>>+63 (PH)</option>
+                                <option value="+1" <?php echo substr($user['contact_number'] ?? '', 0, 2) === '+1' ? 'selected' : ''; ?>>+1 (US/CA)</option>
+                                <option value="+44" <?php echo substr($user['contact_number'] ?? '', 0, 3) === '+44' ? 'selected' : ''; ?>>+44 (UK)</option>
+                                <option value="+81" <?php echo substr($user['contact_number'] ?? '', 0, 3) === '+81' ? 'selected' : ''; ?>>+81 (JP)</option>
+                                <option value="+82" <?php echo substr($user['contact_number'] ?? '', 0, 3) === '+82' ? 'selected' : ''; ?>>+82 (KR)</option>
+                                <option value="+86" <?php echo substr($user['contact_number'] ?? '', 0, 3) === '+86' ? 'selected' : ''; ?>>+86 (CN)</option>
                             </select>
                             <input type="tel" class="form-control" name="phone" 
-                            value="<?php $phone = $user['phone'] ?? ''; echo preg_match('/^\+\d{1,3}(.*)/', $phone, $matches) ? $matches[1] : $phone; ?>" readonly>
+                            value="<?php $phone = $user['contact_number'] ?? ''; echo preg_match('/^\+\d{1,2}(.*)/', $phone, $matches) ? $matches[1] : $phone; ?>" readonly>
                         </div>
                     </div>
                 </div>

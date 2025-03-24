@@ -416,7 +416,7 @@
                 fetch(userStatus, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Content-Type': 'application/json'
                     },
                     body: `user_id=${userId}`
                 })

@@ -1,4 +1,4 @@
-ALTER TABLE class_schedules DROP COLUMN role;
+ALTER TABLE class_schedule DROP COLUMN role;
 
 -- Drop existing tables if they exist
 DROP TABLE IF EXISTS `file_upload_requests`;

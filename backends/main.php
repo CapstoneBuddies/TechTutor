@@ -19,8 +19,8 @@
 	$approved_link = ['user-logout','user-profile-update','user-change-password','user-deactivate','admin-restrict-user','admin-delete-user','admin-activate-user', 'get-transaction-details', 'get-transactions', 'export-transactions', 'create-payment', 'process-card-payment','add-course','add-subject','toggle-subject-status'];
 
 	// Check if user is logged but trying to access unauthorized link
-	if(isset($_SESSION['user']) && in_array($link,$excluded_link) && isset($_COOKIE['role'])) {
-		$_SESSION['err-msg'] = "Invalid Link Accessed!";
+	if(isset($_SESSION['user']) && in_array($link,$excluded_link)) {
+		$_SESSION['msg'] = "Invalid Link Accessed!";
 		log_error('Unauthorized link');
 		header("location: ".BASE."dashboard");
 		exit();

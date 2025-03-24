@@ -1,10 +1,6 @@
 <?php
     require_once '../backends/main.php';
-
-    if (!isset($_SESSION)) {
-        session_start();
-    }
-
+    
     // Check if user is logged in
     if (!isset($_SESSION['user']) || !isset($_SESSION['role'])) {
         header('Location: ' . BASE . 'login.php');

@@ -613,7 +613,8 @@ function updateProfile() {
         return $response;
     }
     function deleteAccount() {
-        $id = $_POST['userId'];
+        log_error("test: ".print_r($_POST,true));
+        $user_id = $_POST['userId'];
         try {
             global $conn;
             
@@ -647,7 +648,7 @@ function updateProfile() {
             // Handle role-specific deletions
             if ($user['role'] === 'TECHGURU') {
                 // Get classes taught by this tutor
-                $stmt = $conn->prepare("SELECT id FROM class WHERE tutor_id = ?");
+                $stmt = $conn->prepare("SELECT tutor_id FROM class WHERE tutor_id = ?");
                 $stmt->bind_param("i", $user_id);
                 $stmt->execute();
                 $result = $stmt->get_result();
@@ -671,7 +672,7 @@ function updateProfile() {
                     $stmt->execute();
                     
                     // Delete classes
-                    $stmt = $conn->prepare("DELETE FROM class WHERE id IN ($placeholders)");
+                    $stmt = $conn->prepare("DELETE FROM class WHERE class_id IN ($placeholders)");
                     $stmt->bind_param($types, ...$class_ids);
                     $stmt->execute();
                 }
@@ -722,7 +723,7 @@ function updateProfile() {
             $admin_name = $_SESSION['first_name'] . ' ' . $_SESSION['last_name'];
             $user_name = $user['first_name'] . ' ' . $user['last_name'];
             $log_message = "Admin {$admin_name} deleted user {$user_name} (ID: {$user_id})\n";
-            error_log($log_message,3,BASE.'logs/deleted_accounts/user-prompt.log');
+            error_log($log_message,3,ROOT_PATH.'logs/deleted_accounts/user-prompt.log');
             
             // Commit transaction
             $conn->commit();
@@ -737,4 +738,78 @@ function updateProfile() {
         }
 
     }
+    function changeUserPassword() {
+        global $conn;
+        
+        try {
+            // Get form data
+            $userId = $_SESSION['user'] ?? null;
+            $currentPassword = $_POST['current_password'] ?? '';
+            $newPassword = $_POST['new_password'] ?? '';
+            $confirmPassword = $_POST['confirm_password'] ?? '';
+            
+            // Input validation
+            if(empty($currentPassword) || empty($newPassword) || empty($confirmPassword)) {
+                throw new Exception("Please fill in all the required fields.");
+            }
+            
+            if($newPassword !== $confirmPassword) {
+                throw new Exception("New password does not match confirmation.");
+            }
+            
+            if(strlen($newPassword) < 8) {
+                throw new Exception("Password must be at least 8 characters long.");
+            }
+            
+            if (!preg_match("/^(?=(.*[A-Z]))(?=(.*[a-z]))(?=(.*\d))(?=(.*[*-_!]))[A-Za-z\d*-_!]{8,16}$/", $newPassword)) {
+                throw new Exception("Password must be 8-16 characters long and contain a mix of letters, numbers, and special characters.");
+            }
+
+            $conn->begin_transaction();
+
+            // Get current password hash
+            $stmt = $conn->prepare("SELECT password FROM users WHERE uid = ?");
+            $stmt->bind_param("i", $userId);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            if ($result->num_rows === 0) {
+                throw new Exception("User not found.");
+            }
+            
+            $user = $result->fetch_assoc();
+            
+            // Verify current password
+            if (!password_verify($currentPassword, $user['password'])) {
+                throw new Exception("Current password is incorrect.");
+            }
+
+            // Hash new password
+            $newPasswordHash = password_hash($newPassword, PASSWORD_DEFAULT);
+            if ($newPasswordHash === false) {
+                throw new Exception("Failed to hash new password.");
+            }
+
+            // Update password
+            $updateStmt = $conn->prepare("UPDATE users SET password = ? WHERE uid = ?");
+            $updateStmt->bind_param("si", $newPasswordHash, $userId);
+            
+            if (!$updateStmt->execute()) {
+                throw new Exception("Failed to update password.");
+            }
+
+            $conn->commit();
+            log_error("Password changed successfully for user ID: " . $userId, 'info');
+            echo json_encode(['success' => true, 'message' => 'Password changed successfully.']);
+            
+        } catch (Exception $e) {
+            $conn->rollback();
+            log_error("Password change error: " . $e->getMessage(), 'error.log');
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        } finally {
+            if(isset($stmt)) $stmt->close();
+            if(isset($updateStmt)) $updateStmt->close();
+        }
+    }
+
 ?>

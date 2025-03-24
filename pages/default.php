@@ -1,5 +1,11 @@
 <?php 
     require_once '../backends/main.php';
+    if(!isset($_SESSION['user'])) {
+        $_SESSION['msg'] = "Invalid Action";
+        log_error("User accessed an invalid page",'security');
+        header("location: ".BASE."login");
+        exit();
+    }
     /**
      * Remove # if you want to have a modified title
      * Default is the file name without ['-','_']

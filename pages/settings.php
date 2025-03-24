@@ -1,6 +1,17 @@
 <?php 
     require_once '../backends/main.php';
     $title = 'Profile';
+    $redirect = '';
+
+    if(!isset($_SESSION['user'])) {
+        $_SESSION['msg'] = "Invalid Action";
+        log_error("User accessed an invalid page",'security');
+        header("location: ".BASE."login");
+        exit();
+    }
+    if(!empty($redirect)) {
+        header("location: user-logout");
+    }
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -193,23 +204,39 @@
                 </div>
                 <div class="modal-body">
                     <form id="changePasswordForm">
+                        <input type="hidden" name="username" value="<?php echo $_SESSION['email']; ?>">
                         <div class="mb-3">
                             <label for="currentPassword" class="form-label">Current Password</label>
-                            <input type="password" class="form-control" id="currentPassword" required>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="currentPassword" required autocomplete="current-password">
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('currentPassword')">
+                                    <i class="bi bi-eye" id="currentPassword-icon"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label for="newPassword" class="form-label">New Password</label>
-                            <input type="password" class="form-control" id="newPassword" required>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="newPassword" required autocomplete="new-password">
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('newPassword')">
+                                    <i class="bi bi-eye" id="newPassword-icon"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label for="confirmPassword" class="form-label">Confirm New Password</label>
-                            <input type="password" class="form-control" id="confirmPassword" required>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="confirmPassword" required autocomplete="new-password">
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('confirmPassword')">
+                                    <i class="bi bi-eye" id="confirmPassword-icon"></i>
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="changePassword()">Save Changes</button>
+                    <button type="button" class="btn btn-primary" onclick="changePassword(this)">Save Changes</button>
                 </div>
             </div>
         </div>
@@ -220,15 +247,15 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="deleteAccountModalLabel">Confirm Account Deletion</h5>
+                    <h5 class="modal-title" id="deleteAccountModalLabel">Delete Account</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p><i class=""></i>  Are you sure you want to delete your account? This action cannot be undone.</p>
                     <form id="deleteAccountForm">
+                        <input type="hidden" name="username" value="<?php echo $_SESSION['email']; ?>">
                         <div class="mb-3">
                             <label for="deleteConfirmPassword" class="form-label">Enter your password to confirm</label>
-                            <input type="password" class="form-control" id="deleteConfirmPassword" required>
+                            <input type="password" class="form-control" id="deleteConfirmPassword" required autocomplete="current-password">
                         </div>
                     </form>
                 </div>
@@ -244,26 +271,98 @@
 
     <?php include ROOT_PATH . '/components/footer.php'; ?>
     <script>
-        $(document).ready(function() {
-            // Initialize any components
-            initializeComponents();
+        window.addEventListener('load', function() {
+            document.getElementById('changePasswordForm')?.addEventListener('submit', function(event) {
+                event.preventDefault();
+                changePassword(event);
+            });
+
+            document.getElementById('deleteAccountForm')?.addEventListener('submit', function(event) {
+                event.preventDefault();
+                deleteAccount(event);
+            });
         });
 
-        function initializeComponents() {
-            // Add event listeners for the delete account button
-            document.querySelector('.btn-danger[data-bs-toggle="modal"]').addEventListener('click', function() {
-                // Reset the form when the modal is opened
-                document.getElementById('deleteAccountForm').reset();
+        function changePassword(event) {
+            if (event && typeof event.preventDefault === 'function') {
+                event.preventDefault();
+            }
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const modalElement = document.getElementById('changePasswordModal');
+            const saveButton = document.querySelector('#changePasswordModal .btn-primary');
+
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showToast('error', 'Please fill in all password fields');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                showToast('error', 'New passwords do not match');
+                return;
+            }
+            
+            if (newPassword.length < 8) {
+                showToast('error', 'Password must be at least 8 characters');
+                return;
+            }
+            
+            // Show loading state
+            saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+            saveButton.disabled = true;
+
+            // Create form data
+            const formData = new FormData();
+            formData.append('current_password', currentPassword);
+            formData.append('new_password', newPassword);
+            formData.append('confirm_password', confirmPassword);
+
+            // Send fetch request
+            fetch('user-change-password', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Proper modal closing
+                    bootstrap.Modal.getInstance(modalElement).hide();
+                    document.body.classList.remove('modal-open');
+                    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+
+                    showToast('success', 'Password changed successfully! Please log back in.');
+
+                    // Reliable redirect
+                    setTimeout(() => {
+                        window.location.href = BASE + 'user-logout';
+                    }, 2000);
+                } else {
+                    showToast('error', data.message || 'Failed to change password');
+                    document.getElementById('changePasswordForm').reset();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('error', 'Connection error. Please try again.');
+                document.getElementById('changePasswordForm').reset();
+            })
+            .finally(() => {
+                saveButton.innerHTML = 'Save Changes';
+                saveButton.disabled = false;
             });
         }
-
-        function deleteAccount() {
+        
+        function deleteAccount(event) {
+            if (event && typeof event.preventDefault === 'function') {
+                event.preventDefault();
+            }
             const password = document.getElementById('deleteConfirmPassword').value;
-            const deleteModal = document.getElementById('deleteAccountModal');
+            const modalElement = document.getElementById('deleteAccountModal');
             const deleteButton = document.querySelector('#deleteAccountModal .btn-danger');
             
             if (!password) {
-                showAlert('error', 'Please enter your password to confirm');
+                showToast('error', 'Please enter your password to confirm');
                 return;
             }
             
@@ -271,133 +370,65 @@
             deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
             deleteButton.disabled = true;
             
-            // Send AJAX request
-            $.ajax({
-                url: '<?php echo BASE; ?>user-deactivate',
-                type: 'POST',
-                data: { userId: <?php echo $_SESSION['user']; ?> },
-                dataType: 'json',
-                success: function(response) {
-                    if (response.status === 'success') {
-                        bootstrap.Modal.getInstance(deleteModal).hide();
-                        showAlert('success', 'Account deleted successfully');
-                        setTimeout(function() {
-                            window.location.href = '<?php echo BASE; ?>login';
-                        }, 1000);
-                    } else {
-                        showAlert('error', response.message || 'Failed to delete account');
-                        deleteButton.innerHTML = 'Delete Account';
-                        deleteButton.disabled = false;
-                    }
-                },
-                error: function(xhr) {
-                    showAlert('error', 'Connection error. Please try again.');
-                    deleteButton.innerHTML = 'Delete Account';
-                    deleteButton.disabled = false;
+            // Create form data
+            const formData = new FormData();
+            formData.append('userId', <?php echo $_SESSION['user']; ?>);
+
+            // Send fetch request
+            fetch(BASE+'user-deactivate', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Proper modal closing
+                    bootstrap.Modal.getInstance(modalElement).hide();
+                    document.body.classList.remove('modal-open');
+                    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+
+                    showToast('success', 'Account deleted successfully');
+
+                    // Reliable redirect
+                    setTimeout(() => {
+                        window.location.href = BASE + 'user-logout';
+                    }, 2000);
+                } else {
+                    showToast('error', data.message || 'Failed to delete account');
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('error', 'Connection error. Please try again.');
+            })
+            .finally(() => {
+                deleteButton.innerHTML = 'Delete Account';
+                deleteButton.disabled = false;
             });
         }
 
-        function changePassword() {
-            const currentPassword = document.getElementById('currentPassword').value;
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            const changeModal = document.getElementById('changePasswordModal');
-            const saveButton = document.querySelector('#changePasswordModal .btn-primary');
+        function togglePasswordVisibility(inputId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(inputId + '-icon');
             
-            if (!currentPassword || !newPassword || !confirmPassword) {
-                alert('Please fill in all password fields');
-                document.getElementById('currentPassword').value = '';
-                document.getElementById('newPassword').value = '';
-                document.getElementById('confirmPassword').value = '';
-                return;
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
             }
-            
-            if (newPassword !== confirmPassword) {
-                alert('New passwords do not match');
-                document.getElementById('currentPassword').value = '';
-                document.getElementById('newPassword').value = '';
-                document.getElementById('confirmPassword').value = '';
-                return;
-            }
-            
-            if (newPassword.length < 8) {
-                alert('Password must be at least 8 characters');
-                document.getElementById('currentPassword').value = '';
-                document.getElementById('newPassword').value = '';
-                document.getElementById('confirmPassword').value = '';
-                return;
-            }
-            
-            // Show loading state
-            saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
-            saveButton.disabled = true;
-            
-            // Send AJAX request
-            $.ajax({
-                url: '<?php echo BASE; ?>user-change-password',
-                type: 'POST',
-                data: {
-                    current_password: currentPassword,
-                    new_password: newPassword,
-                    confirm_password: confirmPassword
-                },
-                dataType: 'json',
-                success: function(response) {
-                    if (response.status === 'success') {
-                        alert('Password was changed successfully! Please log back in.');
-                        window.location.href = '<?php echo BASE; ?>user-logout';
-                    } else {
-                        alert(response.message || 'Failed to change password');
-                        document.getElementById('currentPassword').value = '';
-                        document.getElementById('newPassword').value = '';
-                        document.getElementById('confirmPassword').value = '';
-                    }
-                    saveButton.innerHTML = 'Save Changes';
-                    saveButton.disabled = false;
-                },
-                error: function(xhr) {
-                    alert('Connection error. Please try again.');
-                    saveButton.innerHTML = 'Save Changes';
-                    saveButton.disabled = false;
-                }
-            });
         }
-        
-        function showAlert(type, message) {
-            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
-            const icon = type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill';
-            
-            const alertHtml = `
-                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
-                    <i class="bi ${icon} me-2"></i>
-                    ${message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            `;
-            
-            // Create a container for alerts if it doesn't exist
-            let alertContainer = document.querySelector('.alert-container');
-            if (!alertContainer) {
-                alertContainer = document.createElement('div');
-                alertContainer.className = 'alert-container position-fixed top-0 end-0 p-3';
-                alertContainer.style.zIndex = '1050';
-                document.body.appendChild(alertContainer);
-            }
-            
-            // Add the alert to the container
-            const alertElement = document.createElement('div');
-            alertElement.innerHTML = alertHtml;
-            alertContainer.appendChild(alertElement.firstChild);
-            
-            // Auto-remove the alert after 5 seconds
-            setTimeout(function() {
-                const alerts = document.querySelectorAll('.alert');
-                if (alerts.length > 0) {
-                    alerts[0].remove();
-                }
-            }, 5000);
-        }
+
+        const optimizedInterval = setInterval(() => {
+            // Keep operations minimal
+        }, 1000);
+
+        window.addEventListener('beforeunload', () => {
+            clearInterval(optimizedInterval);
+        });
     </script>
 </body>
 </html>
