@@ -47,7 +47,7 @@
                                             <i class="bi bi-search text-muted"></i>
                                         </span>
                                         <input type="text" class="form-control border-start-0" placeholder="Search">
-                                    </div>
+                        </div>
                                 </div>
                                 <a href="enrollments" class="btn btn-primary d-flex align-items-center">
                                     <i class="bi bi-plus-lg me-2"></i>Browse Available Classes
@@ -80,12 +80,12 @@
                                         <i class="bi bi-laptop text-muted" style="font-size: 48px;"></i>
                                         <h3 class="mt-3">No Classes Enrolled</h3>
                                         <p class="text-muted mb-4">Start your learning journey by enrolling in a class.</p>
-                                        <a href="enrollments" class="btn btn-primary">
-                                            <i class="bi bi-plus-lg me-2"></i>Browse Available Classes
-                                        </a>
-                                    </div>
-                                </div>
-                                <?php else: ?>
+                                <a href="enrollments" class="btn btn-primary">
+                                    <i class="bi bi-plus-lg me-2"></i>Browse Available Classes
+                                </a>
+                            </div>
+                        </div>
+                        <?php else: ?>
                                 <!-- No Results Message (Hidden by default) -->
                                 <div class="col-12" id="noResultsMessage" style="display: none;">
                                     <div class="text-center py-5">
@@ -123,10 +123,10 @@
                                             
                                             <h3 class="h5 mb-2"><?php echo htmlspecialchars($class['class_name']); ?></h3>
                                             
-                                            <div class="d-flex align-items-center mb-3">
+                                    <div class="d-flex align-items-center mb-3">
                                                 <img src="<?php echo !empty($class['tutor_avatar']) ? USER_IMG . $class['tutor_avatar'] : USER_IMG . 'default.jpg'; ?>" 
                                                      class="rounded-circle me-2" 
-                                                     alt="Tutor"
+                                             alt="Tutor" 
                                                      width="24" height="24">
                                                 <span class="text-muted small">
                                                     <?php echo htmlspecialchars($class['tutor_first_name'] . ' ' . $class['tutor_last_name']); ?>
@@ -139,9 +139,9 @@
                                                      aria-valuenow="<?php echo $progress; ?>" 
                                                      aria-valuemin="0" 
                                                      aria-valuemax="100"></div>
-                                            </div>
+                                    </div>
 
-                                            <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex justify-content-between align-items-center">
                                                 <span class="text-muted small">
                                                     <?php echo $class['completed_sessions']; ?>/<?php echo $class['total_sessions']; ?> sessions
                                                 </span>
@@ -230,8 +230,8 @@
                                                 <p class="mb-0 small <?php echo $status_class; ?>">
                                                     <i class="bi bi-circle-fill me-1"></i><?php echo $status; ?>
                                                 </p>
-                                            </div>
-                                        </div>
+                            </div>
+                        </div>
                                         <div class="schedule-action">
                                             <?php if ($status === 'In Progress'): ?>
                                             <a href="class/meeting?id=<?php echo $session['schedule_id']; ?>" 
@@ -240,12 +240,12 @@
                                             <button class="btn btn-outline-primary" disabled>
                                                 Starts in <?php echo human_time_diff($current_time, $session_start); ?>
                                             </button>
-                                            <?php else: ?>
-                                            <span class="badge bg-success">Completed</span>
+                        <?php else: ?>
+                                        <span class="badge bg-success">Completed</span>
                                             <?php endif; ?>
                                         </div>
                                     </div>
-                                </div>
+                                    </div>
                                 <?php 
                                     endforeach;
                                 else:
@@ -270,15 +270,15 @@
                         <div class="card-body">
                             <h2 class="section-title mb-4">Calendar</h2>
                             <div id="calendar"></div>
-                        </div>
-                    </div>
+        </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <?php include ROOT_PATH . '/components/footer.php'; ?>
+    <?php include ROOT_PATH . '/components/footer.php'; ?>
 
-        <script>
+    <script>
             document.addEventListener('DOMContentLoaded', function() {
                 // Filter functionality for schedule items
                 const filterButtons = document.querySelectorAll('.dropdown-item[data-filter]');
@@ -297,7 +297,7 @@
                         scheduleItems.forEach(item => {
                             if (filter === 'all' || item.dataset.status === filter) {
                                 item.style.display = '';
-                            } else {
+                    } else {
                                 item.style.display = 'none';
                             }
                         });
@@ -466,5 +466,5 @@
                 background: #555;
             }
         </style>
-    </body>
+</body>
 </html>

@@ -18,23 +18,7 @@ $title = 'Course Management';
 <html lang="en">
     <?php include ROOT_PATH . '/components/head.php'; ?>
     <style>
- .subject-image{
-    margin-bottom: 30px;
-    width: 300px;
-    height: 200px;
-    aspect-ratio: 1 / 1;
-    object-fit: cover;
-    border: 3px solid #fff;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-}
-.subject-image-icon {
-    height: 50px;
-    width: 50px;
-    aspect-ratio: 16 / 9;
-}
-.add-subject-image, .edit-subject-image {
-    margin-left: 15%;
-}
+ 
     </style>
     <body data-base="<?php echo BASE; ?>">
         <?php include ROOT_PATH . '/components/header.php'; ?>

@@ -299,9 +299,9 @@ function getSubjectDetails($identifier, $by = 'course_id') {
                  FROM class cl 
                  JOIN enrollments e ON cl.class_id = e.class_id 
                  WHERE cl.subject_id = s.subject_id AND e.status = 'active') AS total_students,
-                (SELECT AVG(r.rating) 
+                (SELECT AVG(sf.rating) 
                  FROM class cl 
-                 JOIN ratings r ON cl.tutor_id = r.tutor_id 
+                 JOIN session_feedback sf ON cl.tutor_id = sf.tutor_id 
                  WHERE cl.subject_id = s.subject_id) AS average_rating,
                 (SELECT 
                     CASE 
@@ -417,13 +417,11 @@ function getClassDetails($class_id, $tutor_id = null) {
                     s.subject_name, s.subject_desc, s.image AS subject_image,
                     co.course_name, co.course_desc,
                     CONCAT(u.first_name,' ',u.last_name) AS techguru_name,
+                    u.uid AS techguru_id,
                     u.email AS techguru_email,
                     u.profile_picture AS techguru_profile,
                     COUNT(DISTINCT e.student_id) AS total_students,
                     SUM(CASE WHEN e.status = 'completed' THEN 1 ELSE 0 END) AS completed_students,
-                    (SELECT AVG(r.rating) 
-                     FROM ratings r 
-                     WHERE r.tutor_id = c.tutor_id) AS average_rating,
                     (SELECT COUNT(*) 
                      FROM class_schedule 
                      WHERE class_id = c.class_id AND status = 'completed') AS completed_sessions,

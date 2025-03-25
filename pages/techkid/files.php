@@ -1,9 +1,9 @@
-<?php
-require_once '../../backends/main.php';
-require_once '../../backends/management/file_management.php';
+<?php 
+    require_once '../../backends/main.php';
+require_once BACKEND.'file_management.php';
 
 // Verify session and role
-if (isset($_SESSION['user_id']) || $_SESSION['role'] !== 'TECHKID') {
+if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'TECHKID') {
     header("Location: " . BASE . "login");
     exit();
 }
@@ -13,29 +13,23 @@ $fileManager = new FileManagement();
 
 try {
     // Get student's personal files
-    $personalFiles = $fileManager->getPersonalFiles($_SESSION['user_id']);
+    $personalFiles = $fileManager->getPersonalFiles($_SESSION['user']);
     
-    // Get all accessible class files
-    $classFiles = $fileManager->getAccessibleFiles($_SESSION['user_id']);
+    // Get storage usage
+    $storageInfo = $fileManager->getStorageUsage($_SESSION['user']);
     
-    // Get upload requests
-    $uploadRequests = $fileManager->getUploadRequests($_SESSION['user_id']);
-    
-    // Calculate storage usage
-    $storageInfo = $fileManager->getStorageInfo($_SESSION['user_id']);
-    
-} catch (Exception $e) {
-    log_error($e->getMessage(), "files_page");
-}
+    } catch (Exception $e) {
+    error_log("Error in files page: " . $e->getMessage());
+    }
 
 $title = "My Files";
 ?>
 <!DOCTYPE html>
 <html lang="en">
-    <?php include ROOT_PATH . '/components/head.php'; ?>
+<?php include ROOT_PATH . '/components/head.php'; ?>
     <body data-base="<?php echo BASE; ?>">
-        <?php include ROOT_PATH . '/components/header.php'; ?>
-        
+    <?php include ROOT_PATH . '/components/header.php'; ?>
+
         <!-- Main Dashboard Content -->
         <main class="dashboard-content">
             <div class="container-fluid">
@@ -43,28 +37,33 @@ $title = "My Files";
                 <div class="row mb-4">
                     <div class="col-md-12">
                         <div class="card">
-                            <div class="card-body">
+            <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <h5 class="card-title mb-0">Storage Usage</h5>
-                                    <button class="btn btn-sm btn-primary" onclick="showUploadModal()">
-                                        <i class="fas fa-upload me-1"></i> Upload File
-                                    </button>
-                                </div>
+                                    <div class="btn-group">
+                                        <button class="btn btn-warning" onclick="fixPermissions()">
+                                            <i class="fas fa-lock-open me-1"></i> Fix File Access
+                                        </button>
+                                        <button class="btn btn-primary" onclick="showUploadModal()">
+                                            <i class="fas fa-upload me-1"></i> Upload File
+                                        </button>
+                        </div>
+                    </div>
                                 <div class="progress" style="height: 20px;">
                                     <div class="progress-bar" role="progressbar" 
-                                         style="width: <?php echo $storageInfo['percentage']; ?>%"
-                                         aria-valuenow="<?php echo $storageInfo['percentage']; ?>" 
+                                         style="width: <?php echo number_format($storageInfo['percentage'], 2); ?>%"
+                                         aria-valuenow="<?php echo number_format($storageInfo['percentage'], 2); ?>" 
                                          aria-valuemin="0" aria-valuemax="100">
                                         <?php echo $storageInfo['percentage']; ?>%
                                     </div>
-                                </div>
+                    </div>
                                 <small class="text-muted mt-2 d-block">
                                     <?php echo formatBytes($storageInfo['used']); ?> used of <?php echo formatBytes($storageInfo['limit']); ?>
                                 </small>
-                            </div>
-                        </div>
                     </div>
                 </div>
+            </div>
+        </div>
 
                 <!-- Upload Requests Section -->
                 <?php if (!empty($uploadRequests)): ?>
@@ -73,7 +72,7 @@ $title = "My Files";
                         <div class="card">
                             <div class="card-header">
                                 <h5 class="mb-0">Upload Requests</h5>
-                            </div>
+                    </div>
                             <div class="card-body">
                                 <div class="table-responsive">
                                     <table class="table align-items-center">
@@ -107,7 +106,7 @@ $title = "My Files";
                                             <?php endforeach; ?>
                                         </tbody>
                                     </table>
-                                </div>
+                        </div>
                             </div>
                         </div>
                     </div>
@@ -151,15 +150,41 @@ $title = "My Files";
                                                     <td><?php echo date('M d, Y', strtotime($file['upload_time'])); ?></td>
                                                     <td>
                                                         <div class="btn-group">
+                                                            <?php if ($file['user_id'] == $_SESSION['user']): ?>
                                                             <a href="<?php echo htmlspecialchars($file['drive_link']); ?>" 
                                                                target="_blank" 
-                                                               class="btn btn-sm btn-primary">
-                                                                <i class="fas fa-eye"></i>
+                                                               class="btn btn-sm btn-primary"
+                                                               data-toggle="tooltip" 
+                                                               title="View In Drive">
+                                                                <i class="fas fa-external-link-alt"></i>
                                                             </a>
+                                                            <button class="btn btn-sm btn-info" 
+                                                                    onclick="copyLink('<?php echo htmlspecialchars($file['drive_link']); ?>')"
+                                                                    data-toggle="tooltip" 
+                                                                    title="Copy Link">
+                                                                <i class="fas fa-link"></i>
+                                                            </button>
                                                             <button class="btn btn-sm btn-danger" 
-                                                                    onclick="deleteFile(<?php echo $file['file_id']; ?>)">
+                                                                    onclick="deleteFile(<?php echo $file['file_id']; ?>)"
+                                                                    data-toggle="tooltip" 
+                                                                    title="Delete File">
                                                                 <i class="fas fa-trash"></i>
                                                             </button>
+                                                            <?php else: ?>
+                                                            <a href="<?php echo htmlspecialchars($file['drive_link']); ?>" 
+                                                               target="_blank" 
+                                                               class="btn btn-sm btn-primary me-2"
+                                                               data-toggle="tooltip" 
+                                                               title="View In Drive">
+                                                                <i class="fas fa-external-link-alt"></i>
+                                                            </a>
+                                                            <button class="btn btn-sm btn-info" 
+                                                                    onclick="copyLink('<?php echo htmlspecialchars($file['drive_link']); ?>')"
+                                                                    data-toggle="tooltip" 
+                                                                    title="Copy Link">
+                                                                <i class="fas fa-link"></i>
+                                                            </button>
+                                                            <?php endif; ?>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -227,11 +252,43 @@ $title = "My Files";
                                                                     <td><?php echo htmlspecialchars($file['uploader_name']); ?></td>
                                                                     <td><?php echo date('M d, Y', strtotime($file['upload_time'])); ?></td>
                                                                     <td>
-                                                                        <a href="<?php echo htmlspecialchars($file['drive_link']); ?>" 
-                                                                           target="_blank" 
-                                                                           class="btn btn-sm btn-primary">
-                                                                            <i class="fas fa-eye"></i>
-                                                                        </a>
+                                                                        <div class="btn-group">
+                                                                            <?php if ($file['user_id'] == $_SESSION['user']['uid']): ?>
+                                                                            <a href="<?php echo htmlspecialchars($file['drive_link']); ?>" 
+                                                                               target="_blank" 
+                                                                               class="btn btn-sm btn-primary"
+                                                                               data-toggle="tooltip" 
+                                                                               title="View In Drive">
+                                                                                <i class="fas fa-external-link-alt"></i>
+                                                                            </a>
+                                                                            <button class="btn btn-sm btn-info" 
+                                                                                    onclick="copyLink('<?php echo htmlspecialchars($file['drive_link']); ?>')"
+                                                                                    data-toggle="tooltip" 
+                                                                                    title="Copy Link">
+                                                                                <i class="fas fa-link"></i>
+                                                                            </button>
+                                                                            <button class="btn btn-sm btn-danger" 
+                                                                                    onclick="deleteFile(<?php echo $file['file_id']; ?>)"
+                                                                                    data-toggle="tooltip" 
+                                                                                    title="Delete File">
+                                                                                <i class="fas fa-trash"></i>
+                                                                            </button>
+                                                                            <?php else: ?>
+                                                                            <a href="<?php echo htmlspecialchars($file['drive_link']); ?>" 
+                                                                               target="_blank" 
+                                                                               class="btn btn-sm btn-primary me-2"
+                                                                               data-toggle="tooltip" 
+                                                                               title="View In Drive">
+                                                                                <i class="fas fa-external-link-alt"></i>
+                                                                            </a>
+                                                                            <button class="btn btn-sm btn-info" 
+                                                                                    onclick="copyLink('<?php echo htmlspecialchars($file['drive_link']); ?>')"
+                                                                                    data-toggle="tooltip" 
+                                                                                    title="Copy Link">
+                                                                                <i class="fas fa-link"></i>
+                                                                            </button>
+                                                                            <?php endif; ?>
+                                                                        </div>
                                                                     </td>
                                                                 </tr>
                                                                 <?php endforeach; ?>
@@ -265,25 +322,25 @@ $title = "My Files";
                             <div class="mb-3">
                                 <label class="form-label">Select File</label>
                                 <input type="file" class="form-control" name="file" required>
-                                <small class="text-muted">Maximum file size: 50MB</small>
-                            </div>
+                                <small class="text-muted">Maximum file size: 500MB for personal files, 5GB for class files</small>
+                        </div>
                             <div class="mb-3">
                                 <label class="form-label">Description (Optional)</label>
                                 <textarea class="form-control" name="description" rows="3"></textarea>
                             </div>
                         </form>
-                    </div>
+                        </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         <button type="button" class="btn btn-primary" onclick="uploadFile()">Upload</button>
-                    </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <?php include ROOT_PATH . '/components/footer.php'; ?>
+    <?php include ROOT_PATH . '/components/footer.php'; ?>
 
-        <script>
+    <script>
         function showUploadModal() {
             const modal = new bootstrap.Modal(document.getElementById('uploadModal'));
             modal.show();
@@ -294,7 +351,7 @@ $title = "My Files";
             const formData = new FormData(form);
             
             // Show loading
-            showLoading();
+            showLoading(true);
 
             fetch(BASE + 'upload-file', {
                 method: 'POST',
@@ -302,7 +359,7 @@ $title = "My Files";
             })
             .then(response => response.json())
             .then(data => {
-                hideLoading();
+                showLoading(false);
                 if (data.success) {
                     showToast('success', 'File uploaded successfully');
                     location.reload();
@@ -311,7 +368,7 @@ $title = "My Files";
                 }
             })
             .catch(error => {
-                hideLoading();
+                showLoading(false);
                 showToast('error', 'Failed to upload file');
                 console.error('Error:', error);
             });
@@ -330,16 +387,16 @@ $title = "My Files";
             })
             .then(response => response.json())
             .then(data => {
-                hideLoading();
+                showLoading(false);
                 if (data.success) {
                     showToast('success', 'File deleted successfully');
-                    location.reload();
+                    setTimeout(function() { location.reload(); }, 2000);
                 } else {
                     showToast('error', data.message || 'Failed to delete file');
                 }
             })
             .catch(error => {
-                hideLoading();
+                showLoading(false);
                 showToast('error', 'Failed to delete file');
                 console.error('Error:', error);
             });
@@ -353,6 +410,25 @@ $title = "My Files";
             modal.show();
         }
 
+        function copyLink(link) {
+            navigator.clipboard.writeText(link).then(() => {
+                showToast('success', 'Link copied to clipboard!');
+            }).catch(() => {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = link;
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    showToast('success', 'Link copied to clipboard!');
+                } catch (err) {
+                    showToast('error', 'Failed to copy link');
+                }
+                document.body.removeChild(textarea);
+            });
+        }
+
         // Helper function to format file size
         function formatBytes(bytes, decimals = 2) {
             if (bytes === 0) return '0 Bytes';
@@ -362,6 +438,58 @@ $title = "My Files";
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
         }
-        </script>
-    </body>
+
+        function fixPermissions() {
+            // Show loading state
+            Swal.fire({
+                title: 'Fixing permissions...',
+                text: 'Please wait while we update your file permissions',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Make API call
+            fetch(BASE+'fix-permissions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: data.message,
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        // Reload the page to show updated permissions
+                        window.location.reload();
+                    });
+                } else {
+                    throw new Error(data.error || 'Failed to fix permissions');
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: error.message,
+                    confirmButtonText: 'OK'
+                });
+            });
+        }
+
+        // Initialize tooltips
+        document.addEventListener('DOMContentLoaded', function() {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+    </script>
+</body>
 </html>

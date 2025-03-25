@@ -15,7 +15,7 @@ $class_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 // Check if already enrolled
 $enrollment = checkStudentEnrollment($_SESSION['user'], $class_id);
 if ($enrollment) {
-    header('Location: ' . BASE . 'pages/techkid/class/details?id=' . $enrollment['class_id']);
+    header('Location: ' . BASE . 'dashboard/s/class/details?id=' . $enrollment['class_id']);
     exit();
 }
 
@@ -194,11 +194,11 @@ $title = htmlspecialchars($classDetails['class_name']);
                     
                     if (data.success) {
                         showToast('success', "Successfully enrolled in the class!");
-                        setTimeout(() => location.href = `${BASE}pages/techkid/class/details?id=${<?php echo $class_id; ?>}`, 1500);
+                        setTimeout(() => location.href = `${BASE}pages/s/class/details?id=${<?php echo $class_id; ?>}`, 1500);
                     } else {
                         if (data.already_enrolled) {
                             showToast('info', "You are already enrolled in this class!");
-                            setTimeout(() => location.href = `${BASE}pages/techkid/class/details?id=${data.class_id}`, 1500);
+                            setTimeout(() => location.href = `${BASE}pages/s/class/details?id=${data.class_id}`, 1500);
                         } else {
                             showToast('error', data.message || "Failed to enroll in the class. Please try again.");
                         }

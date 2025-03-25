@@ -450,6 +450,7 @@
     text-align: center;
     white-space: nowrap;
     padding: 0.75rem 0.5rem;
+    word-wrap: break-word;
 }
 
 /* Loading and No Results */
@@ -847,4 +848,21 @@
         width: auto;
         margin: 0 0.25rem;
     }
+}
+.subject-image{
+    margin-bottom: 30px;
+    width: 300px;
+    height: 200px;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border: 3px solid #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+.subject-image-icon {
+    height: 50px;
+    width: 50px;
+    aspect-ratio: 16 / 9;
+}
+.add-subject-image, .edit-subject-image {
+    margin-left: 15%;
 }

@@ -1,3 +1,4 @@
+-- Check first if it exists
 ALTER TABLE class_schedule DROP COLUMN role;
 
 -- Drop existing tables if they exist
@@ -88,4 +89,144 @@ CREATE INDEX idx_file_visibility ON file_management(is_visible);
 CREATE INDEX idx_file_personal ON file_management(is_personal);
 CREATE INDEX idx_request_student ON file_upload_requests(student_id);
 CREATE INDEX idx_request_class ON file_upload_requests(class_id);
-CREATE INDEX idx_request_status ON file_upload_requests(status);
+CREATE INDEX idx_request_status ON file_upload_requests(status); -- Drop existing ratings table as we're replacing it with a more specific one
+DROP TABLE IF EXISTS `ratings`;
+
+-- Create session feedback table
+CREATE TABLE IF NOT EXISTS `session_feedback` (
+    `rating_id` INT PRIMARY KEY AUTO_INCREMENT,
+    `session_id` INT NOT NULL,
+    `student_id` INT NOT NULL,
+    `tutor_id` INT NOT NULL,
+    `rating` INT CHECK (`rating` BETWEEN 1 AND 5),
+    `feedback` TEXT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`session_id`) REFERENCES `class_schedule`(`schedule_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`student_id`) REFERENCES `users`(`uid`) ON DELETE CASCADE,
+    FOREIGN KEY (`tutor_id`) REFERENCES `users`(`uid`) ON DELETE CASCADE,
+    UNIQUE KEY `unique_session_feedback` (`session_id`, `student_id`),
+    INDEX `idx_tutor_ratings` (`tutor_id`, `rating`),
+    INDEX `idx_session_feedback` (`session_id`),
+    INDEX `idx_student_feedback` (`student_id`)
+);
+
+-- Add rating_count column to users table to optimize rating calculations
+ALTER TABLE `users`
+ADD COLUMN `rating_count` INT DEFAULT 0 AFTER `rating`,
+MODIFY COLUMN `rating` DECIMAL(3,2) DEFAULT 0.00;
+
+-- Create trigger to update user's rating and rating_count
+DELIMITER //
+CREATE TRIGGER after_session_feedback_insert
+AFTER INSERT ON session_feedback
+FOR EACH ROW
+BEGIN
+    -- Update tutor's rating count and average rating
+    UPDATE users u
+    SET u.rating_count = (
+            SELECT COUNT(*) 
+            FROM session_feedback 
+            WHERE tutor_id = NEW.tutor_id
+        ),
+        u.rating = (
+            SELECT AVG(rating) 
+            FROM session_feedback 
+            WHERE tutor_id = NEW.tutor_id
+        )
+    WHERE u.uid = NEW.tutor_id;
+END //
+DELIMITER ;
+
+-- Create trigger to update user's rating after feedback deletion
+DELIMITER //
+CREATE TRIGGER after_session_feedback_delete
+AFTER DELETE ON session_feedback
+FOR EACH ROW
+BEGIN
+    -- Update tutor's rating count and average rating
+    UPDATE users u
+    SET u.rating_count = (
+            SELECT COUNT(*) 
+            FROM session_feedback 
+            WHERE tutor_id = OLD.tutor_id
+        ),
+        u.rating = COALESCE(
+            (SELECT AVG(rating) 
+             FROM session_feedback 
+             WHERE tutor_id = OLD.tutor_id),
+            0
+        )
+    WHERE u.uid = OLD.tutor_id;
+END //
+DELIMITER ;
+
+-- Drop existing ratings table as we're replacing it with a more specific one
+DROP TABLE IF EXISTS `ratings`;
+
+-- Create session feedback table
+CREATE TABLE IF NOT EXISTS `session_feedback` (
+    `rating_id` INT PRIMARY KEY AUTO_INCREMENT,
+    `session_id` INT NOT NULL,
+    `student_id` INT NOT NULL,
+    `tutor_id` INT NOT NULL,
+    `rating` INT CHECK (`rating` BETWEEN 1 AND 5),
+    `feedback` TEXT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`session_id`) REFERENCES `class_schedule`(`schedule_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`student_id`) REFERENCES `users`(`uid`) ON DELETE CASCADE,
+    FOREIGN KEY (`tutor_id`) REFERENCES `users`(`uid`) ON DELETE CASCADE,
+    UNIQUE KEY `unique_session_feedback` (`session_id`, `student_id`),
+    INDEX `idx_tutor_ratings` (`tutor_id`, `rating`),
+    INDEX `idx_session_feedback` (`session_id`),
+    INDEX `idx_student_feedback` (`student_id`)
+);
+
+-- Add rating_count column to users table to optimize rating calculations
+ALTER TABLE `users`
+ADD COLUMN `rating_count` INT DEFAULT 0 AFTER `rating`,
+MODIFY COLUMN `rating` DECIMAL(3,2) DEFAULT 0.00;
+
+-- Create trigger to update user's rating and rating_count
+DELIMITER //
+CREATE TRIGGER after_session_feedback_insert
+AFTER INSERT ON session_feedback
+FOR EACH ROW
+BEGIN
+    -- Update tutor's rating count and average rating
+    UPDATE users u
+    SET u.rating_count = (
+            SELECT COUNT(*) 
+            FROM session_feedback 
+            WHERE tutor_id = NEW.tutor_id
+        ),
+        u.rating = (
+            SELECT AVG(rating) 
+            FROM session_feedback 
+            WHERE tutor_id = NEW.tutor_id
+        )
+    WHERE u.uid = NEW.tutor_id;
+END //
+DELIMITER ;
+
+-- Create trigger to update user's rating after feedback deletion
+DELIMITER //
+CREATE TRIGGER after_session_feedback_delete
+AFTER DELETE ON session_feedback
+FOR EACH ROW
+BEGIN
+    -- Update tutor's rating count and average rating
+    UPDATE users u
+    SET u.rating_count = (
+            SELECT COUNT(*) 
+            FROM session_feedback 
+            WHERE tutor_id = OLD.tutor_id
+        ),
+        u.rating = COALESCE(
+            (SELECT AVG(rating) 
+             FROM session_feedback 
+             WHERE tutor_id = OLD.tutor_id),
+            0
+        )
+    WHERE u.uid = OLD.tutor_id;
+END //
+DELIMITER ;

@@ -2,6 +2,7 @@
     require_once '../../backends/main.php';
     require_once BACKEND.'student_management.php';
     require_once BACKEND.'class_management.php';
+    require_once BACKEND.'rating_management.php';
 
     // Ensure user is logged in and is a TechKid
     if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHKID') {
@@ -48,7 +49,7 @@
                                 <nav aria-label="breadcrumb" class="breadcrumb-nav">
                                     <ol class="breadcrumb mb-2">
                                         <li class="breadcrumb-item"><a href="<?php echo BASE; ?>dashboard">Dashboard</a></li>
-                                        <li class="breadcrumb-item"><a href="<?php echo BASE; ?>./">My Classes</a></li>
+                                        <li class="breadcrumb-item"><a href="./">My Classes</a></li>
                                         <li class="breadcrumb-item active"><?php echo htmlspecialchars($classDetails['class_name']); ?></li>
                                     </ol>
                                 </nav>
@@ -185,10 +186,26 @@
                                                         ?>
                                                     </button>
                                                 <?php elseif ($is_completed): ?>
-                                                    <button class="btn btn-outline-success btn-sm" disabled>
-                                                        <i class="bi bi-check-circle me-1"></i>
-                                                        Completed
+                                                    <?php 
+                                                        $ratingManager = new RatingManagement();
+                                                        $hasRated = $ratingManager->hasStudentRatedSession(
+                                                            $schedule['schedule_id'], 
+                                                            $_SESSION['user']
+                                                        );
+                                                    ?>
+                                                    <?php if (!$hasRated): ?>
+                                                    <button type="button" 
+                                                            class="btn btn-sm btn-primary" 
+                                                            onclick="showFeedbackModal(<?php echo $schedule['schedule_id']; ?>, <?php echo $classDetails['techguru_id']; ?>)"
+                                                            data-toggle="tooltip"
+                                                            title="Rate this session">
+                                                        <i class="fas fa-star me-1"></i> Give Feedback
                                                     </button>
+                                                    <?php else: ?>
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-check me-1"></i> Feedback Submitted
+                                                    </span>
+                                                    <?php endif; ?>
                                                 <?php else: ?>
                                                     <button class="btn btn-outline-secondary btn-sm" disabled>
                                                         <i class="bi bi-x-circle me-1"></i>
@@ -264,7 +281,7 @@
             </div>
         </div>
 
-        <?php include ROOT_PATH . '/components/footer.php'; ?>
+    <?php include ROOT_PATH . '/components/footer.php'; ?>
 
         <style>
             .dashboard-content {
@@ -322,6 +339,108 @@
                     font-size: 1.1rem;
                 }
             }
+            .rating-stars {
+                display: inline-flex;
+                flex-direction: row-reverse;
+                gap: 0.25rem;
+            }
+            .rating-stars input {
+                display: none;
+            }
+            .rating-stars label {
+                cursor: pointer;
+                color: #ddd;
+                font-size: 1.5rem;
+            }
+            .rating-stars label:hover,
+            .rating-stars label:hover ~ label,
+            .rating-stars input:checked ~ label {
+                color: #ffd700;
+            }
         </style>
-    </body>
+
+        <!-- Feedback Modal -->
+        <div class="modal fade" id="feedbackModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Session Feedback</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="feedbackForm">
+                            <input type="hidden" name="session_id" id="session_id">
+                            <input type="hidden" name="tutor_id" id="tutor_id">
+                            
+                            <div class="mb-3 text-center">
+                                <label class="form-label d-block">Rate this session</label>
+                                <div class="rating-stars">
+                                    <?php for($i = 5; $i >= 1; $i--): ?>
+                                    <input type="radio" name="rating" value="<?php echo $i; ?>" id="star<?php echo $i; ?>">
+                                    <label for="star<?php echo $i; ?>">
+                                        <i class="fas fa-star"></i>
+                                    </label>
+                                    <?php endfor; ?>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Your Feedback</label>
+                                <textarea class="form-control" name="feedback" rows="4" 
+                                        placeholder="Share your experience about this session..."></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="submitFeedback()">Submit Feedback</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        function showFeedbackModal(sessionId, tutorId) {
+            document.getElementById('session_id').value = sessionId;
+            document.getElementById('tutor_id').value = tutorId;
+            const modal = new bootstrap.Modal(document.getElementById('feedbackModal'));
+            modal.show();
+        }
+
+        function submitFeedback() {
+            const form = document.getElementById('feedbackForm');
+            const formData = new FormData(form);
+            
+            // Validate rating
+            if (!formData.get('rating')) {
+                showToast('error', 'Please select a rating');
+                return;
+            }
+
+            // Show loading
+            showLoading(true);
+
+            fetch(BASE + 'submit-feedback', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                showLoading(false);
+                if (data.success) {
+                    showToast('success', 'Thank you for your feedback!');
+                    bootstrap.Modal.getInstance(document.getElementById('feedbackModal')).hide();
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showToast('error', data.message || 'Failed to submit feedback');
+                }
+            })
+            .catch(error => {
+                showLoading(false);
+                showToast('error', 'Failed to submit feedback');
+                console.error('Error:', error);
+            });
+        }
+        </script>
+</body>
 </html>

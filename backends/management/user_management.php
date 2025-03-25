@@ -613,7 +613,6 @@ function updateProfile() {
         return $response;
     }
     function deleteAccount() {
-        log_error("test: ".print_r($_POST,true));
         $user_id = $_POST['userId'];
         try {
             global $conn;
@@ -678,22 +677,33 @@ function updateProfile() {
                 }
                 
                 // Delete ratings for this tutor
-                $stmt = $conn->prepare("DELETE FROM ratings WHERE tutor_id = ?");
+                $stmt = $conn->prepare("DELETE FROM session_feedback WHERE tutor_id = ?");
+                $stmt->bind_param("i", $user_id);
+                $stmt->execute();
+
+                // Delete class ratings for this tutor's classes
+                $stmt = $conn->prepare("DELETE cr FROM class_ratings cr 
+                                       JOIN class c ON cr.class_id = c.class_id 
+                                       WHERE c.tutor_id = ?");
                 $stmt->bind_param("i", $user_id);
                 $stmt->execute();
             } elseif ($user['role'] === 'TECHKID') {
                 // Delete student enrollments
-                $stmt = $conn->prepare("DELETE FROM class_schedule WHERE user_id = ? AND role = 'STUDENT'");
+                $stmt = $conn->prepare("DELETE FROM class_schedule WHERE user_id = ?");
                 $stmt->bind_param("i", $user_id);
                 $stmt->execute();
                 
                 // Delete ratings given by this student
-                $stmt = $conn->prepare("DELETE FROM ratings WHERE student_id = ?");
+                $stmt = $conn->prepare("DELETE FROM session_feedback WHERE student_id = ?");
+                $stmt->bind_param("i", $user_id);
+                $stmt->execute();
+
+                $stmt = $conn->prepare("DELETE FROM class_ratings WHERE student_id = ?");
                 $stmt->bind_param("i", $user_id);
                 $stmt->execute();
                 
                 // Delete certificates
-                $stmt = $conn->prepare("DELETE FROM certificate WHERE student_id = ?");
+                $stmt = $conn->prepare("DELETE FROM certificate WHERE recipient = ?");
                 $stmt->bind_param("i", $user_id);
                 $stmt->execute();
             }
@@ -723,7 +733,7 @@ function updateProfile() {
             $admin_name = $_SESSION['first_name'] . ' ' . $_SESSION['last_name'];
             $user_name = $user['first_name'] . ' ' . $user['last_name'];
             $log_message = "Admin {$admin_name} deleted user {$user_name} (ID: {$user_id})\n";
-            error_log($log_message,3,ROOT_PATH.'logs/deleted_accounts/user-prompt.log');
+            error_log($log_message,3,ROOT_PATH.'/logs/deleted_accounts/user-prompt.log');
             
             // Commit transaction
             $conn->commit();

@@ -62,7 +62,7 @@ function submitRating($student_id, $tutor_id, $rating, $comment = null) {
 
     try {
         // Check if student has already rated the tutor
-        $stmt = $conn->prepare("SELECT rating_id FROM ratings WHERE student_id = ? AND tutor_id = ?");
+        $stmt = $conn->prepare("SELECT rating_id FROM session_feedback WHERE student_id = ? AND tutor_id = ?");
         $stmt->bind_param("ii", $student_id, $tutor_id);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -72,13 +72,11 @@ function submitRating($student_id, $tutor_id, $rating, $comment = null) {
         }
 
         // Insert new rating
-        $stmt = $conn->prepare("INSERT INTO ratings (student_id, tutor_id, rating, comment) VALUES (?, ?, ?, ?)");
+        $stmt = $conn->prepare("INSERT INTO session_feedback (student_id, tutor_id, rating, feedback, created_at) VALUES (?, ?, ?, ?, NOW())");
         $stmt->bind_param("iiis", $student_id, $tutor_id, $rating, $comment);
         $stmt->execute();
 
-        // Update tutor's average rating
-        updateTutorRating($tutor_id);
-
+        // The trigger will automatically update the tutor's rating
         return "Thank you for your feedback!";
     } catch (Exception $e) {
         return "Error: " . $e->getMessage();
@@ -92,17 +90,20 @@ function updateTutorRating($tutor_id) {
     global $conn;
 
     // Calculate new average rating
-    $stmt = $conn->prepare("SELECT AVG(rating) AS avg_rating FROM ratings WHERE tutor_id = ?");
+    $stmt = $conn->prepare("SELECT AVG(rating) AS avg_rating, COUNT(*) as rating_count 
+                           FROM session_feedback 
+                           WHERE tutor_id = ?");
     $stmt->bind_param("i", $tutor_id);
     $stmt->execute();
     $result = $stmt->get_result();
     $row = $result->fetch_assoc();
 
     $average_rating = round($row['avg_rating'], 1); // Round to 1 decimal place
+    $rating_count = $row['rating_count'];
 
     // Update the tutor's rating in the users table
-    $stmt = $conn->prepare("UPDATE users SET rating = ? WHERE uid = ?");
-    $stmt->bind_param("di", $average_rating, $tutor_id);
+    $stmt = $conn->prepare("UPDATE users SET rating = ?, rating_count = ? WHERE uid = ?");
+    $stmt->bind_param("dii", $average_rating, $rating_count, $tutor_id);
     $stmt->execute();
 }
 
@@ -112,11 +113,13 @@ function updateTutorRating($tutor_id) {
 function getTutorRatings($tutor_id) {
     global $conn;
 
-    $stmt = $conn->prepare("SELECT r.rating, r.comment, u.first_name, u.last_name
-                           FROM ratings r
-                           JOIN users u ON r.student_id = u.uid
-                           WHERE r.tutor_id = ?
-                           ORDER BY r.created_at DESC");
+    $stmt = $conn->prepare("SELECT sf.rating, sf.feedback as comment, 
+                                  CONCAT(u.first_name, ' ', u.last_name) as student_name,
+                                  sf.created_at
+                           FROM session_feedback sf
+                           JOIN users u ON sf.student_id = u.uid
+                           WHERE sf.tutor_id = ?
+                           ORDER BY sf.created_at DESC");
     $stmt->bind_param("i", $tutor_id);
     $stmt->execute();
     return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);

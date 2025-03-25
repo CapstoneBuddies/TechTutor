@@ -85,6 +85,7 @@ RewriteRule ^dashboard/s/certificates$ pages/techkid/certificate.php [L]
 RewriteRule ^dashboard/s/enrollments$ pages/techkid/enrollments.php [L]
 RewriteRule ^dashboard/s/enrollments/class$ pages/techkid/enroll-class.php [L,QSA]
 RewriteRule ^dashboard/s/class/meeting$ pages/techkid/meeting.php [L,QSA]
+RewriteRule ^dashboard/s/class/feedbacks$ pages/techkid/class-feedback.php [L,QSA]
 
 # ----------------------------------
 # 👨‍🏫 TechGuru (Tutors) Routes
@@ -143,3 +144,10 @@ RewriteRule ^mark-notification-read$ backends/api/mark-notification-read.php [L]
 RewriteRule ^delete-notification$ backends/api/delete-notif.php [L]
 RewriteRule ^mark-all-notifications-read$ backends/api/mark-all-notif-read.php [L]
 RewriteRule ^check-notifications$ backends/api/check-notifications.php [L]
+RewriteRule ^upload-file$ backends/api/upload-file.php [L]
+RewriteRule ^delete-file$ backends/api/delete-file.php [L]
+RewriteRule ^fix-permissions$ backends/api/fix-permissions.php [L]
+RewriteRule ^submit-feedback$ backends/api/submit-feedback.php [L]
+
+# Class feedback page
+RewriteRule ^techkid/class-feedback$ pages/techkid/class-feedback.php [QSA,L]

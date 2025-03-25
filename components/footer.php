@@ -61,6 +61,7 @@ if (!in_array($currentPage, $noFooterPages)): ?>
 <script src="<?php echo BASE; ?>assets/vendor/glightbox/js/glightbox.min.js"></script>
 <script src="<?php echo BASE; ?>assets/vendor/swiper/swiper-bundle.min.js"></script>
 <script src="<?php echo BASE; ?>assets/vendor/clockpicker/dist/bootstrap-clockpicker.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.5.1/dist/sweetalert2.all.min.js"></script>
 
 <!-- Footer JavaScript -->
 <script>
