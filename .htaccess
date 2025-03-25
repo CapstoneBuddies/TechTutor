@@ -86,6 +86,8 @@ RewriteRule ^dashboard/s/enrollments$ pages/techkid/enrollments.php [L]
 RewriteRule ^dashboard/s/enrollments/class$ pages/techkid/enroll-class.php [L,QSA]
 RewriteRule ^dashboard/s/class/meeting$ pages/techkid/meeting.php [L,QSA]
 RewriteRule ^dashboard/s/class/feedbacks$ pages/techkid/class-feedback.php [L,QSA]
+RewriteRule ^dashboard/s/class/files$ pages/techkid/class-files.php [L,QSA]
+RewriteRule ^dashboard/s/class/recordings$ pages/techkid/class-recordings.php [L,QSA]
 
 # ----------------------------------
 # 👨‍🏫 TechGuru (Tutors) Routes

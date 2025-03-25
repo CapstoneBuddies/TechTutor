@@ -1,6 +1,7 @@
 <?php 
     require_once '../backends/main.php';
     if(!isset($_SESSION['user'])) {
+        
         $_SESSION['msg'] = "Invalid Action";
         log_error("User accessed an invalid page",'security');
         header("location: ".BASE."login");

@@ -227,7 +227,12 @@
                     <!-- Class Resources -->
                     <div class="content-section mb-4">
                         <div class="class-info-card">
-                            <h2 class="section-title mb-4">Class Resources</h2>
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h2 class="section-title mb-0">Class Resources</h2>
+                                <a href="files?id=<?php echo $class_id; ?>" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-folder2"></i> View All Resources
+                                </a>
+                            </div>
                             <div class="resources-list">
                                 <?php if (empty($files)): ?>
                                     <div class="text-center text-muted py-4">
@@ -235,7 +240,11 @@
                                         <p class="mt-2 mb-0">No resources available yet</p>
                                     </div>
                                 <?php else: ?>
-                                    <?php foreach ($files as $file): ?>
+                                    <?php 
+                                    // Show only the first 3 files
+                                    $displayFiles = array_slice($files, 0, 3); 
+                                    foreach ($displayFiles as $file): 
+                                    ?>
                                         <div class="resource-item">
                                             <i class="bi bi-file-earmark-text"></i>
                                             <div class="resource-info">
@@ -252,6 +261,66 @@
                                             </a>
                                         </div>
                                     <?php endforeach; ?>
+                                    <?php if (count($files) > 3): ?>
+                                        <div class="text-center mt-3">
+                                            <a href="files?id=<?php echo $class_id; ?>" class="text-primary">
+                                                View <?php echo count($files) - 3; ?> more files...
+                                            </a>
+                                        </div>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Class Recordings -->
+                    <div class="content-section mb-4">
+                        <div class="class-info-card">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h2 class="section-title mb-0">Class Recordings</h2>
+                                <a href="recordings?id=<?php echo $class_id; ?>" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-camera-video"></i> View All Recordings
+                                </a>
+                            </div>
+                            <div class="recordings-list">
+                                <?php 
+                                $recordings = getClassRecordings($class_id, 3); // Get only latest 3 recordings
+                                if (empty($recordings)): 
+                                ?>
+                                    <div class="text-center text-muted py-4">
+                                        <i class="bi bi-camera-video" style="font-size: 2rem;"></i>
+                                        <p class="mt-2 mb-0">No recordings available yet</p>
+                                    </div>
+                                <?php else: ?>
+                                    <?php foreach ($recordings as $recording): ?>
+                                        <div class="recording-item d-flex align-items-center p-3 border-bottom">
+                                            <div class="flex-shrink-0 me-3">
+                                                <i class="bi bi-camera-video-fill text-primary" style="font-size: 1.5rem;"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1">Session on <?php echo date('F d, Y', strtotime($recording['session_date'])); ?></h6>
+                                                <p class="text-muted small mb-0">
+                                                    Duration: <?php echo $recording['duration']; ?> minutes
+                                                    <span class="mx-2">•</span>
+                                                    Recorded: <?php echo date('g:i A', strtotime($recording['created_at'])); ?>
+                                                </p>
+                                            </div>
+                                            <a href="recordings?id=<?php echo $class_id; ?>&recording=<?php echo $recording['recording_id']; ?>" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-play-fill"></i> Watch
+                                            </a>
+                                        </div>
+                                    <?php endforeach; ?>
+                                    <?php 
+                                    $total_recordings = getClassRecordingsCount($class_id);
+                                    if ($total_recordings > 3): 
+                                    ?>
+                                        <div class="text-center mt-3">
+                                            <a href="recordings?id=<?php echo $class_id; ?>" class="text-primary">
+                                                View <?php echo $total_recordings - 3; ?> more recordings...
+                                            </a>
+                                        </div>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                             </div>
                         </div>

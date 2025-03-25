@@ -798,4 +798,12 @@ function updateClassSchedules($class_id, $schedules, $tutor_id) {
     }
 }
 
+function getClassRecordings() {
+    return [];
+}
+
+function getClassRecordingsCount() {
+    return 0;
+}
+
 ?>
