@@ -13,20 +13,100 @@
 function getTechGuruClasses($tutor_id) {
     global $conn;
     
-    $query = "SELECT c.*, s.subject_name, COUNT(DISTINCT e.student_id) as student_count 
+    $query = "SELECT 
+                c.*,
+                s.subject_name,
+                COUNT(DISTINCT e.student_id) as student_count,
+                (
+                    SELECT COUNT(*) 
+                    FROM class_schedule cs 
+                    WHERE cs.class_id = c.class_id 
+                    AND cs.status = 'completed'
+                ) as completed_sessions,
+                (
+                    SELECT COUNT(*) 
+                    FROM class_schedule cs 
+                    WHERE cs.class_id = c.class_id
+                ) as total_sessions,
+                (
+                    SELECT cs.session_date
+                    FROM class_schedule cs 
+                    WHERE cs.class_id = c.class_id 
+                    AND cs.status IN ('pending', 'confirmed')
+                    AND cs.session_date >= CURDATE()
+                    ORDER BY cs.session_date ASC, cs.start_time ASC
+                    LIMIT 1
+                ) as next_session_date,
+                (
+                    SELECT CONCAT(
+                        DATE_FORMAT(cs.start_time, '%h:%i %p'), 
+                        ' - ', 
+                        DATE_FORMAT(cs.end_time, '%h:%i %p')
+                    )
+                    FROM class_schedule cs 
+                    WHERE cs.class_id = c.class_id 
+                    AND cs.status IN ('pending', 'confirmed')
+                    AND cs.session_date >= CURDATE()
+                    ORDER BY cs.session_date ASC, cs.start_time ASC
+                    LIMIT 1
+                ) as next_session_time,
+                (
+                    SELECT cs.status
+                    FROM class_schedule cs 
+                    WHERE cs.class_id = c.class_id 
+                    AND cs.status IN ('pending', 'confirmed')
+                    AND cs.session_date >= CURDATE()
+                    ORDER BY cs.session_date ASC, cs.start_time ASC
+                    LIMIT 1
+                ) as next_session_status
              FROM class c 
              LEFT JOIN subject s ON c.subject_id = s.subject_id 
              LEFT JOIN enrollments e ON c.class_id = e.class_id AND e.status = 'active'
              WHERE c.tutor_id = ? 
              GROUP BY c.class_id 
-             ORDER BY c.start_date DESC";
+             ORDER BY 
+                CASE 
+                    WHEN c.status = 'active' THEN 1
+                    WHEN c.status = 'pending' THEN 2
+                    ELSE 3
+                END,
+                next_session_date ASC,
+                c.start_date DESC";
              
     try {
         $stmt = $conn->prepare($query);
         $stmt->bind_param("i", $tutor_id);
         $stmt->execute();
         $result = $stmt->get_result();
-        return $result->fetch_all(MYSQLI_ASSOC);
+        $classes = $result->fetch_all(MYSQLI_ASSOC);
+
+        // Process the results
+        foreach ($classes as &$class) {
+            // Calculate progress percentage
+            $class['progress'] = $class['total_sessions'] > 0 
+                ? round(($class['completed_sessions'] / $class['total_sessions']) * 100) 
+                : 0;
+
+            // Format next session info
+            if (!empty($class['next_session_date'])) {
+                $class['next_session_date'] = date('M d, Y', strtotime($class['next_session_date']));
+            } else {
+                $class['next_session_date'] = 'No scheduled date';
+                $class['next_session_time'] = 'No scheduled time';
+                $class['next_session_status'] = null;
+            }
+
+            // Ensure all fields have default values
+            $class = array_merge([
+                'student_count' => 0,
+                'completed_sessions' => 0,
+                'total_sessions' => 0,
+                'progress' => 0,
+                'next_session_status' => 'pending'
+            ], $class);
+        }
+
+        return $classes;
     } catch (Exception $e) {
         error_log("Error getting tutor classes: " . $e->getMessage());
         return [];

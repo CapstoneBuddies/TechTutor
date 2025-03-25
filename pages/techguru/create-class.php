@@ -92,6 +92,159 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
 <!DOCTYPE html>
 <html lang="en">
     <?php include ROOT_PATH . '/components/head.php'; ?>
+    <style>
+        .form-section {
+            background: #fff;
+            border-radius: 0.75rem;
+            padding: 1.75rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+        }
+        .form-section:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            transform: translateY(-2px);
+        }
+        .form-section h3 {
+            color: var(--bs-primary);
+            font-size: 1.25rem;
+            margin-bottom: 1.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--bs-gray-200);
+        }
+        .preview-card {
+            background: var(--bs-gray-100);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--bs-gray-200);
+        }
+        .preview-card img {
+            width: 100%;
+            height: 240px;
+            object-fit: cover;
+            border-radius: 0.5rem;
+            margin-bottom: 1.25rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        .preview-card img:hover {
+            transform: scale(1.02);
+        }
+        .preview-card h4 {
+            color: var(--bs-gray-900);
+            margin-bottom: 0.75rem;
+        }
+        .time-slot {
+            background: var(--bs-gray-100);
+            border-radius: 0.5rem;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            position: relative;
+            border: 1px solid var(--bs-gray-200);
+            transition: all 0.2s ease;
+        }
+        .time-slot:hover {
+            background: var(--bs-gray-50);
+            border-color: var(--bs-primary);
+        }
+        .time-slot .remove-btn {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .time-slot:hover .remove-btn {
+            opacity: 1;
+        }
+        .btn-check:checked + .btn-outline-primary {
+            background-color: var(--bs-primary);
+            border-color: var(--bs-primary);
+            color: #fff;
+        }
+        .btn-check:checked + .btn-outline-primary i {
+            transform: scale(1.1);
+        }
+        .btn-group .btn {
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-group .btn i {
+            transition: transform 0.2s ease;
+        }
+        .tip-card {
+            background: var(--bs-gray-100);
+            border-radius: 0.5rem;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--bs-primary);
+            transition: all 0.2s ease;
+        }
+        .tip-card:hover {
+            transform: translateX(4px);
+        }
+        .tip-card.warning { border-color: var(--bs-warning); }
+        .tip-card.info { border-color: var(--bs-info); }
+        .tip-card.success { border-color: var(--bs-success); }
+        .tip-card h5 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--bs-gray-900);
+            margin-bottom: 0.75rem;
+        }
+        .tip-card p {
+            color: var(--bs-gray-700);
+            font-size: 0.9rem;
+        }
+        .form-floating > .form-control:focus ~ label {
+            color: var(--bs-primary);
+        }
+        .character-count {
+            position: absolute;
+            right: 1rem;
+            bottom: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--bs-gray-600);
+        }
+        .character-count.warning {
+            color: var(--bs-warning);
+        }
+        .character-count.danger {
+            color: var(--bs-danger);
+        }
+        @media (max-width: 768px) {
+            .form-section {
+                padding: 1.25rem;
+            }
+            .time-slot {
+                padding: 1rem;
+            }
+            .time-slot .remove-btn {
+                opacity: 1;
+                top: 0.5rem;
+                right: 0.5rem;
+            }
+            .btn-group {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            .btn-group .btn {
+                flex: 1;
+                min-width: calc(33.333% - 0.5rem);
+                margin: 0.25rem;
+            }
+            .preview-card img {
+                height: 180px;
+            }
+        }
+    </style>
     <body data-base="<?php echo BASE; ?>">
         <?php include ROOT_PATH . '/components/header.php'; ?>
     <main class="container py-4">
@@ -126,332 +279,552 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
 
         <!-- Class Creation Form -->
         <div class="row mt-4">
-            <div class="col-md-8">
-                <div class="dashboard-card">
+                <div class="col-lg-8">
                     <form id="createClassForm" method="POST" action="" enctype="multipart/form-data">
                         <!-- Basic Information -->
-                        <div class="mb-4">
-                            <h3>Basic Information</h3>
-                            <div class="row mt-3">
+                        <div class="form-section">
+                            <h3><i class="bi bi-info-circle"></i> Basic Information</h3>
+                            <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="className" class="form-label">Class Name</label>
-                                    <input type="text" class="form-control" id="className" name="className" required>
+                                    <input type="text" class="form-control" id="className" name="className" 
+                                           required minlength="5" maxlength="100">
+                                    <div class="form-text">Choose a clear and descriptive name (5-100 characters)</div>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label for="maxStudents" class="form-label">Maximum Students <small class="text-muted">(Leave empty for unlimited)</small></label>
-                                    <input type="number" class="form-control" id="maxStudents" name="maxStudents" min="1" max="50" placeholder="No limit">
+                                    <label for="maxStudents" class="form-label">Maximum Students</label>
+                                    <input type="number" class="form-control" id="maxStudents" name="maxStudents" 
+                                           min="1" max="50" value="10">
+                                    <div class="form-text">Set a limit between 1-50 students</div>
                                 </div>
                             </div>
                             <div class="mb-3">
                                 <label for="description" class="form-label">Class Description</label>
-                                <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
+                                <textarea class="form-control" id="description" name="description" 
+                                          rows="4" required minlength="50" maxlength="500"></textarea>
+                                <div class="form-text">
+                                    <span id="descriptionCount">0</span>/500 characters
+                                </div>
                             </div>
-                            <div class="mb-4">
-                                <label for="classCover" class="form-label">Class Cover/Thumbnail</label>
-                                <input type="file" class="form-control" id="classCover" name="classCover" accept="image/*" required>
+                            <div class="mb-3">
+                                <label for="classCover" class="form-label">Class Cover Image</label>
+                                <input type="file" class="form-control" id="classCover" name="classCover" 
+                                       accept="image/*" required>
+                                <div class="form-text">Upload an eye-catching image (max 2MB, JPG/PNG)</div>
+                            </div>
+                            <div id="imagePreview" class="d-none">
+                                <img src="" alt="Preview" class="img-fluid rounded">
                             </div>
                         </div>
 
                         <!-- Schedule -->
-                        <div class="mb-4">
-                            <h3>Class Schedule</h3>
-                            <div class="row mt-3">
+                        <div class="form-section">
+                            <h3><i class="bi bi-calendar"></i> Class Schedule</h3>
+                            <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="startDate" class="form-label">Start Date</label>
                                     <input type="date" class="form-control" id="startDate" name="startDate" required>
+                                    <div class="form-text">When will the class begin?</div>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label for="endDate" class="form-label">End Date</label>
                                     <input type="date" class="form-control" id="endDate" name="endDate" required>
+                                    <div class="form-text">When will the class end?</div>
                                 </div>
                             </div>
                             
-                            <div class="mb-3">
-                                <label class="form-label d-block">Available Days</label>
+                            <div class="mb-4">
+                                <label class="form-label d-block">Class Days</label>
                                 <div class="btn-group" role="group">
                                     <input type="checkbox" class="btn-check" id="monday" name="days[]" value="monday">
-                                    <label class="btn btn-outline-primary" for="monday">Mon</label>
+                                    <label class="btn btn-outline-primary" for="monday">
+                                        <i class="bi bi-calendar-day"></i> Mon
+                                    </label>
                                     
                                     <input type="checkbox" class="btn-check" id="tuesday" name="days[]" value="tuesday">
-                                    <label class="btn btn-outline-primary" for="tuesday">Tue</label>
+                                    <label class="btn btn-outline-primary" for="tuesday">
+                                        <i class="bi bi-calendar-day"></i> Tue
+                                    </label>
                                     
                                     <input type="checkbox" class="btn-check" id="wednesday" name="days[]" value="wednesday">
-                                    <label class="btn btn-outline-primary" for="wednesday">Wed</label>
+                                    <label class="btn btn-outline-primary" for="wednesday">
+                                        <i class="bi bi-calendar-day"></i> Wed
+                                    </label>
                                     
                                     <input type="checkbox" class="btn-check" id="thursday" name="days[]" value="thursday">
-                                    <label class="btn btn-outline-primary" for="thursday">Thu</label>
+                                    <label class="btn btn-outline-primary" for="thursday">
+                                        <i class="bi bi-calendar-day"></i> Thu
+                                    </label>
                                     
                                     <input type="checkbox" class="btn-check" id="friday" name="days[]" value="friday">
-                                    <label class="btn btn-outline-primary" for="friday">Fri</label>
+                                    <label class="btn btn-outline-primary" for="friday">
+                                        <i class="bi bi-calendar-day"></i> Fri
+                                    </label>
                                     
                                     <input type="checkbox" class="btn-check" id="saturday" name="days[]" value="saturday">
-                                    <label class="btn btn-outline-primary" for="saturday">Sat</label>
+                                    <label class="btn btn-outline-primary" for="saturday">
+                                        <i class="bi bi-calendar-day"></i> Sat
+                                    </label>
                                     
                                     <input type="checkbox" class="btn-check" id="sunday" name="days[]" value="sunday">
-                                    <label class="btn btn-outline-primary" for="sunday">Sun</label>
+                                    <label class="btn btn-outline-primary" for="sunday">
+                                        <i class="bi bi-calendar-day"></i> Sun
+                                    </label>
                                 </div>
+                                <div class="form-text mt-2">Select the days when the class will be held</div>
                             </div>
 
                             <div id="timeSlots">
-                                <div class="time-slot mb-3">
+                                <label class="form-label">Time Slots</label>
+                                <div class="time-slot">
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-btn d-none">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
                                     <div class="row">
-                                        <div class="col-md-5">
+                                        <div class="col-md-6 mb-3">
                                             <label class="form-label">Start Time</label>
-                                            <div class="input-group clockpicker" data-placement="bottom" data-align="left" data-autoclose="true">
-                                                <input type="text" class="form-control" name="startTime[]" required>
-                                                <span class="input-group-addon">
-                                                    <span class="bi bi-clock"></span>
-                                                </span>
+                                            <div class="input-group clockpicker">
+                                                <input type="text" name="startTime[]" class="form-control" placeholder="--:--" required>
+                                                <span class="input-group-text"><i class="bi bi-clock"></i></span>
                                             </div>
                                         </div>
-                                        <div class="col-md-5">
+                                        <div class="col-md-6 mb-3">
                                             <label class="form-label">End Time</label>
-                                            <div class="input-group clockpicker" data-placement="bottom" data-align="left" data-autoclose="true">
-                                                <input type="text" class="form-control" name="endTime[]" required>
-                                                <span class="input-group-addon">
-                                                    <span class="bi bi-clock"></span>
-                                                </span>
+                                            <div class="input-group clockpicker">
+                                                <input type="text" name="endTime[]" class="form-control" placeholder="--:--" required>
+                                                <span class="input-group-text"><i class="bi bi-clock"></i></span>
                                             </div>
-                                        </div>
-                                        <div class="col-md-2 d-flex align-items-end">
-                                            <button type="button" class="btn btn-outline-danger remove-time" style="display: none;">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-
-                            <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="addTimeSlot">
-                                <i class="bi bi-plus"></i> Add Time Slot
+                            <button type="button" class="btn btn-outline-primary mt-3" onclick="addTimeSlot()">
+                                <i class="bi bi-plus-lg"></i> Add Another Time Slot
                             </button>
                         </div>
 
                         <!-- Pricing -->
-                        <div class="mb-4">
-                            <h3>Pricing</h3>
-                            <div class="row mt-3">
+                        <div class="form-section">
+                            <h3><i class="bi bi-currency-dollar"></i> Pricing</h3>
+                            <div class="row">
                                 <div class="col-md-6">
-                                    <div class="form-check mb-2">
-                                        <input class="form-check-input" type="radio" name="pricingType" id="freeClass" value="free" checked>
-                                        <label class="form-check-label" for="freeClass">Free Class</label>
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="radio" name="pricingType" 
+                                               id="pricingFree" value="free">
+                                        <label class="form-check-label" for="pricingFree">
+                                            <i class="bi bi-gift text-success"></i> Free Class
+                                        </label>
                                     </div>
                                     <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="pricingType" id="paidClass" value="paid">
-                                        <label class="form-check-label" for="paidClass">Paid Class</label>
+                                        <input class="form-check-input" type="radio" name="pricingType" 
+                                               id="pricingPaid" value="paid" checked>
+                                        <label class="form-check-label" for="pricingPaid">
+                                            <i class="bi bi-cash text-primary"></i> Paid Class
+                                        </label>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <div id="priceField" class="d-none">
-                                        <label for="price" class="form-label">Price (PHP)</label>
-                                        <input type="number" class="form-control" id="price" name="price" min="0" step="0.01">
+                                <div class="col-md-6" id="priceField">
+                                    <label for="price" class="form-label">Price (₱)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">₱</span>
+                                        <input type="number" class="form-control" id="price" name="price" 
+                                               min="0" step="0.01" value="0.00">
+                                    </div>
+                                    <div class="form-text">Set a reasonable price for your class</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Preview -->
+                        <div class="form-section">
+                            <h3><i class="bi bi-eye"></i> Preview</h3>
+                            <div class="preview-card">
+                                <img id="coverPreview" src="<?php echo IMG; ?>placeholders/class-cover.jpg" alt="Class Cover">
+                                <h4 id="previewTitle">Class Name</h4>
+                                <p id="previewDescription" class="text-muted">Class description will appear here...</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-people"></i>
+                                        <span id="previewStudents">0 students max</span>
+                                    </div>
+                                    <div>
+                                        <i class="bi bi-calendar-check"></i>
+                                        <span id="previewDuration">0 sessions</span>
+                                    </div>
+                                    <div>
+                                        <i class="bi bi-tag"></i>
+                                        <span id="previewPrice">Free</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="text-end">
-                            <a href="./?subject=<?php echo urlencode($subject); ?>" class="btn btn-outline-secondary me-2">Cancel</a>
-                            <button type="submit" class="btn btn-primary">Create Class</button>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="./?subject=<?php echo urlencode($subject); ?>" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Back
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check2"></i> Create Class
+                            </button>
                         </div>
                     </form>
-                </div>
             </div>
 
             <!-- Tips Section -->
-            <div class="col-md-4">
+                <div class="col-lg-4">
                 <div class="dashboard-card">
-                    <h3>Tips for Creating a Class</h3>
-                    <ul class="tips-list">
-                        <li>
-                            <i class="bi bi-lightbulb text-warning"></i>
-                            <strong>Class Name:</strong> Make it descriptive and engaging
-                        </li>
-                        <li>
-                            <i class="bi bi-people text-info"></i>
-                            <strong>Class Size:</strong> Consider a manageable number of students
-                        </li>
-                        <li>
-                            <i class="bi bi-calendar-check text-success"></i>
-                            <strong>Schedule:</strong> Set realistic time slots and duration
-                        </li>
-                        <li>
-                            <i class="bi bi-cash text-primary"></i>
-                            <strong>Pricing:</strong> Consider your expertise and market rates
-                        </li>
-                    </ul>
+                        <h3><i class="bi bi-lightbulb"></i> Creation Tips</h3>
+                        <div class="tip-card warning">
+                            <h5><i class="bi bi-lightbulb"></i> Class Name</h5>
+                            <p class="mb-0">Choose a name that clearly describes what students will learn.</p>
+                        </div>
+                        <div class="tip-card info">
+                            <h5><i class="bi bi-image"></i> Cover Image</h5>
+                            <p class="mb-0">Use high-quality images that represent your class content.</p>
+                        </div>
+                        <div class="tip-card success">
+                            <h5><i class="bi bi-calendar-check"></i> Schedule</h5>
+                            <p class="mb-0">Plan your schedule carefully to maintain consistency.</p>
+                        </div>
+                        <div class="tip-card primary">
+                            <h5><i class="bi bi-currency-dollar"></i> Pricing</h5>
+                            <p class="mb-0">Research similar classes to set competitive pricing.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </main>
     </main> 
-    </div> 
 
     <?php include ROOT_PATH . '/components/footer.php'; ?>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Set default dates to today and a month from today
-            const today = new Date();
-            const nextMonth = new Date();
-            nextMonth.setMonth(today.getMonth() + 1);
-            
-            document.getElementById('startDate').value = today.toISOString().split('T')[0];
-            document.getElementById('endDate').value = nextMonth.toISOString().split('T')[0];
-            
-            // Set default time to current time (rounded to nearest hour)
-            const now = new Date();
-            now.setMinutes(0); // Round to nearest hour
-            const timeInputs = document.querySelectorAll('input[name^="startTime"], input[name^="endTime"]');
-            timeInputs.forEach(input => {
-                if (input.name.includes('startTime')) {
-                    input.value = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-                } else {
-                    now.setHours(now.getHours() + 1);
-                    input.value = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-                }
+                initializeClockpicker();
+                setupFormValidation();
+                setupImagePreview();
+                setupPricing();
+                updatePreview();
+                initializeTooltips();
+                setupCharacterCount();
             });
 
-            // Initialize clockpicker for existing time inputs
+            function initializeClockpicker() {
             $('.clockpicker').clockpicker({
-                donetext: 'Done',
                 autoclose: true,
-                default: 'now',
                 twelvehour: true,
-                afterDone: function() {
-                    // Validate time after selection
-                    validateTimeSlots();
-                }
-            });
+                    donetext: 'Done'
+                });
+            }
 
-            // Time slot management
-            const timeSlots = document.getElementById('timeSlots');
-            const addButton = document.getElementById('addTimeSlot');
-            
-            function updateRemoveButtons() {
-                const slots = timeSlots.querySelectorAll('.time-slot');
-                slots.forEach((slot, index) => {
-                    const removeBtn = slot.querySelector('.remove-time');
-                    removeBtn.style.display = slots.length > 1 ? 'block' : 'none';
-                    
-                    // Hide labels for additional time slots
-                    const labels = slot.querySelectorAll('.form-label');
-                    labels.forEach(label => {
-                        label.style.display = index === 0 ? 'block' : 'none';
-                    });
+            function setupFormValidation() {
+                const form = document.getElementById('createClassForm');
+                const description = document.getElementById('description');
+                const descriptionCount = document.getElementById('descriptionCount');
+                
+                // Update character count
+                description.addEventListener('input', function() {
+                    const count = this.value.length;
+                    descriptionCount.textContent = count;
+                    descriptionCount.className = count > 500 ? 'text-danger' : 'text-muted';
+                });
+                
+                // Validate dates
+                const startDate = document.getElementById('startDate');
+                const endDate = document.getElementById('endDate');
+                
+                startDate.addEventListener('change', function() {
+                    endDate.min = this.value;
+                    validateDates();
+                });
+                
+                endDate.addEventListener('change', validateDates);
+                
+                // Form submission
+                form.addEventListener('submit', function(e) {
+                    if (!validateForm()) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                    form.classList.add('was-validated');
+                });
+            }
+
+            function validateDates() {
+                const start = new Date(startDate.value);
+                const end = new Date(endDate.value);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                if (start < today) {
+                    startDate.setCustomValidity('Start date must be today or later');
+                } else {
+                    startDate.setCustomValidity('');
+                }
+                
+                if (end <= start) {
+                    endDate.setCustomValidity('End date must be after start date');
+                } else {
+                    endDate.setCustomValidity('');
+                }
+            }
+
+            function setupImagePreview() {
+                const input = document.getElementById('classCover');
+                const preview = document.getElementById('coverPreview');
+                const previewContainer = document.getElementById('imagePreview');
+                
+                input.addEventListener('change', function() {
+                    if (this.files && this.files[0]) {
+                        const file = this.files[0];
+                        
+                        // Validate file size
+                        if (file.size > 2 * 1024 * 1024) {
+                            alert('File size must be less than 2MB');
+                            this.value = '';
+                            return;
+                        }
+                        
+                        // Validate file type
+                        if (!file.type.match('image.*')) {
+                            alert('Please upload an image file');
+                            this.value = '';
+                            return;
+                        }
+                        
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            preview.src = e.target.result;
+                            previewContainer.classList.remove('d-none');
+                        }
+                        reader.readAsDataURL(file);
+                    }
                 });
             }
             
-            function validateTimeSlots() {
-                const slots = timeSlots.querySelectorAll('.time-slot');
-                slots.forEach(slot => {
-                    const startInput = slot.querySelector('input[name^="startTime"]');
-                    const endInput = slot.querySelector('input[name^="endTime"]');
+            function setupPricing() {
+                const pricingFree = document.getElementById('pricingFree');
+                const pricingPaid = document.getElementById('pricingPaid');
+                const price = document.getElementById('price');
+                
+                function togglePrice() {
+                    price.disabled = pricingFree.checked;
+                    if (pricingFree.checked) {
+                        price.value = '0.00';
+                    }
+                    updatePreview();
+                }
+                
+                pricingFree.addEventListener('change', togglePrice);
+                pricingPaid.addEventListener('change', togglePrice);
+                price.addEventListener('input', updatePreview);
+            }
+
+            function addTimeSlot() {
+                const container = document.getElementById('timeSlots');
+                const slots = container.getElementsByClassName('time-slot');
+                
+                const template = `
+                    <div class="time-slot">
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-btn">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Start Time</label>
+                                <div class="input-group clockpicker">
+                                    <input type="text" name="startTime[]" class="form-control" placeholder="--:--" required>
+                                    <span class="input-group-text"><i class="bi bi-clock"></i></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">End Time</label>
+                                <div class="input-group clockpicker">
+                                    <input type="text" name="endTime[]" class="form-control" placeholder="--:--" required>
+                                    <span class="input-group-text"><i class="bi bi-clock"></i></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                container.insertAdjacentHTML('beforeend', template);
+                initializeClockpicker();
+                
+                // Show remove buttons if more than one slot
+                if (slots.length > 0) {
+                    document.querySelectorAll('.remove-btn').forEach(btn => btn.classList.remove('d-none'));
+                }
+                
+                // Add remove event listener
+                container.addEventListener('click', function(e) {
+                    if (e.target.closest('.remove-btn')) {
+                        const slot = e.target.closest('.time-slot');
+                        slot.classList.add('fade-out');
+                        setTimeout(() => {
+                            slot.remove();
+                            updateRemoveButtons();
+                        }, 200);
+                    }
+                });
+            }
+
+            function updateRemoveButtons() {
+                const slots = document.getElementsByClassName('time-slot');
+                const removeButtons = document.querySelectorAll('.remove-btn');
+                
+                removeButtons.forEach(btn => {
+                    btn.classList.toggle('d-none', slots.length === 1);
+                });
+            }
+
+            function updatePreview() {
+                const title = document.getElementById('className').value || 'Class Name';
+                const description = document.getElementById('description').value || 'Class description will appear here...';
+                const maxStudents = document.getElementById('maxStudents').value || '0';
+                const price = document.getElementById('pricingFree').checked ? 'Free' : `₱${document.getElementById('price').value || '0.00'}`;
+                
+                // Calculate number of sessions
+                const days = document.querySelectorAll('input[name="days[]"]:checked').length;
+                const slots = document.getElementsByClassName('time-slot').length;
+                const startDate = new Date(document.getElementById('startDate').value);
+                const endDate = new Date(document.getElementById('endDate').value);
+                let sessions = 0;
+                
+                if (!isNaN(startDate) && !isNaN(endDate) && days > 0) {
+                    const weeks = Math.ceil((endDate - startDate) / (7 * 24 * 60 * 60 * 1000));
+                    sessions = weeks * days * slots;
+                }
+                
+                document.getElementById('previewTitle').textContent = title;
+                document.getElementById('previewDescription').textContent = description;
+                document.getElementById('previewStudents').textContent = `${maxStudents} students max`;
+                document.getElementById('previewDuration').textContent = `${sessions} sessions`;
+                document.getElementById('previewPrice').textContent = price;
+            }
+
+            function validateForm() {
+                let isValid = true;
+                
+                // Validate dates
+                validateDates();
+                if (startDate.validity.customError || endDate.validity.customError) {
+                    isValid = false;
+                }
+                
+                // Validate class days
+                const days = document.querySelectorAll('input[name="days[]"]:checked').length;
+                if (days === 0) {
+                    alert('Please select at least one class day');
+                    isValid = false;
+                }
+                
+                // Validate time slots
+                const slots = document.getElementsByClassName('time-slot');
+                Array.from(slots).forEach(slot => {
+                    const start = slot.querySelector('input[name="startTime[]"]').value;
+                    const end = slot.querySelector('input[name="endTime[]"]').value;
                     
-                    if (startInput.value && endInput.value) {
-                        // Convert 12-hour times to Date objects for comparison
-                        const startDate = new Date(`1970/01/01 ${startInput.value}`);
-                        const endDate = new Date(`1970/01/01 ${endInput.value}`);
+                    if (start && end) {
+                        const startTime = new Date(`1970-01-01T${start}`);
+                        const endTime = new Date(`1970-01-01T${end}`);
                         
-                        if (startDate >= endDate) {
-                            endInput.setCustomValidity('End time must be after start time');
-                        } else {
-                            endInput.setCustomValidity('');
+                        if (startTime >= endTime) {
+                            alert('End time must be after start time');
+                            isValid = false;
                         }
                     }
                 });
+                
+                // Validate image
+                const imageInput = document.getElementById('classCover');
+                if (imageInput.files.length > 0) {
+                    const file = imageInput.files[0];
+                    if (file.size > 2 * 1024 * 1024) {
+                        alert('Image size must be less than 2MB');
+                        isValid = false;
+                    }
+                    if (!file.type.match('image.*')) {
+                        alert('Please upload a valid image file');
+                        isValid = false;
+                    }
+                }
+                
+                // Validate price for paid classes
+                if (document.getElementById('pricingPaid').checked) {
+                    const price = parseFloat(document.getElementById('price').value);
+                    if (isNaN(price) || price <= 0) {
+                        alert('Please enter a valid price');
+                        isValid = false;
+                    }
+                }
+                
+                return isValid;
             }
-            
-            addButton.addEventListener('click', function() {
-                const newSlot = timeSlots.querySelector('.time-slot').cloneNode(true);
-                // Hide labels in the new slot
-                newSlot.querySelectorAll('.form-label').forEach(label => {
-                    label.style.display = 'none';
-                });
-                // Reset input values
-                newSlot.querySelectorAll('input').forEach(input => {
-                    input.value = '';
-                });
-                // Initialize clockpicker for new inputs
-                $(newSlot).find('.clockpicker').clockpicker({
-                    donetext: 'Done',
-                    autoclose: true,
-                    default: 'now',
-                    twelvehour: true,
-                    afterDone: function() {
-                        validateTimeSlots();
-                    }
-                });
-                newSlot.querySelector('button').addEventListener('click', function() {
-                    newSlot.remove();
-                    updateRemoveButtons();
-                });
-                timeSlots.appendChild(newSlot);
-                updateRemoveButtons();
-            });
-            
-            // Initial setup for remove buttons
-            document.querySelectorAll('.remove-time').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    btn.closest('.time-slot').remove();
-                    updateRemoveButtons();
-                });
-            });
-            
-            // Pricing toggle
-            const priceField = document.getElementById('priceField');
-            const priceInput = document.getElementById('price');
-            const pricingInputs = document.querySelectorAll('input[name="pricingType"]');
-            
-            pricingInputs.forEach(input => {
-                input.addEventListener('change', function() {
-                    if (this.value === 'paid') {
-                        priceField.classList.remove('d-none');
-                        priceInput.required = true;
+
+            function setupCharacterCount() {
+                const description = document.getElementById('description');
+                const container = description.parentElement;
+                const counter = document.createElement('div');
+                counter.className = 'character-count';
+                container.style.position = 'relative';
+                container.appendChild(counter);
+
+                function updateCount() {
+                    const count = description.value.length;
+                    const remaining = 500 - count;
+                    counter.textContent = `${count}/500`;
+                    counter.className = 'character-count ' + 
+                        (remaining < 50 ? 'danger' : 
+                         remaining < 100 ? 'warning' : '');
+                }
+
+                description.addEventListener('input', updateCount);
+                updateCount();
+            }
+
+            function validateTimeSlot(input) {
+                const slot = input.closest('.time-slot');
+                const start = slot.querySelector('input[name="startTime[]"]');
+                const end = slot.querySelector('input[name="endTime[]"]');
+                
+                if (start.value && end.value) {
+                    const startTime = new Date(`1970-01-01T${start.value}`);
+                    const endTime = new Date(`1970-01-01T${end.value}`);
+                    
+                    if (startTime >= endTime) {
+                        end.classList.add('is-invalid');
+                        showTooltip(end, 'End time must be after start time');
                     } else {
-                        priceField.classList.add('d-none');
-                        priceInput.required = false;
-                        priceInput.value = '';
+                        end.classList.remove('is-invalid');
+                        hideTooltip(end);
                     }
+                }
+            }
+
+            function showTooltip(element, message) {
+                const tooltip = bootstrap.Tooltip.getInstance(element);
+                if (tooltip) {
+                    tooltip.dispose();
+                }
+                new bootstrap.Tooltip(element, {
+                    title: message,
+                    placement: 'top',
+                    trigger: 'manual'
+                }).show();
+            }
+
+            function hideTooltip(element) {
+                const tooltip = bootstrap.Tooltip.getInstance(element);
+                if (tooltip) {
+                    tooltip.dispose();
+                }
+            }
+
+            function initializeTooltips() {
+                const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tooltipTriggerList.map(function (tooltipTriggerEl) {
+                    return new bootstrap.Tooltip(tooltipTriggerEl);
                 });
-            });
-            
-            // Form validation
-            document.getElementById('createClassForm').addEventListener('submit', function(e) {
-                const startDate = new Date(document.getElementById('startDate').value);
-                const endDate = new Date(document.getElementById('endDate').value);
-                const days = document.querySelectorAll('input[name="days[]"]:checked');
-                const pricingType = document.querySelector('input[name="pricingType"]:checked').value;
-                const price = document.getElementById('price').value;
-                
-                // Validate all time slots
-                validateTimeSlots();
-                const hasInvalidTimes = Array.from(timeSlots.querySelectorAll('input[type="text"]')).some(input => !input.checkValidity());
-                
-                if (hasInvalidTimes) {
-                    e.preventDefault();
-                    alert('Please ensure all end times are after their respective start times');
-                    return;
-                }
-                
-                if (startDate >= endDate) {
-                    e.preventDefault();
-                    alert('End date must be after start date');
-                    return;
-                }
-                
-                if (days.length === 0) {
-                    e.preventDefault();
-                    alert('Please select at least one day for classes');
-                    return;
-                }
-                
-                if (pricingType === 'paid' && (!price || parseFloat(price) <= 0)) {
-                    e.preventDefault();
-                    alert('Please enter a valid price for paid classes');
-                    return;
-                }
-            });
-        });
+            }
     </script>
 </body>
 </html>

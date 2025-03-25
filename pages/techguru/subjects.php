@@ -16,18 +16,110 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
     <?php include ROOT_PATH . '/components/head.php'; ?>
     <style>
         .course-table {
-            background-color: #f5f5f5; /* Dirty white */
+            background-color: #f8f9fa;
             overflow-y: auto; 
             position: relative;
         }
+        .subject-card {
+            height: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        .subject-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .subject-card .card-img-top {
+            height: 160px;
+            object-fit: cover;
+        }
+        .subject-card .card-body {
+            padding: 1.25rem;
+            background: white;
+        }
+        .subject-stats {
+            display: flex;
+            gap: 1rem;
+            margin-top: auto;
+            padding-top: 1rem;
+        }
+        .subject-stat {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+        .search-container {
+            position: relative;
+            max-width: 300px;
+            width: 100%;
+        }
+        .search-bar {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .btn-search {
+            background: var(--bs-primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+        }
+        .btn-search:hover {
+            background: var(--bs-primary-dark);
+        }
         #noResults {
             display: none;
+            padding: 3rem 1rem;
         }
         #noResults i {
             font-size: 3rem; 
             color: #6c757d;
         }
-        
+        .category-title {
+            color: var(--bs-primary);
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .course-info {
+            position: relative;
+            padding-left: 1rem;
+        }
+        .course-info::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--bs-primary);
+            border-radius: 2px;
+        }
+        @media (max-width: 768px) {
+            .search-container {
+                max-width: 100%;
+                margin-top: 1rem;
+            }
+            .subject-card .card-img-top {
+                height: 140px;
+            }
+            .subject-stats {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+        .fade-enter {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        .fade-enter-active {
+            opacity: 1;
+            transform: translateY(0);
+            transition: opacity 0.3s, transform 0.3s;
+        }
     </style>
     <body data-base="<?php echo BASE; ?>">
         <?php include ROOT_PATH . '/components/header.php'; ?>
@@ -64,35 +156,39 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
         <!-- Subject Categories -->
         <div class="row">
             <?php foreach ($courses as $course):?>
-            <div class="col-12 mt-4">
+            <div class="col-12 mt-4 fade-enter">
                 <div class="dashboard-card">
                     <div class="course-info">
-                        <h3 class="category-title mb-3"><?php echo htmlspecialchars($course['course_name']); ?></h3>
-                        <div class="subtitle mb-4">
+                        <h3 class="category-title"><?php echo htmlspecialchars($course['course_name']); ?></h3>
+                        <div class="subtitle text-muted">
                             <?php echo htmlspecialchars($course['course_desc']); ?>
                         </div>
                     </div>
-                    <hr style="border: 1px solid #ccc; margin: 1rem 0;"> <!-- Divider -->
-                    <div class="row mx-0">
+                    <hr class="my-4">
+                    <div class="row g-4">
                         <?php foreach (getSubjectDetails($course['course_id']) as $subject):?>
-                        <div class="col-md-4 mb-4">
-                            <div class="subject-card">
-                                <img src="<?php echo SUBJECT_IMG.$subject['image']; ?>" class="card-img-top" alt="<?php echo htmlspecialchars($subject['subject_name']); ?>">
+                        <div class="col-md-4 mb-0">
+                            <div class="subject-card h-100">
+                                <img src="<?php echo SUBJECT_IMG.$subject['image']; ?>" 
+                                     class="card-img-top" 
+                                     alt="<?php echo htmlspecialchars($subject['subject_name']); ?>"
+                                     loading="lazy">
                                 <div class="card-body d-flex flex-column">
-                                    <h5 class="card-title"><?php echo htmlspecialchars($subject['subject_name']); ?></h5>
-                                    <p class="card-text"><?php echo htmlspecialchars($subject['subject_desc']); ?></p>
+                                    <h5 class="card-title mb-2"><?php echo htmlspecialchars($subject['subject_name']); ?></h5>
+                                    <p class="card-text text-muted mb-3"><?php echo htmlspecialchars($subject['subject_desc']); ?></p>
                                     <div class="subject-stats">
-                                        <span class="subject-stat">
-                                            <i class="bi bi-person"></i>
+                                        <span class="subject-stat" data-bs-toggle="tooltip" title="Total enrolled students">
+                                            <i class="bi bi-person text-primary"></i>
                                             <?php echo htmlspecialchars($subject['student_count']); ?> Students
                                         </span>
-                                        <span class="subject-stat">
-                                            <i class="bi bi-journal-bookmark-fill"></i>
+                                        <span class="subject-stat" data-bs-toggle="tooltip" title="Active classes">
+                                            <i class="bi bi-journal-bookmark-fill text-success"></i>
                                             <?php echo htmlspecialchars($subject['class_count']); ?> Classes
                                         </span>
                                     </div>
-                                    <a href="subjects/class?subject=<?php echo urlencode($subject['subject_name']); ?>" class="btn btn-primary btn-action mt-3">
-                                        <i class="bi bi-book"></i>
+                                    <a href="subjects/class?subject=<?php echo urlencode($subject['subject_name']); ?>" 
+                                       class="btn btn-primary btn-action mt-3 w-100">
+                                        <i class="bi bi-book me-2"></i>
                                         View Subject
                                     </a>
                                 </div>
@@ -119,13 +215,33 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
     <?php include ROOT_PATH . '/components/footer.php'; ?>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Add event listener for real-time search
-            document.getElementById('subjectSearch').addEventListener('input', searchSubjects);
+            // Initialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            });
+
+            // Animate elements on load
+            const fadeElements = document.querySelectorAll('.fade-enter');
+            fadeElements.forEach((element, index) => {
+                setTimeout(() => {
+                    element.classList.add('fade-enter-active');
+                }, index * 100);
+            });
+
+            // Add event listener for real-time search with debounce
+            const searchInput = document.getElementById('subjectSearch');
+            let searchTimeout;
+
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(searchSubjects, 300);
+            });
 
             function searchSubjects() {
-                const searchTerm = document.getElementById('subjectSearch').value.toLowerCase();
+                const searchTerm = searchInput.value.toLowerCase();
                 const subjectCards = document.querySelectorAll('.subject-card');
-                const courseCategories = document.querySelectorAll('.dashboard-card');
+                const courseCategories = document.querySelectorAll('.col-12.mt-4');
                 let hasResults = false;
 
                 if (searchTerm.trim() === '') {
@@ -149,7 +265,8 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
                         const title = card.querySelector('.card-title').textContent.toLowerCase();
                         const description = card.querySelector('.card-text').textContent.toLowerCase();
                         
-                        if (title.includes(searchTerm) || description.includes(searchTerm) || courseName.includes(searchTerm) || courseDesc.includes(searchTerm)) {
+                        if (title.includes(searchTerm) || description.includes(searchTerm) || 
+                            courseName.includes(searchTerm) || courseDesc.includes(searchTerm)) {
                             card.closest('.col-md-4').style.display = 'block';
                             categoryHasMatch = true;
                             hasResults = true;

@@ -6,20 +6,31 @@ log_error("User accessed 403 page", 3); // Ensure log file exists
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<head>
     <?php include ROOT_PATH . '/components/head.php'; ?>
-</head>
-<body>
-<div class="container-fluid mt-4 error-page">
-    <div class="text-center">
-        <div class="error mx-auto" data-text="403">403</div>
-        <p class="lead text-gray-800 mb-3">Access Forbidden</p>
-        <p class="text-gray-500 mb-0">Sorry, you don't have permission to access this page.</p>
-        <a href="<?php echo BASE_URL; ?>">&larr; Back to Home</a>
-    </div>
-</div>
+<body data-base="<?php echo BASE; ?>">
+    <link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Arvo'>
+    <link rel='stylesheet' href="<?php echo CSS.'error.css'; ?>">
+    
+    <section class="page_404">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-md-10 col-lg-8">
+                    <div class="text-center">
+                        <div class="four_zero_four_bg">
+                            <h1>403</h1>
+                        </div>
+                        
+                        <div class="contant_box_404">
+                            <h3>Whoa there, VIP area ahead! 🚫</h3>
+                            <p>Looks like you're trying to sneak into the cool kids' club! Unfortunately, your all-access pass seems to be missing. Maybe try logging in first? 😉</p>
+                            <a href="<?php echo BASE; ?>" class="link_404">Escape to Safety</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
-<?php require_once "../../components/footer.php"; ?>
-
+    <?php require_once "../../components/footer.php"; ?>
 </body>
 </html>

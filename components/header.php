@@ -56,7 +56,7 @@
         </div>
         
         <nav class="sidebar-nav">
-            <a href="<?php echo BASE; ?>dashboard" class="nav-item <?php echo $current_page == 'main_dashboard.php' ? 'active' : ''; ?>">
+            <a href="<?php echo BASE; ?>dashboard" class="nav-item <?php echo $current_page == 'role_redirect.php' ? 'active' : ''; ?>">
                 <i class="bi bi-house-door"></i>
                 <span>Dashboard</span>
             </a>

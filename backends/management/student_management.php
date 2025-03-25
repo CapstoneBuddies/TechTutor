@@ -1,21 +1,92 @@
 <?php
 /**
  * Get students enrolled with a specific tutor
+ * Returns detailed information about students including their progress and upcoming sessions
  */
 function getStudentByTutor($tutor_id) {
     global $conn;
 
-    $stmt = $conn->prepare("SELECT u.first_name AS student_first_name, u.last_name AS student_last_name, 
-                                  u.profile_picture, u.email, u.status, 
-                                  c.class_name, cs.session_date, 
-                                  DATE_FORMAT(cs.start_time, '%h:%i %p') AS formatted_start_time, 
-                                  DATE_FORMAT(cs.end_time, '%h:%i %p') AS formatted_end_time 
-                           FROM users u 
-                           JOIN enrollments e ON u.uid = e.student_id
-                           JOIN class c ON e.class_id = c.class_id 
-                           JOIN class_schedule cs ON c.class_id = cs.class_id AND u.uid = cs.user_id
-                           WHERE c.tutor_id = ? 
-                           ORDER BY c.class_name, cs.session_date, u.last_name, u.first_name");
+    $stmt = $conn->prepare("
+        SELECT 
+            u.uid AS student_id,
+            u.first_name AS student_first_name, 
+            u.last_name AS student_last_name,
+            COALESCE(u.profile_picture, '') as profile_picture,
+            COALESCE(u.email, '') as email,
+            COALESCE(u.status, 'inactive') as status,
+            c.class_id,
+            c.class_name,
+            COALESCE(c.thumbnail, '') AS class_thumbnail,
+            e.enrollment_date,
+            COALESCE(e.status, 'pending') AS enrollment_status,
+            COALESCE((
+                SELECT COUNT(*) 
+                FROM class_schedule cs 
+                WHERE cs.class_id = c.class_id 
+                AND cs.user_id = u.uid 
+                AND cs.status = 'completed'
+            ), 0) as completed_sessions,
+            COALESCE((
+                SELECT COUNT(*) 
+                FROM class_schedule cs 
+                WHERE cs.class_id = c.class_id 
+                AND cs.user_id = u.uid
+            ), 0) as total_sessions,
+            (
+                SELECT cs.session_date
+                FROM class_schedule cs 
+                WHERE cs.class_id = c.class_id 
+                AND cs.status IN ('pending', 'confirmed')
+                AND cs.session_date >= CURDATE()
+                ORDER BY cs.session_date ASC, cs.start_time ASC
+                LIMIT 1
+            ) as next_session_date,
+            (
+                SELECT CONCAT(
+                    DATE_FORMAT(cs.start_time, '%h:%i %p'), 
+                    ' - ', 
+                    DATE_FORMAT(cs.end_time, '%h:%i %p')
+                )
+                FROM class_schedule cs 
+                WHERE cs.class_id = c.class_id 
+                AND cs.status IN ('pending', 'confirmed')
+                AND cs.session_date >= CURDATE()
+                ORDER BY cs.session_date ASC, cs.start_time ASC
+                LIMIT 1
+            ) as next_session_time,
+            (
+                SELECT cs.status
+                FROM class_schedule cs 
+                WHERE cs.class_id = c.class_id 
+                AND cs.status IN ('pending', 'confirmed')
+                AND cs.session_date >= CURDATE()
+                ORDER BY cs.session_date ASC, cs.start_time ASC
+                LIMIT 1
+            ) as next_session_status,
+            COALESCE((
+                SELECT sf.rating 
+                FROM session_feedback sf 
+                WHERE sf.student_id = u.uid 
+                AND sf.tutor_id = c.tutor_id 
+                ORDER BY sf.created_at DESC 
+                LIMIT 1
+            ), 0) as student_rating,
+            COALESCE((
+                SELECT sf.feedback 
+                FROM session_feedback sf 
+                WHERE sf.student_id = u.uid 
+                AND sf.tutor_id = c.tutor_id 
+                ORDER BY sf.created_at DESC 
+                LIMIT 1
+            ), '') as student_feedback
+        FROM users u 
+        JOIN enrollments e ON u.uid = e.student_id
+        JOIN class c ON e.class_id = c.class_id 
+        WHERE c.tutor_id = ? 
+        AND e.status = 'active'
+        GROUP BY u.uid, c.class_id
+        ORDER BY u.last_name, u.first_name, c.class_name");
+        
     $stmt->bind_param("i", $tutor_id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -23,8 +94,43 @@ function getStudentByTutor($tutor_id) {
     $students = $result->fetch_all(MYSQLI_ASSOC);
     $num_students = count($students);
 
+    // Process the results to calculate additional metrics
+    foreach ($students as &$student) {
+        // Calculate progress percentage
+        $student['progress'] = $student['total_sessions'] > 0 
+            ? round(($student['completed_sessions'] / $student['total_sessions']) * 100) 
+            : 0;
+            
+        // Format next session info
+        if (!empty($student['next_session_date'])) {
+            $student['next_session_date'] = date('M d, Y', strtotime($student['next_session_date']));
+            $student['session_date'] = $student['next_session_date']; // For backward compatibility
+            $student['session_time'] = $student['next_session_time']; // For backward compatibility
+        } else {
+            $student['next_session_date'] = 'No scheduled date';
+            $student['session_date'] = 'No scheduled date'; // For backward compatibility
+            $student['next_session_time'] = 'No scheduled time';
+            $student['session_time'] = 'No scheduled time'; // For backward compatibility
+        }
+
+        // Ensure all fields have default values
+        $student = array_merge([
+            'profile_picture' => '',
+            'email' => '',
+            'status' => 'inactive',
+            'class_thumbnail' => '',
+            'enrollment_status' => 'pending',
+            'completed_sessions' => 0,
+            'total_sessions' => 0,
+            'student_rating' => 0,
+            'student_feedback' => '',
+            'progress' => 0,
+            'next_session_status' => 'pending'
+        ], $student);
+    }
+
     return [
-        'count' => $num_students, 
+        'count' => $num_students,
         'students' => $students
     ];
 }
@@ -114,7 +220,7 @@ function getTutorRatings($tutor_id) {
     global $conn;
 
     $stmt = $conn->prepare("SELECT sf.rating, sf.feedback as comment, 
-                                  CONCAT(u.first_name, ' ', u.last_name) as student_name,
+                                  u.first_name, u.last_name,
                                   sf.created_at
                            FROM session_feedback sf
                            JOIN users u ON sf.student_id = u.uid

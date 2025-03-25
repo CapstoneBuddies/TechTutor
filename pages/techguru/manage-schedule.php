@@ -49,9 +49,151 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
 <!DOCTYPE html>
 <html lang="en">
     <?php include ROOT_PATH . '/components/head.php'; ?>
+    <style>
+        .schedule-card {
+            background: #fff;
+            border-radius: 0.75rem;
+            padding: 1.75rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+        }
+        .schedule-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            transform: translateY(-2px);
+        }
+        .schedule-entry {
+            background: var(--bs-gray-100);
+            border-radius: 0.5rem;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            position: relative;
+            border: 1px solid var(--bs-gray-200);
+            transition: all 0.2s ease;
+        }
+        .schedule-entry:hover {
+            background: var(--bs-gray-50);
+            border-color: var(--bs-primary);
+        }
+        .schedule-entry .remove-btn {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .schedule-entry:hover .remove-btn {
+            opacity: 1;
+        }
+        .table {
+            margin-bottom: 0;
+        }
+        .table th {
+            background: var(--bs-primary);
+            color: #fff;
+            font-weight: 500;
+            border-bottom: none;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        .table td {
+            vertical-align: middle;
+            padding: 1rem 0.75rem;
+        }
+        .schedule-status {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 0.75rem;
+            position: relative;
+        }
+        .schedule-status::after {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            border-radius: 50%;
+            border: 2px solid currentColor;
+            opacity: 0.2;
+        }
+        .status-upcoming { 
+            background: var(--bs-primary);
+            color: var(--bs-primary);
+        }
+        .status-completed { 
+            background: var(--bs-success);
+            color: var(--bs-success);
+        }
+        .status-cancelled { 
+            background: var(--bs-danger);
+            color: var(--bs-danger);
+        }
+        .table-responsive {
+            border-radius: 0.5rem;
+            border: 1px solid var(--bs-gray-200);
+            max-height: 600px;
+        }
+        .table-responsive::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .table-responsive::-webkit-scrollbar-track {
+            background: var(--bs-gray-100);
+            border-radius: 4px;
+        }
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: var(--bs-gray-400);
+            border-radius: 4px;
+        }
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: var(--bs-gray-500);
+        }
+        .delete-mode .delete-column {
+            width: 50px;
+            text-align: center;
+            background: var(--bs-danger-bg-subtle);
+        }
+        .select-all-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            background: var(--bs-danger-bg-subtle);
+            border-radius: 0.25rem;
+            margin-bottom: 1rem;
+        }
+        .form-check-input:checked {
+            background-color: var(--bs-danger);
+            border-color: var(--bs-danger);
+        }
+        .tooltip {
+            z-index: 1070;
+        }
+        @media (max-width: 768px) {
+            .schedule-entry {
+                padding: 1rem;
+            }
+            .schedule-entry .remove-btn {
+                opacity: 1;
+                top: 0.5rem;
+                right: 0.5rem;
+            }
+            .table td {
+                white-space: nowrap;
+            }
+            .btn-group {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+        }
+    </style>
     <body data-base="<?php echo BASE; ?>">
         <?php include ROOT_PATH . '/components/header.php'; ?>
-
         <main class="container py-4">
             <!-- Welcome Section -->
             <div class="row">
@@ -103,43 +245,45 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
             <!-- Add Schedule Form -->
             <div class="row mt-4">
                 <div class="col-12">
-                    <div class="dashboard-card">
-                        <h3 class="card-title mb-4">Add New Schedule</h3>
-                        <form method="POST" action="">
+                    <div class="schedule-card">
+                        <h3 class="card-title mb-4">
+                            <i class="bi bi-calendar-plus"></i> Add New Schedule
+                        </h3>
+                        <form id="scheduleForm" method="POST" action="">
                             <div id="scheduleContainer">
-                                <div class="schedule-entry row mb-3">
-                                    <div class="col-md-4">
-                                        <div class="form-group">
+                                <div class="schedule-entry">
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-btn d-none">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                    <div class="row">
+                                        <div class="col-md-4 mb-3">
                                             <label class="form-label">Date</label>
-                                            <input type="date" name="schedules[0][date]" class="form-control" required>
+                                            <input type="date" name="schedules[0][date]" class="form-control schedule-date" required>
+                                            <div class="form-text">Select a future date</div>
                                         </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="form-group">
+                                        <div class="col-md-4 mb-3">
                                             <label class="form-label">Start Time</label>
-                                            <div class="input-group clockpicker" data-placement="bottom" data-align="left" data-autoclose="true">
-                                                <input type="text" name="schedules[1][start]" class="form-control" placeholder="--:--" required>
+                                            <div class="input-group clockpicker">
+                                                <input type="text" name="schedules[1][start]" class="form-control schedule-start" placeholder="--:--" required>
                                                 <span class="input-group-text"><i class="bi bi-clock"></i></span>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="form-group">
+                                        <div class="col-md-4 mb-3">
                                             <label class="form-label">End Time</label>
-                                            <div class="input-group clockpicker" data-placement="bottom" data-align="left" data-autoclose="true">
-                                                <input type="text" name="schedules[2][end]" class="form-control" placeholder="--:--" required>
+                                            <div class="input-group clockpicker">
+                                                <input type="text" name="schedules[2][end]" class="form-control schedule-end" placeholder="--:--" required>
                                                 <span class="input-group-text"><i class="bi bi-clock"></i></span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="mt-3">
-                                <button type="button" class="btn btn-secondary" onclick="addScheduleEntry()">
+                            <div class="mt-3 d-flex gap-2">
+                                <button type="button" class="btn btn-outline-primary" onclick="addScheduleEntry()">
                                     <i class="bi bi-plus-lg"></i> Add Another Schedule
                                 </button>
                                 <button type="submit" class="btn btn-primary">
-                                    <i class="bi bi-save"></i> Save Schedule
+                                    <i class="bi bi-save"></i> Save Schedules
                                 </button>
                             </div>
                         </form>
@@ -150,12 +294,19 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
             <!-- Current Schedules Table -->
             <div class="row mt-4">
                 <div class="col-12">
-                    <div class="dashboard-card">
+                    <div class="schedule-card">
                         <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h3 class="card-title mb-0">Current Schedules</h3>
+                            <h3 class="card-title mb-0">
+                                <i class="bi bi-calendar-week"></i> Current Schedules
+                            </h3>
+                            <div class="d-flex gap-2">
                             <button id="toggleDelete" class="btn btn-outline-danger" onclick="toggleDeleteMode()">
-                                <i class="bi bi-trash"></i> Delete Schedules
+                                    <i class="bi bi-trash"></i> Delete Mode
+                                </button>
+                                <button id="deleteSelected" class="btn btn-danger d-none">
+                                    <i class="bi bi-trash-fill"></i> Delete Selected
                             </button>
+                            </div>
                         </div>
                         <?php if (empty($classSchedule)): ?>
                             <div class="text-center py-5">
@@ -168,22 +319,25 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
                                 <table class="table table-hover">
                                     <thead>
                                         <tr>
-                                            <th class="delete-column d-none" width="100">
+                                            <th class="delete-column d-none">
                                                 <div class="form-check">
-                                                    <div class="select-all-wrapper">
-                                                        <input class="form-check-input" type="checkbox" id="selectAll" name="selectAll">
-                                                        <label class="form-check-label" for="selectAll">Select All</label>
-                                                    </div>
+                                                    <input class="form-check-input" type="checkbox" id="selectAll">
                                                 </div>
                                             </th>
                                             <th>Date</th>
-                                            <th>Start Time</th>
-                                            <th>End Time</th>
-                                            <th width="100" class="actions-column">Actions</th>
+                                            <th>Time</th>
+                                            <th>Duration</th>
+                                            <th>Status</th>
+                                            <th class="text-end">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <?php foreach ($classSchedule as $schedule): ?>
+                                        <?php foreach ($classSchedule as $schedule): 
+                                            $start = strtotime($schedule['start_time']);
+                                            $end = strtotime($schedule['end_time']);
+                                            $duration = round(($end - $start) / 3600, 1);
+                                            $status = getScheduleStatus($schedule['session_date'], $schedule['start_time']);
+                                        ?>
                                             <tr>
                                                 <td class="delete-column d-none">
                                                     <div class="form-check">
@@ -192,211 +346,379 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
                                                                value="<?php echo $schedule['schedule_id']; ?>">
                                                     </div>
                                                 </td>
-                                                <td><?php echo date('M d, Y', strtotime($schedule['session_date'])); ?></td>
-                                                <td><?php echo date('h:i A', strtotime($schedule['start_time'])); ?></td>
-                                                <td><?php echo date('h:i A', strtotime($schedule['end_time'])); ?></td>
-                                                <td class="actions-column">
+                                                <td>
+                                                    <?php echo date('D, M d, Y', strtotime($schedule['session_date'])); ?>
+                                                </td>
+                                                <td>
+                                                    <?php echo date('h:i A', $start) . ' - ' . date('h:i A', $end); ?>
+                                                </td>
+                                                <td><?php echo $duration; ?> hours</td>
+                                                <td>
+                                                    <span class="schedule-status status-<?php echo $status; ?>"></span>
+                                                    <?php echo ucfirst($status); ?>
+                                                </td>
+                                                <td class="text-end">
                                                     <button class="btn btn-sm btn-primary" onclick="editSchedule(<?php echo $schedule['schedule_id']; ?>)">
-                                                        <i class="bi bi-pencil"></i> Edit
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-danger" onclick="deleteSchedule(<?php echo $schedule['schedule_id']; ?>)">
+                                                        <i class="bi bi-trash"></i>
                                                     </button>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
-                                <div id="deleteControls" class="mt-3 d-none">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div class="text-muted small schedule-counter"></div>
-                                        <button id="deleteSelected" class="btn btn-danger">
-                                            <i class="bi bi-trash"></i> Delete Selected
-                                        </button>
-                                        <button class="btn btn-outline-secondary" onclick="toggleDeleteMode()">
-                                            Cancel
-                                        </button>
-                                    </div>
-                                </div>
                             </div>
                         <?php endif; ?>
                     </div>
                 </div>
             </div>
         </main>
-        <?php include ROOT_PATH . '/components/footer.php'; ?>
 
+        <!-- Edit Schedule Modal -->
+        <div class="modal fade" id="editScheduleModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Schedule</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="editScheduleForm">
+                            <input type="hidden" id="editScheduleId">
+                            <div class="mb-3">
+                                <label class="form-label">Date</label>
+                                <input type="date" id="editDate" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Start Time</label>
+                                <div class="input-group clockpicker">
+                                    <input type="text" id="editStartTime" class="form-control" required>
+                                    <span class="input-group-text"><i class="bi bi-clock"></i></span>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">End Time</label>
+                                <div class="input-group clockpicker">
+                                    <input type="text" id="editEndTime" class="form-control" required>
+                                    <span class="input-group-text"><i class="bi bi-clock"></i></span>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="saveScheduleChanges()">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <?php include ROOT_PATH . '/components/footer.php'; ?>
         <script>
-            // Initialize clockpicker
-            $('.clockpicker').clockpicker({
-                placement: 'bottom',
-                align: 'left',
-                autoclose: true,
-                'default': 'now'
+            document.addEventListener('DOMContentLoaded', function() {
+                initializeClockpicker();
+                setupFormValidation();
+                setupDeleteMode();
+                initializeTooltips();
+                setupMobileView();
             });
+
+            function initializeClockpicker() {
+                $('.clockpicker').clockpicker({
+                    autoclose: true,
+                    twelvehour: true,
+                    donetext: 'Done',
+                    afterDone: function() {
+                        validateTimeSlot(this.input[0]);
+                    }
+                });
+            }
 
             function addScheduleEntry() {
                 const container = document.getElementById('scheduleContainer');
-                const index = container.children.length * 3;
-                const entry = `
-                    <div class='schedule-entry row mb-3'>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="form-label">Date</label>
-                                <input type='date' name='schedules[${index}][date]' class='form-control' required>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="form-label">Start Time</label>
-                                <div class="input-group clockpicker" data-placement="bottom" data-align="left" data-autoclose="true">
-                                    <input type='text' name='schedules[${index + 1}][start]' class='form-control' placeholder="--:--" required>
-                                    <span class="input-group-text"><i class="bi bi-clock"></i></span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="form-label">End Time</label>
-                                <div class="input-group clockpicker" data-placement="bottom" data-align="left" data-autoclose="true">
-                                    <input type='text' name='schedules[${index + 2}][end]' class='form-control' placeholder="--:--" required>
-                                    <span class="input-group-text"><i class="bi bi-clock"></i></span>
-                                </div>
-                            </div>
-                        </div>
-                        <button type="button" class="delete-schedule-btn" onclick="deleteScheduleEntry(this)">
+                const entries = container.getElementsByClassName('schedule-entry');
+                const newIndex = entries.length * 3;
+
+                const template = `
+                    <div class="schedule-entry">
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-btn">
                             <i class="bi bi-x-lg"></i>
                         </button>
-                    </div>`;
-                container.insertAdjacentHTML('beforeend', entry);
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Date</label>
+                                <input type="date" name="schedules[${newIndex}][date]" class="form-control schedule-date" required>
+                                <div class="form-text">Select a future date</div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Start Time</label>
+                                <div class="input-group clockpicker">
+                                    <input type="text" name="schedules[${newIndex + 1}][start]" class="form-control schedule-start" placeholder="--:--" required>
+                                    <span class="input-group-text"><i class="bi bi-clock"></i></span>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">End Time</label>
+                                <div class="input-group clockpicker">
+                                    <input type="text" name="schedules[${newIndex + 2}][end]" class="form-control schedule-end" placeholder="--:--" required>
+                                    <span class="input-group-text"><i class="bi bi-clock"></i></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                container.insertAdjacentHTML('beforeend', template);
+                initializeClockpicker();
                 
-                // Add first-schedule class to the first entry
-                if (container.children.length === 1) {
-                    container.firstElementChild.classList.add('first-schedule');
+                // Show remove buttons if more than one entry
+                if (entries.length > 0) {
+                    document.querySelectorAll('.remove-btn').forEach(btn => btn.classList.remove('d-none'));
                 }
+            }
+
+            function setupFormValidation() {
+                const form = document.getElementById('scheduleForm');
                 
-                // Initialize clockpicker for new elements
-                const newRow = container.lastElementChild;
-                $(newRow).find('.clockpicker').clockpicker({
-                    placement: 'bottom',
-                    align: 'left',
-                    autoclose: true,
-                    'default': 'now'
+                form.addEventListener('submit', function(e) {
+                    if (!validateSchedules()) {
+                        e.preventDefault();
+                        showToast('Please fix the invalid schedule times.', 'error');
+                    }
+                });
+
+                document.getElementById('scheduleContainer').addEventListener('click', function(e) {
+                    if (e.target.closest('.remove-btn')) {
+                        const entry = e.target.closest('.schedule-entry');
+                        entry.classList.add('fade-out');
+                        setTimeout(() => {
+                            entry.remove();
+                            updateRemoveButtons();
+                        }, 200);
+                    }
                 });
             }
 
-            function deleteScheduleEntry(button) {
-                const entry = button.closest('.schedule-entry');
-                entry.remove();
+            function validateSchedules() {
+                let isValid = true;
+                const entries = document.getElementsByClassName('schedule-entry');
                 
-                // Update the first-schedule class
-                const container = document.getElementById('scheduleContainer');
-                if (container.children.length === 1) {
-                    container.firstElementChild.classList.add('first-schedule');
-                }
+                Array.from(entries).forEach(entry => {
+                    const date = entry.querySelector('.schedule-date');
+                    const start = entry.querySelector('.schedule-start');
+                    const end = entry.querySelector('.schedule-end');
+                    
+                    // Reset validation state
+                    [date, start, end].forEach(input => input.classList.remove('is-invalid'));
+                    
+                    // Validate date is in future
+                    const selectedDate = new Date(date.value);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    
+                    if (selectedDate < today) {
+                        isValid = false;
+                        date.classList.add('is-invalid');
+                        showTooltip(date, 'Date must be in the future');
+                    }
+                    
+                    // Validate end time is after start time
+                    if (start.value && end.value) {
+                        const startTime = new Date(`1970-01-01T${start.value}`);
+                        const endTime = new Date(`1970-01-01T${end.value}`);
+                        
+                        if (startTime >= endTime) {
+                            isValid = false;
+                            end.classList.add('is-invalid');
+                            showTooltip(end, 'End time must be after start time');
+                        }
+                    }
+                });
                 
-                // Reindex the remaining entries
-                reindexScheduleEntries();
+                return isValid;
             }
 
-            function reindexScheduleEntries() {
-                const container = document.getElementById('scheduleContainer');
-                const entries = container.getElementsByClassName('schedule-entry');
+            function validateTimeSlot(input) {
+                const entry = input.closest('.schedule-entry');
+                const start = entry.querySelector('.schedule-start');
+                const end = entry.querySelector('.schedule-end');
                 
-                Array.from(entries).forEach((entry, i) => {
-                    const index = i * 3;
-                    entry.querySelector('input[type="date"]').name = `schedules[${index}][date]`;
-                    entry.querySelector('input[type="text"][name*="[start]"]').name = `schedules[${index + 1}][start]`;
-                    entry.querySelector('input[type="text"][name*="[end]"]').name = `schedules[${index + 2}][end]`;
+                if (start.value && end.value) {
+                    const startTime = new Date(`1970-01-01T${start.value}`);
+                    const endTime = new Date(`1970-01-01T${end.value}`);
+                    
+                    if (startTime >= endTime) {
+                        end.classList.add('is-invalid');
+                        showTooltip(end, 'End time must be after start time');
+                    } else {
+                        end.classList.remove('is-invalid');
+                        hideTooltip(end);
+                    }
+                }
+            }
+
+            function showTooltip(element, message) {
+                const tooltip = bootstrap.Tooltip.getInstance(element);
+                if (tooltip) {
+                    tooltip.dispose();
+                }
+                new bootstrap.Tooltip(element, {
+                    title: message,
+                    placement: 'top',
+                    trigger: 'manual'
+                }).show();
+            }
+
+            function hideTooltip(element) {
+                const tooltip = bootstrap.Tooltip.getInstance(element);
+                if (tooltip) {
+                    tooltip.dispose();
+                }
+            }
+
+            function showToast(message, type = 'info') {
+                const toast = document.createElement('div');
+                toast.className = `toast align-items-center text-white bg-${type} border-0`;
+                toast.setAttribute('role', 'alert');
+                toast.innerHTML = `
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                `;
+                document.body.appendChild(toast);
+                new bootstrap.Toast(toast).show();
+                toast.addEventListener('hidden.bs.toast', () => toast.remove());
+            }
+
+            function updateRemoveButtons() {
+                const entries = document.getElementsByClassName('schedule-entry');
+                const removeButtons = document.querySelectorAll('.remove-btn');
+                
+                removeButtons.forEach(btn => {
+                    btn.classList.toggle('d-none', entries.length === 1);
                 });
             }
 
-            // Add first-schedule class to the initial entry
-            document.addEventListener('DOMContentLoaded', function() {
-                const container = document.getElementById('scheduleContainer');
-                if (container.children.length === 1) {
-                    container.firstElementChild.classList.add('first-schedule');
+            function setupMobileView() {
+                if (window.innerWidth <= 768) {
+                    document.querySelectorAll('.table td').forEach(td => {
+                        if (td.textContent.length > 20) {
+                            td.setAttribute('data-bs-toggle', 'tooltip');
+                            td.setAttribute('title', td.textContent);
+                        }
+                    });
                 }
-            });
+            }
 
-            function toggleDeleteMode() {
-                const table = document.querySelector('table');
-                const deleteControls = document.getElementById('deleteControls');
+            function initializeTooltips() {
+                const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tooltipTriggerList.map(function (tooltipTriggerEl) {
+                    return new bootstrap.Tooltip(tooltipTriggerEl);
+                });
+            }
+
+            function setupDeleteMode() {
                 const toggleBtn = document.getElementById('toggleDelete');
+                const deleteBtn = document.getElementById('deleteSelected');
+                const deleteColumns = document.querySelectorAll('.delete-column');
+                const selectAll = document.getElementById('selectAll');
                 
-                table.classList.toggle('delete-mode');
-                if (table.classList.contains('delete-mode')) {
-                    deleteControls.classList.remove('d-none');
-                    toggleBtn.classList.replace('btn-outline-danger', 'btn-danger');
-                } else {
-                    deleteControls.classList.add('d-none');
-                    toggleBtn.classList.replace('btn-danger', 'btn-outline-danger');
-                    // Uncheck all checkboxes
-                    document.querySelectorAll('.schedule-checkbox, #selectAll').forEach(cb => cb.checked = false);
-                    updateDeleteButton();
-                }
-            }
-
-            // Handle select all checkbox
-            document.getElementById('selectAll')?.addEventListener('change', function() {
-                document.querySelectorAll('.schedule-checkbox').forEach(checkbox => {
-                    checkbox.checked = this.checked;
+                toggleBtn.addEventListener('click', function() {
+                    const isDeleteMode = toggleBtn.classList.toggle('active');
+                    deleteColumns.forEach(col => col.classList.toggle('d-none'));
+                    deleteBtn.classList.toggle('d-none');
+                    
+                    if (!isDeleteMode) {
+                        selectAll.checked = false;
+                        document.querySelectorAll('.schedule-checkbox').forEach(cb => cb.checked = false);
+                    }
                 });
-                updateDeleteButton();
-            });
-
-            // Handle individual checkboxes
-            document.querySelectorAll('.schedule-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', updateDeleteButton);
-            });
-
-            function updateDeleteButton() {
-                const selectedCount = document.querySelectorAll('.schedule-checkbox:checked').length;
-                const counterDiv = document.querySelector('.schedule-counter');
                 
-                if (selectedCount > 0) {
-                    counterDiv.textContent = `${selectedCount} schedule(s) selected`;
-                } else {
-                    counterDiv.textContent = '';
-                }
+                selectAll.addEventListener('change', function() {
+                    document.querySelectorAll('.schedule-checkbox').forEach(cb => cb.checked = this.checked);
+                });
+                
+                deleteBtn.addEventListener('click', function() {
+                    const selected = Array.from(document.querySelectorAll('.schedule-checkbox:checked'))
+                        .map(cb => cb.value);
+                        
+                    if (selected.length === 0) {
+                        alert('Please select schedules to delete');
+                        return;
+                    }
+                    
+                    if (confirm(`Are you sure you want to delete ${selected.length} schedule(s)?`)) {
+                        deleteSchedules(selected);
+                    }
+                });
             }
 
-            function editSchedule(scheduleId) {
-                // Implement edit functionality
-                console.log('Edit schedule:', scheduleId);
+            function editSchedule(id) {
+                // Fetch schedule details and populate modal
+                fetch(`api/schedule/${id}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById('editScheduleId').value = id;
+                        document.getElementById('editDate').value = data.date;
+                        document.getElementById('editStartTime').value = data.start_time;
+                        document.getElementById('editEndTime').value = data.end_time;
+                        
+                        new bootstrap.Modal(document.getElementById('editScheduleModal')).show();
+                    });
             }
 
-            document.getElementById('deleteSelected')?.addEventListener('click', function() {
-                const selectedIds = Array.from(document.querySelectorAll('.schedule-checkbox:checked'))
-                    .map(checkbox => checkbox.value);
-
-                if (selectedIds.length === 0) return;
-
-                if (confirm(`Are you sure you want to delete ${selectedIds.length} schedule(s)?`)) {
-                    showLoading();
-                    const formData = new FormData();
-                    formData.append('classId', <?php echo $class_id; ?>);
-                    selectedIds.forEach(id => formData.append('scheduleIds[]', id));
-
-                    fetch(`${document.body.dataset.base}backends/api/schedule_delete.php`, {
-                        method: 'POST',
-                        body: formData
-                    })
+            function saveScheduleChanges() {
+                const id = document.getElementById('editScheduleId').value;
+                const date = document.getElementById('editDate').value;
+                const start = document.getElementById('editStartTime').value;
+                const end = document.getElementById('editEndTime').value;
+                
+                fetch(`api/schedule/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date, start_time: start, end_time: end })
+                })
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            showToast('success', data.message);
-                            setTimeout(() => location.reload(), 1500);
+                        location.reload();
                         } else {
-                            showToast('error', data.message || 'Failed to delete schedules');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        showToast('error', 'An error occurred while deleting schedules');
-                    })
-                    .finally(() => {
-                        hideLoading();
-                    });
+                        alert(data.error);
+                    }
+                });
+            }
+
+            function deleteSchedules(ids) {
+                fetch('api/schedules', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert(data.error);
+                    }
+                });
+            }
+
+            function getScheduleStatus(date, startTime) {
+                const scheduleDateTime = new Date(`${date} ${startTime}`);
+                const now = new Date();
+                
+                if (scheduleDateTime < now) {
+                    return 'completed';
+                } else if (scheduleDateTime.getTime() - now.getTime() < 24 * 60 * 60 * 1000) {
+                    return 'upcoming';
+                } else {
+                    return 'scheduled';
                 }
-            });
+            }
         </script>
     </body>
 </html>

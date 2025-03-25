@@ -53,7 +53,7 @@ $current_file = isset($_GET['file']) ? $_GET['file'] : '';
             <!-- Header Section -->
             <div class="content-section mb-4">
                 <div class="content-card bg-snow">
-                    <div class="card-body">
+            <div class="card-body">
                         <nav aria-label="breadcrumb" class="breadcrumb-nav">
                             <ol class="breadcrumb mb-2">
                                 <li class="breadcrumb-item"><a href="<?php echo BASE; ?>dashboard">Dashboard</a></li>
@@ -63,20 +63,20 @@ $current_file = isset($_GET['file']) ? $_GET['file'] : '';
                             </ol>
                         </nav>
                         <h1 class="page-title mb-0">Class Resources</h1>
-                    </div>
                 </div>
             </div>
+        </div>
 
             <!-- Files Section -->
             <div class="content-section">
                 <div class="content-card">
                     <div class="card-body p-0">
-                        <?php if (empty($files)): ?>
-                            <div class="text-center text-muted py-5">
-                                <i class="bi bi-folder2-open" style="font-size: 3rem;"></i>
-                                <p class="mt-3 mb-0">No resources available yet</p>
-                            </div>
-                        <?php else: ?>
+                                <?php if (empty($files)): ?>
+                                    <div class="text-center text-muted py-5">
+                                        <i class="bi bi-folder2-open" style="font-size: 3rem;"></i>
+                                        <p class="mt-3 mb-0">No resources available yet</p>
+                                    </div>
+                                <?php else: ?>
                             <div class="files-container">
                                 <!-- Folder Structure (Left Side) -->
                                 <div class="folder-structure">
@@ -102,7 +102,7 @@ $current_file = isset($_GET['file']) ? $_GET['file'] : '';
                                             </a>
                                             <?php
                                         }
-
+                                        
                                         // Display folders first
                                         foreach ($items['folders'] as $folder): 
                                             $folder_path = $current_folder ? $current_folder . '/' . $folder : $folder;
@@ -147,10 +147,10 @@ $current_file = isset($_GET['file']) ? $_GET['file'] : '';
                                                     </div>
                                                     <a href="<?php echo BASE . 'uploads/class/' . $file_details['file_path']; ?>" 
                                                        class="btn btn-primary" 
-                                                       download>
+                                                           download>
                                                         <i class="bi bi-download me-2"></i>
                                                         Download
-                                                    </a>
+                                                        </a>
                                                 </div>
                                                 <?php if ($file_details['description']): ?>
                                                     <div class="file-description">
@@ -164,17 +164,17 @@ $current_file = isset($_GET['file']) ? $_GET['file'] : '';
                                         <div class="text-center text-muted py-5">
                                             <i class="bi bi-file-earmark-text" style="font-size: 3rem;"></i>
                                             <p class="mt-3 mb-0">Select a file to view details</p>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
+                                    </div>
+                                <?php endif; ?>
                             </div>
+                        </div>
                         <?php endif; ?>
-                    </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <?php include ROOT_PATH . '/components/footer.php'; ?>
+    <?php include ROOT_PATH . '/components/footer.php'; ?>
 
         <style>
             .dashboard-content {
@@ -269,9 +269,9 @@ $current_file = isset($_GET['file']) ? $_GET['file'] : '';
                             const fileId = this.dataset.fileId;
                             // Trigger download instead of showing preview
                             window.location.href = BASE + 'download-file?id=' + fileId;
-                        });
-                    });
-                }
+                });
+            });
+        }
             });
 
             function formatFileSize(bytes) {
@@ -283,7 +283,7 @@ $current_file = isset($_GET['file']) ? $_GET['file'] : '';
                     return (bytes / 1024).toFixed(2) + ' KB';
                 }
                 return bytes + ' bytes';
-            }
-        </script>
-    </body>
+        }
+    </script>
+</body>
 </html>

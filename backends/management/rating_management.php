@@ -220,6 +220,8 @@ class RatingManagement {
     public function getTutorRatingStats($tutorId) {
         try {
             $sql = "SELECT 
+                        u.first_name,
+                        u.last_name,
                         COUNT(*) as total_ratings,
                         u.rating as average_rating,
                         u.rating_count,
@@ -230,7 +232,7 @@ class RatingManagement {
                         COUNT(CASE WHEN sf.rating = 1 THEN 1 END) as one_star
                     FROM users u
                     LEFT JOIN session_feedback sf ON u.uid = sf.tutor_id
-                    WHERE u.uid = ?
+                    WHERE u.uid = ? AND u.role = 'TECHGURU'
                     GROUP BY u.uid";
             
             $stmt = $this->db->prepare($sql);

@@ -158,7 +158,7 @@
                         </div>
                     </div>
                 </div>
-            </div>
+                    </div>
 
             <!-- Schedule and Calendar Section -->
             <div class="row g-4">
