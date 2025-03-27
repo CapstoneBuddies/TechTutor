@@ -15,9 +15,13 @@ $class_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $classDetails = getClassDetails($class_id, $_SESSION['user']);
 if (!$classDetails) {
     header('Location: ./');
-    log_error("I failed here!");
     exit();
 }
+
+if(isset($_GET['ended'])) {
+    // change the schedule recently joined to completed
+}
+
 
 // Handle class status update
 if (isset($_POST['action']) && $_POST['action'] === 'updateStatus') {
@@ -28,7 +32,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'updateStatus') {
 }
 
 // Get related data
-$schedules = getClassSchedules($class_id,'TECHGURU');
+$schedules = getClassSchedules($class_id);
 $students = getClassStudents($class_id);
 $files = getClassFiles($class_id);
 
@@ -309,23 +313,45 @@ $title = htmlspecialchars($classDetails['class_name']);
                                             <?php echo ucfirst($schedule['status']); ?>
                                         </span>
                                     </td>
+
+
                                     <td>
                                         <?php if ($schedule['status'] === 'confirmed'): ?>
-                                            <button class="btn btn-sm btn-primary" 
-                                                    onclick="joinMeeting(<?php echo $schedule['schedule_id']; ?>)"
-                                                    data-bs-toggle="tooltip"
-                                                    title="Join the virtual classroom">
-                                                <i class="bi bi-camera-video me-1"></i> Join Meeting
-                                            </button>
-                                        <?php elseif ($schedule['status'] === 'pending'): ?>
-                                            <button class="btn btn-sm btn-primary" 
+                                            <div class="d-flex gap-2">
+                                                <?php if(isset($_GET['ended'])): ?>
+                                                <a href="#" onclick="joinMeeting(<?php echo $schedule['schedule_id']; ?>)" 
+                                                   class="btn btn-success btn-sm">
+                                                    <i class="bi bi-camera-video-fill me-1"></i>
+                                                    Rejoin Meeting
+                                                </a>
+                                                <button type="button" class="btn btn-danger btn-sm" onclick="endMeeting(<?php echo $schedule['schedule_id']; ?>)">
+                                                    <i class="bi bi-stop-circle-fill me-1"></i>
+                                                    End Meeting
+                                                </button>
+                                                <?php else: ?>
+                                                <a href="#" onclick="joinMeeting(<?php echo $schedule['schedule_id']; ?>)" 
+                                                   class="btn btn-success btn-sm">
+                                                    <i class="bi bi-camera-video-fill me-1"></i>
+                                                    Join Meeting
+                                                </a>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php elseif($schedule['status'] === 'pending'): ?>
+                                             <div class="d-flex gap-2">
+                                                <button class="btn btn-sm btn-primary" 
                                                     onclick="startSession(<?php echo $schedule['schedule_id']; ?>)"
                                                     data-bs-toggle="tooltip"
                                                     title="Start the virtual classroom">
                                                 <i class="bi bi-play-circle me-1"></i> Start Session
                                             </button>
+                                            </div>
                                         <?php endif; ?>
                                     </td>
+                                
+
+
+
+
                                 </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -349,7 +375,7 @@ $title = htmlspecialchars($classDetails['class_name']);
                                 <small class="d-block mt-2">Upload study materials for your students</small>
                             </div>
                         <?php else: ?>
-                            <?php foreach ($files as $file): ?>
+                                <?php foreach ($files as $file): ?>
                             <div class="material-item">
                                 <div class="material-icon">
                                     <i class="bi bi-file-earmark-text"></i>
@@ -366,21 +392,21 @@ $title = htmlspecialchars($classDetails['class_name']);
                                                class="btn btn-sm btn-outline-primary"
                                                data-bs-toggle="tooltip"
                                                title="Download material">
-                                                <i class="bi bi-download"></i>
-                                            </a>
-                                            <?php if ($file['user_id'] === $_SESSION['user']): ?>
+                                            <i class="bi bi-download"></i>
+                                        </a>
+                                        <?php if ($file['user_id'] === $_SESSION['user']): ?>
                                             <button class="btn btn-sm btn-outline-danger"
                                                     onclick="deleteMaterial('<?php echo $file['file_uuid']; ?>')"
                                                     data-bs-toggle="tooltip"
                                                     title="Delete material">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                            <?php endif; ?>
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                        <?php endif; ?>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <?php endforeach; ?>
+                                <?php endforeach; ?>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -404,7 +430,7 @@ $title = htmlspecialchars($classDetails['class_name']);
                                 <small class="d-block mt-2">Share your class code to get students enrolled</small>
                             </div>
                         <?php else: ?>
-                            <?php foreach ($students as $student): ?>
+                        <?php foreach ($students as $student): ?>
                             <div class="student-item">
                                 <div class="d-flex align-items-center">
                                     <img src="<?php echo IMG . 'users/' . $student['profile_picture']; ?>" 
@@ -415,23 +441,23 @@ $title = htmlspecialchars($classDetails['class_name']);
                                     <div class="flex-grow-1">
                                         <h6 class="mb-1"><?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?></h6>
                                         <div class="d-flex justify-content-between align-items-center">
-                                            <small class="text-muted">
-                                                <?php echo $student['completed_sessions']; ?>/<?php echo $student['total_sessions']; ?> sessions
+                                <small class="text-muted">
+                                                <?php echo $student['completed_sessions']; ?>/<?php echo $student['all_sessions']; ?> sessions
                                             </small>
-                                            <small class="text-<?php echo ($student['completed_sessions'] / max($student['total_sessions'], 1) * 100) >= 75 ? 'success' : 'warning'; ?>">
-                                                <?php echo round(($student['completed_sessions']/$student['total_sessions']*100)); ?>%
-                                            </small>
+                                            <small class="text-<?php echo $student['attendance_rate'] >= 75 ? 'success' : 'warning'; ?>">
+                                                <?php echo $student['attendance_rate']; ?>%
+                                </small>
                                         </div>
                                         <div class="progress student-progress">
-                                            <div class="progress-bar bg-<?php echo ($student['completed_sessions']/$student['total_sessions']*100) >= 75 ? 'success' : 'warning'; ?>" 
+                                            <div class="progress-bar bg-<?php echo $student['attendance_rate'] >= 75 ? 'success' : 'warning'; ?>" 
                                                  role="progressbar" 
-                                                 style="width: <?php echo ($student['completed_sessions']/$student['total_sessions']*100); ?>%">
+                                                 style="width: <?php echo $student['attendance_rate']; ?>%">
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            <?php endforeach; ?>
+                        </div>
+                        <?php endforeach; ?>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -485,12 +511,12 @@ $title = htmlspecialchars($classDetails['class_name']);
                 </div>
             </div>
         </div>
-    </div>
+    </div> 
 
     <!-- Scripts -->
     <?php include ROOT_PATH . '/components/footer.php'; ?>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+         document.addEventListener('DOMContentLoaded', function() {
             // Initialize tooltips
             var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
             var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -501,7 +527,7 @@ $title = htmlspecialchars($classDetails['class_name']);
             window.uploadModal = new bootstrap.Modal(document.getElementById('uploadMaterialModal'));
         });
 
-        function uploadMaterial() {
+            function uploadMaterial() {
             window.uploadModal.show();
         }
 
@@ -541,9 +567,9 @@ $title = htmlspecialchars($classDetails['class_name']);
                 console.error('Error:', error);
                 showToast('error', 'An error occurred while uploading');
             });
-        }
+            }
 
-        function deleteMaterial(fileUuid) {
+            function deleteMaterial(fileUuid) {
             if (!confirm('Are you sure you want to delete this material?')) return;
 
             showLoading(true);
@@ -570,14 +596,14 @@ $title = htmlspecialchars($classDetails['class_name']);
                 console.error('Error:', error);
                 showToast('error', 'An error occurred while deleting');
             });
-        }
+            }
 
-        function messageStudents() {
+            function messageStudents() {
             // TODO: Implement messaging functionality
             showToast('info', 'Messaging feature coming soon');
-        }
+            }
 
-        function viewAnalytics() {
+            function viewAnalytics() {
             window.location.href = `analytics?class_id=<?php echo $class_id; ?>`;
         }
 
@@ -640,6 +666,34 @@ $title = htmlspecialchars($classDetails['class_name']);
                 showLoading(false);
                 console.error('Error joining meeting:', error);
                 showToast('error', 'An error occurred. Please try again.');
+            });
+        }
+        function endMeeting(scheduleId) {
+            if (!confirm('Are you sure you want to end this meeting?')) {
+                return;
+            }
+            showLoading(true);
+            fetch(BASE + 'api/meeting/end', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `schedule_id=${scheduleId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                showLoading(false);
+                if (data.success) {
+                    showToast('success', 'Meeting ended successfully');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showToast('error', data.message || 'Failed to end meeting');
+                }
+            })
+            .catch(error => {
+                showLoading(false);
+                console.error('Error:', error);
+                showToast('error', 'Failed to end meeting');
             });
         }
     </script>

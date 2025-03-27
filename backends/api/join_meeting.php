@@ -12,6 +12,7 @@ try {
 
     // Validate required parameters
     $scheduleId = $_POST['schedule_id'] ?? null;
+    $role = $_POST['role'] ?? $_SESSION['role'];
     if (!$scheduleId) {
         throw new Exception('Schedule ID is required');
     }
@@ -23,14 +24,14 @@ try {
         SELECT 
             m.*,
             cs.user_id,
-            cs.role as participant_role,
-            CONCAT(u.first_name, ' ', u.last_name) as participant_name
+            cs.class_id,
+            u.role as participant_role
         FROM meetings m
         JOIN class_schedule cs ON m.schedule_id = cs.schedule_id
         JOIN users u ON cs.user_id = u.uid
-        WHERE m.schedule_id = ? AND cs.user_id = ? AND m.is_running = true
+        WHERE m.schedule_id = ?
     ");
-    $stmt->execute([$scheduleId, $_SESSION['user']]);
+    $stmt->execute([$scheduleId]);
     $meeting = $stmt->get_result()->fetch_assoc();
 
     if (!$meeting) {
@@ -50,18 +51,54 @@ try {
         ");
         $stmt->execute([$meeting['meeting_uid']]);
         
-        throw new Exception('Meeting has ended');
+        // Rerun the meeting instead of throwing an error
+        $options = [
+            'attendeePW' => $meeting['attendee_pw'],
+            'moderatorPW' => $meeting['moderator_pw'],
+            'duration' => 0, // No duration limit
+            'record' => false,
+        ];
+        
+        $result = $bbb->createMeeting(
+            $meeting['meeting_uid'],
+            $meeting['meeting_name'],
+            $options
+        );
+        
+        if (!$result['success']) {
+            throw new Exception('Failed to restart meeting: ' . ($result['error'] ?? 'Unknown error'));
+        }
+        
+        // Update meeting status in database
+        $stmt = $conn->prepare("
+            UPDATE meetings 
+            SET is_running = true 
+            WHERE meeting_uid = ?
+        ");
+        $stmt->execute([$meeting['meeting_uid']]);
+        
+        log_error("Meeting {$meeting['meeting_uid']} has been restarted", "meeting");
     }
-    log_error("I RUN HERE!");
+    
     // Get join URL based on role
-    $password = $meeting['participant_role'] === 'TUTOR' ? 
+    $password = $meeting['participant_role'] === 'TECHGURU' ? 
                 $meeting['moderator_pw'] : 
                 $meeting['attendee_pw'];
 
+    // Get Return Link
+    $link = null;
+    if($role === 'TECHGURU') {
+        $link = "https://".$_SERVER['SERVER_NAME']."/dashboard/t/class/details?id={$meeting['class_id']}&ended=1";   
+    }
+    elseif($role === 'TECHKID') {
+        $link = "https://".$_SERVER['SERVER_NAME']."/dashboard/s/class/details?id={$meeting['class_id']}&ended=1";
+    }
+
     $joinUrl = $bbb->getJoinUrl(
         $meeting['meeting_uid'],
-        $meeting['participant_name'],
-        $password
+        $_SESSION['first_name'].' '.$_SESSION['last_name'],
+        $password,
+
     );
 
     // Log meeting join attempt

@@ -194,11 +194,11 @@ $title = htmlspecialchars($classDetails['class_name']);
                     
                     if (data.success) {
                         showToast('success', "Successfully enrolled in the class!");
-                        setTimeout(() => location.href = `${BASE}pages/s/class/details?id=${<?php echo $class_id; ?>}`, 1500);
+                        setTimeout(() => location.href = `${BASE}dashboard/s/class/details?id=${<?php echo $class_id; ?>}`, 1500);
                     } else {
                         if (data.already_enrolled) {
                             showToast('info', "You are already enrolled in this class!");
-                            setTimeout(() => location.href = `${BASE}pages/s/class/details?id=${data.class_id}`, 1500);
+                            setTimeout(() => location.href = `${BASE}dashboard/s/class/details?id=${data.class_id}`, 1500);
                         } else {
                             showToast('error', data.message || "Failed to enroll in the class. Please try again.");
                         }

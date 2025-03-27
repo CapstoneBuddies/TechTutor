@@ -223,10 +223,37 @@ function createClass($data) {
     
     try {
         $conn->begin_transaction();
+         
+        // Validate required fields
+        $required_fields = ['subject_id', 'class_name', 'class_desc', 'tutor_id', 'start_date', 'end_date', 'days', 'time_slots'];
+        foreach ($required_fields as $field) {
+            if (!isset($data[$field]) || empty($data[$field])) {
+                throw new Exception("Missing required field: {$field}");
+            }
+        }
+
+        // Validate dates
+        $start_date = new DateTime($data['start_date']);
+        $end_date = new DateTime($data['end_date']);
+        if ($start_date > $end_date) {
+            throw new Exception("End date cannot be earlier than start date");
+        }
         
         // Handle optional values correctly
         $classSize = isset($data['class_size']) && $data['class_size'] !== '' ? $data['class_size'] : null;
         $price = isset($data['price']) ? $data['price'] : 0; // Default price if not set
+        $is_free = isset($data['is_free']) ? $data['is_free'] : 1; // Default to free class
+        
+        // Handle file upload for thumbnail
+        $thumbnail = 'default.jpg'; // Default thumbnail
+        if (isset($data['thumbnail']) && $data['thumbnail']['error'] === 0) {
+            $file_ext = strtolower(pathinfo($data['thumbnail']['name'], PATHINFO_EXTENSION));
+            if (!in_array($file_ext, ['jpg', 'jpeg', 'png'])) {
+                throw new Exception("Invalid file type. Only JPG and PNG are allowed.");
+            }
+            // Will be renamed after class creation with class_id
+            $thumbnail = "temp_" . time() . "." . $file_ext;
+        }
         
         // Insert into class table
         $stmt = $conn->prepare("INSERT INTO class (subject_id, class_name, class_desc, tutor_id, start_date, end_date, class_size, status, is_free, price, thumbnail) 
@@ -239,36 +266,90 @@ function createClass($data) {
             $data['start_date'],
             $data['end_date'],
             $classSize,
-            $data['is_free'],
+            $is_free,
             $price,
-            $data['thumbnail']
+            $thumbnail
         );
-        $stmt->execute();
+        
+        if (!$stmt->execute()) {
+            throw new Exception("Failed to create class record");
+        }
         $class_id = $conn->insert_id;
         
-        // Insert class schedules if provided
-        if (!empty($data['schedules'])) {
-            $scheduleStmt = $conn->prepare("INSERT INTO class_schedule (class_id, user_id, role, session_date, start_time, end_time, status) 
-                                            VALUES (?, ?, 'TUTOR', ?, ?, ?, 'pending')");
+        // Handle thumbnail upload if exists
+        if (isset($data['thumbnail']) && $data['thumbnail']['error'] === 0) {
+            $new_filename = $class_id . "." . $file_ext;
+            $upload_path = CLASS_IMG . $new_filename;
+            
+            if (!move_uploaded_file($data['thumbnail']['tmp_name'], $upload_path)) {
+                throw new Exception("Failed to upload thumbnail");
+            }
+            
+            // Update the filename in database
+            $stmt = $conn->prepare("UPDATE class SET thumbnail = ? WHERE class_id = ?");
+            $stmt->bind_param("si", $new_filename, $class_id);
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to update thumbnail record");
+            }
+        }
 
-            foreach ($data['schedules'] as $schedule) {
-                $scheduleStmt->bind_param("iisss", 
+        // Generate and insert schedules
+        $schedules = generateClassSchedules(
+            $data['start_date'],
+            $data['end_date'],
+            $data['days'],
+            $data['time_slots']
+        );
+
+        if (empty($schedules)) {
+            throw new Exception("No valid schedules could be generated");
+        }
+
+        $stmt = $conn->prepare("INSERT INTO class_schedule (class_id, day, session_date, start_time, end_time, status) VALUES (?, ?, ?, ?, ?, 'pending')");
+        
+        foreach ($schedules as $schedule) {
+            $stmt->bind_param("issss", 
                     $class_id,
-                    $data['tutor_id'],
-                    $schedule['session_date'],
+                $schedule['day'],
+                $schedule['date'],
                     $schedule['start_time'],
                     $schedule['end_time']
                 );
-                $scheduleStmt->execute();
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to create schedule record");
             }
         }
+
+        // Send notification to tutor
+        sendNotification(
+            $data['tutor_id'],
+            'TECHGURU',
+            "Your class '{$data['class_name']}' has been created successfully",
+            BASE . "dashboard/t/class",
+            $class_id,
+            'bi-mortarboard',
+            'text-success'
+        );
+
+        // Log the successful creation
+        log_error("Class created successfully: {$data['class_name']} (ID: {$class_id}) by tutor {$data['tutor_id']}", "info");
         
         $conn->commit();
-        return ['success' => true, 'class_id' => $class_id];
+        
+        return [
+            'success' => true,
+            'class_id' => $class_id,
+            'message' => 'Class created successfully',
+            'schedules' => $schedules
+        ];
         
     } catch (Exception $e) {
         $conn->rollback();
-        return ['success' => false, 'error' => $e->getMessage()];
+        log_error("Error creating class: " . $e->getMessage(), "database");
+        return [
+            'success' => false,
+            'message' => $e->getMessage()
+        ];
     }
 }
 
@@ -340,7 +421,7 @@ function getClassSchedules($class_id) {
             ORDER BY cs.session_date ASC, cs.start_time ASC";
             
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $class_id);
+        $stmt->bind_param("i", $class_id);
     $stmt->execute();
     
     return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -442,21 +523,61 @@ function getActiveClassesForSubject($subject_id, $tutor_id) {
 function getClassStudents($class_id) {
     global $conn;
     
-    $sql = "SELECT DISTINCT u.*, e.status as enrollment_status,
-            (SELECT COUNT(*) FROM class_schedule cs2 
-             WHERE cs2.class_id = ? AND cs2.user_id = u.uid AND cs2.status = 'completed') as completed_sessions,
-            (SELECT COUNT(*) FROM class_schedule cs2 
-             WHERE cs2.class_id = ? AND cs2.user_id = u.uid) as total_sessions
+    $sql = "SELECT DISTINCT 
+                u.*,
+                e.status as enrollment_status,
+                e.enrollment_date,
+                COALESCE(
+                    (SELECT COUNT(*) 
+                     FROM class_schedule cs 
+                     JOIN attendance a ON cs.schedule_id = a.schedule_id 
+                     WHERE cs.class_id = ? 
+                     AND a.status = 'present'), 
+                    0
+                ) as completed_sessions,
+                COALESCE(
+                    (SELECT COUNT(*) 
+                     FROM class_schedule cs 
+                     WHERE cs.class_id = ? 
+                     AND cs.session_date <= CURRENT_DATE), 
+                    0
+                ) as total_sessions,
+                COALESCE(
+                    (SELECT COUNT(*) 
+                     FROM class_schedule cs 
+                     WHERE cs.class_id = ?), 
+                    0
+                ) as all_sessions
             FROM users u
             JOIN enrollments e ON u.uid = e.student_id
-            WHERE e.class_id = ?
+            WHERE e.class_id = ? AND e.status != 'dropped'
             ORDER BY u.first_name, u.last_name";
             
+    try {
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("iii", $class_id, $class_id, $class_id);
+        $stmt->bind_param("iiii", $class_id, $class_id, $class_id, $class_id);
     $stmt->execute();
-    
-    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $students = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        // Process each student's data
+        foreach ($students as &$student) {
+            // Calculate progress percentage safely
+            $student['total_sessions'] = max($student['total_sessions'], 1); // Prevent division by zero
+            $student['progress_percentage'] = round(($student['completed_sessions'] / $student['total_sessions']) * 100);
+            
+            // Add additional useful information
+            $student['all_sessions'] = (int)$student['all_sessions'];
+            $student['remaining_sessions'] = $student['all_sessions'] - $student['total_sessions'];
+            $student['attendance_rate'] = $student['total_sessions'] > 0 
+                ? round(($student['completed_sessions'] / $student['total_sessions']) * 100) 
+                : 0;
+        }
+
+        return $students;
+    } catch (Exception $e) {
+        log_error("Error getting class students: " . $e->getMessage(), 'database');
+        return [];
+    }
 }
 
 /**
@@ -856,7 +977,7 @@ function updateClassSchedules($class_id, $schedules, $tutor_id) {
         $delete->execute();
         
         // Insert new schedules
-        $insert = $conn->prepare("INSERT INTO class_schedule (class_id, user_id, session_date, start_time, end_time, status) VALUES (?, ?, ?, ?, ?, 'confirmed')");
+        $insert = $conn->prepare("INSERT INTO class_schedule (class_id, user_id, session_date, start_time, end_time) VALUES (?, ?, ?, ?, ?)");
         
         foreach ($schedules as $schedule) {
             $insert->bind_param("iisss", 
@@ -885,5 +1006,16 @@ function getClassRecordings() {
 function getClassRecordingsCount() {
     return 0;
 }
+function getScheduleStatus($date, $startTime) {
+    $scheduleDateTime = strtotime("$date $startTime");
+    $now = time();
 
+    if ($scheduleDateTime < $now) {
+        return 'completed';
+    } elseif (($scheduleDateTime - $now) < 24 * 60 * 60) {
+        return 'upcoming';
+    } else {
+        return 'scheduled';
+    }
+}
 ?>

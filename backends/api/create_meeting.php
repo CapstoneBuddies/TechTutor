@@ -101,7 +101,7 @@ try {
                 'text-success'
             FROM class_schedule cs
             JOIN class c ON cs.class_id = c.class_id
-            WHERE cs.schedule_id = ? AND cs.role = 'STUDENT'
+            WHERE cs.schedule_id = ?
         ");
         $stmt->execute([$scheduleId]);
 

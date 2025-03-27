@@ -19,7 +19,7 @@
         header('Location: ./');
         exit();
     }
-
+    
     // Get class schedules and files
     $schedules = getClassSchedules($class_id);
     $files = getClassFiles($class_id);
@@ -133,6 +133,19 @@
                                     <tbody>
                                         <?php foreach ($schedules as $schedule): ?>
                                         <?php 
+
+                                            // Check if meeting is running from the meetings table
+                                            $stmt = $conn->prepare("
+                                                SELECT is_running 
+                                                FROM meetings 
+                                                WHERE schedule_id = ? 
+                                                ORDER BY created_at DESC 
+                                                LIMIT 1
+                                            ");
+                                            $stmt->bind_param("i", $schedule['schedule_id']);
+                                            $stmt->execute();
+                                            $meeting_result = $stmt->get_result()->fetch_assoc();
+
                                             $session_date = new DateTime($schedule['session_date']);
                                             $start_time = new DateTime($schedule['start_time']);
                                             $end_time = new DateTime($schedule['end_time']);
@@ -141,8 +154,7 @@
                                             $now = new DateTime();
                                             $session_start = new DateTime($schedule['session_date'] . ' ' . $schedule['start_time']);
                                             $session_end = new DateTime($schedule['session_date'] . ' ' . $schedule['end_time']);
-                                            
-                                            $is_ongoing = $now >= $session_start && $now <= $session_end;
+                                            $is_ongoing = ($now >= $session_start && $now <= $session_end) || $meeting_result;
                                             $is_upcoming = $now < $session_start;
                                             $is_completed = $schedule['status'] === 'completed';
                                         ?>
@@ -170,7 +182,7 @@
                                             </td>
                                             <td>
                                                 <?php if ($is_ongoing): ?>
-                                                    <a href="<?php echo BASE; ?>meeting/join?schedule=<?php echo $schedule['schedule_id']; ?>" 
+                                                    <a href="#" onclick="joinMeeting(<?php echo $schedule['schedule_id']; ?>)" 
                                                        class="btn btn-success btn-sm">
                                                         <i class="bi bi-camera-video-fill me-1"></i>
                                                         Join Meeting
@@ -508,6 +520,34 @@
                 showLoading(false);
                 showToast('error', 'Failed to submit feedback');
                 console.error('Error:', error);
+            });
+        }
+        function joinMeeting(scheduleId) {
+            showLoading(true);
+
+            fetch(BASE+'join-meeting', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                        schedule_id: scheduleId,
+                        role: '<?php echo $_SESSION['role']; ?>'
+                    })
+            })
+            .then(response => response.json())
+            .then(data => {
+                showLoading(false);
+                if (data.success) {
+                    window.location.href = data.data.join_url;
+                } else {
+                    showToast('error', data.message || 'Failed to join meeting.');
+                }
+            })
+            .catch(error => {
+                showLoading(false);
+                console.error('Error joining meeting:', error);
+                showToast('error', 'An error occurred. Please try again.');
             });
         }
         </script>

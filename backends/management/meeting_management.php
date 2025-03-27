@@ -31,7 +31,7 @@ class MeetingManagement {
                 'autoStartRecording' => $options['autoStartRecording'] ?? 'false',
                 'allowStartStopRecording' => $options['allowStartStopRecording'] ?? 'true',
                 'webcamsOnlyForModerator' => $options['webcamsOnlyForModerator'] ?? 'false',
-                'muteOnStart' => $options['muteOnStart'] ?? 'true'
+                'muteOnStart' => $options['muteOnStart'] ?? 'true',
             ];
 
             $response = $this->makeRequest('create', $params);
@@ -60,14 +60,15 @@ class MeetingManagement {
      * @param string $password Meeting password (attendee or moderator)
      * @return string Join URL
      */
-    public function getJoinUrl($meetingId, $name, $password) {
+    public function getJoinUrl($meetingId, $name, $password, $link = null) {
         try {
             $params = [
                 'meetingID' => $meetingId,
                 'fullName' => $name,
                 'password' => $password,
                 'userID' => $_SESSION['user'] ?? '',
-                'joinViaHtml5' => 'true'
+                'joinViaHtml5' => 'true',
+                'logoutURL' => $link ?? 'https://www.techtutor.cfd/dashboard'
             ];
 
             return $this->buildUrl('join', $params);

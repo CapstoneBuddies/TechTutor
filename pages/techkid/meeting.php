@@ -13,12 +13,12 @@
     }
 
     // Check if schedule ID is provided
-    if (!isset($_GET['id'])) {
-        header('Location: ' . BASE . 'pages/techkid/class');
+    if (!isset($_GET['schedule'])) {
+        header('Location: ./');
         exit;
     }
 
-    $schedule_id = $_GET['id'];
+    $schedule_id = $_GET['schedule'];
     $meeting_details = null;
     $error_message = null;
 

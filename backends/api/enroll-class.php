@@ -29,10 +29,12 @@ try {
 
     // Check if class exists and is active
     $stmt = $conn->prepare("SELECT c.class_id, c.class_name, c.class_size, c.is_free, c.price, 
-                             u.first_name, u.last_name, u.email, 
+                             u.first_name, u.last_name, u.email,
+                             cs.schedule_id, cs.start_time, cs.end_time,
                              (SELECT COUNT(*) FROM enrollments WHERE class_id = c.class_id AND status = 'active') as enrolled_count 
                              FROM class c 
                              JOIN users u ON c.tutor_id = u.uid 
+                             LEFT JOIN class_schedule cs ON c.class_id = cs.class_id
                              WHERE c.class_id = ? AND c.status = 'active'");
     $stmt->bind_param("i", $class_id);
     $stmt->execute();
@@ -59,59 +61,75 @@ try {
     // Begin transaction
     $conn->begin_transaction();
 
-    // Enroll the student in the class
-    $stmt = $conn->prepare("INSERT INTO enrollments (class_id, student_id, status) VALUES (?, ?, 'active')");
-    $stmt->bind_param("ii", $class_id, $student_id);
-    $result = $stmt->execute();
+    try {
+        // Enroll the student in the class
+        $stmt = $conn->prepare("INSERT INTO enrollments (class_id, student_id, status) VALUES (?, ?, 'active')");
+        $stmt->bind_param("ii", $class_id, $student_id);
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to create enrollment record.');
+        }
+        $enrollment_id = $stmt->insert_id;
 
-    if (!$result) {
-        throw new Exception('Failed to enroll in the class. Please try again.');
-    }
+        // Create initial attendance records for all scheduled sessions
+        $stmt = $conn->prepare("INSERT INTO attendance (student_id, schedule_id, status, created_at) 
+                              SELECT ?, schedule_id, 'pending', NOW() 
+                              FROM class_schedule 
+                              WHERE class_id = ?");
+        $stmt->bind_param("ii", $_SESSION['user'], $class_id);
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to create attendance records.');
+        }
 
-    // Send notification to student
-    sendNotification(
-        $student_id, 
-        'TECHKID', 
-        "You have been enrolled in '{$class['class_name']}'", 
-        BASE . "dashboard/s/class", 
-        $class_id, 
-        'bi-mortarboard', 
-        'text-success'
-    );
+        // Send notification to student
+        sendNotification(
+            $student_id, 
+            'TECHKID', 
+            "You have been enrolled in '{$class['class_name']}'", 
+            BASE . "dashboard/s/class", 
+            $class_id, 
+            'bi-mortarboard', 
+            'text-success'
+        );
 
-    // Send notification to tutor
-    sendNotification(
-        null, 
-        'TECHGURU', 
-        "A new student enrolled in '{$class['class_name']}'", 
-        BASE . "dashboard/t/class", 
-        $class_id, 
-        'bi-person-plus', 
-        'text-primary'
-    );
+        // Send notification to tutor with more details
+        $student_name = $_SESSION['name'];
+        sendNotification(
+            null, 
+            'TECHGURU', 
+            "New student {$student_name} enrolled in '{$class['class_name']}'", 
+            BASE . "dashboard/t/class", 
+            $class_id, 
+            'bi-person-plus', 
+            'text-primary'
+        );
 
-    // Send email confirmation to student
-    sendEnrollmentEmail($_SESSION['email'], $_SESSION['name'], $class['class_name'], $class['first_name'] . ' ' . $class['last_name']);
+        // Send email confirmation to student
+        sendEnrollmentEmail($_SESSION['email'], $_SESSION['name'], $class['class_name'], $class['first_name'] . ' ' . $class['last_name']);
 
-    // If class is paid, handle payment (placeholder for future implementation)
-    if (!$class['is_free']) {
-        // Log this enrollment for payment processing
-        log_error("Paid class enrollment: Student ID {$student_id} enrolled in class ID {$class_id} for ₱{$class['price']}", "info");
-    }
+        // If class is paid, handle payment (placeholder for future implementation)
+        if (!$class['is_free']) {
+            // Log this enrollment for payment processing
+            log_error("Paid class enrollment: Student ID {$student_id} enrolled in class ID {$class_id} for ₱{$class['price']}", "info");
+        }
 
-    // Commit transaction
-    $conn->commit();
+        // Commit transaction
+        $conn->commit();
 
-    log_error("Successful enrollment: Student ID {$student_id} enrolled in class ID {$class_id}", "info");
-    echo json_encode(['success' => true, 'message' => 'Successfully enrolled in the class.']);
+        log_error("Successful enrollment: Student ID {$student_id} enrolled in class ID {$class_id} with attendance records created", "info");
+        echo json_encode([
+            'success' => true, 
+            'message' => 'Successfully enrolled in the class.',
+            'enrollment_id' => $enrollment_id
+        ]);
 
-} catch (Exception $e) {
-    // Rollback transaction if error occurs
-    if ($conn->errno != 0) {
+    } catch (Exception $e) {
         $conn->rollback();
+        log_error("Enrollment Error: " . $e->getMessage(), 'database');
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
-    
-    log_error("Enrollment Error: " . $e->getMessage(), 'database');
+} catch (Exception $e) {
+    log_error("Enrollment Validation Error: " . $e->getMessage(), 'database');
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }

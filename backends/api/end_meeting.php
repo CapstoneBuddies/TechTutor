@@ -1,6 +1,6 @@
 <?php
-require_once '../../main.php';
-require_once '../meeting_management.php';
+require_once '../main.php';
+require_once BACKEND.'meeting_management.php';
 
 header('Content-Type: application/json');
 
@@ -16,7 +16,7 @@ try {
         throw new Exception('Schedule ID is required');
     }
 
-    $conn = getConnection();
+    global $conn;
     
     // Get meeting details and verify ownership
     $stmt = $conn->prepare("
@@ -30,7 +30,7 @@ try {
         WHERE m.schedule_id = ? AND m.is_running = true
     ");
     $stmt->execute([$scheduleId]);
-    $meeting = $stmt->fetch(PDO::FETCH_ASSOC);
+    $meeting = $stmt->get_result()->fetch_assoc();
 
     if (!$meeting) {
         throw new Exception('Meeting not found or already ended');
@@ -46,10 +46,6 @@ try {
 
     // End the meeting
     $result = $bbb->endMeeting($meeting['meeting_uid'], $meeting['moderator_pw']);
-
-    if (!$result['success']) {
-        throw new Exception('Failed to end meeting: ' . ($result['error'] ?? 'Unknown error'));
-    }
 
     // Begin transaction
     $conn->begin_transaction();
@@ -83,7 +79,7 @@ try {
                 'bi-check-circle-fill',
                 'text-success'
             FROM class_schedule cs
-            WHERE cs.schedule_id = ? AND cs.role = 'STUDENT'
+            WHERE cs.schedule_id = ?
         ");
         $stmt->execute([$meeting['class_name'], $scheduleId]);
 

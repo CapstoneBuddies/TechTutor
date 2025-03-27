@@ -50,6 +50,11 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
 <html lang="en">
     <?php include ROOT_PATH . '/components/head.php'; ?>
     <style>
+        .clockpicker-active {
+            background-color: #0d6efd !important;
+            font-weight: bold;
+            color: #fafafa !important;
+        }
         .schedule-card {
             background: #fff;
             border-radius: 0.75rem;
@@ -191,6 +196,32 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
                 gap: 0.5rem;
             }
         }
+        /* Clockpicker Custom Styles */
+        .clockpicker-popover {
+            z-index: 1060 !important;
+        }
+        .clockpicker-plate {
+            top: 50%;
+            left: 50%;
+            transform: translate(-55%, -0%);
+        }
+        .clockpicker-button {
+            padding: 6px 12px !important;
+            border-radius: 4px !important;
+            border: 1px solid var(--bs-gray-300) !important;
+            transition: all 0.2s ease !important;
+        }
+        .clockpicker-canvas line {
+            stroke: var(--bs-primary) !important;
+        }
+        .clockpicker-canvas-bg,
+        .clockpicker-canvas-bearing {
+            fill: var(--bs-primary) !important;
+        }
+        .clockpicker-tick:hover {
+            background-color: var(--bs-primary) !important;
+            color: white !important;
+        }
     </style>
     <body data-base="<?php echo BASE; ?>">
         <?php include ROOT_PATH . '/components/header.php'; ?>
@@ -212,7 +243,7 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
                                 <p class="subtitle">Manage class schedules and sessions</p>
                             </div>
                             <div>
-                                <a href="./" class="btn btn-outline-primary">
+                                <a href="./?id=<?php echo $class_id;?>" class="btn btn-outline-primary">
                                     <i class="bi bi-arrow-left"></i> Back to Classes
                                 </a>
                             </div>
@@ -358,10 +389,10 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
                                                     <?php echo ucfirst($status); ?>
                                                 </td>
                                                 <td class="text-end">
-                                                    <button class="btn btn-sm btn-primary" onclick="editSchedule(<?php echo $schedule['schedule_id']; ?>)">
+                                                    <button class="btn btn-sm btn-primary" onclick="editSchedule(<?php echo $schedule['schedule_id']; ?>)" data-bs-toggle="tooltip" title="Edit Schedule">
                                                         <i class="bi bi-pencil"></i>
                                                     </button>
-                                                    <button class="btn btn-sm btn-danger" onclick="deleteSchedule(<?php echo $schedule['schedule_id']; ?>)">
+                                                    <button class="btn btn-sm btn-danger" onclick="deleteSchedule(<?php echo $schedule['schedule_id']; ?>)" data-bs-toggle="tooltip" title="Delete Schedule">
                                                         <i class="bi bi-trash"></i>
                                                     </button>
                                                 </td>
@@ -431,8 +462,57 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
                     twelvehour: true,
                     donetext: 'Done',
                     afterDone: function() {
-                        validateTimeSlot(this.input[0]);
+                        validateTimeSlot(this.input);
                     }
+                }).on('shown.clockpicker', function(e) {
+                    const picker = $(this).data('clockpicker');
+                    if (!picker) return;
+
+                    // Update AM/PM button states
+                    const ampmBlock = picker.popover.find('.clockpicker-am-pm-block');
+                    const amButton = ampmBlock.find('button').first();
+                    const pmButton = ampmBlock.find('button').last();
+
+                    // Set initial state based on current value
+                    const currentValue = picker.input.val();
+                    if (currentValue) {
+                        const isPM = currentValue.toLowerCase().includes('pm');
+                        picker.amOrPm = isPM ? 'PM' : 'AM';
+                        picker.spanAmPm.textContent = picker.amOrPm;
+                        
+                        amButton.toggleClass('active', !isPM);
+                        pmButton.toggleClass('active', isPM);
+                    } else {
+                        // Default to AM
+                        amButton.addClass('active');
+                        pmButton.removeClass('active');
+                        picker.amOrPm = 'AM';
+                        picker.spanAmPm.textContent = 'AM';
+                    }
+
+                    // Handle AM/PM button clicks
+                    ampmBlock.find('button').off('click').on('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        const isAM = $(this).is(':first-child');
+                        const ampm = isAM ? 'AM' : 'PM';
+                        
+                        // Update button states
+                        amButton.toggleClass('active', isAM);
+                        pmButton.toggleClass('active', !isAM);
+                        
+                        // Update picker state
+                        picker.amOrPm = ampm;
+                        picker.spanAmPm.textContent = ampm;
+                        
+                        // Update input value
+                        const currentValue = picker.input.val();
+                        if (currentValue) {
+                            const timePart = currentValue.split(' ')[0];
+                            picker.input.val(timePart + ' ' + ampm);
+                        }
+                    });
                 });
             }
 
@@ -541,22 +621,42 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
             }
 
             function validateTimeSlot(input) {
-                const entry = input.closest('.schedule-entry');
-                const start = entry.querySelector('.schedule-start');
-                const end = entry.querySelector('.schedule-end');
+                const $input = $(input);
+                const $entry = $input.closest('.schedule-entry');
+                const $start = $entry.find('.schedule-start');
+                const $end = $entry.find('.schedule-end');
                 
-                if (start.value && end.value) {
-                    const startTime = new Date(`1970-01-01T${start.value}`);
-                    const endTime = new Date(`1970-01-01T${end.value}`);
+                if ($start.val() && $end.val()) {
+                    const startParts = $start.val().match(/(\d+):(\d+)\s*(AM|PM)/i);
+                    const endParts = $end.val().match(/(\d+):(\d+)\s*(AM|PM)/i);
                     
-                    if (startTime >= endTime) {
-                        end.classList.add('is-invalid');
-                        showTooltip(end, 'End time must be after start time');
-                    } else {
-                        end.classList.remove('is-invalid');
-                        hideTooltip(end);
+                    if (startParts && endParts) {
+                        let startHour = parseInt(startParts[1]);
+                        let endHour = parseInt(endParts[1]);
+                        const startMin = parseInt(startParts[2]);
+                        const endMin = parseInt(endParts[2]);
+                        const startPeriod = startParts[3].toUpperCase();
+                        const endPeriod = endParts[3].toUpperCase();
+
+                        // Convert to 24-hour format
+                        if (startPeriod === 'PM' && startHour !== 12) startHour += 12;
+                        if (startPeriod === 'AM' && startHour === 12) startHour = 0;
+                        if (endPeriod === 'PM' && endHour !== 12) endHour += 12;
+                        if (endPeriod === 'AM' && endHour === 12) endHour = 0;
+
+                        // Compare times
+                        if (startHour > endHour || (startHour === endHour && startMin >= endMin)) {
+                            $end.addClass('is-invalid');
+                            showTooltip($end[0], 'End time must be after start time');
+                            return false;
+                        } else {
+                            $end.removeClass('is-invalid');
+                            hideTooltip($end[0]);
+                            return true;
+                        }
                     }
                 }
+                return true;
             }
 
             function showTooltip(element, message) {
@@ -658,7 +758,7 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
 
             function editSchedule(id) {
                 // Fetch schedule details and populate modal
-                fetch(`api/schedule/${id}`)
+                fetch(BASE+`api/schedule/${id}`)
                     .then(response => response.json())
                     .then(data => {
                         document.getElementById('editScheduleId').value = id;
@@ -666,7 +766,26 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
                         document.getElementById('editStartTime').value = data.start_time;
                         document.getElementById('editEndTime').value = data.end_time;
                         
-                        new bootstrap.Modal(document.getElementById('editScheduleModal')).show();
+                        const modal = new bootstrap.Modal(document.getElementById('editScheduleModal'));
+                        modal.show();
+                        
+                        // Reinitialize clockpicker for edit modal
+                        $('#editScheduleModal .clockpicker').clockpicker({
+                            autoclose: true,
+                            twelvehour: true,
+                            donetext: 'Done',
+                            afterDone: function() {
+                                validateTimeSlot(this.input);
+                            }
+                        });
+
+                        // Prevent modal from closing when clicking clockpicker elements
+                        const clockpickerPopover = document.querySelector('.clockpicker-popover');
+                        if (clockpickerPopover) {
+                            clockpickerPopover.addEventListener('click', function(e) {
+                                e.stopPropagation();
+                            });
+                        }
                     });
             }
 
@@ -676,11 +795,11 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
                 const start = document.getElementById('editStartTime').value;
                 const end = document.getElementById('editEndTime').value;
                 
-                fetch(`api/schedule/${id}`, {
+                fetch(BASE+`api/schedule/${id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ date, start_time: start, end_time: end })
-                })
+                    })
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
@@ -692,7 +811,7 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
             }
 
             function deleteSchedules(ids) {
-                fetch('api/schedules', {
+                fetch(BASE+'api/schedules', {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ ids })
@@ -707,18 +826,27 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
                 });
             }
 
-            function getScheduleStatus(date, startTime) {
-                const scheduleDateTime = new Date(`${date} ${startTime}`);
-                const now = new Date();
-                
-                if (scheduleDateTime < now) {
-                    return 'completed';
-                } else if (scheduleDateTime.getTime() - now.getTime() < 24 * 60 * 60 * 1000) {
-                    return 'upcoming';
-                } else {
-                    return 'scheduled';
-                }
-            }
+            // Update the AM/PM button click handlers
+            $(document).on('click', '.clockpicker-button.am-button', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $(this).addClass('clockpicker-active');
+                $('.clockpicker-button.pm-button').removeClass('clockpicker-active');
+            });
+
+            $(document).on('click', '.clockpicker-button.pm-button', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $(this).addClass('clockpicker-active');
+                $('.clockpicker-button.am-button').removeClass('clockpicker-active');
+            });
+
+            // Add modal specific event prevention
+            $('#editScheduleModal').on('shown.bs.modal', function() {
+                $('.clockpicker-popover').on('click', function(e) {
+                    e.stopPropagation();
+                });
+            });
         </script>
     </body>
 </html>

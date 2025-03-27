@@ -244,6 +244,50 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                 height: 180px;
             }
         }
+        /* Form validation styles */
+        .form-control.is-invalid,
+        .was-validated .form-control:invalid {
+            border-color: #dc3545;
+            padding-right: calc(1.5em + 0.75rem);
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right calc(0.375em + 0.1875rem) center;
+            background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+        }
+
+        .form-control.is-invalid:focus {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+        }
+
+        .invalid-feedback {
+            display: none;
+            width: 100%;
+            margin-top: 0.25rem;
+            font-size: 0.875em;
+            color: #dc3545;
+        }
+
+        .was-validated .form-control:invalid ~ .invalid-feedback,
+        .form-control.is-invalid ~ .invalid-feedback {
+            display: block;
+        }
+
+        .error-shake {
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        .field-error {
+            color: #dc3545;
+            font-size: 0.875em;
+            margin-top: 0.25rem;
+        }
     </style>
     <body data-base="<?php echo BASE; ?>">
         <?php include ROOT_PATH . '/components/header.php'; ?>
@@ -302,7 +346,7 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                                 <label for="description" class="form-label">Class Description</label>
                                 <textarea class="form-control" id="description" name="description" 
                                           rows="4" required minlength="50" maxlength="500"></textarea>
-                                <div class="form-text">
+                                <div class="form-text descriptionCountContainer">
                                     <span id="descriptionCount">0</span>/500 characters
                                 </div>
                             </div>
@@ -439,7 +483,7 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                         <div class="form-section">
                             <h3><i class="bi bi-eye"></i> Preview</h3>
                             <div class="preview-card">
-                                <img id="coverPreview" src="<?php echo IMG; ?>placeholders/class-cover.jpg" alt="Class Cover">
+                                <img id="coverPreview" src="<?php echo CLASS_IMG; ?>default.jpg" alt="Class Cover">
                                 <h4 id="previewTitle">Class Name</h4>
                                 <p id="previewDescription" class="text-muted">Class description will appear here...</p>
                                 <div class="d-flex justify-content-between align-items-center">
@@ -505,6 +549,8 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                 updatePreview();
                 initializeTooltips();
                 setupCharacterCount();
+
+                // Form 
             });
 
             function initializeClockpicker() {
@@ -517,54 +563,226 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
 
             function setupFormValidation() {
                 const form = document.getElementById('createClassForm');
-                const description = document.getElementById('description');
-                const descriptionCount = document.getElementById('descriptionCount');
-                
-                // Update character count
-                description.addEventListener('input', function() {
-                    const count = this.value.length;
-                    descriptionCount.textContent = count;
-                    descriptionCount.className = count > 500 ? 'text-danger' : 'text-muted';
-                });
-                
-                // Validate dates
-                const startDate = document.getElementById('startDate');
-                const endDate = document.getElementById('endDate');
-                
-                startDate.addEventListener('change', function() {
-                    endDate.min = this.value;
-                    validateDates();
-                });
-                
-                endDate.addEventListener('change', validateDates);
-                
+                const fields = {
+                    className: {
+                        element: document.getElementById('className'),
+                        rules: {
+                            required: 'Class name is required',
+                            minLength: { value: 5, message: 'Class name must be at least 5 characters' },
+                            maxLength: { value: 100, message: 'Class name must not exceed 100 characters' }
+                        }
+                    },
+                    maxStudents: {
+                        element: document.getElementById('maxStudents'),
+                        rules: {
+                            required: 'Maximum students is required',
+                            min: { value: 1, message: 'Must allow at least 1 student' },
+                            max: { value: 50, message: 'Cannot exceed 50 students' }
+                        }
+                    },
+                    description: {
+                        element: document.getElementById('description'),
+                        rules: {
+                            required: 'Description is required',
+                            minLength: { value: 50, message: 'Description must be at least 50 characters' },
+                            maxLength: { value: 500, message: 'Description must not exceed 500 characters' }
+                        }
+                    },
+                    classCover: {
+                        element: document.getElementById('classCover'),
+                        rules: {
+                            // required: 'Class cover image is required',
+                            fileType: { value: ['image/jpeg', 'image/png'], message: 'Only JPG and PNG files are allowed' },
+                            fileSize: { value: 2 * 1024 * 1024, message: 'File size must not exceed 2MB' }
+                        }
+                    }
+                };
+
+                // Validate single field
+                function validateField(fieldName, showError = true) {
+                    const field = fields[fieldName];
+                    const element = field.element;
+                    const rules = field.rules;
+                    let isValid = true;
+                    let errorMessage = '';
+
+                    // Remove existing error messages
+                    const existingError = element.parentElement.querySelector('.field-error');
+                    if (existingError) {
+                        existingError.remove();
+                    }
+
+                    // Check each validation rule
+                    for (const rule in rules) {
+                        switch(rule) {
+                            case 'required':
+                                if (!element.value) {
+                                    isValid = false;
+                                    errorMessage = rules[rule];
+                                }
+                                break;
+                            case 'minLength':
+                                if (element.value.length < rules[rule].value) {
+                                    isValid = false;
+                                    errorMessage = rules[rule].message;
+                                }
+                                break;
+                            case 'maxLength':
+                                if (element.value.length > rules[rule].value) {
+                                    isValid = false;
+                                    errorMessage = rules[rule].message;
+                                }
+                                break;
+                            case 'min':
+                                if (Number(element.value) < rules[rule].value) {
+                                    isValid = false;
+                                    errorMessage = rules[rule].message;
+                                }
+                                break;
+                            case 'max':
+                                if (Number(element.value) > rules[rule].value) {
+                                    isValid = false;
+                                    errorMessage = rules[rule].message;
+                                }
+                                break;
+                            case 'fileType':
+                                if (element.files.length > 0) {
+                                    if (!rules[rule].value.includes(element.files[0].type)) {
+                                        isValid = false;
+                                        errorMessage = rules[rule].message;
+                                    }
+                                }
+                                break;
+                            case 'fileSize':
+                                if (element.files.length > 0) {
+                                    if (element.files[0].size > rules[rule].value) {
+                                        isValid = false;
+                                        errorMessage = rules[rule].message;
+                                    }
+                                }
+                                break;
+                        }
+                        if (!isValid) break;
+                    }
+
+                    // Show/hide error
+                    if (!isValid && showError) {
+                        element.classList.add('is-invalid');
+                        element.classList.add('error-shake');
+                        
+                        // Add error message
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'field-error';
+                        errorDiv.textContent = errorMessage;
+                        element.parentElement.appendChild(errorDiv);
+                        
+                        // Focus the invalid field
+                        element.focus();
+                        
+                        // Remove shake animation after it completes
+                        setTimeout(() => {
+                            element.classList.remove('error-shake');
+                        }, 500);
+                    } else {
+                        element.classList.remove('is-invalid');
+                    }
+
+                    return isValid;
+                }
+
+                // Validate all fields
+                function validateForm() {
+                    let isValid = true;
+                    
+                    // Validate basic information
+                    for (const fieldName in fields) {
+                        if (!validateField(fieldName, true)) {
+                            isValid = false;
+                        }
+                    }
+                    
+                    // Validate class days
+                    const days = document.querySelectorAll('input[name="days[]"]:checked').length;
+                    if (days === 0) {
+                        const daysSection = document.querySelector('.btn-group[role="group"]');
+                        daysSection.classList.add('is-invalid', 'error-shake');
+                        
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'field-error';
+                        errorDiv.textContent = 'Please select at least one class day';
+                        daysSection.parentElement.appendChild(errorDiv);
+                        
+                        isValid = false;
+                        
+                        setTimeout(() => {
+                            daysSection.classList.remove('error-shake');
+                        }, 500);
+                    }
+                    
+                    // Validate time slots
+                    const slots = document.getElementsByClassName('time-slot');
+                    Array.from(slots).forEach(slot => {
+                        const start = slot.querySelector('input[name="startTime[]"]');
+                        const end = slot.querySelector('input[name="endTime[]"]');
+                        
+                        if (start.value && end.value) {
+                            const startTime = new Date(`1970-01-01T${start.value}`);
+                            const endTime = new Date(`1970-01-01T${end.value}`);
+                            
+                            if (startTime >= endTime) {
+                                end.classList.add('is-invalid', 'error-shake');
+                                
+                                const errorDiv = document.createElement('div');
+                                errorDiv.className = 'field-error';
+                                errorDiv.textContent = 'End time must be after start time';
+                                end.parentElement.appendChild(errorDiv);
+                                
+                                isValid = false;
+                                
+                                setTimeout(() => {
+                                    end.classList.remove('error-shake');
+                                }, 500);
+                            }
+                        }
+                    });
+                    
+                    // Validate price for paid classes
+                    if (document.getElementById('pricingPaid').checked) {
+                        const price = document.getElementById('price');
+                        const priceValue = parseFloat(price.value);
+                        if (isNaN(priceValue) || priceValue <= 0) {
+                            price.classList.add('is-invalid', 'error-shake');
+                            
+                            const errorDiv = document.createElement('div');
+                            errorDiv.className = 'field-error';
+                            errorDiv.textContent = 'Please enter a valid price';
+                            price.parentElement.appendChild(errorDiv);
+                            
+                            isValid = false;
+                            
+                            setTimeout(() => {
+                                price.classList.remove('error-shake');
+                            }, 500);
+                        }
+                    }
+                    
+                    return isValid;
+                }
+
+                // Add input event listeners for real-time validation
+                for (const fieldName in fields) {
+                    const element = fields[fieldName].element;
+                    element.addEventListener('input', () => validateField(fieldName, true));
+                    element.addEventListener('blur', () => validateField(fieldName, true));
+                }
+
                 // Form submission
                 form.addEventListener('submit', function(e) {
                     if (!validateForm()) {
                         e.preventDefault();
                         e.stopPropagation();
                     }
-                    form.classList.add('was-validated');
                 });
-            }
-
-            function validateDates() {
-                const start = new Date(startDate.value);
-                const end = new Date(endDate.value);
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                
-                if (start < today) {
-                    startDate.setCustomValidity('Start date must be today or later');
-                } else {
-                    startDate.setCustomValidity('');
-                }
-                
-                if (end <= start) {
-                    endDate.setCustomValidity('End date must be after start date');
-                } else {
-                    endDate.setCustomValidity('');
-                }
             }
 
             function setupImagePreview() {
@@ -701,78 +919,19 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                 document.getElementById('previewPrice').textContent = price;
             }
 
-            function validateForm() {
-                let isValid = true;
-                
-                // Validate dates
-                validateDates();
-                if (startDate.validity.customError || endDate.validity.customError) {
-                    isValid = false;
-                }
-                
-                // Validate class days
-                const days = document.querySelectorAll('input[name="days[]"]:checked').length;
-                if (days === 0) {
-                    alert('Please select at least one class day');
-                    isValid = false;
-                }
-                
-                // Validate time slots
-                const slots = document.getElementsByClassName('time-slot');
-                Array.from(slots).forEach(slot => {
-                    const start = slot.querySelector('input[name="startTime[]"]').value;
-                    const end = slot.querySelector('input[name="endTime[]"]').value;
-                    
-                    if (start && end) {
-                        const startTime = new Date(`1970-01-01T${start}`);
-                        const endTime = new Date(`1970-01-01T${end}`);
-                        
-                        if (startTime >= endTime) {
-                            alert('End time must be after start time');
-                            isValid = false;
-                        }
-                    }
-                });
-                
-                // Validate image
-                const imageInput = document.getElementById('classCover');
-                if (imageInput.files.length > 0) {
-                    const file = imageInput.files[0];
-                    if (file.size > 2 * 1024 * 1024) {
-                        alert('Image size must be less than 2MB');
-                        isValid = false;
-                    }
-                    if (!file.type.match('image.*')) {
-                        alert('Please upload a valid image file');
-                        isValid = false;
-                    }
-                }
-                
-                // Validate price for paid classes
-                if (document.getElementById('pricingPaid').checked) {
-                    const price = parseFloat(document.getElementById('price').value);
-                    if (isNaN(price) || price <= 0) {
-                        alert('Please enter a valid price');
-                        isValid = false;
-                    }
-                }
-                
-                return isValid;
-            }
-
             function setupCharacterCount() {
                 const description = document.getElementById('description');
-                const container = description.parentElement;
-                const counter = document.createElement('div');
-                counter.className = 'character-count';
-                container.style.position = 'relative';
-                container.appendChild(counter);
+                const container = document.getElementById('descriptionCountContainer');
+                const counter = document.getElementById('descriptionCount');
+                // counter.className = 'character-count';
+                // container.style.position = 'relative';
+                // container.appendChild(counter);
 
                 function updateCount() {
                     const count = description.value.length;
                     const remaining = 500 - count;
-                    counter.textContent = `${count}/500`;
-                    counter.className = 'character-count ' + 
+                    counter.textContent = `${count}`;
+                    counter.className = 
                         (remaining < 50 ? 'danger' : 
                          remaining < 100 ? 'warning' : '');
                 }

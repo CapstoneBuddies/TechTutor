@@ -147,6 +147,11 @@ RewriteRule ^schedule-delete$ backends/api/schedule_delete.php [L]
 # ----------------------------------
 RewriteRule ^api/toggle-class-status$ backends/api/toggle-class-status.php [L]
 RewriteRule ^api/enroll-class$ backends/api/enroll-class.php [L]
+
+# Schedule API endpoints
+RewriteRule ^api/schedule/([0-9]+)$ backends/api/schedules.php?id=$1 [QSA,L]
+RewriteRule ^api/schedules$ backends/api/schedules.php [QSA,L]
+
 RewriteRule ^mark-notification-read$ backends/api/mark-notification-read.php [L]
 RewriteRule ^delete-notification$ backends/api/delete-notif.php [L]
 RewriteRule ^mark-all-notifications-read$ backends/api/mark-all-notif-read.php [L]
@@ -155,6 +160,7 @@ RewriteRule ^upload-file$ backends/api/upload-file.php [L]
 RewriteRule ^delete-file$ backends/api/delete-file.php [L]
 RewriteRule ^fix-permissions$ backends/api/fix-permissions.php [L]
 RewriteRule ^submit-feedback$ backends/api/submit-feedback.php [L]
+RewriteRule ^api/meeting/end$ backends/api/end_meeting.php [L,QSA]
 
 # Class feedback page
 RewriteRule ^techkid/class-feedback$ pages/techkid/class-feedback.php [QSA,L]

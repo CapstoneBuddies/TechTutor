@@ -106,6 +106,7 @@ CREATE TABLE IF NOT EXISTS `meetings` (
     `is_running` BOOLEAN NOT NULL DEFAULT TRUE,
     `createtime` BIGINT NOT NULL, 
     `end_time` TIMESTAMP NULL,
+    `created_at` TIMESTAMP NOT NULL DEFAULT NOW(),
     FOREIGN KEY (schedule_id) REFERENCES class_schedule(schedule_id)
 );
 CREATE TABLE IF NOT EXISTS `file_management` (
@@ -240,6 +241,19 @@ CREATE TABLE IF NOT EXISTS `class_ratings` (
     FOREIGN KEY (`class_id`) REFERENCES `class`(`class_id`) ON DELETE CASCADE,
     FOREIGN KEY (`student_id`) REFERENCES `enrollments`(`student_id`) ON DELETE CASCADE,
 );
+-- Create attendance table
+CREATE TABLE attendance (
+    attendance_id INT PRIMARY KEY AUTO_INCREMENT,
+    schedule_id INT NOT NULL,
+    student_id INT NOT NULL,
+    status ENUM('present', 'absent', 'late') NOT NULL DEFAULT 'present',
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (schedule_id) REFERENCES class_schedule(schedule_id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES enrollments(student_id) ON DELETE CASCADE,
+    UNIQUE KEY unique_attendance (schedule_id, student_id)
+);
 
 -- Indexing for optimization
 CREATE INDEX idx_status ON users(status);
@@ -262,6 +276,9 @@ CREATE INDEX idx_file_personal ON file_management(is_personal);
 CREATE INDEX idx_request_student ON file_upload_requests(student_id);
 CREATE INDEX idx_request_class ON file_upload_requests(class_id);
 CREATE INDEX idx_request_status ON file_upload_requests(status);
+CREATE INDEX idx_attendance_schedule ON attendance(schedule_id);
+CREATE INDEX idx_attendance_student ON attendance(student_id);
+CREATE INDEX idx_attendance_status ON attendance(status);
 
 -- Sample Data
 INSERT INTO `users`(`email`,`password`,`role`,`is_verified`, `first_name`, `last_name`) VALUES 
