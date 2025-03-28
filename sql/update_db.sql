@@ -184,3 +184,165 @@ CREATE INDEX idx_attendance_status ON attendance(status);
 -- Add comment to explain the table
 ALTER TABLE attendance COMMENT = 'Tracks student attendance for each class session';
 --------------------------------------------------------------------------------------
+ALTER TABLE enrollments MODIFY COLUMN status enum('active','completed','dropped', 'pending') NOT NULL DEFAULT 'active';
+
+-- Create material_folders table
+CREATE TABLE IF NOT EXISTS material_folders (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    class_id INT NOT NULL,
+    folder_name VARCHAR(255) NOT NULL,
+    created_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (class_id) REFERENCES class(class_id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(uid) ON DELETE CASCADE
+);
+
+-- Create class_materials table
+CREATE TABLE IF NOT EXISTS class_materials (
+    material_id INT PRIMARY KEY AUTO_INCREMENT,
+    class_id INT NOT NULL,
+    folder_id INT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    file_uuid VARCHAR(255) NOT NULL UNIQUE,
+    file_type VARCHAR(50) NOT NULL,
+    description TEXT,
+    upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    user_id INT NOT NULL,
+    FOREIGN KEY (class_id) REFERENCES class(class_id) ON DELETE CASCADE,
+    FOREIGN KEY (folder_id) REFERENCES material_folders(id) ON DELETE SET NULL,
+    FOREIGN KEY (user_id) REFERENCES users(uid) ON DELETE CASCADE
+);
+
+-- Create indexes for faster lookups
+CREATE INDEX IF NOT EXISTS idx_class_folders ON material_folders(class_id);
+CREATE INDEX IF NOT EXISTS idx_material_folders ON class_materials(folder_id);
+CREATE INDEX IF NOT EXISTS idx_material_class ON class_materials(class_id);
+CREATE INDEX IF NOT EXISTS idx_material_user ON class_materials(user_id);
+CREATE INDEX IF NOT EXISTS idx_material_uuid ON class_materials(file_uuid);
+--------------------------------------------------------------------------------------
+-- Updated File Management Schema for Capstone-1
+-- This update consolidates the file management tables for both TechGuru (teachers) and TechKid (students)
+
+-- Drop existing tables (if needed in production, make sure to migrate data first)
+DROP TABLE IF EXISTS file_access;
+DROP TABLE IF EXISTS file_category_mapping;
+DROP TABLE IF EXISTS file_upload_requests;
+DROP TABLE IF EXISTS class_materials;
+DROP TABLE IF EXISTS material_folders;
+
+-- Create a unified files table that combines file_management and class_materials
+CREATE TABLE IF NOT EXISTS `unified_files` (
+    `file_id` INT PRIMARY KEY AUTO_INCREMENT,
+    `file_uuid` VARCHAR(255) NOT NULL UNIQUE,
+    `class_id` INT NULL,
+    `user_id` INT NOT NULL,
+    `folder_id` INT NULL,
+    `file_name` VARCHAR(255) NOT NULL,
+    `file_type` VARCHAR(50) NOT NULL,
+    `file_size` BIGINT NOT NULL,
+    `google_file_id` VARCHAR(255) NOT NULL,
+    `drive_link` TEXT NOT NULL,
+    `description` TEXT,
+    `visibility` ENUM('private', 'public', 'class_only', 'specific_users') DEFAULT 'private',
+    `file_purpose` ENUM('personal', 'class_material', 'assignment', 'submission') DEFAULT 'personal',
+    `category_id` INT NULL,
+    `upload_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `last_modified` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (class_id) REFERENCES class(class_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(uid) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES file_categories(category_id) ON DELETE SET NULL
+);
+
+-- Create a unified folders table
+CREATE TABLE IF NOT EXISTS `file_folders` (
+    `folder_id` INT PRIMARY KEY AUTO_INCREMENT,
+    `class_id` INT NULL,
+    `user_id` INT NOT NULL,
+    `folder_name` VARCHAR(255) NOT NULL,
+    `parent_folder_id` INT NULL,
+    `google_folder_id` VARCHAR(255) NOT NULL,
+    `visibility` ENUM('private', 'public', 'class_only', 'specific_users') DEFAULT 'private',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (class_id) REFERENCES class(class_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(uid) ON DELETE CASCADE,
+    FOREIGN KEY (parent_folder_id) REFERENCES file_folders(folder_id) ON DELETE CASCADE
+);
+
+-- Add the foreign key to link files to folders after folder table is created
+ALTER TABLE unified_files 
+ADD FOREIGN KEY (folder_id) REFERENCES file_folders(folder_id) ON DELETE SET NULL;
+
+-- Create a simplified file access table
+CREATE TABLE IF NOT EXISTS `file_permissions` (
+    `permission_id` INT PRIMARY KEY AUTO_INCREMENT,
+    `file_id` INT NULL,
+    `folder_id` INT NULL,
+    `user_id` INT NOT NULL,
+    `access_type` ENUM('view', 'edit', 'owner') DEFAULT 'view',
+    `granted_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `granted_by` INT NOT NULL,
+    FOREIGN KEY (file_id) REFERENCES unified_files(file_id) ON DELETE CASCADE,
+    FOREIGN KEY (folder_id) REFERENCES file_folders(folder_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(uid) ON DELETE CASCADE,
+    FOREIGN KEY (granted_by) REFERENCES users(uid) ON DELETE CASCADE,
+    CHECK (file_id IS NOT NULL OR folder_id IS NOT NULL)
+);
+
+-- Create a simplified file request table
+CREATE TABLE IF NOT EXISTS `file_requests` (
+    `request_id` INT PRIMARY KEY AUTO_INCREMENT,
+    `class_id` INT NOT NULL,
+    `requester_id` INT NOT NULL,
+    `recipient_id` INT NOT NULL,
+    `request_title` VARCHAR(255) NOT NULL,
+    `description` TEXT,
+    `due_date` DATETIME NOT NULL,
+    `status` ENUM('pending', 'submitted', 'rejected', 'approved', 'expired') DEFAULT 'pending',
+    `response_file_id` INT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (class_id) REFERENCES class(class_id) ON DELETE CASCADE,
+    FOREIGN KEY (requester_id) REFERENCES users(uid) ON DELETE CASCADE,
+    FOREIGN KEY (recipient_id) REFERENCES users(uid) ON DELETE CASCADE,
+    FOREIGN KEY (response_file_id) REFERENCES unified_files(file_id) ON DELETE SET NULL
+);
+
+-- Create optimized indexes
+CREATE INDEX IF NOT EXISTS idx_unified_files_class ON unified_files(class_id);
+CREATE INDEX IF NOT EXISTS idx_unified_files_user ON unified_files(user_id);
+CREATE INDEX IF NOT EXISTS idx_unified_files_folder ON unified_files(folder_id);
+CREATE INDEX IF NOT EXISTS idx_unified_files_visibility ON unified_files(visibility);
+CREATE INDEX IF NOT EXISTS idx_unified_files_purpose ON unified_files(file_purpose);
+CREATE INDEX IF NOT EXISTS idx_unified_files_category ON unified_files(category_id);
+CREATE INDEX IF NOT EXISTS idx_file_folders_class ON file_folders(class_id);
+CREATE INDEX IF NOT EXISTS idx_file_folders_user ON file_folders(user_id);
+CREATE INDEX IF NOT EXISTS idx_file_folders_parent ON file_folders(parent_folder_id);
+CREATE INDEX IF NOT EXISTS idx_file_folders_visibility ON file_folders(visibility);
+CREATE INDEX IF NOT EXISTS idx_file_permissions_file ON file_permissions(file_id);
+CREATE INDEX IF NOT EXISTS idx_file_permissions_folder ON file_permissions(folder_id);
+CREATE INDEX IF NOT EXISTS idx_file_permissions_user ON file_permissions(user_id);
+CREATE INDEX IF NOT EXISTS idx_file_requests_class ON file_requests(class_id);
+CREATE INDEX IF NOT EXISTS idx_file_requests_requester ON file_requests(requester_id);
+CREATE INDEX IF NOT EXISTS idx_file_requests_recipient ON file_requests(recipient_id);
+CREATE INDEX IF NOT EXISTS idx_file_requests_status ON file_requests(status);
+
+-- Create file tags table 
+CREATE TABLE IF NOT EXISTS `file_tags` (
+    `tag_id` INT NOT NULL AUTO_INCREMENT,
+    `tag_name` VARCHAR(50) NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`tag_id`),
+    UNIQUE KEY `tag_name_unique` (`tag_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Create file tag mapping table
+CREATE TABLE IF NOT EXISTS `file_tag_map` (
+    `map_id` INT NOT NULL AUTO_INCREMENT,
+    `file_id` INT NOT NULL,
+    `tag_id` INT NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`map_id`),
+    UNIQUE KEY `file_tag_unique` (`file_id`, `tag_id`),
+    FOREIGN KEY (`file_id`) REFERENCES `unified_files` (`file_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`tag_id`) REFERENCES `file_tags` (`tag_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

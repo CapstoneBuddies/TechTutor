@@ -42,7 +42,7 @@
                         <div>
                             <h1 class="page-title mb-0">My Schedule</h1>
                             <p class="text-muted mb-0">Manage your classes and learning sessions</p>
-                        </div>
+        </div>
                         <div class="d-flex gap-2">
                             <div class="btn-group">
                                 <button type="button" class="btn btn-outline-primary active" data-view="calendar">
@@ -58,8 +58,8 @@
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
+                    </div>
+                </div>
 
         <!-- Main Content -->
         <div class="row g-4">
@@ -70,7 +70,7 @@
                         <!-- Calendar View -->
                         <div id="calendarView">
                             <div id="calendar"></div>
-                        </div>
+                                </div>
 
                         <!-- List View (Initially Hidden) -->
                         <div id="listView" style="display: none;">
@@ -87,8 +87,8 @@
                                                 <li><a class="dropdown-item" href="#" data-filter="upcoming">Upcoming</a></li>
                                                 <li><a class="dropdown-item" href="#" data-filter="completed">Completed</a></li>
                                             </ul>
-                                        </div>
-                                    </div>
+                                </div>
+                            </div>
                                 </div>
                                 
                                 <div class="schedule-list px-4 py-3">
@@ -150,8 +150,8 @@
                                                             <p class="mb-0 small <?php echo $status_class; ?>">
                                                                 <i class="bi bi-circle-fill me-1"></i><?php echo $status; ?>
                                                             </p>
-                                                        </div>
-                                                    </div>
+                                </div>
+                            </div>
                                                     <div class="session-action">
                                                         <?php if ($status === 'In Progress'): ?>
                                                         <a href="meeting?id=<?php echo $session['schedule_id']; ?>" 
@@ -162,7 +162,7 @@
                                                         <button class="btn btn-outline-primary btn-sm" disabled>
                                                             Starts in <?php echo human_time_diff($current_time, $session_start); ?>
                                                         </button>
-                                                        <?php else: ?>
+                                <?php else: ?>
                                                         <span class="badge bg-success">Completed</span>
                                                         <?php endif; ?>
                                                     </div>
@@ -171,7 +171,7 @@
                                             <?php endforeach; ?>
                                         </div>
                                         <?php endforeach; ?>
-                                    <?php endif; ?>
+                                <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -187,7 +187,7 @@
                         <div class="card-body">
                             <h2 class="section-title mb-4">
                                 <i class="bi bi-clock me-2"></i>Today's Schedule
-                            </h2>
+                </h2>
                             <?php
                             $today = date('Y-m-d');
                             $today_schedule = isset($grouped_schedule[$today]) ? $grouped_schedule[$today] : [];
@@ -263,13 +263,13 @@
                                         <div class="h2 mb-1"><?php echo $upcoming_sessions; ?></div>
                                         <div class="small text-muted">Upcoming</div>
                                     </div>
-                                </div>
+                            </div>
                                 <div class="col-6">
                                     <div class="stat-card text-center p-3 rounded bg-light">
                                         <div class="h2 mb-1"><?php echo $total_sessions > 0 ? round(($completed_sessions / $total_sessions) * 100) : 0; ?>%</div>
                                         <div class="small text-muted">Completion</div>
-                                    </div>
-                                </div>
+                            </div>
+                            </div>
                             </div>
                         </div>
                     </div>

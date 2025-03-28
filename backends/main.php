@@ -1,6 +1,7 @@
 <?php 
 	require_once 'db.php';
 	require_once 'management/notifications_management.php';
+	require_once 'management/user_management.php';
 		
 	use PHPMailer\PHPMailer\PHPMailer;
 	use PHPMailer\PHPMailer\Exception;
@@ -8,7 +9,6 @@
 	if(isset($_SESSION['redirect'])) {
 		unset($_SESSION['redirect']);
 	}
-
 	$request_uri =  trim($_SERVER['REQUEST_URI'], "/");
 
 	$link = basename($request_uri);
@@ -28,22 +28,8 @@
 
 	// Check if user is logged in but trying to access login pages
 	if (isset($_SESSION['user']) && isset($_SESSION['role']) && in_array($page, $excluded_page) && !in_array($link,$approved_link)) {
-		if(isset($_COOKIE['role'])) {
-		    header("location: ".BASE."dashboard");
-		    exit();	
-		}
-		else {
 		header("location: ".BASE."dashboard");
 	    exit();
-		}
-	}
-
-	// Clean up role cookie if no session exists
-	if(isset($_COOKIE['role']) && !isset($_SESSION['user'])) {
-		log_error("I run here! cookie clean");
-		unset($_COOKIE['role']);
-		header("location: ".BASE."login");
-		exit();
 	}
 
 	// Check if user is not logged in but trying to access protected pages
@@ -56,7 +42,6 @@
 
 	// Check if user is not logged on but was set to autologin
 	if(!isset($_SESSION['user']) && isset($_COOKIE['remember_me'])) {
-		log_error("I run here!");
 		try { 
 			global $conn;
 			$token = $_COOKIE['remember_me'];
@@ -65,7 +50,7 @@
 
 			if (isset($token_id)) { 
 				// Token matched, retrieve user details
-				$user_stmt = $conn->prepare("SELECT u.`uid`, u.`role`, u.`first_name`, u.`last_name`, u.`email`, u.`profile_picture`, u.`is_verified` FROM users u WHERE uid = (SELECT user_id FROM login_tokens WHERE token_id = ?)");
+				$user_stmt = $conn->prepare("SELECT u.* FROM users u WHERE uid = (SELECT user_id FROM login_tokens WHERE token_id = ?)");
 				$user_stmt->bind_param("i", $token_id);
 				$user_stmt->execute();
 				$user = $user_stmt->get_result()->fetch_assoc();
@@ -82,22 +67,25 @@
 
 					// set session information
 					$_SESSION['user'] = $user['uid'];
-					$_SESSION['name'] = $user['first_name'].' '.$user['last_name'];
-					$_SESSION['first-name'] = $user['first_name'];
-					$_SESSION['last-name'] = $user['last_name'];
 					$_SESSION['email'] = $user['email'];
 					$_SESSION['role'] = $user['role'];
-					$_SESSION['profile'] = USER_IMG.$user['profile_picture'];
+					$_SESSION['first_name'] = $user['first_name'];
+					$_SESSION['last_name'] = $user['last_name'];
+					$_SESSION['name'] = $user['first_name'] . ' ' . $user['last_name'];
+					$_SESSION['address'] = $user['address'];
+					$_SESSION['phone'] = $user['contact_number'];
+					$_SESSION['profile'] = USER_IMG . ($user['profile_picture'] ?? 'default.jpg');
+					$_SESSION['rating'] = $user['rating'] ?? 'Undecided';
 				}
 			}
 			else {
-				setcookie('remember_me','',(time() - 7200));
+				setcookie('remember_me', $token, time() + (7 * 24 * 60 * 60), BASE, "", true, true);
 				unset($_COOKIE['remember_me']);
 				throw new Exception("Invalid Cookie");
 			}
 		}
 		catch (Exception $e) {
-			log_error("Remember Me: ".$e->getMessage(),'error.log');
+			log_error("Remember Me: ".$e->getMessage());
 		}
 		header("location: ".BASE."dashboard");
 		exit();
@@ -184,5 +172,42 @@
 	    }
 	    
 	    return "just now";
+	}
+
+	/**
+	 * Generate a UUID v4
+	 * 
+	 * @return string UUID
+	 */
+	function generateUuid() {
+	    // Generate 16 bytes (128 bits) of random data
+	    $data = random_bytes(16);
+	    
+	    // Set version to 0100
+	    $data[6] = chr(ord($data[6]) & 0x0f | 0x40);
+	    // Set bits 6-7 to 10
+	    $data[8] = chr(ord($data[8]) & 0x3f | 0x80);
+	    
+	    // Output the 36 character UUID
+	    return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
+	}
+
+	/**
+	 * Format bytes to human-readable format
+	 * 
+	 * @param int $bytes Number of bytes
+	 * @param int $precision Decimal precision
+	 * @return string Formatted size
+	 */
+	function formatBytes($bytes, $precision = 2) { 
+	    $units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']; 
+	    
+	    $bytes = max($bytes, 0); 
+	    $pow = floor(($bytes ? log($bytes) : 0) / log(1024)); 
+	    $pow = min($pow, count($units) - 1); 
+	    
+	    $bytes /= (1 << (10 * $pow)); 
+	    
+	    return round($bytes, $precision) . ' ' . $units[$pow]; 
 	}
 ?>

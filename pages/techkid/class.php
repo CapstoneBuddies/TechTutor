@@ -112,7 +112,8 @@
                                                     $status_class = [
                                                         'active' => 'bg-success',
                                                         'completed' => 'bg-primary',
-                                                        'dropped' => 'bg-danger'
+                                                        'dropped' => 'bg-danger',
+                                                        'pending' => 'bg-secondary'
                                                     ][$class['enrollment_status']];
                                                     ?>
                                                     <span class="badge <?php echo $status_class; ?>">

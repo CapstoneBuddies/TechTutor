@@ -221,16 +221,10 @@
 	function logout() {
 		global $conn;
 		if(isset($_SESSION['user'])) {
-			if(isset($_COOKIE['role'])) {
-				unset($_COOKIE['role']);
-				setcookie('role','',time() - 3600, '/');
-			}
 			if(isset($_COOKIE['remember_me'])) {
-				$token = $_COOKIE['remember_me']; //get cookie value
-
 				// Remove cookie from the client-side
 				unset($_COOKIE['remember_me']);
-				setcookie('remember_me','',time() - 3600, '/');
+				setcookie('remember_me', '', time() - 3600, BASE, "", true, true);
 
 				// Remove token from the server-side
 				try{

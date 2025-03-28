@@ -71,7 +71,6 @@
 	$mail->Password = SMTP_PASSWORD;
 	$mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
 	$mail->Port = SMTP_PORT;
-	$mail->setFrom(SMTP_USER, SMTP_HOST);
 	$mail->isHTML(true);
 
 
@@ -113,10 +112,13 @@
 
 
 
-	// provide a clone for mailing instance
-	function getMailerInstance() {
+	// Provide a clone for mailing instance with dynamic "From" name
+	function getMailerInstance($fromName = "The Techtutor Team") {
 	    global $mail;
-	    return clone $mail; // Returns a fresh copy of $mail
+	    // Set a different "From" name for the cloned instance
+	    $cloneMail = clone $mail;
+	    $cloneMail->setFrom(SMTP_USER, $fromName); // Dynamically set the "From" name
+	    return $cloneMail;
 	}
 
 	// Sending of Email Verification

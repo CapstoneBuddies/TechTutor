@@ -1,6 +1,7 @@
 <?php 
 require_once '../../backends/main.php';
 require_once BACKEND.'class_management.php';
+require_once BACKEND.'unified_file_management.php';
 
 // Ensure user is logged in and is a TechGuru
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
@@ -35,6 +36,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'updateStatus') {
 $schedules = getClassSchedules($class_id);
 $students = getClassStudents($class_id);
 $files = getClassFiles($class_id);
+$folders = getClassFolders($class_id); 
 
 // Calculate class statistics
 $completion_rate = $classDetails['total_students'] > 0 
@@ -42,6 +44,55 @@ $completion_rate = $classDetails['total_students'] > 0
     : 0;
 $rating = number_format($classDetails['average_rating'] ?? 0, 1);
 $title = htmlspecialchars($classDetails['class_name']);
+
+// Add this function to the PHP section at the top of the file
+function getFileIconClass($fileType) {
+    $iconMap = [
+        'image/jpeg' => 'image',
+        'image/png' => 'image',
+        'image/gif' => 'image',
+        'application/pdf' => 'pdf',
+        'application/msword' => 'word',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'word',
+        'application/vnd.ms-excel' => 'excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'excel',
+        'application/vnd.ms-powerpoint' => 'ppt',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'ppt',
+        'application/zip' => 'zip',
+        'application/x-zip-compressed' => 'zip',
+        'text/plain' => 'text',
+        'text/csv' => 'csv',
+        'application/json' => 'code',
+        'text/html' => 'code',
+        'text/css' => 'code',
+        'application/javascript' => 'code',
+        'video/mp4' => 'play',
+        'video/quicktime' => 'play',
+        'audio/mpeg' => 'music',
+        'audio/mp3' => 'music'
+    ];
+    
+    if (isset($iconMap[$fileType])) {
+        return $iconMap[$fileType];
+    }
+    
+    // If file type contains "word", "excel", etc.
+    $lowerType = strtolower($fileType);
+    if (strpos($lowerType, 'word') !== false) return 'word';
+    if (strpos($lowerType, 'excel') !== false || strpos($lowerType, 'sheet') !== false) return 'excel';
+    if (strpos($lowerType, 'powerpoint') !== false || strpos($lowerType, 'presentation') !== false) return 'ppt';
+    if (strpos($lowerType, 'pdf') !== false) return 'pdf';
+    if (strpos($lowerType, 'image') !== false) return 'image';
+    if (strpos($lowerType, 'zip') !== false || strpos($lowerType, 'archive') !== false) return 'zip';
+    if (strpos($lowerType, 'text') !== false) return 'text';
+    if (strpos($lowerType, 'video') !== false) return 'play';
+    if (strpos($lowerType, 'audio') !== false) return 'music';
+    if (strpos($lowerType, 'code') !== false || strpos($lowerType, 'html') !== false || 
+        strpos($lowerType, 'css') !== false || strpos($lowerType, 'javascript') !== false) return 'code';
+    
+    // Default
+    return 'text';
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -332,7 +383,7 @@ $title = htmlspecialchars($classDetails['class_name']);
                                                 <a href="#" onclick="joinMeeting(<?php echo $schedule['schedule_id']; ?>)" 
                                                    class="btn btn-success btn-sm">
                                                     <i class="bi bi-camera-video-fill me-1"></i>
-                                                    Join Meeting
+                                             Join Meeting
                                                 </a>
                                                 <?php endif; ?>
                                             </div>
@@ -343,7 +394,7 @@ $title = htmlspecialchars($classDetails['class_name']);
                                                     data-bs-toggle="tooltip"
                                                     title="Start the virtual classroom">
                                                 <i class="bi bi-play-circle me-1"></i> Start Session
-                                            </button>
+                                        </button>
                                             </div>
                                         <?php endif; ?>
                                     </td>
@@ -363,50 +414,101 @@ $title = htmlspecialchars($classDetails['class_name']);
                 <div class="dashboard-card">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h3 class="mb-0">Class Materials</h3>
-                        <button class="btn btn-primary btn-sm" onclick="uploadMaterial()">
-                            <i class="bi bi-upload me-1"></i> Upload Material
-                        </button>
+                        <div class="d-flex gap-2">
+                            <a href="details/files?id=<?php echo $class_id; ?>" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-folder me-1"></i> View All Files
+                            </a>
+                            <button class="btn btn-primary btn-sm" onclick="uploadMaterial()">
+                                <i class="bi bi-upload me-1"></i> Upload Material
+                            </button>
+                        </div>
                     </div>
                     <div class="materials-list">
-                        <?php if (empty($files)): ?>
+                        <?php if (empty($files) && empty($folders)): ?>
                             <div class="text-center text-muted py-4">
                                 <i class="bi bi-file-earmark-text" style="font-size: 2.5rem;"></i>
                                 <p class="mt-3 mb-0">No materials uploaded yet</p>
                                 <small class="d-block mt-2">Upload study materials for your students</small>
                             </div>
                         <?php else: ?>
-                                <?php foreach ($files as $file): ?>
-                            <div class="material-item">
-                                <div class="material-icon">
-                                    <i class="bi bi-file-earmark-text"></i>
+                            <?php if (!empty($folders)): ?>
+                                <div class="folders mb-4">
+                                    <h6 class="text-muted mb-3">Folders</h6>
+                                    <div class="row g-3">
+                                        <?php foreach ($folders as $folder): ?>
+                                            <div class="col-md-6">
+                                                <div class="folder-item d-flex align-items-center p-3 border rounded">
+                                                    <i class="bi bi-folder-fill text-warning me-3 fs-4"></i>
+                                                    <div class="flex-grow-1">
+                                                        <h6 class="mb-1"><?php echo htmlspecialchars($folder['folder_name']); ?></h6>
+                                                        <small class="text-muted"><?php echo $folder['file_count']; ?> files</small>
+                                                    </div>
+                                                    <div class="dropdown">
+                                                        <button class="btn btn-link text-dark" data-bs-toggle="dropdown">
+                                                            <i class="bi bi-three-dots-vertical"></i>
+                                                        </button>
+                                                        <ul class="dropdown-menu">
+                                                            <li>
+                                                                <a class="dropdown-item" href="#" onclick="renameFolder(<?php echo $folder['folder_id']; ?>, '<?php echo htmlspecialchars($folder['folder_name']); ?>')">
+                                                                    <i class="bi bi-pencil me-2"></i> Rename
+                                                                </a>
+                                                            </li>
+                                                            <li>
+                                                                <a class="dropdown-item text-danger" href="#" onclick="deleteFolder(<?php echo $folder['folder_id']; ?>)">
+                                                                    <i class="bi bi-trash me-2"></i> Delete
+                                                                </a>
+                                                            </li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
                                 </div>
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1"><?php echo htmlspecialchars($file['file_name']); ?></h6>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <small class="text-muted">
-                                            Uploaded by <?php echo htmlspecialchars($file['first_name'] . ' ' . $file['last_name']); ?> 
-                                            on <?php echo date('M d, Y', strtotime($file['upload_time'])); ?>
-                                        </small>
-                                        <div class="btn-group">
-                                            <a href="download?uuid=<?php echo $file['file_uuid']; ?>" 
-                                               class="btn btn-sm btn-outline-primary"
-                                               data-bs-toggle="tooltip"
-                                               title="Download material">
+                            <?php endif; ?>
+
+                            <?php if (!empty($files)): ?>
+                                <div class="files">
+                                    <h6 class="text-muted mb-3">Files</h6>
+                                <?php foreach ($files as $file): ?>
+                                        <div class="material-item">
+                                            <div class="material-icon">
+                                                <i class="bi bi-file-earmark-<?php echo getFileIconClass($file['file_type']); ?>"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1"><?php echo htmlspecialchars($file['file_name']); ?></h6>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-muted">
+                                                        <?php if (isset($file['folder_id']) && $file['folder_id']): ?>
+                                                            <i class="bi bi-folder me-1"></i> <?php echo htmlspecialchars($file['folder_name'] ?? 'Folder'); ?> •
+                                                        <?php endif; ?>
+                                                        <?php echo formatBytes($file['file_size']); ?> •
+                                                        Uploaded by <?php echo htmlspecialchars($file['first_name'] . ' ' . $file['last_name']); ?> 
+                                                        on <?php echo date('M d, Y', strtotime($file['upload_time'])); ?>
+                                                    </small>
+                                                    <div class="btn-group">
+                                                        <a href="<?php echo htmlspecialchars($file['drive_link']); ?>" 
+                                                           class="btn btn-sm btn-outline-primary"
+                                                           target="_blank"
+                                                           data-bs-toggle="tooltip"
+                                                           title="View/Download material">
                                             <i class="bi bi-download"></i>
                                         </a>
                                         <?php if ($file['user_id'] === $_SESSION['user']): ?>
-                                            <button class="btn btn-sm btn-outline-danger"
-                                                    onclick="deleteMaterial('<?php echo $file['file_uuid']; ?>')"
-                                                    data-bs-toggle="tooltip"
-                                                    title="Delete material">
+                                                            <button class="btn btn-sm btn-outline-danger"
+                                                                    onclick="deleteMaterial('<?php echo $file['file_id']; ?>')"
+                                                                    data-bs-toggle="tooltip"
+                                                                    title="Delete material">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                         <?php endif; ?>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </div>
-                            </div>
                                 <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -455,7 +557,7 @@ $title = htmlspecialchars($classDetails['class_name']);
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                            </div>
                         </div>
                         <?php endforeach; ?>
                         <?php endif; ?>
@@ -476,8 +578,8 @@ $title = htmlspecialchars($classDetails['class_name']);
                         <button class="btn btn-success quick-action" onclick="viewAnalytics()">
                             <i class="bi bi-graph-up me-2"></i> View Analytics
                         </button>
-                        <button class="btn btn-outline-primary quick-action" onclick="shareClass()">
-                            <i class="bi bi-share me-2"></i> Share Class
+                        <button class="btn btn-outline-primary quick-action" onclick="showShareModal()">
+                            <i class="bi bi-share me-2"></i> Share & Invite
                         </button>
                     </div>
                 </div>
@@ -496,6 +598,34 @@ $title = htmlspecialchars($classDetails['class_name']);
                 <div class="modal-body">
                     <form id="uploadForm">
                         <div class="mb-3">
+                            <label class="form-label">Folder</label>
+                            <div class="input-group">
+                                <select class="form-select" id="materialFolder">
+                                    <option value="">Root Folder</option>
+                                    <?php foreach ($folders as $folder): ?>
+                                        <option value="<?php echo $folder['folder_id']; ?>">
+                                            <?php echo htmlspecialchars($folder['folder_name']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <button type="button" class="btn btn-outline-primary" onclick="showNewFolderInput()">
+                                    <i class="bi bi-folder-plus"></i> New
+                                </button>
+                            </div>
+                        </div>
+                        <div id="newFolderInput" class="mb-3 d-none">
+                            <label class="form-label">New Folder Name</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="newFolderName">
+                                <button type="button" class="btn btn-success" onclick="createFolder()">
+                                    <i class="bi bi-check-lg"></i> Create
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="hideNewFolderInput()">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
                             <label class="form-label">File</label>
                             <input type="file" class="form-control" id="materialFile" required>
                         </div>
@@ -513,9 +643,116 @@ $title = htmlspecialchars($classDetails['class_name']);
         </div>
     </div> 
 
+    <!-- Share and Invite Modal -->
+    <div class="modal fade" id="shareInviteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Share & Invite Students</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Share Link Section -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Share Class Link</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="classLink" readonly>
+                            <button class="btn btn-outline-primary" onclick="copyClassLink()">
+                                <i class="bi bi-clipboard"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <!-- Invite Students Section -->
+                    <div>
+                        <label class="form-label fw-bold">Invite Students</label>
+                        <div class="mb-3">
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="studentSearch" 
+                                   placeholder="Type student email (min. 4 characters)"
+                                   oninput="searchStudents(this.value)">
+                        </div>
+                        <div id="studentResults" class="list-group mb-3" style="max-height: 200px; overflow-y: auto;">
+                            <!-- Search results will be populated here -->
+                        </div>
+                        <div id="selectedStudents" class="mb-3">
+                            <!-- Selected students will be shown here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="sendInvites()">Send Invites</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Students Modal -->
+    <div class="modal fade" id="messageStudentsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Message Students</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="messageForm">
+                        <div class="mb-3">
+                            <label class="form-label">To:</label>
+                            <select class="form-select" id="messageRecipients" multiple>
+                                <option value="all">All Students</option>
+                                <?php foreach ($students as $student): ?>
+                                    <option value="<?php echo $student['uid']; ?>">
+                                        <?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name'] . ' <' . $student['email'] . '>'); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Subject:</label>
+                            <input type="text" class="form-control" id="messageSubject" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Message:</label>
+                            <div id="messageEditor" style="height: 200px;"></div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="sendMessage()">Send Message</button>
+                </div>
+            </div>
+        </div>
+    </div> 
+
     <!-- Scripts -->
     <?php include ROOT_PATH . '/components/footer.php'; ?>
     <script>
+        let selectedStudents = new Set();
+        let shareInviteModal;
+        let messageModal;
+        let quill;
+
+        // Wait for Select2 to load
+        function initializeSelect2() {
+            if (typeof $.fn.select2 === 'undefined') {
+                setTimeout(initializeSelect2, 100);
+                return;
+            }
+            
+            // Initialize select2 for recipients
+            $('#messageRecipients').select2({
+                placeholder: 'Select recipients',
+                width: '100%',
+                dropdownParent: $('#messageStudentsModal') // This ensures proper modal display
+            });
+        }
+
          document.addEventListener('DOMContentLoaded', function() {
             // Initialize tooltips
             var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
@@ -523,8 +760,48 @@ $title = htmlspecialchars($classDetails['class_name']);
                 return new bootstrap.Tooltip(tooltipTriggerEl)
             });
 
-            // Initialize upload modal
+            // Initialize modals
             window.uploadModal = new bootstrap.Modal(document.getElementById('uploadMaterialModal'));
+            shareInviteModal = new bootstrap.Modal(document.getElementById('shareInviteModal'));
+            messageModal = new bootstrap.Modal(document.getElementById('messageStudentsModal'));
+
+            // Set class link in share modal
+            document.getElementById('classLink').value = window.location.href;
+
+            // Initialize Quill editor with MutationObserver
+            const editorContainer = document.getElementById('messageEditor');
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'childList' && !quill) {
+                        initQuillEditor();
+                    }
+                });
+            });
+
+            observer.observe(editorContainer, {
+                childList: true,
+                subtree: true
+            });
+
+            function initQuillEditor() {
+                quill = new Quill('#messageEditor', {
+                    theme: 'snow',
+                    placeholder: 'Write your message here...',
+                    modules: {
+                        toolbar: [
+                            ['bold', 'italic', 'underline'],
+                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                            ['clean']
+                        ]
+                    }
+                });
+            }
+
+            // Initial Quill initialization
+            initQuillEditor();
+
+            // Initialize Select2 after libraries are loaded
+            initializeSelect2();
         });
 
             function uploadMaterial() {
@@ -534,6 +811,7 @@ $title = htmlspecialchars($classDetails['class_name']);
         function submitMaterial() {
             const file = document.getElementById('materialFile').files[0];
             const description = document.getElementById('materialDescription').value;
+            const folderId = document.getElementById('materialFolder').value;
 
             if (!file) {
                 showToast('error', 'Please select a file to upload');
@@ -544,10 +822,12 @@ $title = htmlspecialchars($classDetails['class_name']);
             formData.append('file', file);
             formData.append('description', description);
             formData.append('class_id', '<?php echo $class_id; ?>');
+            formData.append('folder_id', folderId);
+            formData.append('action', 'upload');
 
             showLoading(true);
 
-            fetch(BASE + 'upload-material', {
+            fetch(BASE + 'api/materials?action=upload', {
                 method: 'POST',
                 body: formData
             })
@@ -569,17 +849,19 @@ $title = htmlspecialchars($classDetails['class_name']);
             });
             }
 
-            function deleteMaterial(fileUuid) {
+            function deleteMaterial(fileId) {
             if (!confirm('Are you sure you want to delete this material?')) return;
 
             showLoading(true);
 
-            fetch(BASE + 'delete-material', {
+            fetch(BASE + 'api/materials?action=delete', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Content-Type': 'application/json',
                 },
-                body: `file_uuid=${fileUuid}`
+                body: JSON.stringify({
+                    file_id: fileId
+                })
             })
             .then(response => response.json())
             .then(data => {
@@ -599,20 +881,193 @@ $title = htmlspecialchars($classDetails['class_name']);
             }
 
             function messageStudents() {
-            // TODO: Implement messaging functionality
-            showToast('info', 'Messaging feature coming soon');
+            // Reset form
+            document.getElementById('messageSubject').value = '';
+            quill.setContents([]);
+            $('#messageRecipients').val('all').trigger('change');
+            messageModal.show();
+        }
+
+        function sendMessage() {
+            const recipients = $('#messageRecipients').val();
+            const subject = document.getElementById('messageSubject').value;
+            const content = quill.root.innerHTML;
+
+            if (!recipients.length) {
+                showToast('warning', 'Please select at least one recipient');
+                return;
+            }
+
+            if (!subject) {
+                showToast('warning', 'Please enter a subject');
+                return;
+            }
+
+            if (!quill.getText().trim()) {
+                showToast('warning', 'Please enter a message');
+                return;
+            }
+
+            showLoading(true);
+            fetch(BASE + 'api/send-message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    class_id: <?php echo $class_id; ?>,
+                    recipients: recipients,
+                    subject: subject,
+                    content: content
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                showLoading(false);
+                if (data.success) {
+                    showToast('success', 'Message sent successfully');
+                    messageModal.hide();
+                } else {
+                    showToast('error', data.message || 'Failed to send message');
+                }
+            })
+            .catch(error => {
+                showLoading(false);
+                console.error('Error:', error);
+                showToast('error', 'Failed to send message');
+            });
             }
 
             function viewAnalytics() {
             window.location.href = `analytics?class_id=<?php echo $class_id; ?>`;
         }
 
-        function shareClass() {
-            const classUrl = window.location.href;
-            navigator.clipboard.writeText(classUrl).then(() => {
-                showToast('success', 'Class link copied to clipboard');
-            }).catch(() => {
-                showToast('error', 'Failed to copy class link');
+        function showShareModal() {
+            document.getElementById('studentSearch').value = '';
+            document.getElementById('studentResults').innerHTML = '';
+            document.getElementById('selectedStudents').innerHTML = '';
+            selectedStudents.clear();
+            shareInviteModal.show();
+        }
+
+        function copyClassLink() {
+            const classLink = document.getElementById('classLink');
+            classLink.select();
+            document.execCommand('copy');
+            showToast('success', 'Class link copied to clipboard');
+        }
+
+        function searchStudents(query) {
+            if (query.length < 4) {
+                document.getElementById('studentResults').innerHTML = '';
+                return;
+            }
+
+            fetch(BASE + 'api/search-students', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    query: query,
+                    class_id: <?php echo $class_id; ?>
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultsDiv = document.getElementById('studentResults');
+                resultsDiv.innerHTML = '';
+
+                if (data.students && data.students.length > 0) {
+                    data.students.forEach(student => {
+                        if (!selectedStudents.has(student.user_id)) {
+                            const item = document.createElement('a');
+                            item.href = '#';
+                            item.className = 'list-group-item list-group-item-action';
+                            item.innerHTML = `
+                                <div class="d-flex align-items-center">
+                                    <img src="${BASE}assets/img/users/${student.profile_picture}" 
+                                         class="rounded-circle me-2" 
+                                         width="32" 
+                                         height="32">
+                                    <div>
+                                        <div>${student.first_name} ${student.last_name}</div>
+                                        <small class="text-muted">${student.email}</small>
+                                    </div>
+                                </div>
+                            `;
+                            item.onclick = (e) => {
+                                e.preventDefault();
+                                selectStudent(student);
+                            };
+                            resultsDiv.appendChild(item);
+                        }
+                    });
+                } else {
+                    resultsDiv.innerHTML = '<div class="text-center p-3 text-muted">No students found</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('error', 'Failed to search students');
+            });
+        }
+
+        function selectStudent(student) {
+            if (selectedStudents.has(student.user_id)) return;
+
+            selectedStudents.add(student.user_id);
+            console.log(selectedStudents);
+            const selectedDiv = document.getElementById('selectedStudents');
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-primary me-2 mb-2';
+            badge.innerHTML = `
+                ${student.first_name} ${student.last_name}
+                <button type="button" class="btn-close btn-close-white ms-2" 
+                        onclick="removeStudent('${student.user_id}', this.parentElement)"></button>
+            `;
+            selectedDiv.appendChild(badge);
+            document.getElementById('studentResults').innerHTML = '';
+            document.getElementById('studentSearch').value = '';
+        }
+
+        function removeStudent(userId, element) {
+            selectedStudents.delete(userId);
+            element.remove();
+        }
+
+        function sendInvites() {
+            if (selectedStudents.size === 0) {
+                showToast('warning', 'Please select at least one student to invite');
+                return;
+            }
+
+            showLoading(true);
+            fetch(BASE + 'api/invite-students', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    class_id: <?php echo $class_id; ?>,
+                    student_ids: Array.from(selectedStudents)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                showLoading(false);
+                if (data.success) {
+                    showToast('success', 'Invitations sent successfully');
+                    shareInviteModal.hide();
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showToast('error', data.message || 'Failed to send invitations');
+                }
+            })
+            .catch(error => {
+                showLoading(false);
+                console.error('Error:', error);
+                showToast('error', 'Failed to send invitations');
             });
         }
 
@@ -694,6 +1149,112 @@ $title = htmlspecialchars($classDetails['class_name']);
                 showLoading(false);
                 console.error('Error:', error);
                 showToast('error', 'Failed to end meeting');
+            });
+        }
+
+        function showNewFolderInput() {
+            document.getElementById('newFolderInput').classList.remove('d-none');
+        }
+
+        function hideNewFolderInput() {
+            document.getElementById('newFolderInput').classList.add('d-none');
+            document.getElementById('newFolderName').value = '';
+        }
+
+        function createFolder() {
+            const folderName = document.getElementById('newFolderName').value.trim();
+            if (!folderName) {
+                showToast('warning', 'Please enter a folder name');
+                return;
+            }
+
+            showLoading(true);
+            fetch(BASE + 'api/materials?action=create-folder', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    class_id: <?php echo $class_id; ?>,
+                    folder_name: folderName
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                showLoading(false);
+                if (data.success) {
+                    showToast('success', 'Folder created successfully');
+                    location.reload();
+                } else {
+                    showToast('error', data.message || 'Failed to create folder');
+                }
+            })
+            .catch(error => {
+                showLoading(false);
+                console.error('Error:', error);
+                showToast('error', 'Failed to create folder');
+            });
+        }
+
+        function renameFolder(folderId, currentName) {
+            const newName = prompt('Enter new folder name:', currentName);
+            if (!newName || newName === currentName) return;
+
+            showLoading(true);
+            fetch(BASE + 'api/materials?action=rename-folder', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    folder_id: folderId,
+                    folder_name: newName
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                showLoading(false);
+                if (data.success) {
+                    showToast('success', 'Folder renamed successfully');
+                    location.reload();
+                } else {
+                    showToast('error', data.message || 'Failed to rename folder');
+                }
+            })
+            .catch(error => {
+                showLoading(false);
+                console.error('Error:', error);
+                showToast('error', 'Failed to rename folder');
+            });
+        }
+
+        function deleteFolder(folderId) {
+            if (!confirm('Are you sure you want to delete this folder and all its contents? This action cannot be undone.')) return;
+
+            showLoading(true);
+            fetch(BASE + 'api/materials?action=delete-folder', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    folder_id: folderId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                showLoading(false);
+                if (data.success) {
+                    showToast('success', 'Folder deleted successfully');
+                    location.reload();
+                } else {
+                    showToast('error', data.message || 'Failed to delete folder');
+                }
+            })
+            .catch(error => {
+                showLoading(false);
+                console.error('Error:', error);
+                showToast('error', 'Failed to delete folder');
             });
         }
     </script>

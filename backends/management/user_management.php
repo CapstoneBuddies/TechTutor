@@ -31,7 +31,7 @@ function getUserByRole($role, $page = 1, $limit = 8) {
 /**
  * Verify a remember me token
  */
-function rememberTokenVerifier($hashed_token) {
+function TokenVerifier($hashed_token) {
     global $conn;
     try {
         $stmt = $conn->prepare("SELECT token_id, token FROM login_tokens WHERE type = 'remember_me' AND expiration_date > NOW()");
@@ -46,7 +46,9 @@ function rememberTokenVerifier($hashed_token) {
         throw new Exception("Token not Exist");
     }
     catch(Exception $e) {
-        log_error("Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database_error.log');
+        log_error("Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database');
+        setcookie('remember_me', $token, time() - 7200, BASE, "", true, true);
+        unset($_COOKIE['remember_me']);
         return null;
     }
 }

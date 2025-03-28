@@ -581,7 +581,7 @@ function getClassStudents($class_id) {
 }
 
 /**
- * Get files uploaded to a class
+ * Get all files for a class
  * 
  * @param int $class_id Class ID
  * @return array Array of files with uploader details
@@ -589,17 +589,17 @@ function getClassStudents($class_id) {
 function getClassFiles($class_id) {
     global $conn;
     
-    $sql = "SELECT f.*, u.first_name, u.last_name, u.role
-            FROM file_management f
-            JOIN users u ON f.user_id = u.uid
-            WHERE f.class_id = ?
-            ORDER BY f.upload_time DESC";
-            
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $class_id);
-    $stmt->execute();
-    
-    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    try {
+        // Load the UnifiedFileManagement class
+        require_once BACKEND . 'unified_file_management.php';
+        $fileManager = new UnifiedFileManagement();
+        
+        // Use the new method to get class files
+        return $fileManager->getClassFiles($class_id);
+    } catch (Exception $e) {
+        log_error("Error getting class files: " . $e->getMessage());
+        return [];
+    }
 }
 
 /**
@@ -1018,4 +1018,91 @@ function getScheduleStatus($date, $startTime) {
         return 'scheduled';
     }
 }
+function getClassFolders($class_id) {
+    global $conn;
+    
+    $sql = "SELECT f.folder_id as id, f.folder_name, f.user_id as created_by, f.class_id, f.google_folder_id, f.parent_folder_id, f.created_at,
+            (SELECT COUNT(*) FROM unified_files WHERE folder_id = f.folder_id) as file_count 
+            FROM file_folders f 
+            WHERE f.class_id = ?";
+            
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param('i', $class_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    return $result->fetch_all(MYSQLI_ASSOC);
+}
+
+function getFolderFiles($folder_id) {
+    global $conn;
+    
+    $sql = "SELECT f.*, c.category_name, u.first_name, u.last_name 
+            FROM unified_files f 
+            LEFT JOIN file_categories c ON f.category_id = c.category_id
+            LEFT JOIN users u ON f.user_id = u.uid 
+            WHERE f.folder_id = ? 
+            ORDER BY f.upload_time DESC";
+            
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param('i', $folder_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    return $result->fetch_all(MYSQLI_ASSOC);
+}
+
+function createFolder($class_id, $folder_name, $user_id) {
+    global $conn;
+    
+    try {
+        // Load the UnifiedFileManagement class
+        require_once BACKEND . 'management/unified_file_management.php';
+        $fileManager = new UnifiedFileManagement();
+        
+        // Use the new method to create a folder
+        $result = $fileManager->createFolder($folder_name, $user_id, $class_id);
+        
+        return $result;
+    } catch (Exception $e) {
+        log_error("Error creating folder: " . $e->getMessage());
+        return false;
+    }
+}
+
+function renameFolder($folder_id, $new_name, $user_id) {
+    global $conn;
+    
+    try {
+        // Load the UnifiedFileManagement class
+        require_once BACKEND . 'management/unified_file_management.php';
+        $fileManager = new UnifiedFileManagement();
+        
+        // Use the new method to rename a folder
+        $result = $fileManager->renameFolder($folder_id, $user_id, $new_name);
+        
+        return $result;
+    } catch (Exception $e) {
+        log_error("Error renaming folder: " . $e->getMessage());
+        return false;
+    }
+}
+
+function deleteFolder($folder_id, $user_id) {
+    global $conn;
+    
+    try {
+        // Load the UnifiedFileManagement class
+        require_once BACKEND . 'management/unified_file_management.php';
+        $fileManager = new UnifiedFileManagement();
+        
+        // Use the new method to delete a folder
+        $result = $fileManager->deleteFolder($folder_id, $user_id);
+        
+        return $result;
+    } catch (Exception $e) {
+        log_error("Error deleting folder: " . $e->getMessage());
+        return false;
+    }
+} 
 ?>

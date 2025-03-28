@@ -438,6 +438,12 @@
             .rating-stars input:checked ~ label {
                 color: #ffd700;
             }
+            .resource-name {
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 200px;
+            }
         </style>
 
         <!-- Feedback Modal -->

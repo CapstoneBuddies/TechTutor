@@ -100,6 +100,8 @@ RewriteRule ^dashboard/t/subjects/class/create$ pages/techguru/create-class.php 
 RewriteRule ^dashboard/t/class/details$ pages/techguru/class-details.php [L,QSA]
 RewriteRule ^dashboard/t/class/edit$ pages/techguru/class-edit.php [L,QSA]
 RewriteRule ^dashboard/t/class/details/schedules$ pages/techguru/manage-schedule.php [L,QSA]
+RewriteRule ^dashboard/t/class/details/files$ pages/techguru/class-files.php [L,QSA]
+RewriteRule ^dashboard/t/class/analytics$ pages/techguru/analytics.php [L,QSA]
 
 #
 RewriteRule ^dashboard/t/students$ pages/techguru/students.php [L]
@@ -140,7 +142,6 @@ RewriteRule ^update-subject-cover$ backends/admin/course_handler.php [L]
 #BBB
 RewriteRule ^create-meeting$ backends/api/create_meeting.php [L,QSA]
 RewriteRule ^join-meeting$ backends/api/join_meeting.php [L,QSA]
-RewriteRule ^schedule-delete$ backends/api/schedule_delete.php [L]
 
 # ----------------------------------
 # 🌍 API Endpoints
@@ -148,19 +149,28 @@ RewriteRule ^schedule-delete$ backends/api/schedule_delete.php [L]
 RewriteRule ^api/toggle-class-status$ backends/api/toggle-class-status.php [L]
 RewriteRule ^api/enroll-class$ backends/api/enroll-class.php [L]
 
+# Materials API endpoints
+RewriteRule ^api/materials$ backends/handler/unified_file_handler.php [QSA,L]
+
 # Schedule API endpoints
 RewriteRule ^api/schedule/([0-9]+)$ backends/api/schedules.php?id=$1 [QSA,L]
 RewriteRule ^api/schedules$ backends/api/schedules.php [QSA,L]
+RewriteRule ^schedule-delete$ backends/api/schedule_delete.php [L]
 
 RewriteRule ^mark-notification-read$ backends/api/mark-notification-read.php [L]
 RewriteRule ^delete-notification$ backends/api/delete-notif.php [L]
 RewriteRule ^mark-all-notifications-read$ backends/api/mark-all-notif-read.php [L]
 RewriteRule ^check-notifications$ backends/api/check-notifications.php [L]
-RewriteRule ^upload-file$ backends/api/upload-file.php [L]
-RewriteRule ^delete-file$ backends/api/delete-file.php [L]
+RewriteRule ^upload-file$ backends/handler/unified_file_handler.php [L]
+RewriteRule ^delete-file$ backends/handler/unified_file_handler.php [L]
 RewriteRule ^fix-permissions$ backends/api/fix-permissions.php [L]
 RewriteRule ^submit-feedback$ backends/api/submit-feedback.php [L]
 RewriteRule ^api/meeting/end$ backends/api/end_meeting.php [L,QSA]
 
 # Class feedback page
 RewriteRule ^techkid/class-feedback$ pages/techkid/class-feedback.php [QSA,L]
+
+#TechGuru
+RewriteRule ^api/search-students$ backends/api/search-students.php [L]
+RewriteRule ^api/invite-students$ backends/api/invite-students.php [L]
+RewriteRule ^api/send-message$ backends/api/send-message.php [L]

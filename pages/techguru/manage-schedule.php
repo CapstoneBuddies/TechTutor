@@ -352,7 +352,7 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
                                         <tr>
                                             <th class="delete-column d-none">
                                                 <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" id="selectAll">
+                                                    <input class="form-check-input" type="checkbox" id="selectAll" data-bs-toggle="tooltip" title="Select All">
                                                 </div>
                                             </th>
                                             <th>Date</th>
@@ -730,6 +730,7 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
                     const isDeleteMode = toggleBtn.classList.toggle('active');
                     deleteColumns.forEach(col => col.classList.toggle('d-none'));
                     deleteBtn.classList.toggle('d-none');
+                    toggleBtn.textContent = "Cancel";
                     
                     if (!isDeleteMode) {
                         selectAll.checked = false;

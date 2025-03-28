@@ -1,6 +1,6 @@
 <?php 
     require_once '../../backends/main.php';
-    require_once BACKEND.'file_management.php';
+    require_once BACKEND.'unified_file_management.php';
     require_once BACKEND.'student_management.php';
     require_once BACKEND.'class_management.php';
 
@@ -11,14 +11,11 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'TECHKID') {
 }
 
 // Initialize file management
-$fileManager = new FileManagement();
+$fileManager = new UnifiedFileManagement();
 
-try {
-    // Get student's personal files
-    $personalFiles = $fileManager->getPersonalFiles($_SESSION['user']);
-    
+try {    
     // Get storage usage
-    $storageInfo = $fileManager->getStorageUsage($_SESSION['user']);
+    $storageInfo = $fileManager->getStorageInfo($_SESSION['user']);
     
     } catch (Exception $e) {
     error_log("Error in files page: " . $e->getMessage());
@@ -36,9 +33,7 @@ if (!$classDetails) {
 
 // Get class files organized by folders
 $files = $fileManager->getClassFiles($class_id);
-
 $title = "Class Resources - " . htmlspecialchars($classDetails['class_name']);
-
 // Get current folder and file
 $current_folder = isset($_GET['folder']) ? $_GET['folder'] : '';
 $current_file = isset($_GET['file']) ? $_GET['file'] : '';
@@ -88,7 +83,7 @@ $current_file = isset($_GET['file']) ? $_GET['file'] : '';
                                     </div>
                                     <div class="folder-content p-2">
                                         <?php 
-                                        $items = $fileManager->getFolderContents($class_id, $current_folder);
+                                        $items = $fileManager->getClassFiles($class_id);
                                         
                                         // Show parent folder link if in subfolder
                                         if ($current_folder) {
@@ -98,29 +93,29 @@ $current_file = isset($_GET['file']) ? $_GET['file'] : '';
                                             <a href="?id=<?php echo $class_id; ?>&folder=<?php echo urlencode($parent_folder); ?>" 
                                                class="folder-item d-flex align-items-center p-2 text-decoration-none">
                                                 <i class="bi bi-arrow-up me-2"></i>
-                                                <span>Parent Folder</span>
+                                                <span>Root</span>
                                             </a>
                                             <?php
                                         }
                                         
                                         // Display folders first
-                                        foreach ($items['folders'] as $folder): 
-                                            $folder_path = $current_folder ? $current_folder . '/' . $folder : $folder;
+                                        foreach ($items as $folder): 
+                                            $folder_path = $current_folder ? $current_folder . '/' . $folder['folder_name'] : $folder['folder_name'];
                                         ?>
                                             <a href="?id=<?php echo $class_id; ?>&folder=<?php echo urlencode($folder_path); ?>" 
                                                class="folder-item d-flex align-items-center p-2 text-decoration-none">
                                                 <i class="bi bi-folder2 me-2"></i>
-                                                <span><?php echo htmlspecialchars($folder); ?></span>
+                                                <span><?php echo htmlspecialchars($folder['folder_name']); ?></span>
                                             </a>
                                         <?php endforeach; ?>
 
                                         <!-- Display files -->
-                                        <?php foreach ($items['files'] as $file): ?>
+                                        <?php foreach ($items as $file): ?>
                                             <a href="?id=<?php echo $class_id; ?>&folder=<?php echo urlencode($current_folder); ?>&file=<?php echo urlencode($file['file_id']); ?>" 
                                                class="file-item d-flex align-items-center p-2 text-decoration-none <?php echo $current_file == $file['file_id'] ? 'active' : ''; ?>"
                                                data-file-id="<?php echo $file['file_id']; ?>">
                                                 <i class="bi bi-file-earmark-text me-2"></i>
-                                                <span><?php echo htmlspecialchars($file['file_name']); ?></span>
+                                                <span id="file-name"><?php echo htmlspecialchars($file['file_name']); ?></span>
                                             </a>
                                         <?php endforeach; ?>
                                     </div>
@@ -177,6 +172,12 @@ $current_file = isset($_GET['file']) ? $_GET['file'] : '';
     <?php include ROOT_PATH . '/components/footer.php'; ?>
 
         <style>
+                #file-name {
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    max-width: 200px;
+                }
             .dashboard-content {
                 background-color: #F5F5F5;
                 min-height: calc(100vh - 60px);
@@ -255,6 +256,8 @@ $current_file = isset($_GET['file']) ? $_GET['file'] : '';
                 }
                 .file-item {
                     cursor: pointer;
+                    max-width: 200px;
+                    display: flex;
                 }
             }
         </style>
