@@ -5,3 +5,4 @@
 -Fix Already enrolled message prompt
 -Add a `href` on notifications
 -Handles payment for class referral
+-Check and verify for any errors on all pages for all user types

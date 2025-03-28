@@ -1,6 +1,4 @@
 <?php
-require_once '../main.php';
-
 class MeetingManagement {
     private $bbbBaseUrl;
     private $bbbSecret;
@@ -305,6 +303,117 @@ class MeetingManagement {
     }
 
     /**
+     * Update the publish status of a recording (alias for publishRecording)
+     * @param string $recordId Recording identifier
+     * @param bool $publish Whether to publish or unpublish
+     * @return array Operation response
+     */
+    public function updateRecordingPublishStatus($recordId, $publish) {
+        return $this->publishRecording($recordId, $publish);
+    }
+
+    /**
+     * Get download URL for a recording
+     * @param array $recording Recording data
+     * @return string|null Download URL
+     */
+    public function getRecordingDownloadUrl($recording) {
+        try {
+            if (!isset($recording['playback']['format']['url'])) {
+                return null;
+            }
+
+            // Replace the playback URL with the download URL
+            // BigBlueButton stores recordings in the format: https://server/playback/presentation/2.0/playback.html?meetingId=...
+            // Download URL format: https://server/presentation/[meetingId]/video.mp4
+            $playbackUrl = $recording['playback']['format']['url'];
+            $pattern = '/playback\.html\?meetingId=([^&]+)/';
+            if (preg_match($pattern, $playbackUrl, $matches)) {
+                $baseUrl = substr($playbackUrl, 0, strpos($playbackUrl, '/playback/'));
+                return $baseUrl . '/presentation/' . $matches[1] . '/video.mp4';
+            }
+            return null;
+        } catch (Exception $e) {
+            log_error("Error generating download URL: " . $e->getMessage(), "meeting");
+            return null;
+        }
+    }
+
+    /**
+     * Archive a recording
+     * @param string $recordId Recording identifier
+     * @param bool $archive Whether to archive or unarchive
+     * @return array Operation response
+     */
+    public function archiveRecording($recordId, $archive = true) {
+        try {
+            // First, update the recording metadata to mark it as archived
+            $meta = ['archived' => $archive ? 'true' : 'false'];
+            $result = $this->updateRecordingSettings($recordId, $meta);
+
+            if (!$result['success']) {
+                throw new Exception("Failed to update recording archive status");
+            }
+
+            log_error("Recording " . ($archive ? "archived" : "unarchived") . " successfully: $recordId", "meeting");
+            return ['success' => true];
+        } catch (Exception $e) {
+            log_error("Recording archive error: " . $e->getMessage(), "meeting");
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get all recordings for a specific class
+     * @param int $class_id Class identifier
+     * @return array List of recordings with session details
+     */
+    public function getClassRecordings($class_id) {
+        try {
+            global $conn;
+            
+            // Get all meetings for this class
+            $query = "SELECT m.*, cs.session_date, cs.start_time, cs.end_time 
+                     FROM meetings m 
+                     JOIN class_schedule cs ON m.schedule_id = cs.schedule_id 
+                     WHERE cs.class_id = ? 
+                     ORDER BY cs.session_date DESC, cs.start_time DESC";
+
+            $stmt = $conn->prepare($query);
+            $stmt->execute([$class_id]);
+            $meetings = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+            // Get recordings for each meeting
+            $recordings = [];
+            foreach ($meetings as $meeting_data) {
+                $meetingRecordings = $this->getRecordings($meeting_data['meeting_uid']);
+                if (!empty($meetingRecordings)) {
+                    foreach ($meetingRecordings as $recording) {
+                        $recording['session_date'] = $meeting_data['session_date'];
+                        $recording['start_time'] = $meeting_data['start_time'];
+                        $recording['end_time'] = $meeting_data['end_time'];
+                        $recording['download_url'] = $this->getRecordingDownloadUrl($recording);
+                        $recording['archived'] = isset($recording['meta']['archived']) && $recording['meta']['archived'] === 'true';
+                        $recordings[] = $recording;
+                    }
+                }
+            }
+
+            return [
+                'success' => true,
+                'recordings' => $recordings
+            ];
+        } catch (Exception $e) {
+            log_error("Error retrieving class recordings: " . $e->getMessage(), "meeting");
+            return [
+                'success' => false,
+                'error' => 'Failed to retrieve recordings',
+                'recordings' => []
+            ];
+        }
+    }
+
+    /**
      * Make an API request to BigBlueButton server
      * @param string $action API action
      * @param array $params Request parameters
@@ -332,5 +441,197 @@ class MeetingManagement {
         $query = http_build_query($params);
         $checksum = sha1($action . $query . $this->bbbSecret);
         return $this->bbbBaseUrl . 'api/' . $action . '?' . $query . '&checksum=' . $checksum;
+    }
+    /**
+     * Get aggregated statistics for meetings
+     * @param string $tutorId The tutor's ID
+     * @param string $period daily|weekly|monthly
+     * @param string $startDate Start date in Y-m-d format
+     * @param string $endDate End date in Y-m-d format
+     * @return array Aggregated statistics
+     */
+    public function getAggregatedStats($tutorId, $period = 'daily', $startDate = null, $endDate = null) {
+        try {
+            $groupBy = '';
+            switch ($period) {
+                case 'daily':
+                    $groupBy = 'DATE(start_time)';
+                    break;
+                case 'weekly':
+                    $groupBy = 'YEARWEEK(start_time)';
+                    break;
+                case 'monthly':
+                    $groupBy = 'DATE_FORMAT(start_time, "%Y-%m")';
+                    break;
+                default:
+                    throw new Exception("Invalid period specified");
+            }
+
+            $query = "SELECT 
+                        $groupBy as period,
+                        COUNT(*) as total_sessions,
+                        SUM(participant_count) as total_participants,
+                        AVG(participant_count) as avg_participants,
+                        AVG(duration) as avg_duration,
+                        SUM(recording_available) as total_recordings
+                     FROM meeting_analytics 
+                     WHERE tutor_id = ?";
+
+            $params = [$tutorId];
+
+            if ($startDate && $endDate) {
+                $query .= " AND start_time BETWEEN ? AND ?";
+                $params[] = $startDate;
+                $params[] = $endDate;
+            }
+
+            $query .= " GROUP BY $groupBy ORDER BY period";
+
+            $results = DB::run($query, $params)->fetchAll(PDO::FETCH_ASSOC);
+
+            // Calculate additional metrics
+            foreach ($results as &$row) {
+                $row['engagement_rate'] = $row['avg_participants'] / ($row['total_sessions'] ?: 1);
+                $row['recording_rate'] = $row['total_recordings'] / ($row['total_sessions'] ?: 1) * 100;
+            }
+
+            return $results;
+
+        } catch (Exception $e) {
+            log_error("Analytics aggregation error: " . $e->getMessage(), "error");
+            return [];
+        }
+    }
+
+    /**
+     * Get participation trends by hour of day
+     * @param string $tutorId The tutor's ID
+     * @param string $startDate Start date in Y-m-d format
+     * @param string $endDate End date in Y-m-d format
+     * @return array Hourly participation trends
+     */
+    public function getParticipationTrends($tutorId, $startDate = null, $endDate = null) {
+        try {
+            $query = "SELECT 
+                        DATE_FORMAT(start_time, '%H:00') as hour_of_day,
+                        AVG(participant_count) as avg_participants,
+                        COUNT(*) as session_count
+                     FROM meeting_analytics 
+                     WHERE tutor_id = ?";
+            
+            $params = [$tutorId];
+
+            if ($startDate && $endDate) {
+                $query .= " AND start_time BETWEEN ? AND ?";
+                $params[] = $startDate;
+                $params[] = $endDate;
+            }
+
+            $query .= " GROUP BY hour_of_day ORDER BY hour_of_day";
+
+            return DB::run($query, $params)->fetchAll(PDO::FETCH_ASSOC);
+
+        } catch (Exception $e) {
+            log_error("Participation trend analysis error: " . $e->getMessage(), "error");
+            return [];
+        }
+    }
+
+    /**
+     * Get duration distribution statistics
+     * @param string $tutorId The tutor's ID
+     * @param string $startDate Start date in Y-m-d format
+     * @param string $endDate End date in Y-m-d format
+     * @return array Duration distribution data
+     */
+    public function getDurationDistribution($tutorId, $startDate = null, $endDate = null) {
+        try {
+            $query = "SELECT 
+                        CASE 
+                            WHEN duration <= 1800 THEN '0-30'
+                            WHEN duration <= 3600 THEN '31-60'
+                            WHEN duration <= 5400 THEN '61-90'
+                            ELSE '90+'
+                        END as duration_range,
+                        COUNT(*) as session_count
+                     FROM meeting_analytics 
+                     WHERE tutor_id = ?";
+            
+            $params = [$tutorId];
+
+            if ($startDate && $endDate) {
+                $query .= " AND start_time BETWEEN ? AND ?";
+                $params[] = $startDate;
+                $params[] = $endDate;
+            }
+
+            $query .= " GROUP BY duration_range ORDER BY 
+                        CASE duration_range 
+                            WHEN '0-30' THEN 1 
+                            WHEN '31-60' THEN 2 
+                            WHEN '61-90' THEN 3 
+                            ELSE 4 
+                        END";
+
+            return DB::run($query, $params)->fetchAll(PDO::FETCH_ASSOC);
+
+        } catch (Exception $e) {
+            log_error("Duration distribution analysis error: " . $e->getMessage(), "error");
+            return [];
+        }
+    }
+
+    /**
+     * Get recent sessions with details
+     * @param string $tutorId The tutor's ID
+     * @param int $limit Number of recent sessions to retrieve
+     * @return array Recent session data
+     */
+    public function getRecentSessions($tutorId, $limit = 5) {
+        try {
+            $query = "SELECT 
+                        ma.*,
+                        m.name as meeting_name
+                     FROM meeting_analytics ma
+                     JOIN meetings m ON ma.meeting_id = m.meeting_id
+                     WHERE ma.tutor_id = ?
+                     ORDER BY ma.start_time DESC
+                     LIMIT ?";
+
+            return DB::run($query, [$tutorId, $limit])->fetchAll(PDO::FETCH_ASSOC);
+
+        } catch (Exception $e) {
+            log_error("Recent sessions retrieval error: " . $e->getMessage(), "error");
+            return [];
+        }
+    }
+
+    /**
+     * Get overall statistics summary
+     * @param string $tutorId The tutor's ID
+     * @return array Summary statistics
+     */
+    public function getStatsSummary($tutorId) {
+        try {
+            $query = "SELECT 
+                        COUNT(*) as total_sessions,
+                        SUM(participant_count) as total_participants,
+                        AVG(duration) as avg_duration,
+                        SUM(recording_available) as total_recordings
+                     FROM meeting_analytics 
+                     WHERE tutor_id = ?";
+
+            $result = DB::run($query, [$tutorId])->fetch(PDO::FETCH_ASSOC);
+
+            // Add calculated metrics
+            $result['total_hours'] = round(($result['avg_duration'] * $result['total_sessions']) / 3600, 1);
+            $result['avg_participants'] = round($result['total_participants'] / ($result['total_sessions'] ?: 1), 1);
+
+            return $result;
+
+        } catch (Exception $e) {
+            log_error("Stats summary error: " . $e->getMessage(), "error");
+            return [];
+        }
     }
 }

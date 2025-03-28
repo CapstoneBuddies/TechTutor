@@ -101,7 +101,8 @@ RewriteRule ^dashboard/t/class/details$ pages/techguru/class-details.php [L,QSA]
 RewriteRule ^dashboard/t/class/edit$ pages/techguru/class-edit.php [L,QSA]
 RewriteRule ^dashboard/t/class/details/schedules$ pages/techguru/manage-schedule.php [L,QSA]
 RewriteRule ^dashboard/t/class/details/files$ pages/techguru/class-files.php [L,QSA]
-RewriteRule ^dashboard/t/class/analytics$ pages/techguru/analytics.php [L,QSA]
+RewriteRule ^dashboard/t/class/details/analytics$ pages/techguru/analytics.php [L,QSA]
+RewriteRule ^dashboard/t/class/details/recordings$ pages/techguru/recordings.php [L,QSA]
 
 #
 RewriteRule ^dashboard/t/students$ pages/techguru/students.php [L]
@@ -161,11 +162,8 @@ RewriteRule ^mark-notification-read$ backends/api/mark-notification-read.php [L]
 RewriteRule ^delete-notification$ backends/api/delete-notif.php [L]
 RewriteRule ^mark-all-notifications-read$ backends/api/mark-all-notif-read.php [L]
 RewriteRule ^check-notifications$ backends/api/check-notifications.php [L]
-RewriteRule ^upload-file$ backends/handler/unified_file_handler.php [L]
-RewriteRule ^delete-file$ backends/handler/unified_file_handler.php [L]
 RewriteRule ^fix-permissions$ backends/api/fix-permissions.php [L]
 RewriteRule ^submit-feedback$ backends/api/submit-feedback.php [L]
-RewriteRule ^api/meeting/end$ backends/api/end_meeting.php [L,QSA]
 
 # Class feedback page
 RewriteRule ^techkid/class-feedback$ pages/techkid/class-feedback.php [QSA,L]
@@ -174,3 +172,7 @@ RewriteRule ^techkid/class-feedback$ pages/techkid/class-feedback.php [QSA,L]
 RewriteRule ^api/search-students$ backends/api/search-students.php [L]
 RewriteRule ^api/invite-students$ backends/api/invite-students.php [L]
 RewriteRule ^api/send-message$ backends/api/send-message.php [L]
+
+#BBB
+RewriteRule ^api/meeting/end$ backends/api/end_meeting.php [L,QSA]
+RewriteRule ^api/meeting$ backends/handler/meeting_handlers.php [L,QSA]

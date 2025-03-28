@@ -346,3 +346,22 @@ CREATE TABLE IF NOT EXISTS `file_tag_map` (
     FOREIGN KEY (`file_id`) REFERENCES `unified_files` (`file_id`) ON DELETE CASCADE,
     FOREIGN KEY (`tag_id`) REFERENCES `file_tags` (`tag_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- Meeting Analytics Table
+CREATE TABLE IF NOT EXISTS meeting_analytics (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    meeting_id VARCHAR(255) NOT NULL,
+    tutor_id VARCHAR(255) NOT NULL,
+    participant_count INT DEFAULT 0,
+    duration INT DEFAULT 0,
+    start_time DATETIME,
+    end_time DATETIME,
+    recording_available BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (meeting_id) REFERENCES meetings(meeting_id),
+    FOREIGN KEY (tutor_id) REFERENCES users(user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Indexes for faster queries
+CREATE INDEX idx_meeting_analytics_meeting_id ON meeting_analytics(meeting_id);
+CREATE INDEX idx_meeting_analytics_tutor_id ON meeting_analytics(tutor_id);
+CREATE INDEX idx_meeting_analytics_start_time ON meeting_analytics(start_time);

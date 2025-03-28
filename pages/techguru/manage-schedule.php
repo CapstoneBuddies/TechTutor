@@ -17,7 +17,12 @@ else {
     header('Location: ./');
     exit();
 }
-
+// Get class details or redirect if invalid
+$classDetails = getClassDetails($class_id, $_SESSION['user']);
+if (!$classDetails) {
+    header('Location: ./');
+    exit();
+}
 $classSchedule = getClassSchedules($class_id);
 $title = "Manage " . htmlspecialchars($classSchedule[0]['class_name']) . " Schedule";
 
@@ -235,7 +240,12 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
                                 <nav aria-label="breadcrumb" class="breadcrumb-nav">
                                     <ol class="breadcrumb">
                                         <li class="breadcrumb-item"><a href="<?php echo BASE; ?>dashboard">Dashboard</a></li>
-                                        <li class="breadcrumb-item"><a href="<?php echo BASE; ?>dashboard/t/class">My Classes</a></li>
+                                        <li class="breadcrumb-item"><a href="./">My Classes</a></li>
+                                        <li class="breadcrumb-item">
+                                            <a href="details?id=<?php echo htmlspecialchars($classDetails['class_id']); ?>">
+                                                <?php echo htmlspecialchars($classDetails['class_name']); ?>
+                                            </a>
+                                        </li>
                                         <li class="breadcrumb-item active"><?php echo $title; ?></li>
                                     </ol>
                                 </nav>
@@ -244,7 +254,7 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
                             </div>
                             <div>
                                 <a href="./?id=<?php echo $class_id;?>" class="btn btn-outline-primary">
-                                    <i class="bi bi-arrow-left"></i> Back to Classes
+                                    <i class="bi bi-arrow-left"></i> Back to Class
                                 </a>
                             </div>
                         </div>

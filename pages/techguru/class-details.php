@@ -28,7 +28,7 @@ if(isset($_GET['ended'])) {
 if (isset($_POST['action']) && $_POST['action'] === 'updateStatus') {
     $newStatus = isset($_POST['status']) ? intval($_POST['status']) : 0;
     updateClassStatus($class_id, $_SESSION['user'], $newStatus);
-    header("Location: class-details?id={$class_id}&updated=1");
+    header("Location: details?id={$class_id}&updated=1");
     exit();
 }
 
@@ -36,7 +36,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'updateStatus') {
 $schedules = getClassSchedules($class_id);
 $students = getClassStudents($class_id);
 $files = getClassFiles($class_id);
-$folders = getClassFolders($class_id); 
+$folders = getClassFolders($class_id);
 
 // Calculate class statistics
 $completion_rate = $classDetails['total_students'] > 0 
@@ -449,12 +449,12 @@ function getFileIconClass($fileType) {
                                                         </button>
                                                         <ul class="dropdown-menu">
                                                             <li>
-                                                                <a class="dropdown-item" href="#" onclick="renameFolder(<?php echo $folder['folder_id']; ?>, '<?php echo htmlspecialchars($folder['folder_name']); ?>')">
+                                                                <a class="dropdown-item" href="#" onclick="renameFolder(<?php echo $folder['id']; ?>, '<?php echo htmlspecialchars($folder['folder_name']); ?>')">
                                                                     <i class="bi bi-pencil me-2"></i> Rename
                                                                 </a>
                                                             </li>
                                                             <li>
-                                                                <a class="dropdown-item text-danger" href="#" onclick="deleteFolder(<?php echo $folder['folder_id']; ?>)">
+                                                                <a class="dropdown-item text-danger" href="#" onclick="deleteFolder(<?php echo $folder['id']; ?>)">
                                                                     <i class="bi bi-trash me-2"></i> Delete
                                                                 </a>
                                                             </li>
@@ -479,7 +479,7 @@ function getFileIconClass($fileType) {
                                                 <h6 class="mb-1"><?php echo htmlspecialchars($file['file_name']); ?></h6>
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <small class="text-muted">
-                                                        <?php if (isset($file['folder_id']) && $file['folder_id']): ?>
+                                                        <?php if (isset($file['id']) && $file['id']): ?>
                                                             <i class="bi bi-folder me-1"></i> <?php echo htmlspecialchars($file['folder_name'] ?? 'Folder'); ?> •
                                                         <?php endif; ?>
                                                         <?php echo formatBytes($file['file_size']); ?> •
@@ -578,6 +578,10 @@ function getFileIconClass($fileType) {
                         <button class="btn btn-success quick-action" onclick="viewAnalytics()">
                             <i class="bi bi-graph-up me-2"></i> View Analytics
                         </button>
+                        <a href="details/recordings?id=<?php echo htmlspecialchars($class_id); ?>" 
+                           class="btn btn-warning quick-action">
+                            <i class="bi bi-camera-reels me-2"></i> View Recordings
+                        </a>
                         <button class="btn btn-outline-primary quick-action" onclick="showShareModal()">
                             <i class="bi bi-share me-2"></i> Share & Invite
                         </button>
@@ -603,7 +607,7 @@ function getFileIconClass($fileType) {
                                 <select class="form-select" id="materialFolder">
                                     <option value="">Root Folder</option>
                                     <?php foreach ($folders as $folder): ?>
-                                        <option value="<?php echo $folder['folder_id']; ?>">
+                                        <option value="<?php echo $folder['id']; ?>">
                                             <?php echo htmlspecialchars($folder['folder_name']); ?>
                                         </option>
                                     <?php endforeach; ?>
@@ -822,7 +826,7 @@ function getFileIconClass($fileType) {
             formData.append('file', file);
             formData.append('description', description);
             formData.append('class_id', '<?php echo $class_id; ?>');
-            formData.append('folder_id', folderId);
+            formData.append('id', folderId);
             formData.append('action', 'upload');
 
             showLoading(true);
@@ -939,7 +943,7 @@ function getFileIconClass($fileType) {
             }
 
             function viewAnalytics() {
-            window.location.href = `analytics?class_id=<?php echo $class_id; ?>`;
+            window.location.href = `details/analytics?class_id=<?php echo $class_id; ?>`;
         }
 
         function showShareModal() {
@@ -1207,7 +1211,7 @@ function getFileIconClass($fileType) {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    folder_id: folderId,
+                    id: folderId,
                     folder_name: newName
                 })
             })

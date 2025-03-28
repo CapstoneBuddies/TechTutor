@@ -115,7 +115,7 @@ $current_file = isset($_GET['file']) ? $_GET['file'] : '';
                                                class="file-item d-flex align-items-center p-2 text-decoration-none <?php echo $current_file == $file['file_id'] ? 'active' : ''; ?>"
                                                data-file-id="<?php echo $file['file_id']; ?>">
                                                 <i class="bi bi-file-earmark-text me-2"></i>
-                                                <span id="file-name"><?php echo htmlspecialchars($file['file_name']); ?></span>
+                                                <span class="file-name"><?php echo htmlspecialchars($file['file_name']); ?></span>
                                             </a>
                                         <?php endforeach; ?>
                                     </div>
@@ -125,24 +125,22 @@ $current_file = isset($_GET['file']) ? $_GET['file'] : '';
                                 <div class="file-preview">
                                     <?php if ($current_file): ?>
                                         <?php 
-                                        $file_details = $fileManager->getFileDetails($current_file);
+                                        $file_details = $fileManager->getFileDetails($current_file); 
                                         if ($file_details):
                                         ?>
                                             <div class="file-details p-4">
                                                 <div class="d-flex justify-content-between align-items-start mb-4">
                                                     <div>
-                                                        <h4 class="mb-2"><?php echo htmlspecialchars($file_details['file_name']); ?></h4>
+                                                        <h4 class="mb-2 file-name"><?php echo htmlspecialchars($file_details['file_name']); ?></h4>
                                                         <p class="text-muted mb-0">
                                                             Uploaded by <?php echo htmlspecialchars($file_details['uploader_name']); ?> on 
                                                             <?php echo date('F d, Y', strtotime($file_details['upload_time'])); ?>
                                                         </p>
                                                         <p class="text-muted mb-0">
-                                                            Size: <?php echo formatFileSize($file_details['file_size']); ?>
+                                                            Size: <?php echo $fileManager->formatFileSize($file_details['file_size']); ?>
                                                         </p>
                                                     </div>
-                                                    <a href="<?php echo BASE . 'uploads/class/' . $file_details['file_path']; ?>" 
-                                                       class="btn btn-primary" 
-                                                           download>
+                                                    <a href="<?php echo "https://drive.google.com/uc?export=download&id=".$file_details['google_file_id']; ?>" class="btn btn-primary" download>
                                                         <i class="bi bi-download me-2"></i>
                                                         Download
                                                         </a>
@@ -153,6 +151,9 @@ $current_file = isset($_GET['file']) ? $_GET['file'] : '';
                                                         <p class="mb-0"><?php echo nl2br(htmlspecialchars($file_details['description'])); ?></p>
                                                     </div>
                                                 <?php endif; ?>
+                                                <div class="embed-responsive embed-responsive-16by9 p-2 shadow-lg rounded">
+                                                  <iframe class="embed-responsive-item item-view" src="https://drive.google.com/file/d/<?php echo $file_details['google_file_id']; ?>/preview" allowfullscreen sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+                                                </div>
                                             </div>
                                         <?php endif; ?>
                                     <?php else: ?>
@@ -172,12 +173,18 @@ $current_file = isset($_GET['file']) ? $_GET['file'] : '';
     <?php include ROOT_PATH . '/components/footer.php'; ?>
 
         <style>
-                #file-name {
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    max-width: 200px;
-                }
+            .item-view {
+                width: 60vw;
+                height: 70vh;
+                padding-right: 1em;
+                border-radius: 5%;
+            }
+            .file-name {
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 200px;
+            }
             .dashboard-content {
                 background-color: #F5F5F5;
                 min-height: calc(100vh - 60px);
@@ -236,6 +243,12 @@ $current_file = isset($_GET['file']) ? $_GET['file'] : '';
                 border-top: 1px solid #e9ecef;
             }
             @media (max-width: 768px) {
+                .item-view {
+                    width: 90vw; /* Increase width to 90% of the viewport width for smaller screens */
+                    height: 50vh; /* Reduce height to 50% of the viewport height */
+                    padding-right: 0.5em; /* Reduce right padding for smaller screens */
+                    border-radius: 3%; /* Optionally reduce border-radius for a sharper look */
+                }
                 .dashboard-content {
                     padding: 1rem;
                 }

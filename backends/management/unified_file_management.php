@@ -1615,6 +1615,55 @@ class UnifiedFileManagement {
         }
     }
     public function getFileDetails($fileId) {
-        return [];
+        try {
+        // Prepare the SQL query to fetch the file details
+        $query = "SELECT 
+                    CONCAT(u.first_name,' ',u.last_name) AS uploader_name,
+                    uf.file_id, 
+                    uf.file_name, 
+                    uf.file_type, 
+                    uf.file_size, 
+                    uf.upload_time, 
+                    uf.google_file_id,
+                    uf.drive_link, 
+                    uf.description, 
+                    uf.visibility, 
+                    uf.file_purpose, 
+                    fc.category_name AS file_category 
+                  FROM unified_files uf 
+                  LEFT JOIN file_categories fc ON uf.category_id = fc.category_id
+                  LEFT JOIN users u ON uf.user_id = u.uid
+                  WHERE uf.file_id = ?";
+
+        $stmt = $this->db->prepare($query);
+        $stmt->bind_param("i", $fileId);
+        
+        // Execute the query
+        $stmt->execute();
+
+        // Fetch the result
+        return $stmt->get_result()->fetch_assoc();
+        } 
+        catch (Exception $e) {
+            log_error("Error in getPopularTags: " . $e->getMessage());
+            return [];
+        }
     }
-} 
+    public function formatFileSize($fileSize) {
+        if ($fileSize < 1024) {
+            return $fileSize . ' bytes';
+        } elseif ($fileSize < 1048576) {
+            return round($fileSize / 1024, 2) . ' KB';
+        } elseif ($fileSize < 1073741824) {
+            return round($fileSize / 1048576, 2) . ' MB';
+        } else {
+            return round($fileSize / 1073741824, 2) . ' GB';
+        }
+    }
+    public function extractFileIdFromDriveLink($url) {
+        // Regular expression to extract file ID from Google Drive URL
+        preg_match('/\/d\/([a-zA-Z0-9_-]+)\//', $url, $matches);
+        
+        return isset($matches[1]) ? "https://drive.google.com/uc?export=download&id=".$matches[1] : null;
+    }
+}
