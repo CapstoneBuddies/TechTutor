@@ -83,9 +83,9 @@
                             <p class="subtitle">View and manage all upcoming and past class sessions</p>
                         </div>
                         <div>
-                            <a href="<?php echo BASE; ?>dashboard/t/manage-schedule" class="btn btn-primary btn-action">
-                                <i class="bi bi-calendar-plus"></i>
-                                Manage Schedules
+                            <a href="./" class="btn btn-primary btn-action">
+                                <i class="bi bi-arrow-left"></i>
+                                Go Back to Your Class
                             </a>
                         </div>
                     </div>

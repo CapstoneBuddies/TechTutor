@@ -400,7 +400,8 @@ function getStudentSchedule($student_id) {
 }
 
 function getStudentCertificates($student_id) {
-    return [];
+    require_once BACKEND . 'certificate_management.php';
+    return getStudentCertificatesDetails($student_id);
 }
 
 /**

@@ -1,7 +1,7 @@
 <?php 
     require_once '../../backends/main.php';
-    require_once BACKEND.'class_management.php';
-    require_once BACKEND.'meeting_management.php';
+    require_once BACKEND . 'class_management.php';
+    require_once BACKEND . 'meeting_management.php';
         
     if(!isset($_SESSION['user']) || $_SESSION['role'] !== 'TECHGURU') {
         $_SESSION['msg'] = "Invalid Action";
@@ -20,21 +20,38 @@
         exit();
     }
 
-    $title = 'Learning Analytics';
+    $title = 'Learning Analytics - ' . $classDetails['class_name'];
     $tutor_id = $_SESSION['user'];
     
+    // Initialize the meeting management class
     $meeting = new MeetingManagement();
+
+    // Force refresh analytics data if requested
+    if(isset($_GET['refresh']) && $_GET['refresh'] == 'true') {
+        $refreshResult = $meeting->fetchMeetingAnalytics($class_id);
+        if($refreshResult['success']) {
+            $_SESSION['success'] = "Analytics data refreshed successfully. " . $refreshResult['message'];
+        } else {
+            $_SESSION['error'] = "Failed to refresh analytics: " . ($refreshResult['error'] ?? "Unknown error");
+        }
+    }
 
     // Get analytics data from the database
     $analyticsData = $meeting->getMeetingAnalytics($class_id, $tutor_id);
     
-    // If fetchMeetingAnalytics hasn't been executed yet, trigger it
-    if (empty($analyticsData['activity_data'])) {
-        // This ensures we have fresh analytics data
+    // If no analytics data exists, try to fetch it
+    if ($analyticsData['total_sessions'] == 0) {
         $meeting->fetchMeetingAnalytics($class_id);
         // Get updated analytics
         $analyticsData = $meeting->getMeetingAnalytics($class_id, $tutor_id);
     }
+
+    // Get class participation stats
+    $classStats = getClassStats($tutor_id);
+    
+    // Get recordings for this class
+    $recordingsResult = $meeting->getClassRecordings($class_id);
+    $recordings = $recordingsResult['success'] ? $recordingsResult['recordings'] : [];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -84,6 +101,23 @@
             background-color: #f8f9fa;
         }
 
+        .stats-icon {
+            width: 3rem;
+            height: 3rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .recording-badge {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+        }
+
         @media (max-width: 768px) {
             .stat-value {
                 font-size: 1.5rem;
@@ -102,9 +136,9 @@
                         <nav aria-label="breadcrumb" class="breadcrumb-nav">
                             <ol class="breadcrumb">
                                 <li class="breadcrumb-item"><a href="<?php echo BASE; ?>dashboard">Dashboard</a></li>
-                                <li class="breadcrumb-item"><a href="././">My Classes</a></li>
+                                <li class="breadcrumb-item"><a href="<?php echo BASE; ?>dashboard/t/class">My Classes</a></li>
                                 <li class="breadcrumb-item">
-                                    <a href="./?id=<?php echo htmlspecialchars($classDetails['class_id']); ?>">
+                                    <a href="<?php echo BASE; ?>dashboard/t/class/details?id=<?php echo htmlspecialchars($classDetails['class_id']); ?>">
                                         <?php echo htmlspecialchars($classDetails['class_name']); ?>
                                     </a>
                                 </li>
@@ -115,12 +149,36 @@
                         <p class="text-muted">View detailed analytics and insights for your class</p>
                     </div>
                     <div>
-                        <a href="./?id=<?php echo $classDetails['class_id'];?>" class="btn btn-outline-primary">
+                        <a href="<?php echo BASE; ?>dashboard/t/class/details?id=<?php echo $classDetails['class_id'];?>" class="btn btn-outline-primary">
                             <i class="bi bi-arrow-left"></i> Back to Class
+                        </a>
+                        <a href="?id=<?php echo $classDetails['class_id'];?>&refresh=true" class="btn btn-primary">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh Analytics
                         </a>
                     </div>
                 </div>
             </div>
+
+            <!-- Alert Messages -->
+            <?php if (isset($_SESSION['success'])): ?>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <?php 
+                        echo $_SESSION['success'];
+                        unset($_SESSION['success']);
+                    ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <?php endif; ?>
+
+            <?php if (isset($_SESSION['error'])): ?>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <?php 
+                        echo $_SESSION['error'];
+                        unset($_SESSION['error']);
+                    ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <?php endif; ?>
 
             <!-- Analytics Grid -->
             <div class="row g-4">
@@ -174,9 +232,9 @@
                                     </div>
                                 </div>
                                 <div class="stat-value" id="total-recordings">
-                                    <?php echo number_format($analyticsData['total_recordings'] ?? 0); ?>
+                                    <?php echo number_format(count($recordings)); ?>
                                 </div>
-                                <div class="stat-label">Total Recordings</div>
+                                <div class="stat-label">Available Recordings</div>
                             </div>
                         </div>
                     </div>
@@ -213,6 +271,11 @@
                                                 ?>
                                             </small>
                                         </div>
+                                        <?php if (isset($session['recording_available']) && $session['recording_available']): ?>
+                                        <span class="badge bg-danger recording-badge">
+                                            <i class="bi bi-record-circle"></i> Recorded
+                                        </span>
+                                        <?php endif; ?>
                                     </div>
                                     <div class="mt-2 d-flex justify-content-between">
                                         <small class="text-muted">
@@ -253,6 +316,106 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Recordings Card -->
+                <?php if (!empty($recordings)): ?>
+                <div class="col-12">
+                    <div class="analytics-card p-4">
+                        <h5 class="section-title mb-4">Available Recordings</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Name</th>
+                                        <th>Duration</th>
+                                        <th>Size</th>
+                                        <th>Visibility</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($recordings as $recording): ?>
+                                    <tr>
+                                        <td>
+                                            <?php 
+                                                if (isset($recording['session_date'])) {
+                                                    echo date('M d, Y', strtotime($recording['session_date']));
+                                                } else if (isset($recording['startTime'])) {
+                                                    echo date('M d, Y', round($recording['startTime']/1000));
+                                                } else {
+                                                    echo 'Unknown';
+                                                }
+                                            ?>
+                                        </td>
+                                        <td>
+                                            <?php echo htmlspecialchars($recording['name'] ?? 'Untitled Recording'); ?>
+                                        </td>
+                                        <td>
+                                            <?php 
+                                                $duration = 0;
+                                                if (isset($recording['duration'])) {
+                                                    $duration = $recording['duration'];
+                                                } else if (isset($recording['endTime']) && isset($recording['startTime'])) {
+                                                    $duration = ($recording['endTime'] - $recording['startTime']) / 1000;
+                                                }
+                                                
+                                                $hours = floor($duration / 3600);
+                                                $minutes = floor(($duration % 3600) / 60);
+                                                $seconds = $duration % 60;
+                                                
+                                                if ($hours > 0) {
+                                                    echo $hours . 'h ' . $minutes . 'm ' . $seconds . 's';
+                                                } else {
+                                                    echo $minutes . 'm ' . $seconds . 's';
+                                                }
+                                            ?>
+                                        </td>
+                                        <td>
+                                            <?php 
+                                                $size = 0;
+                                                if (isset($recording['size'])) {
+                                                    $size = $recording['size'];
+                                                    $unit = 'bytes';
+                                                    
+                                                    if ($size > 1024 * 1024 * 1024) {
+                                                        $size = round($size / (1024 * 1024 * 1024), 2);
+                                                        $unit = 'GB';
+                                                    } else if ($size > 1024 * 1024) {
+                                                        $size = round($size / (1024 * 1024), 2);
+                                                        $unit = 'MB';
+                                                    } else if ($size > 1024) {
+                                                        $size = round($size / 1024, 2);
+                                                        $unit = 'KB';
+                                                    }
+                                                    
+                                                    echo $size . ' ' . $unit;
+                                                } else {
+                                                    echo 'Unknown';
+                                                }
+                                            ?>
+                                        </td>
+                                        <td>
+                                            <span class="badge <?php echo $recording['is_visible'] ? 'bg-success' : 'bg-secondary'; ?>">
+                                                <?php echo $recording['is_visible'] ? 'Public' : 'Hidden'; ?>
+                                            </span>
+                                            <?php if ($recording['is_archived']): ?>
+                                            <span class="badge bg-info ms-1">Archived</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <a href="<?php echo $recording['download_url'] ?? '#'; ?>" class="btn btn-sm btn-outline-primary" target="_blank">
+                                                <i class="bi bi-play-fill"></i> View
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
             </div>
     </main>
 
@@ -306,7 +469,19 @@
                         maintainAspectRatio: false,
                         scales: {
                             y: {
-                                beginAtZero: true
+                                beginAtZero: true,
+                                ticks: {
+                                    precision: 0 // Only show whole numbers
+                                }
+                            }
+                        },
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Number of Sessions per Month'
+                            },
+                            legend: {
+                                position: 'bottom'
                             }
                         }
                     }
@@ -350,6 +525,15 @@
                                     display: true,
                                     text: 'Average Participants per Session'
                                 }
+                            }
+                        },
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Student Engagement Over Time'
+                            },
+                            legend: {
+                                position: 'bottom'
                             }
                         }
                     }
@@ -397,6 +581,15 @@
                                     display: true,
                                     text: 'Hours'
                                 }
+                            }
+                        },
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Average Session Duration Over Time'
+                            },
+                            legend: {
+                                position: 'bottom'
                             }
                         }
                     }

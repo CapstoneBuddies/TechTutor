@@ -2,9 +2,9 @@
 CREATE TABLE IF NOT EXISTS `recording_visibility` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `recording_id` varchar(255) NOT NULL,
-  `class_id` int(11) NOT NULL,
+  `class_id` int NOT NULL,
   `is_visible` tinyint(1) NOT NULL DEFAULT 0,
-  `created_by` int(11) NOT NULL,
+  `created_by` int NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`),

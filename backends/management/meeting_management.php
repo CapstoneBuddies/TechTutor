@@ -25,8 +25,8 @@ class MeetingManagement {
                 'welcome' => $options['welcome'] ?? 'Welcome to TechTutor Online Session!',
                 'maxParticipants' => $options['maxParticipants'] ?? -1,
                 'duration' => $options['duration'] ?? 0,
-                'record' => $options['record'] ?? 'false',
-                'autoStartRecording' => $options['autoStartRecording'] ?? 'false',
+                'record' => $options['record'] ?? 'true',
+                'autoStartRecording' => $options['autoStartRecording'] ?? 'true',
                 'allowStartStopRecording' => $options['allowStartStopRecording'] ?? 'true',
                 'disableRecording' => $options['disableRecording'] ?? 'false',
                 'webcamsOnlyForModerator' => $options['webcamsOnlyForModerator'] ?? 'false',
@@ -72,22 +72,22 @@ class MeetingManagement {
                     if (isset($_SESSION['role'])) {
                         switch ($_SESSION['role']) {
                             case 'TECHGURU':
-                                $logoutUrl = 'https://' . $_SERVER['SERVER_NAME'] . '/dashboard/t/class/details?id=' . $class_id . '&ended=' . $schedule_id;
+                                $logoutUrl = 'http://' . $_SERVER['SERVER_NAME'] . '/dashboard/t/class/details?id=' . $class_id . '&ended=' . $schedule_id;
                                 break;
                             case 'TECHKID':
-                                $logoutUrl = 'https://' . $_SERVER['SERVER_NAME'] . '/dashboard/s/class/details?id=' . $class_id . '&ended=' . $schedule_id;
+                                $logoutUrl = 'http://' . $_SERVER['SERVER_NAME'] . '/dashboard/s/class/details?id=' . $class_id . '&ended=' . $schedule_id;
                                 break;
                             case 'ADMIN':
-                                $logoutUrl = 'https://' . $_SERVER['SERVER_NAME'] . '/dashboard/a/class/details?id=' . $class_id . '&ended=' . $schedule_id;
+                                $logoutUrl = 'http://' . $_SERVER['SERVER_NAME'] . '/dashboard/a/class/details?id=' . $class_id . '&ended=' . $schedule_id;
                                 break;
                             default:
-                                $logoutUrl = 'https://' . $_SERVER['SERVER_NAME'] . '/dashboard';
+                                $logoutUrl = 'http://' . $_SERVER['SERVER_NAME'] . '/dashboard';
                         }
                     } else {
-                        $logoutUrl = 'https://' . $_SERVER['SERVER_NAME'] . '/dashboard';
+                        $logoutUrl = 'http://' . $_SERVER['SERVER_NAME'] . '/dashboard';
                     }
                 } else {
-                    $logoutUrl = 'https://' . $_SERVER['SERVER_NAME'] . '/dashboard';
+                    $logoutUrl = 'http://' . $_SERVER['SERVER_NAME'] . '/dashboard';
                 }
             }
 

@@ -531,7 +531,7 @@
         function joinMeeting(scheduleId) {
             showLoading(true);
 
-            fetch(BASE+'join-meeting', {
+            fetch(BASE+'api/meeting?action=join-meeting', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',

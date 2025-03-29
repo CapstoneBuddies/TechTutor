@@ -237,7 +237,7 @@
                 });
             });
         });
-        
+
         function deleteAccount() {
             const password = document.getElementById('deleteConfirmPassword').value;
             const modalElement = document.getElementById('deleteAccountModal');
