@@ -690,11 +690,6 @@ function updateProfile() {
                 $stmt->bind_param("i", $user_id);
                 $stmt->execute();
             } elseif ($user['role'] === 'TECHKID') {
-                // Delete student enrollments
-                $stmt = $conn->prepare("DELETE FROM class_schedule WHERE user_id = ?");
-                $stmt->bind_param("i", $user_id);
-                $stmt->execute();
-                
                 // Delete ratings given by this student
                 $stmt = $conn->prepare("DELETE FROM session_feedback WHERE student_id = ?");
                 $stmt->bind_param("i", $user_id);

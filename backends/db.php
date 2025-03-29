@@ -178,7 +178,7 @@
 					$_SESSION['address'] = $user['address'];
 					$_SESSION['phone'] = $user['contact_number'];
 					$_SESSION['profile'] = USER_IMG . ($user['profile_picture'] ?? 'default.jpg');
-					$_SESSION['rating'] = $user['rating'] ?? 'Undecided';
+					$_SESSION['rating'] = $user['rating'] ?? 0.00;
 
 					if(empty($user['role'])) {
 						$deleteStmt = $conn->prepare("DELETE FROM users WHERE email = ?");

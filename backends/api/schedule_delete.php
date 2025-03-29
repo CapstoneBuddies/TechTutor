@@ -46,9 +46,9 @@ try {
     
     // Get enrolled students
     $stmt = $conn->prepare("SELECT DISTINCT u.uid, u.email, u.first_name, u.last_name 
-                           FROM class_schedule cs 
-                           JOIN users u ON cs.user_id = u.uid 
-                           WHERE cs.class_id = ? AND cs.role = 'STUDENT'");
+                           FROM enrollments e
+                           JOIN users u ON e.student_id = u.uid 
+                           WHERE e.class_id = ? AND e.status = 'active'");
     $stmt->bind_param('i', $classId);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -62,7 +62,7 @@ try {
             $student['uid'],
             'TECHKID',
             $message,
-            "/dashboard/k/class/details?id={$classId}",
+            "/dashboard/s/class/details?id={$classId}",
             $classId,
             'bi-calendar-x',
             'text-danger'

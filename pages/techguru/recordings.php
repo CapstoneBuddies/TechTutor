@@ -190,7 +190,7 @@ $title = 'Class Recordings - ' . htmlspecialchars($classDetails['class_name']);
                                         <?php endif; ?>
                                         <button type="button" 
                                                 class="btn btn-sm <?php echo $recording['archived'] ? 'btn-secondary' : 'btn-dark'; ?>"
-                                                onclick="toggleArchiveStatus('<?php echo $recording['recordID']; ?>', <?php echo $recording['archived'] ? 'false' : 'true'; ?>)">
+                                                onclick="toggleArchiveStatus('<?php echo $recording['recordID']; ?>', <?php echo $recording['archived'] ? 'false' : 'true'; ?>)" data-bs-toggle="tooltip" title="Archive Recording">
                                             <i class="bi bi-archive<?php echo $recording['archived'] ? '-fill' : ''; ?>"></i>
                                         </button>
                                     </div>
@@ -203,7 +203,7 @@ $title = 'Class Recordings - ' . htmlspecialchars($classDetails['class_name']);
                                         </button>
                                         <button type="button" 
                                                 class="btn btn-sm btn-danger"
-                                                onclick="deleteRecording('<?php echo $recording['recordID']; ?>')">
+                                                onclick="deleteRecording('<?php echo $recording['recordID']; ?>')" data-bs-toggle="tooltip" title="Delete Recording">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </div>
@@ -222,9 +222,9 @@ $title = 'Class Recordings - ' . htmlspecialchars($classDetails['class_name']);
                 if (!confirm('Are you sure you want to ' + (publish ? 'publish' : 'unpublish') + ' this recording?')) {
                     return;
                 }
-
+                console.log(publish);
                 showLoading(true);
-                fetch(`${BASE}api/meeting?action=toggle_recording`, {
+                fetch(`${BASE}api/meeting?action=toggle-recording`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -241,7 +241,8 @@ $title = 'Class Recordings - ' . htmlspecialchars($classDetails['class_name']);
                     if (data.success) {
                         location.reload();
                     } else {
-                        showToast('error', 'Failed to update recording visibility: ' + (data.error || 'Unknown error'));
+                        showToast('error', 'Failed to update recording visibility');
+                        logError(data.error, 'toggle_recording', 'recordings');
                     }
                 })
                 .catch(error => {
@@ -258,7 +259,7 @@ $title = 'Class Recordings - ' . htmlspecialchars($classDetails['class_name']);
                 }
 
                 showLoading(true);
-                fetch(`${BASE}api/meeting?action=delete_recording`, {
+                fetch(`${BASE}api/meeting?action=delete-recording`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -291,7 +292,7 @@ $title = 'Class Recordings - ' . htmlspecialchars($classDetails['class_name']);
                 }
 
                 showLoading(true);
-                fetch(`${BASE}api/meeting?action=archive_recording`, {
+                fetch(`${BASE}api/meeting?action=archive-recording`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -308,7 +309,8 @@ $title = 'Class Recordings - ' . htmlspecialchars($classDetails['class_name']);
                     if (data.success) {
                         location.reload();
                     } else {
-                        showToast('error', 'Failed to update archive status: ' + (data.error || 'Unknown error'));
+                        showToast('error', 'Failed to update archive status');
+                        logError(data.error, 'archive', 'recordings');
                     }
                 })
                 .catch(error => {

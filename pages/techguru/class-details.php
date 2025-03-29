@@ -19,11 +19,6 @@ if (!$classDetails) {
     exit();
 }
 
-if(isset($_GET['ended'])) {
-    // change the schedule recently joined to completed
-}
-
-
 // Handle class status update
 if (isset($_POST['action']) && $_POST['action'] === 'updateStatus') {
     $newStatus = isset($_POST['status']) ? intval($_POST['status']) : 0;
@@ -369,19 +364,19 @@ function getFileIconClass($fileType) {
                                     <td>
                                         <?php if ($schedule['status'] === 'confirmed'): ?>
                                             <div class="d-flex gap-2">
-                                                <?php if(isset($_GET['ended'])): ?>
+                                                <?php if(isset($_GET['ended']) && $_GET['ended'] == $schedule['schedule_id'] ): ?>
                                                 <a href="#" onclick="joinMeeting(<?php echo $schedule['schedule_id']; ?>)" 
-                                                   class="btn btn-success btn-sm">
+                                                   class="btn btn-info btn-sm">
                                                     <i class="bi bi-camera-video-fill me-1"></i>
                                                     Rejoin Meeting
                                                 </a>
-                                                <button type="button" class="btn btn-danger btn-sm" onclick="endMeeting(<?php echo $schedule['schedule_id']; ?>)">
+                                                <button type="button" class="btn btn-warning btn-sm" onclick="endMeeting(<?php echo $schedule['schedule_id']; ?>)">
                                                     <i class="bi bi-stop-circle-fill me-1"></i>
                                                     End Meeting
                                                 </button>
                                                 <?php else: ?>
                                                 <a href="#" onclick="joinMeeting(<?php echo $schedule['schedule_id']; ?>)" 
-                                                   class="btn btn-success btn-sm">
+                                                   class="btn btn-primary btn-sm">
                                                     <i class="bi bi-camera-video-fill me-1"></i>
                                              Join Meeting
                                                 </a>
@@ -581,6 +576,10 @@ function getFileIconClass($fileType) {
                         <a href="details/recordings?id=<?php echo htmlspecialchars($class_id); ?>" 
                            class="btn btn-warning quick-action">
                             <i class="bi bi-camera-reels me-2"></i> View Recordings
+                        </a>
+                        <a href="details/feedbacks?id=<?php echo htmlspecialchars($class_id); ?>" 
+                           class="btn btn-danger quick-action">
+                            <i class="bi bi-star me-2"></i> View Feedbacks
                         </a>
                         <button class="btn btn-outline-primary quick-action" onclick="showShareModal()">
                             <i class="bi bi-share me-2"></i> Share & Invite
@@ -843,7 +842,8 @@ function getFileIconClass($fileType) {
                     showToast('success', 'Material uploaded successfully');
                     setTimeout(() => location.reload(), 1500);
                 } else {
-                    showToast('error', data.message || 'Failed to upload material');
+                    logError(data.message, 'submitMaterial');
+                    showToast('error', 'Failed to upload material');
                 }
             })
             .catch(error => {
@@ -874,7 +874,8 @@ function getFileIconClass($fileType) {
                     showToast('success', 'Material deleted successfully');
                     setTimeout(() => location.reload(), 1500);
                 } else {
-                    showToast('error', data.message || 'Failed to delete material');
+                    showToast('error', 'Failed to delete material');
+                    logError(data.message, 'delete Material');
                 }
             })
             .catch(error => {
@@ -932,7 +933,8 @@ function getFileIconClass($fileType) {
                     showToast('success', 'Message sent successfully');
                     messageModal.hide();
                 } else {
-                    showToast('error', data.message || 'Failed to send message');
+                    showToast('error', 'Failed to send message');
+                    logError(data.message, 'send Message');
                 }
             })
             .catch(error => {
@@ -1074,16 +1076,16 @@ function getFileIconClass($fileType) {
                 showToast('error', 'Failed to send invitations');
             });
         }
-
+ 
         function startSession(scheduleId) {
             if (!confirm("Are you sure you want to start this session?")) return;
 
             showLoading(true);
 
-            fetch(BASE+'create-meeting', {
+            fetch(BASE+'api/meeting?action=create-meeting', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `schedule_id=${scheduleId}`
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ schedule_id: scheduleId })
             })
             .then(response => response.json())
             .then(data => {
@@ -1092,7 +1094,8 @@ function getFileIconClass($fileType) {
                     showToast('success', "Meeting room was successfully generated");
                     setTimeout(() => location.reload(), 2000);
                 } else {
-                    showToast('error', data.message || "Failed to create meeting room");
+                    showToast('error', "Failed to create meeting room");
+                    logError(data.message, 'create-meeting');
                 }
             })
             .catch(error => {
@@ -1105,12 +1108,12 @@ function getFileIconClass($fileType) {
         function joinMeeting(scheduleId) {
             showLoading(true);
 
-            fetch(BASE+'join-meeting', {
+            fetch(BASE+'api/meeting?action=join-meeting', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Content-Type': 'application/json',
                 },
-                body: `schedule_id=${scheduleId}`
+                body: JSON.stringify({ schedule_id: scheduleId })
             })
             .then(response => response.json())
             .then(data => {
@@ -1118,7 +1121,8 @@ function getFileIconClass($fileType) {
                 if (data.success) {
                     window.location.href = data.data.join_url;
                 } else {
-                    showToast('error', data.message || 'Failed to join meeting.');
+                    showToast('error', 'Failed to join meeting.');
+                    logError(data.message, 'join-meeting');
                 }
             })
             .catch(error => {
@@ -1132,12 +1136,12 @@ function getFileIconClass($fileType) {
                 return;
             }
             showLoading(true);
-            fetch(BASE + 'api/meeting/end', {
+            fetch(BASE + 'api/meeting?action=end-meeting', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Content-Type': 'application/json',
                 },
-                body: `schedule_id=${scheduleId}`
+                body: JSON.stringify({ schedule_id: scheduleId })
             })
             .then(response => response.json())
             .then(data => {
@@ -1146,7 +1150,8 @@ function getFileIconClass($fileType) {
                     showToast('success', 'Meeting ended successfully');
                     setTimeout(() => location.reload(), 1500);
                 } else {
-                    showToast('error', data.message || 'Failed to end meeting');
+                    logError(data.message, 'end-meeting');
+                    showToast('error', 'Failed to end meeting');
                 }
             })
             .catch(error => {
@@ -1188,9 +1193,10 @@ function getFileIconClass($fileType) {
                 showLoading(false);
                 if (data.success) {
                     showToast('success', 'Folder created successfully');
-                    location.reload();
+                    setTimeout(() => {location.reload();}, 1500);
                 } else {
-                    showToast('error', data.message || 'Failed to create folder');
+                    showToast('error', 'Failed to create folder');
+                    logError(data.message, 'create-folder');
                 }
             })
             .catch(error => {
@@ -1220,9 +1226,10 @@ function getFileIconClass($fileType) {
                 showLoading(false);
                 if (data.success) {
                     showToast('success', 'Folder renamed successfully');
-                    location.reload();
+                    setTimeout(() => {location.reload();}, 1500);
                 } else {
-                    showToast('error', data.message || 'Failed to rename folder');
+                    showToast('error', 'Failed to rename folder');
+                    logError(data.message, 'rename-folder');
                 }
             })
             .catch(error => {
@@ -1250,9 +1257,10 @@ function getFileIconClass($fileType) {
                 showLoading(false);
                 if (data.success) {
                     showToast('success', 'Folder deleted successfully');
-                    location.reload();
+                    setTimeout(() => {location.reload();}, 1500);
                 } else {
-                    showToast('error', data.message || 'Failed to delete folder');
+                    showToast('error', 'Failed to delete folder');
+                    logError(data.message, 'delete-folder');
                 }
             })
             .catch(error => {

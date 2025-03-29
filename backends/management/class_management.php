@@ -304,14 +304,13 @@ function createClass($data) {
         if (empty($schedules)) {
             throw new Exception("No valid schedules could be generated");
         }
-
-        $stmt = $conn->prepare("INSERT INTO class_schedule (class_id, day, session_date, start_time, end_time, status) VALUES (?, ?, ?, ?, ?, 'pending')");
+        log_error(print_r($schedules,true));
+        $stmt = $conn->prepare("INSERT INTO class_schedule (class_id, session_date, start_time, end_time, status) VALUES ( ?, ?, ?, ?, 'pending')");
         
         foreach ($schedules as $schedule) {
-            $stmt->bind_param("issss", 
+            $stmt->bind_param("isssi", 
                     $class_id,
-                $schedule['day'],
-                $schedule['date'],
+                $schedule['session_date'],
                     $schedule['start_time'],
                     $schedule['end_time']
                 );
@@ -411,17 +410,18 @@ function generateClassSchedules($start_date, $end_date, $days, $time_slots) {
 function getClassSchedules($class_id) {
     global $conn;
     
-    $sql = "SELECT cs.*, u.first_name, u.last_name, u.profile_picture, u.role, c.class_name,
-                   e.status as enrollment_status
+    $sql = "SELECT cs.*, c.class_name, c.tutor_id,
+                   u.first_name, u.last_name, u.profile_picture, u.role
             FROM class_schedule cs
-            LEFT JOIN users u ON cs.user_id = u.uid
-            LEFT JOIN class c ON cs.class_id = c.class_id
-            LEFT JOIN enrollments e ON c.class_id = e.class_id AND u.uid = e.student_id
+            JOIN class c ON cs.class_id = c.class_id
+            LEFT JOIN users u ON c.tutor_id = u.uid
+            LEFT JOIN enrollments e ON c.class_id = e.class_id
             WHERE cs.class_id = ?
+            GROUP BY cs.schedule_id
             ORDER BY cs.session_date ASC, cs.start_time ASC";
             
     $stmt = $conn->prepare($sql);
-        $stmt->bind_param("i", $class_id);
+    $stmt->bind_param("i", $class_id);
     $stmt->execute();
     
     return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -909,18 +909,6 @@ function getEnrolledStudents($class_id) {
     global $conn;
 
     try {
-        // Ensure the enrollments table exists
-        $create_enrollments_table = "
-            CREATE TABLE IF NOT EXISTS `enrollments` (
-                `enrollment_id` INT PRIMARY KEY AUTO_INCREMENT,
-                `class_id` INT NOT NULL,
-                `student_id` INT NOT NULL,
-                `enrollment_date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                `status` ENUM('active', 'completed', 'dropped') NOT NULL DEFAULT 'active',
-                FOREIGN KEY (class_id) REFERENCES class(class_id) ON DELETE CASCADE,
-                FOREIGN KEY (student_id) REFERENCES users(uid) ON DELETE CASCADE,
-                UNIQUE KEY `unique_enrollment` (`class_id`, `student_id`)
-            )";
         $conn->query($create_enrollments_table);
         
         // Fetch enrolled students
@@ -961,7 +949,6 @@ function updateClassSchedules($class_id, $schedules, $tutor_id) {
     
     try {
         $conn->begin_transaction();
-        log_error("was called");
         // Verify class ownership
         $verify = $conn->prepare("SELECT tutor_id FROM class WHERE class_id = ?");
         $verify->bind_param("i", $class_id);
@@ -971,18 +958,13 @@ function updateClassSchedules($class_id, $schedules, $tutor_id) {
         if (!$result || $result['tutor_id'] != $tutor_id) {
             throw new Exception("Unauthorized schedule update attempt");
         }
-        // Delete existing schedules
-        $delete = $conn->prepare("DELETE FROM class_schedule WHERE class_id = ? AND user_id = ?");
-        $delete->bind_param("ii", $class_id, $tutor_id);
-        $delete->execute();
         
         // Insert new schedules
-        $insert = $conn->prepare("INSERT INTO class_schedule (class_id, user_id, session_date, start_time, end_time) VALUES (?, ?, ?, ?, ?)");
+        $insert = $conn->prepare("INSERT INTO class_schedule (class_id, session_date, start_time, end_time, status) VALUES (?, ?, ?, ?, 'pending')");
         
         foreach ($schedules as $schedule) {
-            $insert->bind_param("iisss", 
+            $insert->bind_param("isss", 
                 $class_id,
-                $tutor_id,
                 $schedule['session_date'],
                 $schedule['start_time'],
                 $schedule['end_time']
@@ -1006,17 +988,79 @@ function getClassRecordings() {
 function getClassRecordingsCount() {
     return 0;
 }
-function getScheduleStatus($date, $startTime) {
+function getScheduleStatus($schedule_id) {
+    global $conn;
+    
+    // Get schedule details from database
+    $stmt = $conn->prepare("SELECT schedule_id, session_date, start_time, end_time, status FROM class_schedule WHERE schedule_id = ?");
+    $stmt->bind_param("i", $schedule_id);
+    $stmt->execute();
+    $schedule = $stmt->get_result()->fetch_assoc();
+    
+    if (!$schedule) {
+        return 'unknown';
+    }
+    
+    // If the status is already completed or canceled, return that status
+    if ($schedule['status'] === 'completed' || $schedule['status'] === 'canceled') {
+        return $schedule['status'];
+    }
+    
+    // Otherwise, calculate the status based on date and time
+    $date = $schedule['session_date'];
+    $startTime = $schedule['start_time'];
+    $endTime = $schedule['end_time'];
+    
     $scheduleDateTime = strtotime("$date $startTime");
+    $scheduleEndTime = strtotime("$date $endTime");
     $now = time();
-
-    if ($scheduleDateTime < $now) {
+    
+    // Get current date and time
+    $currentDate = date('Y-m-d');
+    $todayStart = strtotime($currentDate . ' 00:00:00');
+    $todayEnd = strtotime($currentDate . ' 23:59:59');
+    $tomorrowStart = $todayStart + (24 * 60 * 60);
+    $tomorrowEnd = $todayEnd + (24 * 60 * 60);
+    $weekEnd = $todayStart + (7 * 24 * 60 * 60);
+    
+    // For sessions that have passed
+    if ($scheduleEndTime < $now) {
         return 'completed';
-    } elseif (($scheduleDateTime - $now) < 24 * 60 * 60) {
-        return 'upcoming';
-    } else {
+    }
+    
+    // For sessions currently in progress
+    if ($scheduleDateTime <= $now && $now <= $scheduleEndTime) {
+        return 'in-progress';
+    }
+    
+    // For upcoming sessions
+    if ($scheduleDateTime > $now) {
+        // Starting in less than an hour
+        if (($scheduleDateTime - $now) < 60 * 60) {
+            return 'starting-soon';
+        }
+        
+        // Today
+        if ($scheduleDateTime >= $todayStart && $scheduleDateTime <= $todayEnd) {
+            return 'today';
+        }
+        
+        // Tomorrow
+        if ($scheduleDateTime >= $tomorrowStart && $scheduleDateTime <= $tomorrowEnd) {
+            return 'tomorrow';
+        }
+        
+        // This week (within 7 days)
+        if ($scheduleDateTime <= $weekEnd) {
+            return 'this-week';
+        }
+        
+        // More than a week away
         return 'scheduled';
     }
+    
+    // Default (should not reach here)
+    return 'pending';
 }
 function getClassFolders($class_id) {
     global $conn;

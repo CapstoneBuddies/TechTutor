@@ -44,9 +44,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
-    // Generate all class schedules
-    $schedules = generateClassSchedules($startDate, $endDate, $days, $timeSlots);
-    
     // Prepare class data
     $classData = [
         'subject_id' => $subjectDetails['subject_id'],
@@ -58,12 +55,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'class_size' => $maxStudents,
         'is_free' => $pricingType === 'free' ? 1 : 0,
         'price' => $pricingType === 'free' ? 0 : $price,
-        'thumbnail' => $classCover ? $classCover['name'] : 'default.jpg',
-        'schedules' => $schedules
+        'thumbnail' => $classCover,
+        'days' => $days,
+        'time_slots' => $timeSlots
     ];
-    
     // Create the class
     $result = createClass($classData);
+    log_error(print_r($result,true));
     
     if ($result['success']) {
         // Send notification to admin about new class
@@ -353,7 +351,7 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                             <div class="mb-3">
                                 <label for="classCover" class="form-label">Class Cover Image</label>
                                 <input type="file" class="form-control" id="classCover" name="classCover" 
-                                       accept="image/*" required>
+                                       accept="image/*">
                                 <div class="form-text">Upload an eye-catching image (max 2MB, JPG/PNG)</div>
                             </div>
                             <div id="imagePreview" class="d-none">
@@ -599,7 +597,7 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                 };
 
                 // Validate single field
-                function validateField(fieldName, showError = true) {
+                function validateField(fieldName, showError = true, enableShake = false) {
                     const field = fields[fieldName];
                     const element = field.element;
                     const rules = field.rules;
@@ -668,7 +666,16 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                     // Show/hide error
                     if (!isValid && showError) {
                         element.classList.add('is-invalid');
-                        element.classList.add('error-shake');
+                        
+                        // Only add shake animation if enableShake is true (during form submission)
+                        if (enableShake) {
+                            element.classList.add('error-shake');
+                            
+                            // Remove shake animation after it completes
+                            setTimeout(() => {
+                                element.classList.remove('error-shake');
+                            }, 500);
+                        }
                         
                         // Add error message
                         const errorDiv = document.createElement('div');
@@ -678,11 +685,6 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                         
                         // Focus the invalid field
                         element.focus();
-                        
-                        // Remove shake animation after it completes
-                        setTimeout(() => {
-                            element.classList.remove('error-shake');
-                        }, 500);
                     } else {
                         element.classList.remove('is-invalid');
                     }
@@ -696,7 +698,7 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                     
                     // Validate basic information
                     for (const fieldName in fields) {
-                        if (!validateField(fieldName, true)) {
+                        if (!validateField(fieldName, true, true)) {
                             isValid = false;
                         }
                     }
@@ -716,7 +718,7 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                         
                         setTimeout(() => {
                             daysSection.classList.remove('error-shake');
-                        }, 500);
+                        }, 1000);
                     }
                     
                     // Validate time slots
@@ -769,11 +771,11 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                     return isValid;
                 }
 
-                // Add input event listeners for real-time validation
+                // Add input event listeners for real-time validation without shake
                 for (const fieldName in fields) {
                     const element = fields[fieldName].element;
-                    element.addEventListener('input', () => validateField(fieldName, true));
-                    element.addEventListener('blur', () => validateField(fieldName, true));
+                    element.addEventListener('input', () => validateField(fieldName, true, false));
+                    element.addEventListener('blur', () => validateField(fieldName, true, false));
                 }
 
                 // Form submission

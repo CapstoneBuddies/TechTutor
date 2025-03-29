@@ -1,6 +1,6 @@
 <?php 
 require_once '../../backends/main.php';
-require_once BACKEND.'class_management.php';
+require_once BACKEND.'class_management.php'; 
 
 // Ensure user is logged in and is a TechGuru
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
@@ -46,7 +46,7 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
         } else {
             $_SESSION['success'] = "Schedules updated successfully!";
         }
-        header('Location: ' . $_SERVER['PHP_SELF'] . '?id=' . $class_id);
+        header('Location:  schedules?id=' . $class_id);
         exit();
     }
 }
@@ -373,11 +373,11 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <?php foreach ($classSchedule as $schedule): 
+                                        <?php foreach ($classSchedule as $schedule):
                                             $start = strtotime($schedule['start_time']);
                                             $end = strtotime($schedule['end_time']);
                                             $duration = round(($end - $start) / 3600, 1);
-                                            $status = getScheduleStatus($schedule['session_date'], $schedule['start_time']);
+                                            $status = getScheduleStatus($schedule['schedule_id']);
                                         ?>
                                             <tr>
                                                 <td class="delete-column d-none">
@@ -399,12 +399,11 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
                                                     <?php echo ucfirst($status); ?>
                                                 </td>
                                                 <td class="text-end">
+                                                    <?php if ( !in_array($status, ['completed', 'canceled']) ): ?>    
                                                     <button class="btn btn-sm btn-primary" onclick="editSchedule(<?php echo $schedule['schedule_id']; ?>)" data-bs-toggle="tooltip" title="Edit Schedule">
                                                         <i class="bi bi-pencil"></i>
                                                     </button>
-                                                    <button class="btn btn-sm btn-danger" onclick="deleteSchedule(<?php echo $schedule['schedule_id']; ?>)" data-bs-toggle="tooltip" title="Delete Schedule">
-                                                        <i class="bi bi-trash"></i>
-                                                    </button>
+                                                    <?php endif ?>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -830,8 +829,10 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        location.reload();
+                        showToast('success', "Schedules has been deleted successfully");
+                        setTimeout(() =>{location.reload();}, 3000);
                     } else {
+                        showToast('error', "Error occured during Schedule deletion");
                         alert(data.error);
                     }
                 });

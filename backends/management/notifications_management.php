@@ -240,9 +240,9 @@ function sendClassSessionLink($scheduleId) {
         ");
         $stmt->bind_param("i", $scheduleId);
         $stmt->execute();
-        $meeting = $stmt->get_result()->fetch_assoc();
+        $meetingData = $stmt->get_result()->fetch_assoc();
 
-        if (!$meeting) {
+        if (!$meetingData) {
             throw new Exception("Meeting not found for this session.");
         }
 
@@ -262,16 +262,33 @@ function sendClassSessionLink($scheduleId) {
             throw new Exception("No students enrolled in this session.");
         }
 
+        // Get class ID for the logout URL
+        $classIdStmt = $conn->prepare("SELECT class_id FROM class_schedule WHERE schedule_id = ?");
+        $classIdStmt->bind_param("i", $scheduleId);
+        $classIdStmt->execute();
+        $classIdResult = $classIdStmt->get_result()->fetch_assoc();
+        $classId = $classIdResult['class_id'];
+        
+        // Create the student-specific logout URL
+        $logoutUrl = $_SERVER['SERVER_NAME'] . '/dashboard/s/class/details?id=' . $classId . '&ended=' . $scheduleId;
+        
         // Initialize meeting class to generate join links
-        $meeting = new MeetingManagement();
+        require_once BACKEND . 'meeting_management.php';
+        $meetingManager = new MeetingManagement();
 
         // Loop through each student and send the meeting link
         foreach ($students as $student) {
-            $joinUrl = $meeting->getJoinUrl($meeting['meeting_uid'], $student['student_name'], $meeting['attendee_pw']);
+            $joinUrl = $meetingManager->getJoinUrl(
+                $meetingData['meeting_uid'], 
+                $student['student_name'], 
+                $meetingData['attendee_pw'],
+                $student['uid'],
+                $logoutUrl
+            );
 
             // Send email notification (using PHPMailer)
             $mail = getMailerInstance();
-            $subject = "Class Session Link - {$meeting['class_name']}";
+            $subject = "Class Session Link - {$meetingData['class_name']}";
             $body = "
             <!DOCTYPE html>
             <html lang='en'>
@@ -296,7 +313,7 @@ function sendClassSessionLink($scheduleId) {
                         <td style='padding: 20px 0;'>
                             <p style='font-size: 16px; color: #333;'>Hello <strong>{$student['student_name']}</strong>,</p>
                             <p style='font-size: 16px; color: #333;'>
-                                You have a scheduled class for <strong>{$meeting['class_name']}</strong>.
+                                You have a scheduled class for <strong>{$meetingData['class_name']}</strong>.
                             </p>
                             <p style='font-size: 16px; color: #333;'>Click below to join:</p>
                             <div style='text-align: center; margin: 20px 0;'>
@@ -318,18 +335,19 @@ function sendClassSessionLink($scheduleId) {
             </body>
             </html>
             ";
-            $mail->setFrom($meeting['email'], $meeting['tutor']);
+            $mail->setFrom($meetingData['email'], $meetingData['tutor']);
             $mail->addAddress($student['email'],$student['student_name']);
             $mail->Subject = $subject;
             $mail->Body = $body;
             $mail->send();
+            
             // Insert system notification
             $stmt = $conn->prepare("
                 INSERT INTO notifications (recipient_id, recipient_role, class_id, message, icon, icon_color)
                 VALUES (?, 'TECHKID', ?, ?, 'bi-camera-video-fill', 'text-primary')
             ");
-            $notifMessage = "Your class <b>{$meeting['class_name']}</b> is starting soon! <a href='{$joinUrl}'>Join now</a>";
-            $stmt->bind_param("iis", $student['uid'], $scheduleId, $notifMessage);
+            $notifMessage = "Your class <b>{$meetingData['class_name']}</b> is starting soon! <a href='{$joinUrl}'>Join now</a>";
+            $stmt->bind_param("iis", $student['uid'], $classId, $notifMessage);
             $stmt->execute();
         }
 

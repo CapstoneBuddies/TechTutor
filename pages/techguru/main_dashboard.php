@@ -442,7 +442,7 @@
                                         <i class="bi bi-chat-square-quote me-2 text-primary"></i>
                                         Recent Feedback
                                     </h2>
-                                    <a href="dashboard/t/feedbacks" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2">
+                                    <a href="dashboard/t/class/feedbacks" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2">
                                         <span>View All</span>
                                         <i class="bi bi-arrow-right"></i>
                                     </a>

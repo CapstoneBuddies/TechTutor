@@ -2,7 +2,7 @@
     require_once '../../backends/main.php';
     require_once BACKEND.'class_management.php';
     require_once BACKEND.'meeting_management.php';
-    
+        
     if(!isset($_SESSION['user']) || $_SESSION['role'] !== 'TECHGURU') {
         $_SESSION['msg'] = "Invalid Action";
         log_error("User accessed an invalid page",'security');
@@ -77,7 +77,7 @@
     <body data-base="<?php echo BASE; ?>">
         <?php include ROOT_PATH . '/components/header.php'; ?>
         
-        <!-- Main Dashboard Content -->
+    <!-- Main Dashboard Content -->
         <main class="dashboard-content p-4">
             <!-- Header Section -->
             <div class="dashboard-card mb-4">
@@ -107,7 +107,7 @@
             </div>
 
             <!-- Analytics Grid -->
-            <div class="row g-4">
+            <div class="row g-4"> 
                 <!-- Overview Stats -->
                 <div class="col-12">
                     <div class="row g-4">
@@ -198,7 +198,7 @@
                     </div>
                 </div>
             </div>
-        </main>
+    </main>
 
         <?php include ROOT_PATH . '/components/footer.php'; ?>
 
@@ -216,7 +216,7 @@
 
             function fetchAnalyticsData() {
                 // Fetch data using AJAX
-                fetch(`${BASE}api/meeting?action=get_analytics&tutor_id=<?php echo $tutor_id; ?>`)
+                fetch(`${BASE}api/meeting?action=get-analytics&tutor_id=<?php echo $tutor_id; ?>`)
                     .then(response => response.json())
                     .then(data => {
                         updateDashboardStats(data);
@@ -265,7 +265,7 @@
                                 <i class="bi bi-people me-1"></i>
                                 ${session.participants} participants
                             </small>
-                        </div>
+    </div> 
                     `;
                     container.appendChild(item);
                 });
@@ -350,5 +350,5 @@
                 }
             }
         </script>
-    </body>
+</body>
 </html>

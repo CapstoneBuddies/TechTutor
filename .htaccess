@@ -103,11 +103,12 @@ RewriteRule ^dashboard/t/class/details/schedules$ pages/techguru/manage-schedule
 RewriteRule ^dashboard/t/class/details/files$ pages/techguru/class-files.php [L,QSA]
 RewriteRule ^dashboard/t/class/details/analytics$ pages/techguru/analytics.php [L,QSA]
 RewriteRule ^dashboard/t/class/details/recordings$ pages/techguru/recordings.php [L,QSA]
+RewriteRule ^dashboard/t/class/details/feedbacks$ pages/techguru/feedbacks.php [L,QSA]
 
 #
-RewriteRule ^dashboard/t/students$ pages/techguru/students.php [L]
-RewriteRule ^dashboard/t/schedules$ pages/techguru/schedules.php [L]
-RewriteRule ^dashboard/t/feedbacks$ pages/techguru/feedbacks.php [L]
+RewriteRule ^dashboard/t/class/students$ pages/techguru/students.php [L]
+RewriteRule ^dashboard/t/class/schedules$ pages/techguru/schedules.php [L]
+RewriteRule ^dashboard/t/class/feedbacks$ pages/techguru/feedbacks.php [L]
 
 # ----------------------------------
 # 🔧 Admin Routes
@@ -125,7 +126,7 @@ RewriteRule ^dashboard/a/classes/details$ pages/admin/class-details.php [L,QSA]
 # ----------------------------------
 # 🛠 AJAX Actions
 # ----------------------------------
-RewriteRule ^logs$ backends/logs.php [L]
+RewriteRule ^log$ backends/logs.php [L]
 RewriteRule ^get-users$ backends/admin/get_users.php [L]
 RewriteRule ^toggle-user-status$ backends/admin/toggle_user_status.php [L]
 RewriteRule ^delete-user$ backends/admin/delete_user.php [L]
@@ -140,9 +141,6 @@ RewriteRule ^edit-subject$ backends/admin/course_handler.php [L]
 RewriteRule ^delete-subject$ backends/admin/course_handler.php [L]
 RewriteRule ^toggle-subject$ backends/admin/course_handler.php [L,QSA]
 RewriteRule ^update-subject-cover$ backends/admin/course_handler.php [L]
-#BBB
-RewriteRule ^create-meeting$ backends/api/create_meeting.php [L,QSA]
-RewriteRule ^join-meeting$ backends/api/join_meeting.php [L,QSA]
 
 # ----------------------------------
 # 🌍 API Endpoints
@@ -174,5 +172,4 @@ RewriteRule ^api/invite-students$ backends/api/invite-students.php [L]
 RewriteRule ^api/send-message$ backends/api/send-message.php [L]
 
 #BBB
-RewriteRule ^api/meeting/end$ backends/api/end_meeting.php [L,QSA]
 RewriteRule ^api/meeting$ backends/handler/meeting_handlers.php [L,QSA]
