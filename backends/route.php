@@ -42,6 +42,7 @@
 		changeUserPassword();
 	}
 	elseif ($link == 'admin-restrict-user') {
+		log_error('Was run here!');
 		$userId = isset($_POST['userId']) ? $_POST['userId'] : null;
 		if ($userId) {
 			$result = adminUpdateAccount($userId, 'restrict');

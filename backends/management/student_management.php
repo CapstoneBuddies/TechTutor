@@ -22,15 +22,16 @@ function getStudentByTutor($tutor_id) {
             COALESCE((
                 SELECT COUNT(*) 
                 FROM class_schedule cs 
-                JOIN enrollments e2 ON cs.class_id = e2.class_id AND e2.student_id = u.uid
+                JOIN attendance a ON cs.schedule_id = a.schedule_id
                 WHERE cs.class_id = c.class_id 
+                AND a.student_id = u.uid 
                 AND cs.status = 'completed'
+                AND a.status = 'present'
             ), 0) as completed_sessions,
             COALESCE((
                 SELECT COUNT(*) 
                 FROM class_schedule cs 
-                JOIN enrollments e2 ON cs.class_id = e2.class_id AND e2.student_id = u.uid
-                WHERE cs.class_id = c.class_id 
+                WHERE cs.class_id = c.class_id
             ), 0) as total_sessions,
             (
                 SELECT cs.session_date

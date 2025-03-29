@@ -1,6 +1,7 @@
 <?php
 require_once '../main.php';
 require_once BACKEND.'meeting_management.php';
+require_once BACKEND.'class_management.php';
 
 // Initialize meeting management
 $meeting = new MeetingManagement();
@@ -143,7 +144,7 @@ switch ($action) {
                             $schedule['tutor_name'], 
                             $result['moderatorPW'],
                             $schedule['tutor_id'],
-                            $_SERVER['SERVER_NAME'] . '/dashboard/t/class/details?id=' . $schedule['class_id'] . '&ended=' . $scheduleId
+                            'https://' . $_SERVER['SERVER_NAME'] . '/dashboard/t/class/details?id=' . $schedule['class_id'] . '&ended=' . $scheduleId
                         )
                     ]
                 ];
@@ -217,6 +218,42 @@ switch ($action) {
                     WHERE schedule_id = ?
                 ");
                 $stmt->execute([$scheduleId]);
+
+                // Get meeting analytics from BBB
+                try {
+                    $meetingInfo = $meeting->getMeetingInfo($meeting_data['meeting_uid'], $meeting_data['moderator_pw']);
+                    
+                    // Calculate duration and other metrics
+                    $startTime = isset($meetingInfo['startTime']) ? 
+                        date('Y-m-d H:i:s', strtotime($meetingInfo['startTime'])) : 
+                        date('Y-m-d H:i:s', strtotime($meeting_data['created_at']));
+                    
+                    $endTime = date('Y-m-d H:i:s');
+                    $participantCount = isset($meetingInfo['participantCount']) ? 
+                        intval($meetingInfo['participantCount']) : 0;
+                    
+                    // Get the duration in minutes
+                    $durationInMinutes = isset($meetingInfo['duration']) ? 
+                        intval($meetingInfo['duration']) : 
+                        round((time() - strtotime($startTime)) / 60);
+                    
+                    // Check if recordings are available
+                    $hasRecordings = isset($meetingInfo['recording']) && $meetingInfo['recording'] === 'true' ? 1 : 0;
+                    
+                    // Save analytics data
+                    $analytics = [
+                        'participant_count' => $participantCount,
+                        'duration' => $durationInMinutes,
+                        'start_time' => $startTime,
+                        'end_time' => $endTime,
+                        'recording_available' => $hasRecordings
+                    ];
+                    
+                    updateMeetingAnalytics($meeting_data['meeting_id'], $_SESSION['user'], $analytics);
+                } catch (Exception $analyticsError) {
+                    // Log the error but continue with the request
+                    log_error("Failed to collect meeting analytics: " . $analyticsError->getMessage(), "meeting");
+                }
 
                 // Create notifications for students
                 $stmt = $conn->prepare("
@@ -558,55 +595,139 @@ switch ($action) {
         break;
 
     case 'archive-recording':
-        if (!isset($input['record_id']) || !isset($input['archive'])) {
-            $response['error'] = 'Record ID and archive status are required';
-            break;
-        }
-
+        // Archive or unarchive a recording
         try {
-            $result = $meeting->archiveRecording(
-                $input['record_id'],
-                $input['archive']
-            );
+            // Verify user is logged in and is a TechGuru
+            if ($_SESSION['role'] !== 'TECHGURU') {
+                throw new Exception('Unauthorized access');
+            }
 
-            if ($result['success']) {
-                $response['success'] = true;
+            // Check for GET parameters first, then fall back to POST/JSON
+            if (isset($_GET['recording_id'])) {
+                $record_id = $_GET['recording_id'];
+                $archive = isset($_GET['archive']) ? ($_GET['archive'] === 'true' || $_GET['archive'] === '1') : true;
             } else {
-                $response['error'] = $result['error'] ?? 'Failed to update archive status';
+                // Validate required parameters from JSON input
+                if (!isset($input['record_id'])) {
+                    throw new Exception('Recording ID is required');
+                }
+                $record_id = $input['record_id'];
+                $archive = isset($input['archive']) ? (bool)$input['archive'] : true;
+            }
+
+            $result = $meeting->archiveRecording($record_id, $archive);
+            
+            if ($result['success']) {
+                $response = $result;
+                log_error("Recording " . ($archive ? "archived" : "unarchived") . " successfully: {$record_id}", "meeting");
+            } else {
+                throw new Exception($result['error'] ?? 'Failed to update recording archive status');
             }
         } catch (Exception $e) {
-            log_error("Error updating recording archive status: " . $e->getMessage(), "meeting");
-            $response['error'] = 'Failed to update archive status';
+            log_error("Failed to archive recording: " . $e->getMessage(), 'meeting');
+            $response['error'] = $e->getMessage();
+            $response['success'] = false;
         }
         break;
 
     case 'get-analytics':
-        $tutor_id = $_GET['tutor_id'] ?? '';
-        
-        if (empty($tutor_id)) {
-            $response['error'] = 'Tutor ID is required';
-            break;
-        }
- 
         try {
-            // Get aggregated stats from the meeting manager
-            $period = $_GET['period'] ?? 'monthly';
-            $startDate = $_GET['start_date'] ?? null;
-            $endDate = $_GET['end_date'] ?? null;
+            // Get required parameters
+            $tutor_id = isset($_GET['tutor_id']) ? intval($_GET['tutor_id']) : null;
+            $class_id = isset($_GET['class_id']) ? intval($_GET['class_id']) : null;
             
-            $stats = $meeting->getAggregatedStats($tutor_id, $period, $startDate, $endDate);
-            $trends = $meeting->getParticipationTrends($tutor_id, $startDate, $endDate);
-            $duration = $meeting->getDurationDistribution($tutor_id, $startDate, $endDate);
+            // Ensure at least one filter is provided
+            if (!$tutor_id && !$class_id) {
+                throw new Exception('Either tutor_id or class_id must be provided');
+            }
+            
+            // Verify authorization
+            if ($_SESSION['role'] === 'TECHGURU' && $_SESSION['user'] != $tutor_id) {
+                throw new Exception('Unauthorized access to analytics');
+            }
+            
+            // Get analytics data using the class method
+            $analytics = $meeting->getMeetingAnalytics($class_id, $tutor_id);
             
             $response = [
                 'success' => true,
-                'stats' => $stats,
-                'trends' => $trends,
-                'duration' => $duration
+                'total_sessions' => $analytics['total_sessions'] ?? 0,
+                'total_participants' => $analytics['total_participants'] ?? 0, 
+                'total_hours' => $analytics['total_hours'] ?? 0,
+                'total_recordings' => $analytics['total_recordings'] ?? 0,
+                'recent_sessions' => $analytics['recent_sessions'] ?? [],
+                'activity_data' => $analytics['activity_data'] ?? [],
+                'engagement_data' => $analytics['engagement_data'] ?? [],
+                'duration_data' => $analytics['duration_data'] ?? []
             ];
         } catch (Exception $e) {
             log_error("Error fetching meeting analytics: " . $e->getMessage(), "meeting");
-            $response['error'] = 'Failed to fetch analytics data';
+            $response['error'] = $e->getMessage();
+            $response['success'] = false;
+        }
+        break;
+
+    case 'toggle-visibility':
+        // Toggle student visibility of a recording
+        try {
+            // Verify user is logged in and is a TechGuru
+            if ($_SESSION['role'] !== 'TECHGURU') {
+                throw new Exception('Unauthorized access');
+            }
+
+            // Check GET parameters first, then POST/JSON
+            if (isset($_GET['recording_id']) && isset($_GET['class_id'])) {
+                $record_id = $_GET['recording_id'];
+                $class_id = (int)$_GET['class_id'];
+                $visible = isset($_GET['visible']) ? ($_GET['visible'] === 'true' || $_GET['visible'] === '1') : false;
+            } else {
+                // Validate required parameters from JSON input
+                if (!isset($input['record_id']) || !isset($input['class_id']) || !isset($input['visible'])) {
+                    throw new Exception('Recording ID, class ID, and visibility flag are required');
+                }
+                $record_id = $input['record_id'];
+                $class_id = (int)$input['class_id'];
+                $visible = (bool)$input['visible'];
+            }
+
+            // First check if class belongs to this tutor
+            $stmt = $conn->prepare("SELECT class_id FROM class WHERE class_id = ? AND tutor_id = ?");
+            $stmt->bind_param("ii", $class_id, $_SESSION['user']);
+            $stmt->execute();
+            
+            if ($stmt->get_result()->num_rows === 0) {
+                throw new Exception("Unauthorized to modify this class's recordings");
+            }
+            
+            // Check if recording visibility entry exists
+            $stmt = $conn->prepare("SELECT id FROM recording_visibility WHERE recording_id = ?");
+            $stmt->bind_param("s", $record_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            if ($result->num_rows > 0) {
+                // Update existing entry
+                $stmt = $conn->prepare("UPDATE recording_visibility SET is_visible = ?, updated_at = NOW() WHERE recording_id = ?");
+                $visibleValue = $visible ? 1 : 0;
+                $stmt->bind_param("is", $visibleValue, $record_id);
+            } else {
+                // Create new entry
+                $stmt = $conn->prepare("INSERT INTO recording_visibility (recording_id, class_id, is_visible, is_archived, created_by) VALUES (?, ?, ?, 0, ?)");
+                $visibleValue = $visible ? 1 : 0;
+                $stmt->bind_param("siis", $record_id, $class_id, $visibleValue, $_SESSION['user']);
+            }
+            
+            if ($stmt->execute()) {
+                $response['success'] = true;
+                $response['message'] = 'Recording visibility updated successfully';
+                log_error("Recording visibility updated: {$record_id}, visible: " . ($visible ? 'true' : 'false'), "meeting");
+            } else {
+                throw new Exception("Database error: " . $stmt->error);
+            }
+        } catch (Exception $e) {
+            log_error("Recording visibility update error: " . $e->getMessage(), 'meeting');
+            $response['error'] = $e->getMessage();
+            $response['success'] = false;
         }
         break;
 

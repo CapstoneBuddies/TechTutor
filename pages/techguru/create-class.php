@@ -31,9 +31,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $endTimes = $_POST['endTime'];
     $pricingType = $_POST['pricingType'];
     $price = isset($_POST['price']) ? floatval($_POST['price']) : 0;
-    $classCover = $_FILES['classCover'] ?? null;
     
-    // Convert time format from HH:MM to HH:MM:SS for database
+    // Build time slots array
     $timeSlots = [];
     for ($i = 0; $i < count($startTimes); $i++) {
         if (!empty($startTimes[$i]) && !empty($endTimes[$i])) {
@@ -55,13 +54,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'class_size' => $maxStudents,
         'is_free' => $pricingType === 'free' ? 1 : 0,
         'price' => $pricingType === 'free' ? 0 : $price,
-        'thumbnail' => $classCover,
         'days' => $days,
         'time_slots' => $timeSlots
     ];
+    
     // Create the class
     $result = createClass($classData);
-    log_error(print_r($result,true));
     
     if ($result['success']) {
         // Send notification to admin about new class
@@ -79,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: ".BASE."dashboard/t/class/details?id={$result['class_id']}&created=1");
         exit();
     } else {
-        $error = $result['error'];
+        $error = $result['message'];
     }
 }
 
@@ -91,6 +89,11 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
 <html lang="en">
     <?php include ROOT_PATH . '/components/head.php'; ?>
     <style>
+        .clockpicker-active {
+            background-color: #0d6efd !important;
+            font-weight: bold;
+            color: #fafafa !important;
+        }
         .form-section {
             background: #fff;
             border-radius: 0.75rem;
@@ -272,19 +275,33 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
         }
 
         .error-shake {
-            animation: shake 0.5s;
+            animation: shake 0.5s ease-in-out;
+            border-color: var(--bs-danger) !important;
         }
 
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
-            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-            20%, 40%, 60%, 80% { transform: translateX(5px); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
         }
 
         .field-error {
-            color: #dc3545;
-            font-size: 0.875em;
+            color: var(--bs-danger);
+            font-size: 0.875rem;
             margin-top: 0.25rem;
+            display: block;
+        }
+
+        /* Style for image preview */
+        .preview-placeholder {
+            width: 100%;
+            height: 240px;
+            background-color: var(--bs-gray-200);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            color: var(--bs-gray-600);
         }
     </style>
     <body data-base="<?php echo BASE; ?>">
@@ -348,14 +365,31 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                                     <span id="descriptionCount">0</span>/500 characters
                                 </div>
                             </div>
-                            <div class="mb-3">
-                                <label for="classCover" class="form-label">Class Cover Image</label>
-                                <input type="file" class="form-control" id="classCover" name="classCover" 
-                                       accept="image/*">
-                                <div class="form-text">Upload an eye-catching image (max 2MB, JPG/PNG)</div>
-                            </div>
-                            <div id="imagePreview" class="d-none">
-                                <img src="" alt="Preview" class="img-fluid rounded">
+                            <div class="form-section">
+                                <h3><i class="bi bi-image-fill"></i> Class Cover Image (Optional)</h3>
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="mb-3">
+                                            <label for="classCover" class="form-label">Upload Cover Image</label>
+                                            <input type="file" class="form-control" id="classCover" name="classCover" accept="image/*">
+                                            <div class="form-text">Recommended size: 1280x720px. Max size: 2MB.</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div id="imagePreview" class="mb-3 d-none">
+                                            <label class="form-label">Preview</label>
+                                            <div>
+                                                <img id="coverPreview" src="#" alt="Cover Preview" class="img-fluid img-thumbnail">
+                                            </div>
+                                        </div>
+                                        <div id="imagePlaceholder" class="mb-3">
+                                            <label class="form-label">Preview</label>
+                                            <div class="preview-placeholder">
+                                                <i class="bi bi-image fs-1"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -415,7 +449,7 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                                 </div>
                                 <div class="form-text mt-2">Select the days when the class will be held</div>
                             </div>
-
+                            
                             <div id="timeSlots">
                                 <label class="form-label">Time Slots</label>
                                 <div class="time-slot">
@@ -470,7 +504,7 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                                     <div class="input-group">
                                         <span class="input-group-text">₱</span>
                                         <input type="number" class="form-control" id="price" name="price" 
-                                               min="0" step="0.01" value="0.00">
+                                               min="0" step="0.01" placeholder="0.00">
                                     </div>
                                     <div class="form-text">Set a reasonable price for your class</div>
                                 </div>
@@ -597,7 +631,7 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                 };
 
                 // Validate single field
-                function validateField(fieldName, showError = true, enableShake = false) {
+                function validateField(fieldName, showError = true) {
                     const field = fields[fieldName];
                     const element = field.element;
                     const rules = field.rules;
@@ -666,16 +700,7 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                     // Show/hide error
                     if (!isValid && showError) {
                         element.classList.add('is-invalid');
-                        
-                        // Only add shake animation if enableShake is true (during form submission)
-                        if (enableShake) {
-                            element.classList.add('error-shake');
-                            
-                            // Remove shake animation after it completes
-                            setTimeout(() => {
-                                element.classList.remove('error-shake');
-                            }, 500);
-                        }
+                        element.classList.add('error-shake');
                         
                         // Add error message
                         const errorDiv = document.createElement('div');
@@ -685,6 +710,11 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                         
                         // Focus the invalid field
                         element.focus();
+                        
+                        // Remove shake animation after it completes
+                        setTimeout(() => {
+                            element.classList.remove('error-shake');
+                        }, 500);
                     } else {
                         element.classList.remove('is-invalid');
                     }
@@ -694,13 +724,45 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
 
                 // Validate all fields
                 function validateForm() {
+                    // Clear previous errors
+                    document.querySelectorAll('.field-error').forEach(el => el.remove());
+                    document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+                    
                     let isValid = true;
                     
-                    // Validate basic information
+                    // Validate required fields
                     for (const fieldName in fields) {
-                        if (!validateField(fieldName, true, true)) {
+                        if (!validateField(fieldName)) {
                             isValid = false;
+                            
+                            // Add shake animation
+                            const element = fields[fieldName].element;
+                            element.classList.add('error-shake');
+                            
+                            setTimeout(() => {
+                                element.classList.remove('error-shake');
+                            }, 500);
                         }
+                    }
+                    
+                    // Validate date range
+                    const startDate = new Date(document.getElementById('startDate').value);
+                    const endDate = new Date(document.getElementById('endDate').value);
+                    
+                    if (startDate && endDate && startDate > endDate) {
+                        const endDateInput = document.getElementById('endDate');
+                        endDateInput.classList.add('is-invalid', 'error-shake');
+                        
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'field-error';
+                        errorDiv.textContent = 'End date must be after start date';
+                        endDateInput.parentElement.appendChild(errorDiv);
+                        
+                        isValid = false;
+                        
+                        setTimeout(() => {
+                            endDateInput.classList.remove('error-shake');
+                        }, 500);
                     }
                     
                     // Validate class days
@@ -718,7 +780,7 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                         
                         setTimeout(() => {
                             daysSection.classList.remove('error-shake');
-                        }, 1000);
+                        }, 500);
                     }
                     
                     // Validate time slots
@@ -768,14 +830,34 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                         }
                     }
                     
+                    // If validation failed, show an alert at the top of the form
+                    if (!isValid) {
+                        const formAlert = document.createElement('div');
+                        formAlert.className = 'alert alert-danger mb-4 error-shake';
+                        formAlert.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> Please fix the errors in the form before submitting.';
+                        
+                        const form = document.querySelector('form');
+                        form.insertBefore(formAlert, form.firstChild);
+                        
+                        // Scroll to the top of the form
+                        window.scrollTo({
+                            top: form.offsetTop - 100,
+                            behavior: 'smooth'
+                        });
+                        
+                        setTimeout(() => {
+                            formAlert.classList.remove('error-shake');
+                        }, 500);
+                    }
+                    
                     return isValid;
                 }
 
-                // Add input event listeners for real-time validation without shake
+                // Add input event listeners for real-time validation
                 for (const fieldName in fields) {
                     const element = fields[fieldName].element;
-                    element.addEventListener('input', () => validateField(fieldName, true, false));
-                    element.addEventListener('blur', () => validateField(fieldName, true, false));
+                    element.addEventListener('input', () => validateField(fieldName, true));
+                    element.addEventListener('blur', () => validateField(fieldName, true));
                 }
 
                 // Form submission
@@ -791,6 +873,7 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                 const input = document.getElementById('classCover');
                 const preview = document.getElementById('coverPreview');
                 const previewContainer = document.getElementById('imagePreview');
+                const placeholderContainer = document.getElementById('imagePlaceholder');
                 
                 input.addEventListener('change', function() {
                     if (this.files && this.files[0]) {
@@ -814,10 +897,32 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                         reader.onload = function(e) {
                             preview.src = e.target.result;
                             previewContainer.classList.remove('d-none');
+                            placeholderContainer.classList.add('d-none');
                         }
                         reader.readAsDataURL(file);
+                    } else {
+                        // No file selected, show placeholder
+                        previewContainer.classList.add('d-none');
+                        placeholderContainer.classList.remove('d-none');
                     }
                 });
+                
+                // Add remove button for image
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'btn btn-sm btn-outline-danger mt-2';
+                removeBtn.innerHTML = '<i class="bi bi-trash"></i> Remove Image';
+                removeBtn.onclick = function() {
+                    input.value = '';
+                    previewContainer.classList.add('d-none');
+                    placeholderContainer.classList.remove('d-none');
+                    
+                    // Create a new change event
+                    const event = new Event('change', { bubbles: true });
+                    input.dispatchEvent(event);
+                };
+                
+                previewContainer.appendChild(removeBtn);
             }
             
             function setupPricing() {
@@ -986,6 +1091,27 @@ $title = 'Create Class - '.htmlspecialchars($subjectDetails['subject_name']);
                     return new bootstrap.Tooltip(tooltipTriggerEl);
                 });
             }
+            // Update the AM/PM button click handlers
+            $(document).on('click', '.clockpicker-button.am-button', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $(this).addClass('clockpicker-active');
+                $('.clockpicker-button.pm-button').removeClass('clockpicker-active');
+            });
+
+            $(document).on('click', '.clockpicker-button.pm-button', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $(this).addClass('clockpicker-active');
+                $('.clockpicker-button.am-button').removeClass('clockpicker-active');
+            });
+
+            // Add modal specific event prevention
+            $('#editScheduleModal').on('shown.bs.modal', function() {
+                $('.clockpicker-popover').on('click', function(e) {
+                    e.stopPropagation();
+                });
+            });
     </script>
 </body>
 </html>

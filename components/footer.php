@@ -142,26 +142,6 @@ function showLoading(show) {
         }
     }
 }
-
-// Logging Errors
-function logError(error, actions, components) {
-    let err_msg = String(error);
-    let action = actions ? actions : null;;
-    let component = components ? components : null;
-    fetch(BASE+'log', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            error: err_msg,
-            component: component,
-            action: action
-        })
-    })
-    .then(response => response.json())
-    .catch(error => {
-        console.error('There was a problem with the fetch operation:', error);
-    });
-}
 </script>
 <?php
 // Load role-based JavaScript if available

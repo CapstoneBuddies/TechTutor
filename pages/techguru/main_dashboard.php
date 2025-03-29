@@ -207,7 +207,7 @@
                                         My Students
                                     </h2>
                                     <?php if (isset($students_data['count']) && $students_data['count'] > 0): ?>
-                                        <a href="dashboard/t/students" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2">
+                                        <a href="dashboard/t/class/students" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2">
                                             <span>View All</span>
                                             <i class="bi bi-arrow-right"></i>
                                         </a>
@@ -298,7 +298,7 @@
                                         <i class="bi bi-calendar3-week me-2 text-primary"></i>
                                         Upcoming Sessions
                                     </h2>
-                                    <a href="dashboard/t/students" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2">
+                                    <a href="dashboard/t/class/schedules" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2">
                                         <span>View All</span>
                                         <i class="bi bi-arrow-right"></i>
                                     </a>

@@ -1,7 +1,5 @@
 <?php
-require_once '../backends/config.php';
-require_once '../backends/db.php';
-require_once '../backends/techkid_management.php';
+require_once '../backends/main.php';
 
 // Verify user is logged in and is a TechKid
 if (!isset($_SESSION['user']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHKID') {

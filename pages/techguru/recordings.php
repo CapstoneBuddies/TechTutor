@@ -95,7 +95,7 @@ $title = 'Class Recordings - ' . htmlspecialchars($classDetails['class_name']);
                                 <li class="breadcrumb-item"><a href="<?php echo BASE; ?>dashboard">Dashboard</a></li>
                                 <li class="breadcrumb-item"><a href="./">My Classes</a></li>
                                 <li class="breadcrumb-item">
-                                    <a href="class-details?id=<?php echo $class_id; ?>">
+                                    <a href="./?id=<?php echo $class_id; ?>">
                                         <?php echo htmlspecialchars($classDetails['class_name']); ?>
                                     </a>
                                 </li>
@@ -134,105 +134,240 @@ $title = 'Class Recordings - ' . htmlspecialchars($classDetails['class_name']);
                 </div>
             <?php endif; ?>
 
-            <!-- Recordings Grid -->
-            <div class="row g-4">
-                <?php if (empty($recordings)): ?>
-                    <div class="col-12">
-                        <div class="text-center py-5">
-                            <i class="bi bi-camera-reels display-1 text-muted"></i>
-                            <h4 class="mt-3">No Recordings Available</h4>
-                            <p class="text-muted">Recordings will appear here after your class sessions</p>
-                            <a href="./?id=<?php echo $class_id; ?>" class="btn btn-primary mt-3">
-                                <i class="bi bi-arrow-left me-2"></i>Back to Class Details
-                            </a>
-                        </div>
-                    </div>
-                <?php else: ?>
-                    <?php foreach ($recordings as $recording): ?>
-                        <div class="col-md-6 col-lg-4">
-                            <div class="recording-card border position-relative">
-                                <!-- Recording Status Badge -->
-                                <div class="recording-status">
-                                    <span class="badge <?php echo $recording['published'] ? 'bg-success' : 'bg-warning'; ?>">
-                                        <?php echo $recording['published'] ? 'Published' : 'Unpublished'; ?>
-                                    </span>
-                                </div>
-
-                                <!-- Recording Thumbnail -->
-                                <div class="recording-thumbnail">
-                                    <i class="bi bi-play-circle"></i>
-                                </div>
-
-                                <!-- Recording Info -->
-                                <div class="recording-info">
-                                    <h5 class="mb-2"><?php echo htmlspecialchars($recording['name']); ?></h5>
-                                    <div class="text-muted small mb-2">
-                                        <div><i class="bi bi-calendar me-2"></i><?php echo date('F j, Y', strtotime($recording['session_date'])); ?></div>
-                                        <div><i class="bi bi-clock me-2"></i><?php echo date('g:i A', strtotime($recording['start_time'])); ?> - <?php echo date('g:i A', strtotime($recording['end_time'])); ?></div>
-                                        <div><i class="bi bi-stopwatch me-2"></i><?php echo round($recording['duration'] / 60); ?> minutes</div>
-                                    </div>
-                                </div>
-
-                                <!-- Recording Actions -->
-                                <div class="recording-actions">
-                                    <div class="d-flex gap-2 mb-2">
-                                        <button type="button" 
-                                                onclick="window.open('<?php echo htmlspecialchars($recording['url']); ?>', '_blank')"
-                                                class="btn btn-sm btn-primary flex-grow-1">
-                                            <i class="bi bi-play-fill me-1"></i> Play
-                                        </button>
-                                        <?php if ($recording['download_url']): ?>
-                                        <a href="<?php echo htmlspecialchars($recording['download_url']); ?>" 
-                                           download
-                                           class="btn btn-sm btn-info">
-                                            <i class="bi bi-download"></i>
-                                        </a>
-                                        <?php endif; ?>
-                                        <button type="button" 
-                                                class="btn btn-sm <?php echo $recording['archived'] ? 'btn-secondary' : 'btn-dark'; ?>"
-                                                onclick="toggleArchiveStatus('<?php echo $recording['recordID']; ?>', <?php echo $recording['archived'] ? 'false' : 'true'; ?>)" data-bs-toggle="tooltip" title="Archive Recording">
-                                            <i class="bi bi-archive<?php echo $recording['archived'] ? '-fill' : ''; ?>"></i>
-                                        </button>
-                                    </div>
-                                    <div class="d-flex gap-2">
-                                        <button type="button" 
-                                                class="btn btn-sm <?php echo $recording['published'] ? 'btn-warning' : 'btn-success'; ?> flex-grow-1"
-                                                onclick="toggleRecordingVisibility('<?php echo $recording['recordID']; ?>', <?php echo $recording['published'] ? 'false' : 'true'; ?>)">
-                                            <i class="bi bi-<?php echo $recording['published'] ? 'eye-slash' : 'eye'; ?> me-1"></i>
-                                            <?php echo $recording['published'] ? 'Unpublish' : 'Publish'; ?>
-                                        </button>
-                                        <button type="button" 
-                                                class="btn btn-sm btn-danger"
-                                                onclick="deleteRecording('<?php echo $recording['recordID']; ?>')" data-bs-toggle="tooltip" title="Delete Recording">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </div>
+            <!-- Tabs -->
+            <ul class="nav nav-tabs mb-4" id="recordingTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-recordings" type="button" role="tab" aria-controls="active-recordings" aria-selected="true">
+                        <i class="bi bi-camera-video-fill me-1"></i> Active Recordings
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="archived-tab" data-bs-toggle="tab" data-bs-target="#archived-recordings" type="button" role="tab" aria-controls="archived-recordings" aria-selected="false">
+                        <i class="bi bi-archive-fill me-1"></i> Archived Recordings
+                        <span class="badge bg-secondary ms-1" id="archived-count">0</span>
+                    </button>
+                </li>
+            </ul>
+            
+            <!-- Tab Content -->
+            <div class="tab-content" id="recordingTabsContent">
+                <!-- Active Recordings Tab -->
+                <div class="tab-pane fade show active" id="active-recordings" role="tabpanel" aria-labelledby="active-tab">
+                    <!-- Recordings Grid -->
+                    <div class="row g-4">
+                        <?php if (empty($recordings)): ?>
+                            <div class="col-12">
+                                <div class="text-center py-5">
+                                    <i class="bi bi-camera-reels display-1 text-muted"></i>
+                                    <h4 class="mt-3">No Recordings Available</h4>
+                                    <p class="text-muted">Recordings will appear here after your class sessions</p>
+                                    <a href="./?id=<?php echo $class_id; ?>" class="btn btn-primary mt-3">
+                                        <i class="bi bi-arrow-left me-2"></i>Back to Class Details
+                                    </a>
                                 </div>
                             </div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
+                        <?php else: ?>
+                            <?php 
+                            $activeCount = 0;
+                            $archivedCount = 0;
+                            foreach ($recordings as $recording): 
+                                if (!$recording['archived']):
+                                    $activeCount++;
+                            ?>
+                                <div class="col-md-6 col-lg-4">
+                                    <div class="recording-card border position-relative">
+                                        <!-- Recording Status Badge -->
+                                        <div class="recording-status">
+                                            <?php 
+                                            // Get visibility status from database
+                                            $visibilitySettings = getRecordingVisibilitySettings($class_id);
+                                            $isVisible = isset($visibilitySettings[$recording['recordID']]) ? 
+                                                $visibilitySettings[$recording['recordID']]['is_visible'] : false;
+                                            ?>
+                                            <span class="badge <?php echo $isVisible ? 'bg-success' : 'bg-secondary'; ?>">
+                                                <?php echo $isVisible ? 'Visible to Students' : 'Hidden from Students'; ?>
+                                            </span>
+                                        </div>
+
+                                        <!-- Recording Thumbnail -->
+                                        <div class="recording-thumbnail">
+                                            <i class="bi bi-play-circle"></i>
+                                        </div>
+
+                                        <!-- Recording Info -->
+                                        <div class="recording-info">
+                                            <h5 class="mb-2"><?php echo htmlspecialchars($recording['name']); ?></h5>
+                                            <div class="text-muted small mb-2">
+                                                <div><i class="bi bi-calendar me-2"></i><?php echo date('F j, Y', strtotime($recording['session_date'])); ?></div>
+                                                <div><i class="bi bi-clock me-2"></i><?php echo date('g:i A', strtotime($recording['start_time'])); ?> - <?php echo date('g:i A', strtotime($recording['end_time'])); ?></div>
+                                                <div><i class="bi bi-stopwatch me-2"></i><?php echo round($recording['duration'] / 60); ?> minutes</div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Recording Actions -->
+                                        <div class="recording-actions">
+                                            <div class="d-flex gap-2 mb-2">
+                                                <button type="button" 
+                                                        onclick="window.open('<?php echo htmlspecialchars($recording['url']); ?>', '_blank')"
+                                                        class="btn btn-sm btn-primary flex-grow-1">
+                                                    <i class="bi bi-play-fill me-1"></i> Play
+                                                </button>
+                                                
+                                                <a href="<?php echo htmlspecialchars($recording['url']); ?>" 
+                                                   download="<?php echo htmlspecialchars($recording['name']); ?>.mp4"
+                                                   class="btn btn-sm btn-info" data-bs-toggle="tooltip" title="Download Recording">
+                                                    <i class="bi bi-download"></i>
+                                                </a>
+                                                
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-dark"
+                                                        onclick="toggleArchiveStatus('<?php echo $recording['recordID']; ?>', true)" 
+                                                        data-bs-toggle="tooltip" title="Archive Recording">
+                                                    <i class="bi bi-archive"></i>
+                                                </button>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <button type="button" 
+                                                        class="btn btn-sm <?php echo $isVisible ? 'btn-warning' : 'btn-success'; ?> flex-grow-1"
+                                                        onclick="toggleStudentVisibility('<?php echo $recording['recordID']; ?>', <?php echo $isVisible ? 'false' : 'true'; ?>, <?php echo $class_id; ?>)">
+                                                    <i class="bi bi-<?php echo $isVisible ? 'eye-slash' : 'eye'; ?> me-1"></i>
+                                                    <?php echo $isVisible ? 'Hide from Students' : 'Show to Students'; ?>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php 
+                                else:
+                                    $archivedCount++;
+                                endif;
+                            endforeach; 
+                            
+                            if ($activeCount === 0): 
+                            ?>
+                                <div class="col-12">
+                                    <div class="text-center py-5">
+                                        <i class="bi bi-camera-reels display-1 text-muted"></i>
+                                        <h4 class="mt-3">No Active Recordings</h4>
+                                        <p class="text-muted">All your recordings are currently archived.</p>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                
+                <!-- Archived Recordings Tab -->
+                <div class="tab-pane fade" id="archived-recordings" role="tabpanel" aria-labelledby="archived-tab">
+                    <div class="alert alert-warning mb-4">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <strong>Note:</strong> Archived recordings will be automatically deleted after 7 days to free up storage space.
+                    </div>
+                    
+                    <div class="row g-4">
+                        <?php 
+                        if (empty($recordings) || $archivedCount === 0): 
+                        ?>
+                            <div class="col-12">
+                                <div class="text-center py-5">
+                                    <i class="bi bi-archive display-1 text-muted"></i>
+                                    <h4 class="mt-3">No Archived Recordings</h4>
+                                    <p class="text-muted">Archived recordings will appear here.</p>
+                                </div>
+                            </div>
+                        <?php 
+                        else:
+                            foreach ($recordings as $recording): 
+                                if ($recording['archived']):
+                        ?>
+                                <div class="col-md-6 col-lg-4">
+                                    <div class="recording-card border position-relative">
+                                        <!-- Recording Thumbnail -->
+                                        <div class="recording-thumbnail">
+                                            <i class="bi bi-play-circle"></i>
+                                        </div>
+
+                                        <!-- Recording Info -->
+                                        <div class="recording-info">
+                                            <h5 class="mb-2"><?php echo htmlspecialchars($recording['name']); ?></h5>
+                                            <div class="text-muted small mb-2">
+                                                <div><i class="bi bi-calendar me-2"></i><?php echo date('F j, Y', strtotime($recording['session_date'])); ?></div>
+                                                <div><i class="bi bi-clock me-2"></i><?php echo date('g:i A', strtotime($recording['start_time'])); ?> - <?php echo date('g:i A', strtotime($recording['end_time'])); ?></div>
+                                                <div><i class="bi bi-stopwatch me-2"></i><?php echo round($recording['duration'] / 60); ?> minutes</div>
+                                                <?php 
+                                                // Calculate days until deletion (7 days from archive date)
+                                                $archiveDate = isset($recording['meta']['archive_date']) ? 
+                                                    strtotime($recording['meta']['archive_date']) : 
+                                                    time();
+                                                $deletionDate = $archiveDate + (7 * 24 * 60 * 60);
+                                                $daysLeft = ceil(($deletionDate - time()) / (24 * 60 * 60));
+                                                ?>
+                                                <div class="mt-2 text-danger">
+                                                    <i class="bi bi-trash me-2"></i>
+                                                    <strong>Auto-delete in <?php echo $daysLeft; ?> day<?php echo $daysLeft !== 1 ? 's' : ''; ?></strong>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Recording Actions -->
+                                        <div class="recording-actions">
+                                            <div class="d-flex gap-2 mb-2">
+                                                <button type="button" 
+                                                        onclick="window.open('<?php echo htmlspecialchars($recording['url']); ?>', '_blank')"
+                                                        class="btn btn-sm btn-primary flex-grow-1">
+                                                    <i class="bi bi-play-fill me-1"></i> Play
+                                                </button>
+                                                
+                                                <a href="<?php echo htmlspecialchars($recording['url']); ?>" 
+                                                   download="<?php echo htmlspecialchars($recording['name']); ?>.mp4"
+                                                   class="btn btn-sm btn-info">
+                                                    <i class="bi bi-download"></i>
+                                                </a>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-secondary flex-grow-1"
+                                                        onclick="toggleArchiveStatus('<?php echo $recording['recordID']; ?>', false)">
+                                                    <i class="bi bi-arrow-counterclockwise me-1"></i>
+                                                    Restore Recording
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                        <?php 
+                                endif;
+                            endforeach; 
+                        endif;
+                        ?>
+                    </div>
+                </div>
             </div>
         </main>
 
         <?php include ROOT_PATH . '/components/footer.php'; ?>
         <script>
-            // Toggle recording visibility (publish/unpublish)
-            function toggleRecordingVisibility(recordId, publish) {
-                if (!confirm('Are you sure you want to ' + (publish ? 'publish' : 'unpublish') + ' this recording?')) {
+            document.addEventListener('DOMContentLoaded', function() {
+                // Update the archived count badge
+                document.getElementById('archived-count').textContent = <?php echo $archivedCount; ?>;
+            });
+            
+            // Toggle student visibility (show/hide to students)
+            function toggleStudentVisibility(recordId, visible, classId) {
+                if (!confirm('Are you sure you want to ' + (visible ? 'show' : 'hide') + ' this recording ' + (visible ? 'to' : 'from') + ' students?')) {
                     return;
                 }
-                console.log(publish);
+                
                 showLoading(true);
-                fetch(`${BASE}api/meeting?action=toggle-recording`, {
+                fetch(`${BASE}api/meeting?action=toggle-visibility`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        action: 'toggle_recording',
                         record_id: recordId,
-                        publish: publish
+                        class_id: classId,
+                        visible: visible
                     })
                 })
                 .then(response => response.json())
@@ -242,46 +377,13 @@ $title = 'Class Recordings - ' . htmlspecialchars($classDetails['class_name']);
                         location.reload();
                     } else {
                         showToast('error', 'Failed to update recording visibility');
-                        logError(data.error, 'toggle_recording', 'recordings');
+                        logError(data.error, 'toggle_visibility', 'recordings');
                     }
                 })
                 .catch(error => {
                     showLoading(false);
                     console.error('Error:', error);
                     showToast('error', 'An error occurred while updating the recording visibility');
-                });
-            }
-
-            // Delete recording
-            function deleteRecording(recordId) {
-                if (!confirm('Are you sure you want to delete this recording? This action cannot be undone.')) {
-                    return;
-                }
-
-                showLoading(true);
-                fetch(`${BASE}api/meeting?action=delete-recording`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        action: 'delete_recording',
-                        record_id: recordId
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    showLoading(false);
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        showToast('error', 'Failed to delete recording: ' + (data.error || 'Unknown error'));
-                    }
-                })
-                .catch(error => {
-                    showLoading(false);
-                    console.error('Error:', error);
-                    showToast('error', 'An error occurred while deleting the recording');
                 });
             }
 
@@ -292,32 +394,22 @@ $title = 'Class Recordings - ' . htmlspecialchars($classDetails['class_name']);
                 }
 
                 showLoading(true);
-                fetch(`${BASE}api/meeting?action=archive-recording`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        action: 'archive_recording',
-                        record_id: recordId,
-                        archive: archive
+                fetch(`${BASE}backends/handler/meeting_handlers.php?action=archive-recording&recording_id=${recordId}&archive=${archive}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        showLoading(false);
+                        if (data.success) {
+                            location.reload();
+                        } else {
+                            showToast('error', 'Failed to update archive status: ' + (data.error || 'Unknown error'));
+                            console.error(data.error || 'Unknown error');
+                        }
                     })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    showLoading(false);
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        showToast('error', 'Failed to update archive status');
-                        logError(data.error, 'archive', 'recordings');
-                    }
-                })
-                .catch(error => {
-                    showLoading(false);
-                    console.error('Error:', error);
-                    showToast('error', 'An error occurred while updating the archive status');
-                });
+                    .catch(error => {
+                        showLoading(false);
+                        console.error('Error:', error);
+                        showToast('error', 'An error occurred while updating the archive status');
+                    });
             }
         </script>
     </body>

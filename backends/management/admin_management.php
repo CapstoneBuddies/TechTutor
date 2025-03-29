@@ -202,9 +202,9 @@ function getSubjectStatistics() {
              FROM users u 
              JOIN class c ON u.uid = c.tutor_id 
              WHERE u.role = 'TECHGURU' AND u.status = 'ACTIVE') as active_tutors,
-            (SELECT COUNT(DISTINCT cs.user_id) 
-             FROM class_schedule cs 
-             WHERE cs.role = 'STUDENT') as enrolled_students";
+            (SELECT COUNT(DISTINCT e.student_id) 
+             FROM enrollments e 
+             WHERE e.status = 'active') as enrolled_students";
         
         $result = $conn->query($query);
         return $result->fetch_assoc() ?: [

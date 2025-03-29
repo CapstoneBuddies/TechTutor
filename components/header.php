@@ -13,6 +13,8 @@
         'subjects.php',
         'subject-details.php',
         'manage-schedule.php',
+        'analytics.php',
+        'recordings.php'
     ];
     $is_teaching_page = in_array($current_page, $teaching_pages);
 

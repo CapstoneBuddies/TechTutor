@@ -72,22 +72,22 @@ class MeetingManagement {
                     if (isset($_SESSION['role'])) {
                         switch ($_SESSION['role']) {
                             case 'TECHGURU':
-                                $logoutUrl = $_SERVER['SERVER_NAME'] . '/dashboard/t/class/details?id=' . $class_id . '&ended=' . $schedule_id;
+                                $logoutUrl = 'https://' . $_SERVER['SERVER_NAME'] . '/dashboard/t/class/details?id=' . $class_id . '&ended=' . $schedule_id;
                                 break;
                             case 'TECHKID':
-                                $logoutUrl = $_SERVER['SERVER_NAME'] . '/dashboard/s/class/details?id=' . $class_id . '&ended=' . $schedule_id;
+                                $logoutUrl = 'https://' . $_SERVER['SERVER_NAME'] . '/dashboard/s/class/details?id=' . $class_id . '&ended=' . $schedule_id;
                                 break;
                             case 'ADMIN':
-                                $logoutUrl = $_SERVER['SERVER_NAME'] . '/dashboard/a/class/details?id=' . $class_id . '&ended=' . $schedule_id;
+                                $logoutUrl = 'https://' . $_SERVER['SERVER_NAME'] . '/dashboard/a/class/details?id=' . $class_id . '&ended=' . $schedule_id;
                                 break;
                             default:
-                                $logoutUrl = $_SERVER['SERVER_NAME'] . '/dashboard';
+                                $logoutUrl = 'https://' . $_SERVER['SERVER_NAME'] . '/dashboard';
                         }
                     } else {
-                        $logoutUrl = $_SERVER['SERVER_NAME'] . '/dashboard';
+                        $logoutUrl = 'https://' . $_SERVER['SERVER_NAME'] . '/dashboard';
                     }
                 } else {
-                    $logoutUrl = $_SERVER['SERVER_NAME'] . '/dashboard';
+                    $logoutUrl = 'https://' . $_SERVER['SERVER_NAME'] . '/dashboard';
                 }
             }
 
@@ -296,9 +296,15 @@ class MeetingManagement {
      * @param string $meetingId Meeting identifier
      * @return array Meeting statistics
      */
-    public function getMeetingStats($meetingId) {
+    public function getMeetingStats($meetingId, $scheduleId = null) {
+        global $conn;
+
+        $query = "SELECT moderator_pw FROM meetings WHERE schedule_id = ?";
+        $stmt = $conn->prepare($query);
+        $stmt->execute([$scheduleId]);
+        $mod_pas = $stmt->get_result()->fetch_assoc();
         try {
-            $info = $this->getMeetingInfo($meetingId, BBB_MODERATOR_PASSWORD);
+            $info = $this->getMeetingInfo($meetingId, $mod_pas);
             
             $stats = [
                 'participant_count' => $info['participantCount'] ?? 0,
@@ -371,25 +377,95 @@ class MeetingManagement {
     }
 
     /**
-     * Archive a recording
-     * @param string $recordId Recording identifier
-     * @param bool $archive Whether to archive or unarchive
-     * @return array Operation response
+     * Archive or unarchive a recording
+     * @param string $recordingId The ID of the recording to archive
+     * @param bool $archive Whether to archive (true) or unarchive (false) the recording
+     * @return array Result of the operation
      */
-    public function archiveRecording($recordId, $archive = true) {
+    public function archiveRecording($recordingId, $archive = true) {
+        global $conn;
+        
         try {
-            // First, update the recording metadata to mark it as archived
-            $meta = ['archived' => $archive ? 'true' : 'false'];
-            $result = $this->updateRecordingSettings($recordId, $meta);
-
-            if (!$result['success']) {
-                throw new Exception("Failed to update recording archive status");
+            // Prepare meta parameters for updating the recording
+            if ($archive) {
+                $params = [
+                    'recordID' => $recordingId,
+                    'meta_archived' => 'true',
+                    'meta_archive_date' => date('Y-m-d H:i:s')
+                ];
+            } else {
+                $params = [
+                    'recordID' => $recordingId,
+                    'meta_archived' => 'false',
+                    'meta_archive_date' => ''
+                ];
             }
 
-            log_error("Recording " . ($archive ? "archived" : "unarchived") . " successfully: $recordId", "meeting");
-            return ['success' => true];
+            $response = $this->makeRequest('updateRecordings', $params);
+            
+            if ($response['returncode'] === 'SUCCESS') {
+                // Update the recording_visibility table to set the is_archived flag
+                // First check if this recording is already in the table
+                $stmt = $conn->prepare("SELECT id, class_id FROM recording_visibility WHERE recording_id = ?");
+                $stmt->bind_param("s", $recordingId);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                
+                if ($result->num_rows > 0) {
+                    // Update existing record
+                    $row = $result->fetch_assoc();
+                    $stmt = $conn->prepare("UPDATE recording_visibility SET is_archived = ?, updated_at = NOW() WHERE id = ?");
+                    $archivedValue = $archive ? 1 : 0;
+                    $stmt->bind_param("ii", $archivedValue, $row['id']);
+                    $stmt->execute();
+                } else {
+                    // Get the recordings data to find the meeting ID and class
+                    $recordings = $this->getRecordings($recordingId);
+                    if (!empty($recordings)) {
+                        $recording = $recordings[0];
+                        $meetingId = $recording['meetingID'] ?? null;
+                        
+                        if ($meetingId) {
+                            // Find the class ID for this meeting
+                            $stmt = $conn->prepare("
+                                SELECT cs.class_id 
+                                FROM meetings m 
+                                JOIN class_schedule cs ON m.schedule_id = cs.schedule_id 
+                                WHERE m.meeting_uid = ?
+                            ");
+                            $stmt->bind_param("s", $meetingId);
+                            $stmt->execute();
+                            $classResult = $stmt->get_result();
+                            
+                            if ($classResult->num_rows > 0) {
+                                $classRow = $classResult->fetch_assoc();
+                                $classId = $classRow['class_id'];
+                                $userId = $_SESSION['user'] ?? 0;
+                                
+                                // Insert new record with archive value
+                                $stmt = $conn->prepare("
+                                    INSERT INTO recording_visibility 
+                                    (recording_id, class_id, is_visible, is_archived, created_by) 
+                                    VALUES (?, ?, 0, ?, ?)
+                                ");
+                                $archivedValue = $archive ? 1 : 0;
+                                $stmt->bind_param("siis", $recordingId, $classId, $archivedValue, $userId);
+                                $stmt->execute();
+                            }
+                        }
+                    }
+                }
+                
+                log_error("Recording archive status updated successfully: $recordingId, archived: " . ($archive ? 'true' : 'false'), "meeting");
+                return [
+                    'success' => true, 
+                    'message' => 'Recording ' . ($archive ? 'archived' : 'unarchived') . ' successfully'
+                ];
+            } else {
+                throw new Exception("Failed to update recording archive status: " . ($response['message'] ?? 'Unknown error'));
+            }
         } catch (Exception $e) {
-            log_error("Recording archive error: " . $e->getMessage(), "meeting");
+            log_error("Recording archive update error: " . $e->getMessage(), "meeting");
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
@@ -414,6 +490,9 @@ class MeetingManagement {
             $stmt->execute([$class_id]);
             $meetings = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
+            // Get all visibility settings for this class
+            $visibilitySettings = $this->getRecordingVisibilitySettings($class_id);
+
             // Get recordings for each meeting
             $recordings = [];
             foreach ($meetings as $meeting_data) {
@@ -424,7 +503,21 @@ class MeetingManagement {
                         $recording['start_time'] = $meeting_data['start_time'];
                         $recording['end_time'] = $meeting_data['end_time'];
                         $recording['download_url'] = $this->getRecordingDownloadUrl($recording);
-                        $recording['archived'] = isset($recording['meta']['archived']) && $recording['meta']['archived'] === 'true';
+                        
+                        // Check if this recording is in our visibility table
+                        $recordingId = $recording['recordID'];
+                        if (isset($visibilitySettings[$recordingId])) {
+                            $settings = $visibilitySettings[$recordingId];
+                            $recording['is_visible'] = (bool)$settings['is_visible'];
+                            $recording['is_archived'] = (bool)$settings['is_archived'];
+                            $recording['archived'] = (bool)$settings['is_archived']; // For backward compatibility
+                        } else {
+                            // Fall back to meta data if not in our database
+                            $recording['is_visible'] = true; // Default to visible
+                            $recording['is_archived'] = isset($recording['meta']['archived']) && $recording['meta']['archived'] === 'true';
+                            $recording['archived'] = $recording['is_archived']; // For backward compatibility
+                        }
+                        
                         $recordings[] = $recording;
                     }
                 }
@@ -441,6 +534,412 @@ class MeetingManagement {
                 'error' => 'Failed to retrieve recordings',
                 'recordings' => []
             ];
+        }
+    }
+
+    /**
+     * Fetch meeting analytics data from BigBlueButton and store in database
+     * @param int $class_id Class ID to fetch data for
+     * @return array Result with success status and counts
+     */
+    public function fetchMeetingAnalytics($class_id) {
+        global $conn;
+        
+        try {
+            // Check if class exists
+            $stmt = $conn->prepare("SELECT tutor_id FROM class WHERE class_id = ?");
+            $stmt->bind_param("i", $class_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            if ($result->num_rows === 0) {
+                throw new Exception("Class not found");
+            }
+            
+            $classInfo = $result->fetch_assoc();
+            $tutor_id = $classInfo['tutor_id'];
+            
+            // Get all schedule IDs for this class
+            $stmt = $conn->prepare("SELECT schedule_id FROM class_schedule WHERE class_id = ?");
+            $stmt->bind_param("i", $class_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            if ($result->num_rows === 0) {
+                return [
+                    'success' => true,
+                    'message' => 'No scheduled sessions found for this class',
+                    'sessions_processed' => 0,
+                    'analytics_updated' => 0
+                ];
+            }
+            
+            $scheduleIds = [];
+            while ($row = $result->fetch_assoc()) {
+                $scheduleIds[] = $row['schedule_id'];
+            }
+            
+            $conn->begin_transaction();
+            
+            $sessionsProcessed = 0;
+            $analyticsUpdated = 0;
+            
+            foreach ($scheduleIds as $schedule_id) {
+                // Get meetings for this schedule if they exist
+                $stmt = $conn->prepare("SELECT meeting_id, moderator_pw FROM meetings WHERE schedule_id = ?");
+                $stmt->bind_param("i", $schedule_id);
+                $stmt->execute();
+                $meetings = $stmt->get_result();
+                
+                while ($meeting = $meetings->fetch_assoc()) {
+                    $sessionsProcessed++;
+                    
+                    try {
+                        // Get meeting info from BBB
+                        $meetingInfo = $this->getMeetingInfo($meeting['meeting_id'], $meeting['moderator_pw']);
+                        
+                        if ($meetingInfo['returncode'] !== 'SUCCESS') {
+                            continue; // Skip if we can't get meeting info
+                        }
+                        
+                        // Check if meeting has ended (we only want analytics for completed meetings)
+                        if ($this->isMeetingRunning($meeting['meeting_id'])) {
+                            continue; // Skip active meetings
+                        }
+                        // Extract analytics data
+                        $startTime = isset($meetingInfo['startTime']) ? 
+                            date('Y-m-d H:i:s', round($meetingInfo['startTime'] / 1000)) : 
+                            null;
+                            
+                        $endTime = isset($meetingInfo['endTime']) ? 
+                            date('Y-m-d H:i:s', round($meetingInfo['endTime'] / 1000)) : 
+                            date('Y-m-d H:i:s'); // Use current time if not available
+                        
+                        $participantCount = isset($meetingInfo['participantCount']) ? 
+                            $meetingInfo['participantCount'] : 
+                            (isset($meetingInfo['attendeeCount']) ? $meetingInfo['attendeeCount'] : 0);
+                        
+                        $duration = isset($meetingInfo['duration']) ? 
+                            $meetingInfo['duration'] : 
+                            (isset($startTime) && isset($endTime) ? 
+                                round((strtotime($endTime) - strtotime($startTime)) / 60) : 0);
+                        
+                        // Check if this meeting has recordings
+                        $recordings = $this->getRecordings($meeting['meeting_id']);
+                        $recordingAvailable = !empty($recordings) ? 1 : 0;
+                        
+                        // Prepare analytics data
+                        $analytics = [
+                            'participant_count' => $participantCount,
+                            'duration' => $duration,
+                            'start_time' => $startTime,
+                            'end_time' => $endTime,
+                            'recording_available' => $recordingAvailable
+                        ];
+                        
+                        // Update analytics in database
+                        $updated = $this->updateMeetingAnalytics($meeting['meeting_id'], $tutor_id, $analytics);
+                        
+                        if ($updated) {
+                            $analyticsUpdated++;
+                        }
+                    } catch (Exception $e) {
+                        log_error("Error processing meeting {$meeting['meeting_id']}: " . $e->getMessage(), "meeting");
+                        continue; // Skip this meeting but try others
+                    }
+                }
+            }
+            
+            $conn->commit();
+            
+            return [
+                'success' => true,
+                'message' => "Successfully processed $sessionsProcessed sessions and updated $analyticsUpdated analytics records",
+                'sessions_processed' => $sessionsProcessed,
+                'analytics_updated' => $analyticsUpdated
+            ];
+        } catch (Exception $e) {
+            if (isset($conn) && $conn->ping()) {
+                $conn->rollback();
+            }
+            log_error("Error fetching meeting analytics: " . $e->getMessage(), "meeting");
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Get recording visibility settings for a class
+     * @param int $class_id Class ID to get settings for
+     * @return array Associative array of recording_id => settings
+     */
+    public function getRecordingVisibilitySettings($class_id) {
+        global $conn;
+        
+        $settings = [];
+        
+        try {
+            $stmt = $conn->prepare("
+                SELECT recording_id, is_visible, is_archived, created_at, updated_at
+                FROM recording_visibility
+                WHERE class_id = ?
+            ");
+            $stmt->bind_param("i", $class_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            while ($row = $result->fetch_assoc()) {
+                $settings[$row['recording_id']] = $row;
+            }
+            
+            return $settings;
+        } catch (Exception $e) {
+            log_error("Error retrieving recording visibility settings: " . $e->getMessage(), "meeting");
+            return $settings;
+        }
+    }
+
+    /**
+     * Get meeting analytics data for a class or tutor
+     * @param int|null $class_id Class ID to get analytics for (optional)
+     * @param int|null $tutor_id Tutor ID to get analytics for (optional)
+     * @return array Meeting analytics data
+     */
+    public function getMeetingAnalytics($class_id = null, $tutor_id = null) {
+        global $conn;
+        
+        try {
+            // Build the query based on provided filters
+            $where_clauses = [];
+            $params = [];
+            $types = "";
+            
+            if ($class_id) {
+                $where_clauses[] = "cs.class_id = ?";
+                $params[] = $class_id;
+                $types .= "i";
+            }
+            
+            if ($tutor_id) {
+                $where_clauses[] = "c.tutor_id = ?";
+                $params[] = $tutor_id;
+                $types .= "i";
+            }
+            
+            $where_sql = "";
+            if (!empty($where_clauses)) {
+                $where_sql = "WHERE " . implode(" AND ", $where_clauses);
+            }
+            
+            // Get overall statistics
+            $query = "
+                SELECT 
+                    COUNT(DISTINCT m.meeting_id) as total_sessions,
+                    SUM(ma.participant_count) as total_participants,
+                    SUM(ma.duration) / 60 as total_hours,
+                    SUM(ma.recording_available) as total_recordings
+                FROM meetings m
+                JOIN class_schedule cs ON m.schedule_id = cs.schedule_id
+                JOIN class c ON cs.class_id = c.class_id
+                LEFT JOIN meeting_analytics ma ON m.meeting_id = ma.meeting_id
+                $where_sql
+            ";
+            
+            $stmt = $conn->prepare($query);
+            if (!empty($params)) {
+                $stmt->bind_param($types, ...$params);
+            }
+            $stmt->execute();
+            $overall = $stmt->get_result()->fetch_assoc();
+            
+            // Get recent sessions
+            $query = "
+                SELECT 
+                    m.meeting_id,
+                    c.class_name,
+                    cs.session_date,
+                    ma.participant_count,
+                    ma.duration,
+                    ma.recording_available,
+                    m.createtime as start_time,
+                    m.end_time
+                FROM meetings m
+                JOIN class_schedule cs ON m.schedule_id = cs.schedule_id
+                JOIN class c ON cs.class_id = c.class_id
+                LEFT JOIN meeting_analytics ma ON m.meeting_id = ma.meeting_id
+                $where_sql
+                ORDER BY m.createtime DESC
+                LIMIT 5
+            ";
+            
+            $stmt = $conn->prepare($query);
+            if (!empty($params)) {
+                $stmt->bind_param($types, ...$params);
+            }
+            $stmt->execute();
+            $recent_sessions = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            
+            // Get activity data for chart (meetings per month)
+            $query = "
+                SELECT 
+                    DATE_FORMAT(FROM_UNIXTIME(m.createtime), '%Y-%m') as month,
+                    COUNT(DISTINCT m.meeting_id) as meeting_count
+                FROM meetings m
+                JOIN class_schedule cs ON m.schedule_id = cs.schedule_id
+                JOIN class c ON cs.class_id = c.class_id
+                $where_sql
+                GROUP BY month
+                ORDER BY month
+                LIMIT 12
+            ";
+            
+            $stmt = $conn->prepare($query);
+            if (!empty($params)) {
+                $stmt->bind_param($types, ...$params);
+            }
+            $stmt->execute();
+            $activity_data = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            
+            // Get engagement data (average participants per meeting)
+            $query = "
+                SELECT 
+                    DATE_FORMAT(FROM_UNIXTIME(m.createtime), '%Y-%m') as month,
+                    ROUND(AVG(ma.participant_count), 1) as avg_participants
+                FROM meetings m
+                JOIN class_schedule cs ON m.schedule_id = cs.schedule_id
+                JOIN class c ON cs.class_id = c.class_id
+                LEFT JOIN meeting_analytics ma ON m.meeting_id = ma.meeting_id
+                $where_sql
+                GROUP BY month
+                ORDER BY month
+                LIMIT 12
+            ";
+            
+            $stmt = $conn->prepare($query);
+            if (!empty($params)) {
+                $stmt->bind_param($types, ...$params);
+            }
+            $stmt->execute();
+            $engagement_data = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            
+            // Get duration data (average meeting length)
+            $query = "
+                SELECT 
+                    DATE_FORMAT(FROM_UNIXTIME(m.createtime), '%Y-%m') as month,
+                    ROUND(AVG(ma.duration) / 60, 1) as avg_duration_hours
+                FROM meetings m
+                JOIN class_schedule cs ON m.schedule_id = cs.schedule_id
+                JOIN class c ON cs.class_id = c.class_id
+                LEFT JOIN meeting_analytics ma ON m.meeting_id = ma.meeting_id
+                $where_sql
+                GROUP BY month
+                ORDER BY month
+                LIMIT 12
+            ";
+            
+            $stmt = $conn->prepare($query);
+            if (!empty($params)) {
+                $stmt->bind_param($types, ...$params);
+            }
+            $stmt->execute();
+            $duration_data = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            
+            return [
+                'total_sessions' => $overall['total_sessions'] ?? 0,
+                'total_participants' => $overall['total_participants'] ?? 0,
+                'total_hours' => round($overall['total_hours'] ?? 0, 1),
+                'total_recordings' => $overall['total_recordings'] ?? 0,
+                'recent_sessions' => $recent_sessions,
+                'activity_data' => $activity_data,
+                'engagement_data' => $engagement_data,
+                'duration_data' => $duration_data
+            ];
+        } catch (Exception $e) {
+            log_error("Error fetching meeting analytics: " . $e->getMessage(), "meeting");
+            
+            // Return empty data structure on error
+            return [
+                'total_sessions' => 0,
+                'total_participants' => 0,
+                'total_hours' => 0,
+                'total_recordings' => 0,
+                'recent_sessions' => [],
+                'activity_data' => [],
+                'engagement_data' => [],
+                'duration_data' => []
+            ];
+        }
+    }
+
+    /**
+     * Update or create analytics data for a meeting
+     * @param string $meeting_id Meeting identifier
+     * @param int $user_id User who updated the analytics
+     * @param array $analytics Analytics data (participant_count, duration, etc.)
+     * @return bool True if update was successful
+     */
+    public function updateMeetingAnalytics($meeting_id, $user_id, $analytics) {
+        global $conn;
+        
+        try {
+            // Check if analytics record already exists
+            $stmt = $conn->prepare("SELECT id FROM meeting_analytics WHERE meeting_id = ?");
+            $stmt->bind_param("s", $meeting_id);
+            $stmt->execute();
+            $exists = $stmt->get_result()->num_rows > 0;
+            
+            if ($exists) {
+                // Update existing record
+                $query = "UPDATE meeting_analytics SET 
+                    participant_count = ?, 
+                    duration = ?, 
+                    recording_available = ?,
+                    updated_by = ?,
+                    updated_at = NOW()
+                    WHERE meeting_id = ?";
+                
+                $stmt = $conn->prepare($query);
+                $stmt->bind_param(
+                    "iiiss", 
+                    $analytics['participant_count'],
+                    $analytics['duration'],
+                    $analytics['recording_available'],
+                    $user_id,
+                    $meeting_id
+                );
+            } else {
+                // Create new record
+                $query = "INSERT INTO meeting_analytics (
+                    meeting_id, participant_count, duration, 
+                    start_time, end_time, recording_available,
+                    created_by, updated_by
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                
+                $stmt = $conn->prepare($query);
+                $stmt->bind_param(
+                    "siissiii", 
+                    $meeting_id,
+                    $analytics['participant_count'],
+                    $analytics['duration'],
+                    $analytics['start_time'],
+                    $analytics['end_time'],
+                    $analytics['recording_available'],
+                    $user_id,
+                    $user_id
+                );
+            }
+            
+            if ($stmt->execute()) {
+                log_error("Meeting analytics updated for {$meeting_id}", "analytics");
+                return true;
+            } else {
+                throw new Exception("Failed to update analytics: " . $stmt->error);
+            }
+        } catch (Exception $e) {
+            log_error("Error updating meeting analytics: " . $e->getMessage(), "meeting");
+            return false;
         }
     }
 
@@ -471,429 +970,5 @@ class MeetingManagement {
         $query = http_build_query($params);
         $checksum = sha1($action . $query . $this->bbbSecret);
         return $this->bbbBaseUrl . 'api/' . $action . '?' . $query . '&checksum=' . $checksum;
-    }
-    /**
-     * Get aggregated statistics for meetings
-     * @param string $tutorId The tutor's ID
-     * @param string $period daily|weekly|monthly
-     * @param string $startDate Start date in Y-m-d format
-     * @param string $endDate End date in Y-m-d format
-     * @return array Aggregated statistics
-     */
-    public function getAggregatedStats($tutorId, $period = 'daily', $startDate = null, $endDate = null) {
-        global $conn;
-        try {
-            $groupBy = '';
-            switch ($period) {
-                case 'daily':
-                    $groupBy = 'DATE(start_time)';
-                    break;
-                case 'weekly':
-                    $groupBy = 'YEARWEEK(start_time)';
-                    break;
-                case 'monthly':
-                    $groupBy = 'DATE_FORMAT(start_time, "%Y-%m")';
-                    break;
-                default:
-                    throw new Exception("Invalid period specified");
-            }
-
-            $query = "SELECT 
-                        $groupBy as period,
-                        COUNT(*) as total_sessions,
-                        SUM(participant_count) as total_participants,
-                        AVG(participant_count) as avg_participants,
-                        AVG(duration) as avg_duration,
-                        SUM(recording_available) as total_recordings
-                     FROM meeting_analytics 
-                     WHERE tutor_id = ?";
-
-            $params = [$tutorId];
-
-            if ($startDate && $endDate) {
-                $query .= " AND start_time BETWEEN ? AND ?";
-                $params[] = $startDate;
-                $params[] = $endDate;
-            }
-
-            $query .= " GROUP BY $groupBy ORDER BY period";
-
-            $stmt = $conn->prepare($query);
-            $stmt->execute($params); 
-            $results = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-
-            // Calculate additional metrics
-            foreach ($results as &$row) {
-                $row['engagement_rate'] = $row['avg_participants'] / ($row['total_sessions'] ?: 1);
-                $row['recording_rate'] = $row['total_recordings'] / ($row['total_sessions'] ?: 1) * 100;
-            }
-
-            return $results;
-
-        } catch (Exception $e) {
-            log_error("Analytics aggregation error: " . $e->getMessage(), "error");
-            return [];
-        }
-    }
-
-    /**
-     * Get participation trends by hour of day
-     * @param string $tutorId The tutor's ID
-     * @param string $startDate Start date in Y-m-d format
-     * @param string $endDate End date in Y-m-d format
-     * @return array Hourly participation trends
-     */
-    public function getParticipationTrends($tutorId, $startDate = null, $endDate = null) {
-        global $conn;
-        try {
-            $query = "SELECT 
-                        DATE_FORMAT(start_time, '%H:00') as hour_of_day,
-                        AVG(participant_count) as avg_participants,
-                        COUNT(*) as session_count
-                     FROM meeting_analytics 
-                     WHERE tutor_id = ?";
-            
-            $params = [$tutorId];
-
-            if ($startDate && $endDate) {
-                $query .= " AND start_time BETWEEN ? AND ?";
-                $params[] = $startDate;
-                $params[] = $endDate;
-            }
-
-            $query .= " GROUP BY hour_of_day ORDER BY hour_of_day";
-
-            $stmt = $conn->prepare($query);
-            $stmt->execute($params);
-            return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-
-        } catch (Exception $e) {
-            log_error("Participation trend analysis error: " . $e->getMessage(), "error");
-            return [];
-        }
-    }
-
-    /**
-     * Get duration distribution statistics
-     * @param string $tutorId The tutor's ID
-     * @param string $startDate Start date in Y-m-d format
-     * @param string $endDate End date in Y-m-d format
-     * @return array Duration distribution data
-     */
-    public function getDurationDistribution($tutorId, $startDate = null, $endDate = null) {
-        global $conn;
-        try {
-            $query = "SELECT 
-                        CASE 
-                            WHEN duration <= 1800 THEN '0-30'
-                            WHEN duration <= 3600 THEN '31-60'
-                            WHEN duration <= 5400 THEN '61-90'
-                            ELSE '90+'
-                        END as duration_range,
-                        COUNT(*) as session_count
-                     FROM meeting_analytics 
-                     WHERE tutor_id = ?";
-            
-            $params = [$tutorId];
-
-            if ($startDate && $endDate) {
-                $query .= " AND start_time BETWEEN ? AND ?";
-                $params[] = $startDate;
-                $params[] = $endDate;
-            }
-
-            $query .= " GROUP BY duration_range ORDER BY 
-                        CASE duration_range 
-                            WHEN '0-30' THEN 1 
-                            WHEN '31-60' THEN 2 
-                            WHEN '61-90' THEN 3 
-                            ELSE 4 
-                        END";
-
-            $stmt = $conn->prepare($query);
-            $stmt->execute($params);
-            return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-
-        } catch (Exception $e) {
-            log_error("Duration distribution analysis error: " . $e->getMessage(), "error");
-            return [];
-        }
-    }
-
-    /**
-     * Get recent sessions with details
-     * @param string $tutorId The tutor's ID
-     * @param int $limit Number of recent sessions to retrieve
-     * @return array Recent session data
-     */
-    public function getRecentSessions($tutorId, $limit = 5) {
-        global $conn;
-        try {
-            $query = "SELECT 
-                        ma.*,
-                        m.name as meeting_name
-                     FROM meeting_analytics ma
-                     JOIN meetings m ON ma.meeting_id = m.meeting_id
-                     WHERE ma.tutor_id = ?
-                     ORDER BY ma.start_time DESC
-                     LIMIT ?";
-
-            $stmt = $conn->prepare($query);
-            $stmt->execute([$tutorId, $limit]);
-            return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-
-        } catch (Exception $e) {
-            log_error("Recent sessions retrieval error: " . $e->getMessage(), "error");
-            return [];
-        }
-    }
-
-    /**
-     * Get overall statistics summary
-     * @param string $tutorId The tutor's ID
-     * @return array Summary statistics
-     */
-    public function getStatsSummary($tutorId) {
-        global $conn;
-        try {
-            $query = "SELECT 
-                        COUNT(*) as total_sessions,
-                        SUM(participant_count) as total_participants,
-                        AVG(duration) as avg_duration,
-                        SUM(recording_available) as total_recordings
-                     FROM meeting_analytics 
-                     WHERE tutor_id = ?";
-
-            $stmt = $conn->prepare($query);
-            $stmt->execute([$tutorId]);
-            $result = $stmt->get_result()->fetch_assoc();
-
-            // Add calculated metrics
-            $result['total_hours'] = round(($result['avg_duration'] * $result['total_sessions']) / 3600, 1);
-            $result['avg_participants'] = round($result['total_participants'] / ($result['total_sessions'] ?: 1), 1);
-
-            return $result;
-
-        } catch (Exception $e) {
-            log_error("Stats summary error: " . $e->getMessage(), "error");
-            return [];
-        }
-    }
-
-    /**
-     * Get detailed analytics for a specific class
-     * @param int $classId Class identifier
-     * @param string $tutorId Tutor's user ID
-     * @return array Comprehensive analytics data for the class
-     */
-    public function getClassAnalytics($classId, $tutorId) {
-        global $conn;
-        try {
-            // Summary statistics
-            $summaryQuery = "SELECT 
-                COUNT(*) as total_sessions,
-                SUM(TIMESTAMPDIFF(MINUTE, cs.start_time, cs.end_time)) as total_minutes,
-                COUNT(DISTINCT m.meeting_uid) as total_meetings,
-                SUM(CASE WHEN m.recording_url IS NOT NULL THEN 1 ELSE 0 END) as total_recordings
-            FROM class_schedule cs
-            LEFT JOIN meetings m ON cs.schedule_id = m.schedule_id
-            WHERE cs.class_id = ? AND cs.status IN ('completed', 'confirmed')";
-
-            $stmt = $conn->prepare($summaryQuery);
-            $stmt->bind_param("i", $classId);
-            $stmt->execute();
-            $summaryResult = $stmt->get_result()->fetch_assoc();
-
-            // Calculate enrollments to get a sense of participants
-            $enrollmentQuery = "SELECT COUNT(*) as total_enrollments 
-                                FROM enrollments 
-                                WHERE class_id = ? AND status = 'active'";
-            $stmt = $conn->prepare($enrollmentQuery);
-            $stmt->bind_param("i", $classId);
-            $stmt->execute();
-            $enrollmentResult = $stmt->get_result()->fetch_assoc();
-
-            // Session activity over time
-            $activityQuery = "SELECT 
-                cs.session_date, 
-                COUNT(*) as session_count,
-                SUM(TIMESTAMPDIFF(MINUTE, cs.start_time, cs.end_time)) as total_duration
-            FROM class_schedule cs
-            WHERE cs.class_id = ? AND cs.status IN ('completed', 'confirmed')
-            GROUP BY cs.session_date
-            ORDER BY cs.session_date";
-
-            $stmt = $conn->prepare($activityQuery);
-            $stmt->bind_param("i", $classId);
-            $stmt->execute();
-            $activityResult = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-
-            // Recent sessions
-            $recentQuery = "SELECT 
-                cs.schedule_id,
-                cs.session_date,
-                cs.start_time,
-                cs.end_time,
-                cs.status,
-                m.meeting_uid,
-                m.recording_url,
-                TIMESTAMPDIFF(MINUTE, cs.start_time, cs.end_time) as duration_minutes
-            FROM class_schedule cs
-            LEFT JOIN meetings m ON cs.schedule_id = m.schedule_id
-            WHERE cs.class_id = ? AND cs.status IN ('completed', 'confirmed')
-            ORDER BY cs.session_date DESC, cs.start_time DESC
-            LIMIT 5";
-
-            $stmt = $conn->prepare($recentQuery);
-            $stmt->bind_param("i", $classId);
-            $stmt->execute();
-            $recentSessions = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-
-            // Session duration distribution
-            $durationQuery = "SELECT 
-                CASE 
-                    WHEN TIMESTAMPDIFF(MINUTE, cs.start_time, cs.end_time) <= 30 THEN '0-30 min'
-                    WHEN TIMESTAMPDIFF(MINUTE, cs.start_time, cs.end_time) <= 60 THEN '31-60 min'
-                    WHEN TIMESTAMPDIFF(MINUTE, cs.start_time, cs.end_time) <= 90 THEN '61-90 min'
-                    ELSE '90+ min'
-                END as duration_range,
-                COUNT(*) as session_count
-            FROM class_schedule cs
-            WHERE cs.class_id = ? AND cs.status IN ('completed', 'confirmed')
-            GROUP BY duration_range";
-
-            $stmt = $conn->prepare($durationQuery);
-            $stmt->bind_param("i", $classId);
-            $stmt->execute();
-            $durationDistribution = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-
-            // Format the data for the frontend
-            $totalHours = round($summaryResult['total_minutes'] / 60, 1);
-            
-            return [
-                'success' => true,
-                'stats' => [
-                    'total_sessions' => $summaryResult['total_sessions'],
-                    'total_hours' => $totalHours,
-                    'total_participants' => $enrollmentResult['total_enrollments'],
-                    'total_recordings' => $summaryResult['total_recordings'],
-                    'avg_duration' => $summaryResult['total_sessions'] > 0 ? 
-                                    round($summaryResult['total_minutes'] / $summaryResult['total_sessions'], 1) : 0
-                ],
-                'session_activity' => $activityResult,
-                'recent_sessions' => $recentSessions,
-                'duration_distribution' => $durationDistribution
-            ];
-        } catch (Exception $e) {
-            log_error("Error retrieving class analytics: " . $e->getMessage(), "meeting");
-            return [
-                'success' => false,
-                'error' => 'Failed to retrieve analytics data',
-                'message' => $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Get overall tutor analytics across all classes
-     * @param string $tutorId Tutor's user ID
-     * @param string $period Period to analyze (last_week, last_month, all_time)
-     * @return array Analytics data across all classes
-     */
-    public function getTutorAnalytics($tutorId, $period = 'all_time') {
-        global $conn;
-        try {
-            // Date condition based on period
-            $dateCondition = "";
-            if ($period === 'last_week') {
-                $dateCondition = " AND cs.session_date >= DATE_SUB(CURDATE(), INTERVAL 1 WEEK)";
-            } elseif ($period === 'last_month') {
-                $dateCondition = " AND cs.session_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)";
-            }
-
-            // Overall summary
-            $summaryQuery = "SELECT 
-                COUNT(*) as total_sessions,
-                SUM(TIMESTAMPDIFF(MINUTE, cs.start_time, cs.end_time)) as total_minutes,
-                COUNT(DISTINCT cs.class_id) as total_classes,
-                SUM(CASE WHEN m.recording_url IS NOT NULL THEN 1 ELSE 0 END) as total_recordings
-            FROM class_schedule cs
-            JOIN class c ON cs.class_id = c.class_id
-            LEFT JOIN meetings m ON cs.schedule_id = m.schedule_id
-            WHERE c.tutor_id = ? AND cs.status IN ('completed', 'confirmed')" . $dateCondition;
-
-            $stmt = $conn->prepare($summaryQuery);
-            $stmt->bind_param("s", $tutorId);
-            $stmt->execute();
-            $summaryResult = $stmt->get_result()->fetch_assoc();
-
-            // Get total enrollments across all classes
-            $enrollmentQuery = "SELECT COUNT(*) as total_enrollments 
-                                FROM enrollments e
-                                JOIN class c ON e.class_id = c.class_id
-                                WHERE c.tutor_id = ? AND e.status = 'active'";
-            $stmt = $conn->prepare($enrollmentQuery);
-            $stmt->bind_param("s", $tutorId);
-            $stmt->execute();
-            $enrollmentResult = $stmt->get_result()->fetch_assoc();
-
-            // Session activity by date
-            $activityQuery = "SELECT 
-                cs.session_date, 
-                COUNT(*) as session_count,
-                SUM(TIMESTAMPDIFF(MINUTE, cs.start_time, cs.end_time)) as total_duration
-            FROM class_schedule cs
-            JOIN class c ON cs.class_id = c.class_id
-            WHERE c.tutor_id = ? AND cs.status IN ('completed', 'confirmed')" . $dateCondition . "
-            GROUP BY cs.session_date
-            ORDER BY cs.session_date";
-
-            $stmt = $conn->prepare($activityQuery);
-            $stmt->bind_param("s", $tutorId);
-            $stmt->execute();
-            $activityResult = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-
-            // Session activity by class
-            $classActivityQuery = "SELECT 
-                c.class_id,
-                c.class_name,
-                COUNT(cs.schedule_id) as session_count,
-                SUM(TIMESTAMPDIFF(MINUTE, cs.start_time, cs.end_time)) as total_duration
-            FROM class c
-            LEFT JOIN class_schedule cs ON c.class_id = cs.class_id AND cs.status IN ('completed', 'confirmed')
-            WHERE c.tutor_id = ?" . $dateCondition . "
-            GROUP BY c.class_id
-            ORDER BY session_count DESC";
-
-            $stmt = $conn->prepare($classActivityQuery);
-            $stmt->bind_param("s", $tutorId);
-            $stmt->execute();
-            $classActivity = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-
-            // Format the data for the frontend
-            $totalHours = round($summaryResult['total_minutes'] / 60, 1);
-            
-            return [
-                'success' => true,
-                'stats' => [
-                    'total_sessions' => $summaryResult['total_sessions'],
-                    'total_hours' => $totalHours,
-                    'total_classes' => $summaryResult['total_classes'],
-                    'total_participants' => $enrollmentResult['total_enrollments'],
-                    'total_recordings' => $summaryResult['total_recordings'],
-                    'avg_duration' => $summaryResult['total_sessions'] > 0 ? 
-                                    round($summaryResult['total_minutes'] / $summaryResult['total_sessions'], 1) : 0
-                ],
-                'session_activity' => $activityResult,
-                'class_activity' => $classActivity
-            ];
-        } catch (Exception $e) {
-            log_error("Error retrieving tutor analytics: " . $e->getMessage(), "meeting");
-            return [
-                'success' => false,
-                'error' => 'Failed to retrieve analytics data',
-                'message' => $e->getMessage()
-            ];
-        }
     }
 }

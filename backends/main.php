@@ -34,6 +34,7 @@
 
 	// Check if user is not logged in but trying to access protected pages
 	if (!isset($_SESSION['user']) && in_array($link, $logged_excluded_page)) {
+		log_error("was accessed this");
 	    $_SESSION['msg'] = "Please log in to access this page.";
 	    header("location: ".BASE."login");
 	    exit();

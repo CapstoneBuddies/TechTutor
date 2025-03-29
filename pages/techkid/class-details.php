@@ -531,12 +531,15 @@
         function joinMeeting(scheduleId) {
             showLoading(true);
 
-            fetch(BASE+'api/meeting?action=join-meeting', {
+            fetch(BASE+'join-meeting', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: JSON.stringify({ schedule_id: scheduleId, role: '<?php echo $_SESSION['role']; ?>'})
+                body: new URLSearchParams({
+                        schedule_id: scheduleId,
+                        role: '<?php echo $_SESSION['role']; ?>'
+                    })
             })
             .then(response => response.json())
             .then(data => {

@@ -1,17 +1,4 @@
 <?php
-/**
- * Unified File Handler
- * 
- * This file combines the functionality of:
- * - upload-file.php
- * - upload-material.php
- * - delete-file.php
- * - delete-material.php
- * - materials_handlers.php
- * 
- * It handles all file-related operations for both TechGuru (teachers) and TechKid (students)
- */
-
 require_once __DIR__ . '/../main.php';
 
 // Set header

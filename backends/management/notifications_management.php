@@ -230,7 +230,7 @@ function sendClassSessionLink($scheduleId) {
     try {
         // Fetch meeting details
         $stmt = $conn->prepare("
-            SELECT m.meeting_uid, m.attendee_pw, c.class_name, CONCAT(u.first_name,' ',u.last_name) AS 'tutor',
+            SELECT m.meeting_uid, m.attendee_pw, c.class_id, c.class_name, CONCAT(u.first_name,' ',u.last_name) AS 'tutor',
             u.email
             FROM meetings m
             JOIN class_schedule cs ON m.schedule_id = cs.schedule_id
@@ -262,29 +262,12 @@ function sendClassSessionLink($scheduleId) {
             throw new Exception("No students enrolled in this session.");
         }
 
-        // Get class ID for the logout URL
-        $classIdStmt = $conn->prepare("SELECT class_id FROM class_schedule WHERE schedule_id = ?");
-        $classIdStmt->bind_param("i", $scheduleId);
-        $classIdStmt->execute();
-        $classIdResult = $classIdStmt->get_result()->fetch_assoc();
-        $classId = $classIdResult['class_id'];
-        
-        // Create the student-specific logout URL
-        $logoutUrl = $_SERVER['SERVER_NAME'] . '/dashboard/s/class/details?id=' . $classId . '&ended=' . $scheduleId;
-        
         // Initialize meeting class to generate join links
-        require_once BACKEND . 'meeting_management.php';
-        $meetingManager = new MeetingManagement();
+        $meeting = new MeetingManagement();
 
         // Loop through each student and send the meeting link
         foreach ($students as $student) {
-            $joinUrl = $meetingManager->getJoinUrl(
-                $meetingData['meeting_uid'], 
-                $student['student_name'], 
-                $meetingData['attendee_pw'],
-                $student['uid'],
-                $logoutUrl
-            );
+            $joinUrl = $meeting->getJoinUrl($meetingData['meeting_uid'], $student['student_name'], $meetingData['attendee_pw']);
 
             // Send email notification (using PHPMailer)
             $mail = getMailerInstance();
@@ -340,14 +323,13 @@ function sendClassSessionLink($scheduleId) {
             $mail->Subject = $subject;
             $mail->Body = $body;
             $mail->send();
-            
             // Insert system notification
             $stmt = $conn->prepare("
                 INSERT INTO notifications (recipient_id, recipient_role, class_id, message, icon, icon_color)
                 VALUES (?, 'TECHKID', ?, ?, 'bi-camera-video-fill', 'text-primary')
             ");
             $notifMessage = "Your class <b>{$meetingData['class_name']}</b> is starting soon! <a href='{$joinUrl}'>Join now</a>";
-            $stmt->bind_param("iis", $student['uid'], $classId, $notifMessage);
+            $stmt->bind_param("iis", $student['uid'], $meetingData['class_id'], $notifMessage);
             $stmt->execute();
         }
 

@@ -9,16 +9,32 @@
         header("location: ".BASE."login");
         exit();
     }
+    
     // Get class details or redirect if invalid
-    $classDetails = getClassDetails($_GET['class_id'], $_SESSION['user']);
+    $class_id = isset($_GET['class_id']) ? intval($_GET['class_id']) : 
+                (isset($_GET['id']) ? intval($_GET['id']) : 0);
+    
+    $classDetails = getClassDetails($class_id, $_SESSION['user']);
     if (!$classDetails) {
         header('Location: ./');
         exit();
     }
 
     $title = 'Learning Analytics';
-    $meeting = new MeetingManagement();
     $tutor_id = $_SESSION['user'];
+    
+    $meeting = new MeetingManagement();
+
+    // Get analytics data from the database
+    $analyticsData = $meeting->getMeetingAnalytics($class_id, $tutor_id);
+    
+    // If fetchMeetingAnalytics hasn't been executed yet, trigger it
+    if (empty($analyticsData['activity_data'])) {
+        // This ensures we have fresh analytics data
+        $meeting->fetchMeetingAnalytics($class_id);
+        // Get updated analytics
+        $analyticsData = $meeting->getMeetingAnalytics($class_id, $tutor_id);
+    }
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -107,7 +123,7 @@
             </div>
 
             <!-- Analytics Grid -->
-            <div class="row g-4"> 
+            <div class="row g-4">
                 <!-- Overview Stats -->
                 <div class="col-12">
                     <div class="row g-4">
@@ -118,7 +134,9 @@
                                         <i class="bi bi-camera-video-fill"></i>
                                     </div>
                                 </div>
-                                <div class="stat-value" id="total-sessions">-</div>
+                                <div class="stat-value" id="total-sessions">
+                                    <?php echo number_format($analyticsData['total_sessions'] ?? 0); ?>
+                                </div>
                                 <div class="stat-label">Total Sessions</div>
                             </div>
                         </div>
@@ -129,7 +147,9 @@
                                         <i class="bi bi-clock-fill"></i>
                                     </div>
                                 </div>
-                                <div class="stat-value" id="total-hours">-</div>
+                                <div class="stat-value" id="total-hours">
+                                    <?php echo number_format($analyticsData['total_hours'] ?? 0, 1); ?>
+                                </div>
                                 <div class="stat-label">Total Hours</div>
                             </div>
                         </div>
@@ -140,7 +160,9 @@
                                         <i class="bi bi-people-fill"></i>
                                     </div>
                                 </div>
-                                <div class="stat-value" id="total-participants">-</div>
+                                <div class="stat-value" id="total-participants">
+                                    <?php echo number_format($analyticsData['total_participants'] ?? 0); ?>
+                                </div>
                                 <div class="stat-label">Total Participants</div>
                             </div>
                         </div>
@@ -151,7 +173,9 @@
                                         <i class="bi bi-camera-reels-fill"></i>
                                     </div>
                                 </div>
-                                <div class="stat-value" id="total-recordings">-</div>
+                                <div class="stat-value" id="total-recordings">
+                                    <?php echo number_format($analyticsData['total_recordings'] ?? 0); ?>
+                                </div>
                                 <div class="stat-label">Total Recordings</div>
                             </div>
                         </div>
@@ -173,7 +197,39 @@
                     <div class="analytics-card p-4">
                         <h5 class="section-title mb-4">Recent Sessions</h5>
                         <div class="meeting-list" id="recent-sessions">
-                            <!-- Will be populated by JavaScript -->
+                            <?php if (empty($analyticsData['recent_sessions'])): ?>
+                                <p class="text-muted text-center">No recent sessions found</p>
+                            <?php else: ?>
+                                <?php foreach ($analyticsData['recent_sessions'] as $session): ?>
+                                <div class="meeting-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1"><?php echo htmlspecialchars($session['class_name']); ?></h6>
+                                            <small class="text-muted">
+                                                <i class="bi bi-calendar-date me-1"></i>
+                                                <?php 
+                                                    $sessionDate = !empty($session['session_date']) ? date('M d, Y', strtotime($session['session_date'])) : 'No date';
+                                                    echo $sessionDate; 
+                                                ?>
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 d-flex justify-content-between">
+                                        <small class="text-muted">
+                                            <i class="bi bi-people me-1"></i>
+                                            <?php echo $session['participant_count'] ?? 0; ?> participants
+                                        </small>
+                                        <small class="text-muted">
+                                            <i class="bi bi-clock-history me-1"></i>
+                                            <?php 
+                                                $duration = isset($session['duration']) ? round($session['duration'] / 60, 1) : 0;
+                                                echo $duration;
+                                            ?> hours
+                                        </small>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -207,148 +263,145 @@
         
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                // Fetch analytics data
-                fetchAnalyticsData();
-                
-                // Initialize charts
+                // Initialize charts with data from PHP
                 initializeCharts();
             });
 
-            function fetchAnalyticsData() {
-                // Fetch data using AJAX
-                fetch(`${BASE}api/meeting?action=get-analytics&tutor_id=<?php echo $tutor_id; ?>`)
-                    .then(response => response.json())
-                    .then(data => {
-                        updateDashboardStats(data);
-                        updateCharts(data);
-                        updateRecentSessions(data.recent_sessions);
-                    })
-                    .catch(error => {
-                        console.error('Error fetching analytics:', error);
-                    });
-            }
-
-            function updateDashboardStats(data) {
-                document.getElementById('total-sessions').textContent = data.total_sessions || 0;
-                document.getElementById('total-hours').textContent = data.total_hours || 0;
-                document.getElementById('total-participants').textContent = data.total_participants || 0;
-                document.getElementById('total-recordings').textContent = data.total_recordings || 0;
-            }
-
-            function updateRecentSessions(sessions) {
-                const container = document.getElementById('recent-sessions');
-                container.innerHTML = '';
-
-                if (!sessions || sessions.length === 0) {
-                    container.innerHTML = '<p class="text-muted text-center">No recent sessions found</p>';
-                    return;
-                }
-
-                sessions.forEach(session => {
-                    const item = document.createElement('div');
-                    item.className = 'meeting-item';
-                    item.innerHTML = `
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <h6 class="mb-1">${session.name}</h6>
-                                <small class="text-muted">
-                                    <i class="bi bi-clock me-1"></i>
-                                    ${new Date(session.start_time).toLocaleDateString()}
-                                </small>
-                            </div>
-                            <span class="badge bg-${session.status === 'completed' ? 'success' : 'primary'}">
-                                ${session.status}
-                            </span>
-                        </div>
-                        <div class="mt-2">
-                            <small class="text-muted">
-                                <i class="bi bi-people me-1"></i>
-                                ${session.participants} participants
-                            </small>
-    </div> 
-                    `;
-                    container.appendChild(item);
-                });
-            }
-
             function initializeCharts() {
+                const activityData = <?php 
+                    $dates = [];
+                    $sessionCounts = [];
+                    
+                    if (isset($analyticsData['activity_data']) && !empty($analyticsData['activity_data'])) {
+                        foreach ($analyticsData['activity_data'] as $item) {
+                            $dates[] = date('M Y', strtotime($item['month'].'-01'));
+                            $sessionCounts[] = $item['meeting_count'];
+                        }
+                    }
+                    
+                    echo json_encode([
+                        'labels' => $dates,
+                        'sessions' => $sessionCounts,
+                        'participants' => array_fill(0, count($dates), 0) // Placeholder
+                    ]); 
+                ?>;
+                
                 // Session Activity Chart
                 new Chart(document.getElementById('sessionActivityChart'), {
                     type: 'line',
                     data: {
-                        labels: [],
-                        datasets: [{
-                            label: 'Sessions',
-                            data: [],
-                            borderColor: '#4e73df',
-                            tension: 0.1
-                        }]
+                        labels: activityData.labels,
+                        datasets: [
+                            {
+                                label: 'Sessions',
+                                data: activityData.sessions,
+                                borderColor: '#4e73df',
+                                tension: 0.2,
+                                fill: false
+                            }
+                        ]
                     },
                     options: {
                         responsive: true,
-                        maintainAspectRatio: false
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
                     }
                 });
 
-                // Engagement Chart
+                // Engagement Chart - Participants per session
+                const engagementData = <?php 
+                    $months = [];
+                    $avgParticipants = [];
+                    
+                    if (isset($analyticsData['engagement_data']) && !empty($analyticsData['engagement_data'])) {
+                        foreach ($analyticsData['engagement_data'] as $item) {
+                            $months[] = date('M Y', strtotime($item['month'].'-01'));
+                            $avgParticipants[] = $item['avg_participants'];
+                        }
+                    }
+                    
+                    echo json_encode([
+                        'labels' => $months,
+                        'data' => $avgParticipants
+                    ]); 
+                ?>;
+                
                 new Chart(document.getElementById('engagementChart'), {
                     type: 'bar',
                     data: {
-                        labels: [],
+                        labels: engagementData.labels,
                         datasets: [{
-                            label: 'Engagement',
-                            data: [],
+                            label: 'Average Participants',
+                            data: engagementData.data,
                             backgroundColor: '#36b9cc'
                         }]
                     },
                     options: {
                         responsive: true,
-                        maintainAspectRatio: false
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Average Participants per Session'
+                                }
+                            }
+                        }
                     }
                 });
 
-                // Duration Chart
+                // Duration Chart - Session duration distribution
+                const durationData = <?php 
+                    $months = [];
+                    $avgDurations = [];
+                    $colors = ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b'];
+                    
+                    if (isset($analyticsData['duration_data']) && !empty($analyticsData['duration_data'])) {
+                        foreach ($analyticsData['duration_data'] as $item) {
+                            $months[] = date('M Y', strtotime($item['month'].'-01'));
+                            $avgDurations[] = $item['avg_duration_hours'];
+                        }
+                    }
+                    
+                    echo json_encode([
+                        'labels' => $months,
+                        'data' => $avgDurations,
+                        'colors' => array_slice($colors, 0, count($months))
+                    ]); 
+                ?>;
+                
                 new Chart(document.getElementById('durationChart'), {
-                    type: 'doughnut',
+                    type: 'line',
                     data: {
-                        labels: [],
+                        labels: durationData.labels,
                         datasets: [{
-                            data: [],
-                            backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e']
+                            label: 'Average Session Duration (hours)',
+                            data: durationData.data,
+                            borderColor: '#1cc88a',
+                            backgroundColor: 'rgba(28, 200, 138, 0.2)',
+                            fill: true
                         }]
                     },
                     options: {
                         responsive: true,
-                        maintainAspectRatio: false
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Hours'
+                                }
+                            }
+                        }
                     }
                 });
             }
-
-            function updateCharts(data) {
-                // Update Session Activity Chart
-                const activityChart = Chart.getChart('sessionActivityChart');
-                if (activityChart && data.session_activity) {
-                    activityChart.data.labels = data.session_activity.labels;
-                    activityChart.data.datasets[0].data = data.session_activity.data;
-                    activityChart.update();
-                }
-
-                // Update Engagement Chart
-                const engagementChart = Chart.getChart('engagementChart');
-                if (engagementChart && data.engagement_data) {
-                    engagementChart.data.labels = data.engagement_data.labels;
-                    engagementChart.data.datasets[0].data = data.engagement_data.data;
-                    engagementChart.update();
-                }
-
-                // Update Duration Distribution Chart
-                const durationChart = Chart.getChart('durationChart');
-                if (durationChart && data.duration_distribution) {
-                    durationChart.data.labels = data.duration_distribution.labels;
-                    durationChart.data.datasets[0].data = data.duration_distribution.data;
-                    durationChart.update();
-                }
-            }
         </script>
-</body>
+    </body>
 </html>

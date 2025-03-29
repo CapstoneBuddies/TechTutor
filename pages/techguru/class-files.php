@@ -461,8 +461,7 @@ $title = "Class Files - " . htmlspecialchars($classDetails['class_name']);
                         showToast('success', 'Folder created successfully');
                         location.reload();
                     } else {
-                        showToast('error', 'Failed to create folder');
-                        logError(data.message, 'create-folder', 'class-file');
+                        showToast('error', data.message || 'Failed to create folder');
                     }
                 })
                 .catch(error => {
@@ -503,8 +502,7 @@ $title = "Class Files - " . htmlspecialchars($classDetails['class_name']);
                         showToast('success', 'Material uploaded successfully');
                         setTimeout(() => location.reload(), 1500);
                     } else {
-                        showToast('error', 'Failed to upload material');
-                        logError(data.message, 'upload', 'class-file');
+                        showToast('error', data.message || 'Failed to upload material');
                     }
                 })
                 .catch(error => {
@@ -535,8 +533,7 @@ $title = "Class Files - " . htmlspecialchars($classDetails['class_name']);
                         showToast('success', 'Material deleted successfully');
                         setTimeout(() => location.reload(), 1500);
                     } else {
-                        showToast('error', 'Failed to delete material');
-                        logError(data.message, 'delete-material', 'class-file');
+                        showToast('error', data.message || 'Failed to delete material');
                     }
                 })
                 .catch(error => {

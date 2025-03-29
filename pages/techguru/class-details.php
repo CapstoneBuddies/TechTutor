@@ -19,6 +19,11 @@ if (!$classDetails) {
     exit();
 }
 
+if(isset($_GET['ended'])) {
+    // change the schedule recently joined to completed
+}
+
+
 // Handle class status update
 if (isset($_POST['action']) && $_POST['action'] === 'updateStatus') {
     $newStatus = isset($_POST['status']) ? intval($_POST['status']) : 0;
@@ -364,19 +369,19 @@ function getFileIconClass($fileType) {
                                     <td>
                                         <?php if ($schedule['status'] === 'confirmed'): ?>
                                             <div class="d-flex gap-2">
-                                                <?php if(isset($_GET['ended']) && $_GET['ended'] == $schedule['schedule_id'] ): ?>
+                                                <?php if(isset($_GET['ended'])): ?>
                                                 <a href="#" onclick="joinMeeting(<?php echo $schedule['schedule_id']; ?>)" 
-                                                   class="btn btn-info btn-sm">
+                                                   class="btn btn-success btn-sm">
                                                     <i class="bi bi-camera-video-fill me-1"></i>
                                                     Rejoin Meeting
                                                 </a>
-                                                <button type="button" class="btn btn-warning btn-sm" onclick="endMeeting(<?php echo $schedule['schedule_id']; ?>)">
+                                                <button type="button" class="btn btn-danger btn-sm" onclick="endMeeting(<?php echo $schedule['schedule_id']; ?>)">
                                                     <i class="bi bi-stop-circle-fill me-1"></i>
                                                     End Meeting
                                                 </button>
                                                 <?php else: ?>
                                                 <a href="#" onclick="joinMeeting(<?php echo $schedule['schedule_id']; ?>)" 
-                                                   class="btn btn-primary btn-sm">
+                                                   class="btn btn-success btn-sm">
                                                     <i class="bi bi-camera-video-fill me-1"></i>
                                              Join Meeting
                                                 </a>
@@ -577,9 +582,9 @@ function getFileIconClass($fileType) {
                            class="btn btn-warning quick-action">
                             <i class="bi bi-camera-reels me-2"></i> View Recordings
                         </a>
-                        <a href="details/feedbacks?id=<?php echo htmlspecialchars($class_id); ?>" 
-                           class="btn btn-danger quick-action">
-                            <i class="bi bi-star me-2"></i> View Feedbacks
+                        <a href="details/feedbacks?id=<?php echo htmlspecialchars($class_id); ?>"
+                           class="btn btn-secondary quick-action">
+                            <i class="bi bi-star me-2"></i> View All Feedbacks
                         </a>
                         <button class="btn btn-outline-primary quick-action" onclick="showShareModal()">
                             <i class="bi bi-share me-2"></i> Share & Invite
@@ -842,8 +847,7 @@ function getFileIconClass($fileType) {
                     showToast('success', 'Material uploaded successfully');
                     setTimeout(() => location.reload(), 1500);
                 } else {
-                    logError(data.message, 'submitMaterial');
-                    showToast('error', 'Failed to upload material');
+                    showToast('error', data.message || 'Failed to upload material');
                 }
             })
             .catch(error => {
@@ -874,8 +878,7 @@ function getFileIconClass($fileType) {
                     showToast('success', 'Material deleted successfully');
                     setTimeout(() => location.reload(), 1500);
                 } else {
-                    showToast('error', 'Failed to delete material');
-                    logError(data.message, 'delete Material');
+                    showToast('error', data.message || 'Failed to delete material');
                 }
             })
             .catch(error => {
@@ -894,57 +897,102 @@ function getFileIconClass($fileType) {
         }
 
         function sendMessage() {
-            const recipients = $('#messageRecipients').val();
-            const subject = document.getElementById('messageSubject').value;
-            const content = quill.root.innerHTML;
-
-            if (!recipients.length) {
+            // Get selected recipients
+            let recipients = $('#messageRecipients').val();
+            if (!recipients || recipients.length === 0) {
                 showToast('warning', 'Please select at least one recipient');
                 return;
             }
 
+            // Get subject
+            let subject = $('#messageSubject').val().trim();
             if (!subject) {
                 showToast('warning', 'Please enter a subject');
                 return;
             }
 
-            if (!quill.getText().trim()) {
+            // Get message content from Quill editor
+            let messageContent = quill.root.innerHTML.trim();
+            if (!messageContent || messageContent === '<p><br></p>') {
                 showToast('warning', 'Please enter a message');
                 return;
             }
 
-            showLoading(true);
+            // Handle "All Students" option
+            let selectedStudents = [];
+            let allStudents = false;
+            
+            if (recipients.includes('all')) {
+                allStudents = true;
+            } else {
+                selectedStudents = recipients;
+            }
+            
+            // Check if email notifications should be sent
+            let sendEmail = confirm('Would you like to send email notifications to the students as well?');
+            let recipientCount = allStudents ? 'all students' : `${selectedStudents.length} student(s)`;
+            
+            // Display loading indicator
+            $('#messageModalFooter').html(`
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" disabled>
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    Sending...
+                </button>
+            `);
+
+            // Send message
             fetch(BASE + 'api/send-message', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     class_id: <?php echo $class_id; ?>,
-                    recipients: recipients,
+                    selected_students: selectedStudents,
+                    all_students: allStudents,
                     subject: subject,
-                    content: content
+                    message: messageContent,
+                    send_email: sendEmail
                 })
             })
             .then(response => response.json())
             .then(data => {
-                showLoading(false);
                 if (data.success) {
-                    showToast('success', 'Message sent successfully');
+                    // Reset form
+                    $('#messageRecipients').val(null).trigger('change');
+                    $('#messageSubject').val('');
+                    quill.root.innerHTML = '';
+                    
+                    // Close modal
                     messageModal.hide();
+                    
+                    // Show success message
+                    showToast('success', `Message sent successfully to ${recipientCount}${sendEmail ? ' (with email notifications)' : ''}`);
                 } else {
-                    showToast('error', 'Failed to send message');
-                    logError(data.message, 'send Message');
+                    // Show error
+                    showToast('error', data.message || 'Failed to send message');
+                    
+                    // Reset footer
+                    $('#messageModalFooter').html(`
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="sendMessage()">Send Message</button>
+                    `);
                 }
             })
             .catch(error => {
-                showLoading(false);
-                console.error('Error:', error);
-                showToast('error', 'Failed to send message');
+                console.error('Error sending message:', error);
+                showToast('error', 'An error occurred while sending the message');
+                
+                // Reset footer
+                $('#messageModalFooter').html(`
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="sendMessage()">Send Message</button>
+                `);
             });
-            }
+        }
 
-            function viewAnalytics() {
+        function viewAnalytics() {
             window.location.href = `details/analytics?class_id=<?php echo $class_id; ?>`;
         }
 
@@ -1076,7 +1124,7 @@ function getFileIconClass($fileType) {
                 showToast('error', 'Failed to send invitations');
             });
         }
- 
+
         function startSession(scheduleId) {
             if (!confirm("Are you sure you want to start this session?")) return;
 
@@ -1084,8 +1132,8 @@ function getFileIconClass($fileType) {
 
             fetch(BASE+'api/meeting?action=create-meeting', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ schedule_id: scheduleId })
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `schedule_id=${scheduleId}`
             })
             .then(response => response.json())
             .then(data => {
@@ -1094,8 +1142,7 @@ function getFileIconClass($fileType) {
                     showToast('success', "Meeting room was successfully generated");
                     setTimeout(() => location.reload(), 2000);
                 } else {
-                    showToast('error', "Failed to create meeting room");
-                    logError(data.message, 'create-meeting');
+                    showToast('error', data.message || "Failed to create meeting room");
                 }
             })
             .catch(error => {
@@ -1111,9 +1158,9 @@ function getFileIconClass($fileType) {
             fetch(BASE+'api/meeting?action=join-meeting', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: JSON.stringify({ schedule_id: scheduleId })
+                body: `schedule_id=${scheduleId}`
             })
             .then(response => response.json())
             .then(data => {
@@ -1121,8 +1168,7 @@ function getFileIconClass($fileType) {
                 if (data.success) {
                     window.location.href = data.data.join_url;
                 } else {
-                    showToast('error', 'Failed to join meeting.');
-                    logError(data.message, 'join-meeting');
+                    showToast('error', data.message || 'Failed to join meeting.');
                 }
             })
             .catch(error => {
@@ -1139,9 +1185,9 @@ function getFileIconClass($fileType) {
             fetch(BASE + 'api/meeting?action=end-meeting', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: JSON.stringify({ schedule_id: scheduleId })
+                body: `schedule_id=${scheduleId}`
             })
             .then(response => response.json())
             .then(data => {
@@ -1150,8 +1196,7 @@ function getFileIconClass($fileType) {
                     showToast('success', 'Meeting ended successfully');
                     setTimeout(() => location.reload(), 1500);
                 } else {
-                    logError(data.message, 'end-meeting');
-                    showToast('error', 'Failed to end meeting');
+                    showToast('error', data.message || 'Failed to end meeting');
                 }
             })
             .catch(error => {
@@ -1193,10 +1238,9 @@ function getFileIconClass($fileType) {
                 showLoading(false);
                 if (data.success) {
                     showToast('success', 'Folder created successfully');
-                    setTimeout(() => {location.reload();}, 1500);
+                    location.reload();
                 } else {
-                    showToast('error', 'Failed to create folder');
-                    logError(data.message, 'create-folder');
+                    showToast('error', data.message || 'Failed to create folder');
                 }
             })
             .catch(error => {
@@ -1226,10 +1270,9 @@ function getFileIconClass($fileType) {
                 showLoading(false);
                 if (data.success) {
                     showToast('success', 'Folder renamed successfully');
-                    setTimeout(() => {location.reload();}, 1500);
+                    location.reload();
                 } else {
-                    showToast('error', 'Failed to rename folder');
-                    logError(data.message, 'rename-folder');
+                    showToast('error', data.message || 'Failed to rename folder');
                 }
             })
             .catch(error => {
@@ -1257,10 +1300,9 @@ function getFileIconClass($fileType) {
                 showLoading(false);
                 if (data.success) {
                     showToast('success', 'Folder deleted successfully');
-                    setTimeout(() => {location.reload();}, 1500);
+                    location.reload();
                 } else {
-                    showToast('error', 'Failed to delete folder');
-                    logError(data.message, 'delete-folder');
+                    showToast('error', data.message || 'Failed to delete folder');
                 }
             })
             .catch(error => {

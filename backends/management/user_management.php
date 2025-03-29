@@ -221,7 +221,7 @@ function searchUsers($search) {
     
     $stmt = $conn->prepare("SELECT u.*, 
                            IF(u.role = 'TECHKID', 
-                              (SELECT COUNT(*) FROM class_schedule cs WHERE cs.user_id = u.uid AND cs.role = 'STUDENT'), 
+                              (SELECT COUNT(*) FROM enrollments e WHERE e.student_id = u.uid), 
                               (SELECT COUNT(*) FROM class c WHERE c.tutor_id = u.uid)) AS `num_classes`,
                            u.status, u.last_login 
                            FROM users u 
@@ -690,6 +690,11 @@ function updateProfile() {
                 $stmt->bind_param("i", $user_id);
                 $stmt->execute();
             } elseif ($user['role'] === 'TECHKID') {
+                // Delete student enrollments
+                $stmt = $conn->prepare("DELETE FROM enrollments WHERE student_id = ?");
+                $stmt->bind_param("i", $user_id);
+                $stmt->execute();
+                
                 // Delete ratings given by this student
                 $stmt = $conn->prepare("DELETE FROM session_feedback WHERE student_id = ?");
                 $stmt->bind_param("i", $user_id);
