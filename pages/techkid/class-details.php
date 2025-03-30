@@ -157,9 +157,9 @@
                                                 $session_start = new DateTime($schedule['session_date'] . ' ' . $schedule['start_time']);
                                                 $session_end = new DateTime($schedule['session_date'] . ' ' . $schedule['end_time']);
                                                 $is_ongoing = ($now >= $session_start && $now <= $session_end) || $meeting_result;
-                                                $is_upcoming = $now < $session_start;
+                                                $is_upcoming = $now < $session_start && $schedule['status'] !== 'completed';
                                                 $is_completed = $schedule['status'] === 'completed';
-                                                
+
                                                 // Status label and class
                                                 $status_label = $is_completed ? 'Completed' : ($is_ongoing ? 'Ongoing' : ($is_upcoming ? 'Upcoming' : 'Missed'));
                                                 $status_class = $is_completed ? 'success' : ($is_ongoing ? 'primary' : ($is_upcoming ? 'info' : 'secondary'));
@@ -209,32 +209,35 @@
                                                                         $_SESSION['user']
                                                                     );
                                                                 ?>
-                                                                <?php if (!$hasRated): ?>
-                                                                    <button type="button" 
-                                                                            class="btn btn-sm btn-primary" 
-                                                                            onclick="showFeedbackModal(<?php echo $schedule['schedule_id']; ?>, <?php echo $classDetails['techguru_id']; ?>)">
-                                                                        <i class="bi bi-star me-1"></i> Give Feedback
-                                                                    </button>
-                                                                <?php else: ?>
-                                                                    <span class="badge bg-success">
-                                                                        <i class="bi bi-check-circle me-1"></i> Feedback Submitted
-                                                                    </span>
-                                                                <?php endif; ?>
-                                                                
-                                                                <?php 
-                                                                // Check if recording exists
-                                                                $rec_stmt = $conn->prepare("SELECT recording_id FROM recordings WHERE schedule_id = ? LIMIT 1");
-                                                                $rec_stmt->bind_param("i", $schedule['schedule_id']);
-                                                                $rec_stmt->execute();
-                                                                $recording = $rec_stmt->get_result()->fetch_assoc();
-                                                                
-                                                                if ($recording): 
-                                                                ?>
-                                                                    <a href="recordings?id=<?php echo $class_id; ?>&recording=<?php echo $recording['recording_id']; ?>" 
-                                                                       class="btn btn-outline-secondary btn-sm ms-2">
-                                                                        <i class="bi bi-play-circle me-1"></i> View Recording
-                                                                    </a>
-                                                                <?php endif; ?>
+                                                                <div class="d-flex gap-2">
+                                                                    <?php if (!$hasRated): ?>
+                                                                        <button type="button" 
+                                                                                class="btn btn-sm btn-primary" 
+                                                                                onclick="showFeedbackModal(<?php echo $schedule['schedule_id']; ?>, <?php echo $classDetails['techguru_id']; ?>)">
+                                                                            <i class="bi bi-star me-1"></i> Give Feedback
+                                                                        </button>
+                                                                    <?php else: ?>
+                                                                        <span class="badge bg-success">
+                                                                            <i class="bi bi-check-circle me-1"></i> Feedback Submitted
+                                                                        </span>
+                                                                    <?php endif; ?>
+                                                                    
+                                                                    <?php 
+                                                                    // Check if recording exists
+                                                                    $rec_stmt = $conn->prepare("SELECT recording_id FROM recording_visibility 
+                                                                        WHERE class_id = ? AND is_visible = 1 LIMIT 1");
+                                                                    $rec_stmt->bind_param("i", $schedule['class_id']);
+                                                                    $rec_stmt->execute();
+                                                                    $recording = $rec_stmt->get_result()->fetch_assoc();
+                                                                    
+                                                                    if ($recording): 
+                                                                    ?>
+                                                                        <a href="recordings?id=<?php echo $class_id; ?>&recording=<?php echo $recording['recording_id']; ?>" 
+                                                                           class="btn btn-outline-secondary btn-sm">
+                                                                            <i class="bi bi-play-circle me-1"></i> View Recording
+                                                                        </a>
+                                                                    <?php endif; ?>
+                                                                </div>
                                                             <?php else: ?>
                                                                 <button class="btn btn-outline-secondary btn-sm" disabled>
                                                                     <i class="bi bi-x-circle me-1"></i> Missed
@@ -598,6 +601,9 @@
             .session-date {
                 min-width: 60px;
             }
+            .session-info {
+                flex: 1;
+            }
             .resource-item {
                 display: flex;
                 align-items: center;
@@ -693,6 +699,24 @@
                 .session-info {
                     width: 100%;
                     margin-bottom: 0.5rem;
+                }
+                .session-item .ms-md-auto {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 0.5rem;
+                    margin-top: 0.5rem;
+                    width: 100%;
+                }
+                .session-item .badge {
+                    margin-bottom: 0.5rem;
+                }
+                .session-item .d-flex.gap-2 {
+                    flex-direction: column;
+                    width: 100%;
+                }
+                .session-item .btn {
+                    width: 100%;
+                    margin-right: 0 !important;
                 }
             }
         </style>
