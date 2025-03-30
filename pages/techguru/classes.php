@@ -228,20 +228,20 @@ $title = 'My Classes';
                                                        title="View Details">
                                                         <i class="bi bi-eye"></i>
                                                     </a>
+                                                    <?php if ($class['status'] !== 'completed'): ?>
                                                     <a href="<?php echo BASE; ?>dashboard/t/class/edit?id=<?php echo $class['class_id']; ?>" 
                                                        class="btn btn-sm btn-outline-secondary"
                                                        data-bs-toggle="tooltip"
                                                        title="Edit Class">
                                                         <i class="bi bi-pencil"></i>
                                                     </a>
-                                                    <?php if ($class['status'] !== 'completed'): ?>
-                                                        <button type="button" 
-                                                                class="btn btn-sm btn-outline-danger"
-                                                                data-bs-toggle="tooltip"
-                                                                title="Delete Class"
-                                                                onclick="confirmDelete(<?php echo $class['class_id']; ?>)">
-                                                            <i class="bi bi-trash"></i>
-                                                        </button>
+                                                    <button type="button" 
+                                                            class="btn btn-sm btn-outline-danger"
+                                                            data-bs-toggle="tooltip"
+                                                            title="Delete Class"
+                                                            onclick="confirmDelete(<?php echo $class['class_id']; ?>)">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
                                                     <?php endif; ?>
                                                 </div>
                                             </td>

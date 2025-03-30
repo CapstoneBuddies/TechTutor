@@ -12,23 +12,26 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
 // Get class ID from URL parameter
 $class_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
+// Process form submission for completing class (backward compatibility)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'completeClass') {
+    require_once BACKEND.'class_management.php';
+    $result = completeClass($class_id, $_SESSION['user']);
+    
+    if (is_array($result) && isset($result['success']) && !$result['success']) {
+        header('Location: details?id=' . $class_id . '&error=completion_failed&message=' . urlencode($result['message']));
+    } else {
+        header('Location: details?id=' . $class_id . '&completed=1');
+    }
+    exit();
+}
+
+$status = getClassStatus($class_id);
+log_error($status);
+
 // Get class details or redirect if invalid
 $classDetails = getClassDetails($class_id, $_SESSION['user']);
 if (!$classDetails) {
     header('Location: ./');
-    exit();
-}
-
-if(isset($_GET['ended'])) {
-    // change the schedule recently joined to completed
-}
-
-
-// Handle class status update
-if (isset($_POST['action']) && $_POST['action'] === 'updateStatus') {
-    $newStatus = isset($_POST['status']) ? intval($_POST['status']) : 0;
-    updateClassStatus($class_id, $_SESSION['user'], $newStatus);
-    header("Location: details?id={$class_id}&updated=1");
     exit();
 }
 
@@ -212,6 +215,35 @@ function getFileIconClass($fileType) {
         </div>
         <?php endif; ?>
 
+        <?php if (isset($_GET['completed']) && $_GET['completed'] == 1): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <strong>Success!</strong> The class has been marked as completed and all students have been notified.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <?php endif; ?>
+        
+        <?php if (isset($_GET['error']) && $_GET['error'] == 'completion_failed'): ?>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <strong>Error!</strong> <?php echo isset($_GET['message']) ? htmlspecialchars(urldecode($_GET['message'])) : 'Failed to complete the class. Please try again later.'; ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <?php endif; ?>
+        
+        <?php 
+        // Show info alert about early completion if class is active and started but hasn't reached the 10-day mark yet
+        $tenDaysAfterStart = date('Y-m-d', strtotime($classDetails['start_date'] . ' + 10 days'));
+        $today = date('Y-m-d');
+        $hasStarted = $today >= $classDetails['start_date'];
+        
+        if ($classDetails['status'] === 'active' && $hasStarted && $today < $tenDaysAfterStart): 
+        ?>
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            <i class="bi bi-info-circle me-2"></i>
+            This class will be eligible for early completion on <strong><?php echo date('M d, Y', strtotime($tenDaysAfterStart)); ?></strong> (10 days after start date). The class will be automatically marked as completed one day after its end date.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <?php endif; ?>
+
         <!-- Header Section -->
         <div class="row">
             <div class="col-12">
@@ -318,10 +350,12 @@ function getFileIconClass($fileType) {
                 <div class="dashboard-card mb-4">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h3 class="mb-0">Class Schedule</h3>
+                        <?php if($status != 'completed'): ?>
                         <a href="details/schedules?id=<?php echo htmlspecialchars($class_id); ?>" 
                            class="btn btn-outline-primary btn-sm">
                             <i class="bi bi-calendar-plus"></i> Manage Schedule
                         </a>
+                        <?php endif; ?>
                     </div>
                     <div class="schedule-table">
                         <table class="table table-hover align-middle">
@@ -418,9 +452,11 @@ function getFileIconClass($fileType) {
                             <a href="details/files?id=<?php echo $class_id; ?>" class="btn btn-outline-primary btn-sm">
                                 <i class="bi bi-folder me-1"></i> View All Files
                             </a>
+                            <?php if($status != 'completed'): ?>
                             <button class="btn btn-primary btn-sm" onclick="uploadMaterial()">
                                 <i class="bi bi-upload me-1"></i> Upload Material
                             </button>
+                            <?php endif; ?>
                         </div>
                     </div>
                     <div class="materials-list">
@@ -568,6 +604,7 @@ function getFileIconClass($fileType) {
                 <div class="dashboard-card">
                     <h3 class="mb-4">Quick Actions</h3>
                     <div class="d-grid gap-3">
+                        <?php if($status !== 'completed'): ?>
                         <a href="details/schedules?id=<?php echo htmlspecialchars($class_id); ?>" 
                            class="btn btn-primary quick-action">
                             <i class="bi bi-calendar-check me-2"></i> Manage Schedule
@@ -575,6 +612,27 @@ function getFileIconClass($fileType) {
                         <button class="btn btn-info quick-action" onclick="messageStudents()">
                             <i class="bi bi-chat-dots me-2"></i> Message Students
                         </button>
+                        <?php 
+                        // Show Complete Class button if:
+                        // 1. Class status is active, AND
+                        // 2. Class has been active for at least 10 days since start date
+                        $tenDaysAfterStart = date('Y-m-d', strtotime($classDetails['start_date'] . ' + 10 days'));
+                        $today = date('Y-m-d');
+
+                        log_error($classDetails['status']);
+
+                        if (in_array($classDetails['status'], ['active','completed']) && ($today >= $tenDaysAfterStart || $today >= $classDetails['end_date']) ): 
+                        ?>
+                        <button type="button" class="btn btn-dark quick-action w-100" onclick="completeClass(<?php echo $class_id; ?>)">
+                            <i class="bi bi-check-circle me-2"></i> Complete Class
+                        </button>
+                        <?php endif; ?>
+                        <button class="btn btn-outline-primary quick-action" onclick="showShareModal()">
+                            <i class="bi bi-share me-2"></i> Share & Invite
+                        </button>
+
+                        <?php endif; ?>
+                        
                         <button class="btn btn-success quick-action" onclick="viewAnalytics()">
                             <i class="bi bi-graph-up me-2"></i> View Analytics
                         </button>
@@ -586,9 +644,6 @@ function getFileIconClass($fileType) {
                            class="btn btn-secondary quick-action">
                             <i class="bi bi-star me-2"></i> View All Feedbacks
                         </a>
-                        <button class="btn btn-outline-primary quick-action" onclick="showShareModal()">
-                            <i class="bi bi-share me-2"></i> Share & Invite
-                        </button>
                     </div>
                 </div>
             </div>
@@ -1309,6 +1364,37 @@ function getFileIconClass($fileType) {
                 showLoading(false);
                 console.error('Error:', error);
                 showToast('error', 'Failed to delete folder');
+            });
+        }
+
+        function completeClass(classId) {
+            if (!confirm('Are you sure you want to mark this class as completed early?\n\nThis will:\n- Change the class status to "completed"\n- Update all student enrollments to "completed"\n- Send notifications to all students\n\nThis action cannot be undone.')) {
+                return;
+            }
+
+            showLoading(true);
+            fetch(BASE + 'api/class-completion', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `class_id=${classId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                showLoading(false);
+                if (data.success) {
+                    showToast('success', data.message || 'Class has been successfully completed.');
+                    // Redirect with success parameter
+                    window.location.href = `details?id=${classId}&completed=1`;
+                } else {
+                    showToast('error', data.message || 'Failed to complete the class. Please try again later.');
+                }
+            })
+            .catch(error => {
+                showLoading(false);
+                console.error('Error:', error);
+                showToast('error', 'An error occurred while processing your request.');
             });
         }
     </script>

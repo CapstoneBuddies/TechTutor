@@ -57,7 +57,6 @@ $title = $certificate ? "Certificate: " . $certificate['award'] : "Certificate N
 <html lang="en">
 <?php include ROOT_PATH . '/components/head.php'; ?>
 <body data-base="<?php echo BASE; ?>">
-    <?php include ROOT_PATH . '/components/header.php'; ?>
     
     <main class="container py-4">
         <div class="row justify-content-center">
@@ -80,7 +79,7 @@ $title = $certificate ? "Certificate: " . $certificate['award'] : "Certificate N
                                 <div class="certificate-corner certificate-corner-br"></div>
                                 
                                 <div class="certificate-header mb-4">
-                                    <img src="<?php echo IMG; ?>logo.png" alt="TechTutor" class="certificate-logo">
+                                    <img src="<?php echo IMG; ?>stand_alone_logo.png" alt="TechTutor" class="certificate-logo">
                                     <h1 class="certificate-title mt-3">Certificate of Achievement</h1>
                                 </div>
                                 

@@ -19,13 +19,6 @@ if (!$classDetails) {
     exit();
 }
 
-// Check if class is active
-if (!in_array($classDetails['status'], ['active','ongoing'])) {
-    log_error($classDetails['status']);
-    $_SESSION['error'] = 'This class is not currently active. Recordings are only available for active classes.';
-    header('Location: ./?id=' . $class_id);
-    exit();
-}
 
 // Initialize meeting management and get recordings
 $meeting = new MeetingManagement();
@@ -38,6 +31,9 @@ if (!$result['success']) {
 
 $recordings = $result['recordings'];
 $title = 'Class Recordings - ' . htmlspecialchars($classDetails['class_name']);
+
+$activeCount = 0;
+$archivedCount = 0;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -168,8 +164,6 @@ $title = 'Class Recordings - ' . htmlspecialchars($classDetails['class_name']);
                             </div>
                         <?php else: ?>
                             <?php 
-                            $activeCount = 0;
-                            $archivedCount = 0;
                             foreach ($recordings as $recording): 
                                 if (!$recording['archived']):
                                     $activeCount++;

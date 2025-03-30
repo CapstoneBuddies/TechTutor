@@ -247,7 +247,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> 
     <?php endif; ?>
     
     <?php include ROOT_PATH . '/components/footer.php'; ?>

@@ -66,9 +66,13 @@ switch ($action) {
                 'welcome' => "Welcome to {$schedule['class_name']}!",
                 'duration' => ceil((strtotime($schedule['end_time']) - strtotime($schedule['start_time'])) / 60),
                 'record' => 'true',
-                'autoStartRecording' => 'false',
+                'autoStartRecording' => 'true',
                 'allowStartStopRecording' => 'true',
-                'disableRecording' => 'false'
+                'disableRecording' => 'false',
+                'muteOnStart' => 'true',
+                // Add custom meta data to indicate this is a recorded class
+                'meta_bbb-recording-ready-url' => 'https://' . $_SERVER['SERVER_NAME'] . '/api/meeting?action=recording-ready',
+                'meta_recording-name' => $schedule['class_name'] . ' - ' . date('Y-m-d', strtotime($schedule['session_date']))
             ];
 
             $result = $meeting->createMeeting($meetingId, $schedule['class_name'], $options);
@@ -356,9 +360,11 @@ switch ($action) {
                         'attendeePW' => $meeting_data['attendee_pw'],
                         'moderatorPW' => $meeting_data['moderator_pw'],
                         'duration' => 0, // No duration limit
-                        'record' => true,
-                        'autoStartRecording' => true,
-                        'allowStartStopRecording' => true,
+                        'record' => 'true',
+                        'autoStartRecording' => 'true',
+                        'allowStartStopRecording' => 'true',
+                        'disableRecording' => 'false',
+                        'meta_recording-name' => $meeting_data['meeting_name'] . ' - ' . date('Y-m-d')
                     ];
                     
                     $result = $meeting->createMeeting(

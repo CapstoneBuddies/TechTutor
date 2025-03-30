@@ -74,6 +74,7 @@ function getFileIconClass($fileType) {
     // Default
     return 'text';
 }
+$status = getClassStatus($class_id);
 
 // Find current folder details if viewing a folder
 $current_folder = null;
@@ -220,9 +221,11 @@ $title = "Class Files - " . htmlspecialchars($classDetails['class_name']);
                                 </h2>
                             </div>
                             <div>
+                                <?php if($status != 'completed'): ?>
                                 <button class="btn btn-primary" onclick="uploadMaterial()">
                                     <i class="bi bi-upload me-1"></i> Upload Material
                                 </button>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -260,10 +263,12 @@ $title = "Class Files - " . htmlspecialchars($classDetails['class_name']);
                             <div class="empty-state">
                                 <i class="bi bi-folder"></i>
                                 <h5>No files or folders yet</h5>
+                                <?php if($status != 'completed'): ?>
                                 <p class="mb-3">Upload materials to help your students learn better</p>
                                 <button class="btn btn-primary" onclick="uploadMaterial()">
                                     <i class="bi bi-upload me-1"></i> Upload Material
                                 </button>
+                                <?php endif; ?>
                             </div>
                             <?php else: ?>
                             

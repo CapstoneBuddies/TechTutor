@@ -47,7 +47,7 @@ function TokenVerifier($hashed_token) {
     }
     catch(Exception $e) {
         log_error("Error on line " . $e->getLine() . " in " . $e->getFile() . ": SQL Error: " . $e->getMessage(), 'database');
-        setcookie('remember_me', $token, time() - 7200, BASE, "", true, true);
+        setcookie('remember_me', $hashed_token, time() - 7200, BASE, "", true, true);
         unset($_COOKIE['remember_me']);
         return null;
     }

@@ -58,11 +58,16 @@ function getTechGuruClasses($tutor_id) {
                     AND cs.session_date >= CURDATE()
                     ORDER BY cs.session_date ASC, cs.start_time ASC
                     LIMIT 1
-                ) as next_session_status
+                ) as next_session_status,
+                (
+                    SELECT cs.schedule_id
+                    FROM class_schedule cs
+                    WHERE cs.class_id = c.class_id
+                ) as next_session_id
              FROM class c 
              LEFT JOIN subject s ON c.subject_id = s.subject_id 
              LEFT JOIN enrollments e ON c.class_id = e.class_id AND e.status = 'active'
-             WHERE c.tutor_id = ? 
+             WHERE c.tutor_id = ?
              GROUP BY c.class_id 
              ORDER BY 
                 CASE 
@@ -2046,4 +2051,213 @@ function getTutorAnalytics($tutorId, $period = 'all_time') {
         ];
     }
 }
+
+/**
+ * Check and update class status to completed if end date has passed (1 day after end date)
+ * Also updates all student enrollments to completed status
+ * 
+ * @param int $class_id Optional class ID to check specific class, or null to check all classes
+ * @return bool True if any updates were made, false otherwise
+ */
+function checkAndUpdateClassCompletion($class_id = null) {
+    global $conn;
+    
+    try {
+        $conn->begin_transaction();
+        
+        // Build query to find active classes that ended at least 1 day ago
+        $query = "SELECT c.class_id, c.class_name, c.tutor_id, c.end_date 
+                 FROM class c 
+                 WHERE c.status = 'active' 
+                 AND DATE(c.end_date) < DATE_SUB(CURDATE(), INTERVAL 1 DAY)";
+        
+        $params = [];
+        $types = "";
+        
+        if ($class_id !== null) {
+            $query .= " AND c.class_id = ?";
+            $params[] = $class_id;
+            $types .= "i";
+        }
+        
+        $stmt = $conn->prepare($query);
+        
+        if (!empty($params)) {
+            $stmt->bind_param($types, ...$params);
+        }
+        
+        $stmt->execute();
+        $classes_to_complete = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        
+        if (empty($classes_to_complete)) {
+            $conn->commit();
+            return false;
+        }
+        
+        foreach ($classes_to_complete as $class) {
+            // Update class status to completed
+            $update_class = $conn->prepare("UPDATE class SET status = 'completed' WHERE class_id = ?");
+            $update_class->bind_param("i", $class['class_id']);
+            $update_class->execute();
+            
+            // Update all active enrollments to completed
+            $update_enrollments = $conn->prepare("UPDATE enrollments SET status = 'completed' WHERE class_id = ? AND status = 'active'");
+            $update_enrollments->bind_param("i", $class['class_id']);
+            $update_enrollments->execute();
+            
+            // Notify tutor
+            insertNotification(
+                $class['tutor_id'],
+                'TECHGURU',
+                "Your class '{$class['class_name']}' has been automatically marked as completed.",
+                "class-details?id={$class['class_id']}",
+                $class['class_id'],
+                'bi-check-circle-fill',
+                'text-success'
+            );
+            
+            // Notify students
+            $students = $conn->prepare("SELECT student_id FROM enrollments WHERE class_id = ?");
+            $students->bind_param("i", $class['class_id']);
+            $students->execute();
+            $student_list = $students->get_result()->fetch_all(MYSQLI_ASSOC);
+            
+            foreach ($student_list as $student) {
+                insertNotification(
+                    $student['student_id'],
+                    'TECHKID',
+                    "Class '{$class['class_name']}' has been marked as completed.",
+                    "class-details?id={$class['class_id']}",
+                    $class['class_id'],
+                    'bi-check-circle-fill',
+                    'text-success'
+                );
+            }
+            
+            log_error("Class {$class['class_id']} ({$class['class_name']}) automatically marked as completed because end date passed", "class");
+        }
+        
+        $conn->commit();
+        return true;
+    } catch (Exception $e) {
+        $conn->rollback();
+        log_error("Error auto-completing classes: " . $e->getMessage(), "database");
+        return false;
+    }
+}
+
+/**
+ * Manually complete a class
+ * 
+ * @param int $class_id The ID of the class to mark as completed
+ * @param int $tutor_id The ID of the tutor who owns the class
+ * @return bool True if completion was successful, false otherwise
+ */
+function completeClass($class_id, $tutor_id) {
+    global $conn;
+    
+    try {
+        $conn->begin_transaction();
+        
+        // Verify the class belongs to this tutor and is active
+        $verify = $conn->prepare("SELECT c.class_id, c.class_name, c.tutor_id, c.status, c.start_date 
+                                  FROM class c 
+                                  WHERE c.class_id = ? AND c.tutor_id = ? AND c.status != 'completed'");
+        $verify->bind_param("ii", $class_id, $tutor_id);
+        $verify->execute();
+        $result = $verify->get_result()->fetch_assoc();
+        
+        if (!$result) {
+            throw new Exception("Class not found");
+        }
+        
+        if ($result['tutor_id'] != $tutor_id) {
+            throw new Exception("Unauthorized completion attempt");
+        }
+        
+        if ($result['status'] !== 'active') {
+            throw new Exception("Only active classes can be marked as completed");
+        }
+        
+        // Check if class has been active for at least 10 days since start date
+        $tenDaysAfterStart = date('Y-m-d', strtotime($result['start_date'] . ' + 10 days'));
+        $today = date('Y-m-d');
+        $hasPassedMinDuration = ($today >= $tenDaysAfterStart) || ($today >= $result['end_date']);
+        
+        if (!$hasPassedMinDuration) {
+            throw new Exception("Class must be active for at least 10 days before it can be manually completed");
+        }
+        
+        // Update class status to completed
+        $update_class = $conn->prepare("UPDATE class SET status = 'completed' WHERE class_id = ?");
+        $update_class->bind_param("i", $class_id);
+        $update_class->execute();
+        
+        // Update all active enrollments to completed
+        $update_enrollments = $conn->prepare("UPDATE enrollments SET status = 'completed' WHERE class_id = ? AND status = 'active'");
+        $update_enrollments->bind_param("i", $class_id);
+        $update_enrollments->execute();
+
+        // Update all schedules to completed
+        $update_sched = $conn->prepare("UPDATE class_schedule SET status = 'completed' WHERE class_id = ?");
+        $update_sched->bind_param("i", $class_id);
+        $update_sched->execute();
+
+        
+        // Notify tutor
+        insertNotification(
+            $tutor_id,
+            'TECHGURU',
+            "Your class '{$result['class_name']}' has been marked as completed.",
+            "class-details?id={$class_id}",
+            $class_id,
+            'bi-check-circle-fill',
+            'text-success'
+        );
+        
+        // Notify students
+        $students = $conn->prepare("SELECT student_id FROM enrollments WHERE class_id = ?");
+        $students->bind_param("i", $class_id);
+        $students->execute();
+        $student_list = $students->get_result()->fetch_all(MYSQLI_ASSOC);
+        
+        foreach ($student_list as $student) {
+            insertNotification(
+                $student['student_id'],
+                'TECHKID',
+                "Class '{$result['class_name']}' has been marked as completed by your instructor.",
+                "class-details?id={$class_id}",
+                $class_id,
+                'bi-check-circle-fill',
+                'text-success'
+            );
+        }
+        
+        log_error("Class {$class_id} ({$result['class_name']}) manually marked as completed by tutor {$tutor_id}", "class");
+        
+        $conn->commit();
+        return true;
+    } catch (Exception $e) {
+        $conn->rollback();
+        log_error("Error completing class: " . $e->getMessage(), "database");
+        return ['success' => false, 'message' => $e->getMessage()];
+    }
+}
+
+/**
+ * Get class Status
+ * 
+ * @param int $class_id The ID of the class to check if it is completed
+ */
+function getClassStatus($class_id) {
+    global $conn;
+
+    $stmt = $conn->prepare("SELECT status FROM class WHERE class_id = ?");
+    $stmt->bind_param("i",$class_id);
+    $stmt->execute();
+
+    return $stmt->get_result()->fetch_assoc()['status'];
+}
+
+
 ?>

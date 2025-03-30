@@ -488,7 +488,7 @@
                             {
                                 title: '<?php echo addslashes($schedule['class_name']); ?>',
                                 start: '<?php echo $schedule['session_date'] . 'T' . $schedule['start_time']; ?>',
-                                end: '<?php echo $schedule['session_date'] . 'T' . $schedule['end_time']; ?>',
+                                end: '<?php echo $schedule['session_date'] . 'T' . (isset($schedule['end_time']) && $schedule['end_time'] ? $schedule['end_time'] : $schedule['start_time']); ?>',
                                 url: '<?php echo BASE; ?>dashboard/t/class/details?id=<?php echo $schedule['class_id']; ?>',
                                 backgroundColor: '<?php echo getStatusColor($schedule['status']); ?>',
                                 borderColor: '<?php echo getStatusColor($schedule['status']); ?>',
@@ -521,7 +521,7 @@
                                         </div>
                                         <div class="modal-body">
                                             <p><strong>Date:</strong> ${info.event.start.toLocaleDateString()}</p>
-                                            <p><strong>Time:</strong> ${info.event.start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${info.event.end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                                            <p><strong>Time:</strong> ${info.event.start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}${info.event.end ? ' - ' + info.event.end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}</p>
                                             <p><strong>Status:</strong> <span class="badge bg-${getStatusBadgeClass(status)}">${status.charAt(0).toUpperCase() + status.slice(1)}</span></p>
                                         </div>
                                         <div class="modal-footer">

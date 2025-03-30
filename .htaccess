@@ -171,6 +171,6 @@ RewriteRule ^techkid/class-feedback$ pages/techkid/class-feedback.php [QSA,L]
 RewriteRule ^api/search-students$ backends/api/search-students.php [L]
 RewriteRule ^api/invite-students$ backends/api/invite-students.php [L]
 RewriteRule ^api/send-message$ backends/api/send-message.php [L]
-
+RewriteRule ^api/class-completion$ backends/api/class-completion.php [L]
 #BBB
 RewriteRule ^api/meeting$ backends/handler/meeting_handlers.php [L,QSA]

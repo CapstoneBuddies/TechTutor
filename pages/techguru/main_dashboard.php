@@ -327,7 +327,7 @@
                                                     </div>
                                                     <div class="ms-3">
                                                         <?php if ($class['next_session_status'] === 'confirmed'): ?>
-                                                            <a href="meeting/host?class=<?php echo $class['class_id']; ?>" 
+                                                            <a href="#" onclick="joinMeeting(<?php echo $class['next_session_id']; ?>)" 
                                                                class="btn btn-success btn-sm d-flex align-items-center gap-2">
                                                                 <i class="bi bi-camera-video-fill"></i>
                                                                 <span>Start</span>
@@ -511,6 +511,34 @@
                     return new bootstrap.Tooltip(tooltipTriggerEl);
                 });
             });
+            function joinMeeting(scheduleId) {
+                showLoading(true);
+
+                fetch(BASE+'api/meeting?action=join-meeting', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                            schedule_id: scheduleId,
+                            role: '<?php echo $_SESSION['role']; ?>'
+                        })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    showLoading(false);
+                    if (data.success) {
+                        window.location.href = data.data.join_url;
+                    } else {
+                        showToast('error', data.message || 'Failed to join meeting.');
+                    }
+                })
+                .catch(error => {
+                    showLoading(false);
+                    console.error('Error joining meeting:', error);
+                    showToast('error', 'An error occurred. Please try again.');
+                });
+            }
         </script>
     </body>
 </html>

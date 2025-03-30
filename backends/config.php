@@ -31,6 +31,7 @@
 	define('SUBJECT_IMG', BASE.'assets/img/subjects/');
 	define('USER_IMG', BASE.'assets/img/users/');
 	define('BACKEND', ROOT_PATH.'/backends/management/');
+	define('SITE_NAME', 'Tech Tutor');
 
 	// Define LOG_PATH based on fixed ROOT_PATH
 	define('LOG_PATH', ROOT_PATH . '/logs/');
