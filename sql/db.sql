@@ -141,6 +141,7 @@ CREATE TABLE `enrollments` (
   `student_id` int(11) NOT NULL,
   `enrollment_date` timestamp NOT NULL DEFAULT current_timestamp(),
   `status` enum('active','completed','dropped','pending') NOT NULL DEFAULT 'active',
+  `invitation_message` TEXT NULL,
   PRIMARY KEY (`enrollment_id`),
   UNIQUE KEY `unique_enrollment` (`class_id`,`student_id`),
   KEY `idx_enrollment_class` (`class_id`),
@@ -517,7 +518,70 @@ CREATE TRIGGER `after_session_feedback_insert` AFTER INSERT ON `session_feedback
 END
 $$
 DELIMITER ;
-
+DELIMITER //
+CREATE TRIGGER IF NOT EXISTS `enrollment_status_update_trigger` 
+AFTER UPDATE ON `enrollments`
+FOR EACH ROW
+BEGIN
+    DECLARE tutor_id INT;
+    DECLARE class_name VARCHAR(255);
+    DECLARE student_name VARCHAR(255);
+    
+    IF OLD.status != NEW.status THEN
+        -- Get tutor ID and class name
+        SELECT c.tutor_id, c.class_name INTO tutor_id, class_name
+        FROM class c WHERE c.class_id = NEW.class_id;
+        
+        -- Get student name
+        SELECT CONCAT(u.first_name, ' ', u.last_name) INTO student_name
+        FROM users u WHERE u.uid = NEW.student_id;
+        
+        -- If status changed to active (accepted invitation)
+        IF NEW.status = 'active' AND OLD.status = 'pending' THEN
+            -- Insert notification for tutor
+            INSERT INTO notifications (
+                recipient_id, 
+                recipient_role, 
+                message, 
+                link, 
+                class_id, 
+                icon, 
+                icon_color
+            ) VALUES (
+                tutor_id, 
+                'TECHGURU', 
+                CONCAT(student_name, ' has accepted your invitation to "', class_name, '"'), 
+                CONCAT('dashboard/t/class/details?id=', NEW.class_id), 
+                NEW.class_id, 
+                'bi-person-check', 
+                'text-success'
+            );
+        END IF;
+        
+        -- If enrollment was dropped
+        IF NEW.status = 'dropped' AND OLD.status = 'active' THEN
+            -- Insert notification for tutor
+            INSERT INTO notifications (
+                recipient_id, 
+                recipient_role, 
+                message, 
+                link, 
+                class_id, 
+                icon, 
+                icon_color
+            ) VALUES (
+                tutor_id, 
+                'TECHGURU', 
+                CONCAT(student_name, ' has dropped from "', class_name, '"'), 
+                CONCAT('dashboard/t/class/details?id=', NEW.class_id), 
+                NEW.class_id, 
+                'bi-person-x', 
+                'text-danger'
+            );
+        END IF;
+    END IF;
+END//
+DELIMITER ; 
 --
 -- Dumped Values
 --

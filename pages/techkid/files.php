@@ -1,6 +1,6 @@
 <?php 
     require_once '../../backends/main.php';
-require_once BACKEND.'file_management.php';
+require_once BACKEND.'unified_file_management.php';
 
 // Verify session and role
 if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'TECHKID') {
@@ -9,14 +9,14 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'TECHKID') {
 }
 
 // Initialize file management
-$fileManager = new FileManagement();
+$fileManager = new UnifiedFileManagement();
 
 try {
     // Get student's personal files
     $personalFiles = $fileManager->getPersonalFiles($_SESSION['user']);
     
     // Get storage usage
-    $storageInfo = $fileManager->getStorageUsage($_SESSION['user']);
+    $storageInfo = $fileManager->getStorageInfo($_SESSION['user']);
     
     } catch (Exception $e) {
     error_log("Error in files page: " . $e->getMessage());
@@ -337,7 +337,8 @@ $title = "My Files";
             </div>
         </div>
     </div>
-
+</main>
+</div>
     <?php include ROOT_PATH . '/components/footer.php'; ?>
 
     <script>

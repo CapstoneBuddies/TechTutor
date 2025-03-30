@@ -77,6 +77,25 @@ body {
   color: var(--default-color);
   background-color: var(--background-color);
   font-family: var(--default-font);
+  /* Sticky footer setup */
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Sticky Footer Setup */
+html {
+  height: 100%;
+}
+
+.dashboard-content, 
+main, 
+.container {
+  flex: 1 0 auto;
+}
+
+.footer {
+  flex-shrink: 0;
 }
 
 a {

@@ -208,6 +208,36 @@ function exportTransactions($filter = 'all', $role = '', $userId = null) {
  * Get Recent Transactions per user
  */
 function getRecentTransactions($user_id) {
-    return [];
+    global $conn;
+    
+    try {
+        $query = "SELECT 
+                    t.transaction_id as id,
+                    t.payment_method_type,
+                    t.amount,
+                    t.status,
+                    DATE_FORMAT(t.created_at, '%b %d, %Y') as date,
+                    t.description as message,
+                    t.payment_method_id as reference
+                FROM transactions t
+                WHERE t.user_id = ?
+                ORDER BY t.created_at DESC
+                LIMIT 5";
+
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param('i', $user_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $transactions = [];
+        while ($row = $result->fetch_assoc()) {
+            $transactions[] = $row;
+        }
+        
+        return $transactions;
+    } catch (Exception $e) {
+        log_error("Error fetching recent transactions: " . $e->getMessage(), 'database');
+        return [];
+    }
 }
 ?>

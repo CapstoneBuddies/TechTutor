@@ -210,6 +210,8 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
         <h4 class="mt-3">No subjects found</h4>
         <p class="text-muted">Try adjusting your search terms</p>
     </div>
+</main>
+</div>
 
     <!-- Scripts -->
     <?php include ROOT_PATH . '/components/footer.php'; ?>

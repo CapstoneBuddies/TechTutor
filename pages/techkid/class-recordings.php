@@ -127,7 +127,8 @@
                 </div>
             </div>
         </div>
-
+    </main>
+</div>
         <?php include ROOT_PATH . '/components/footer.php'; ?>
 
         <style>

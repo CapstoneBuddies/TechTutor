@@ -39,320 +39,342 @@
     <body data-base="<?php echo BASE; ?>">
         <?php include ROOT_PATH . '/components/header.php'; ?>
 
-        <div class="dashboard-content bg">
-            <!-- Header Section -->
-            <div class="content-section mb-4">
-                <div class="content-card bg-snow">
-                    <div class="card-body">
-                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
-                            <div>
-                                <nav aria-label="breadcrumb" class="breadcrumb-nav">
-                                    <ol class="breadcrumb mb-2">
-                                        <li class="breadcrumb-item"><a href="<?php echo BASE; ?>dashboard">Dashboard</a></li>
-                                        <li class="breadcrumb-item"><a href="./">My Classes</a></li>
-                                        <li class="breadcrumb-item active"><?php echo htmlspecialchars($classDetails['class_name']); ?></li>
-                                    </ol>
-                                </nav>
-                                <h1 class="page-title mb-1"><?php echo htmlspecialchars($classDetails['class_name']); ?></h1>
-                                <div class="d-flex flex-wrap align-items-center gap-2">
-                                    <span class="badge bg-<?php echo $classDetails['status'] === 'active' ? 'success' : 'secondary'; ?>">
-                                        <?php echo ucfirst($classDetails['status']); ?>
-                                    </span>
-                                    <?php if ($classDetails['is_free']): ?>
-                                        <span class="badge bg-info">Free Class</span>
-                                    <?php else: ?>
-                                        <span class="badge bg-primary">₱<?php echo number_format($classDetails['price'], 2); ?></span>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Main Content -->
-            <div class="row">
-                <!-- Left Column -->
-                <div class="col-md-8">
-                    <!-- Class Information -->
-                    <div class="content-section mb-4">
-                        <div class="class-info-card">
-                            <h2 class="section-title mb-4">Class Information</h2>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <p><strong>Subject:</strong> <?php echo htmlspecialchars($classDetails['subject_name']); ?></p>
-                                    <p><strong>Course:</strong> <?php echo htmlspecialchars($classDetails['course_name']); ?></p>
-                                    <p><strong>Duration:</strong> <?php echo date('M d, Y', strtotime($classDetails['start_date'])); ?> - <?php echo date('M d, Y', strtotime($classDetails['end_date'])); ?></p>
-                                </div>
-                                <div class="col-md-6">
-                                    <p>
-                                        <strong>Tutor:</strong> 
-                                        <span class="d-inline-flex align-items-center">
-                                            <img src="<?php echo USER_IMG . $classDetails['techguru_profile']; ?>" 
-                                                 class="rounded-circle me-2" 
-                                                 width="24" 
-                                                 height="24"
-                                                 alt="Tutor">
-                                            <?php echo htmlspecialchars($classDetails['techguru_name']); ?>
+        <main class="container py-4">
+            <div class="dashboard-content bg">
+                <!-- Header Section -->
+                <div class="content-section mb-4">
+                    <div class="content-card bg-snow">
+                        <div class="card-body">
+                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                                <div>
+                                    <nav aria-label="breadcrumb" class="breadcrumb-nav">
+                                        <ol class="breadcrumb mb-2">
+                                            <li class="breadcrumb-item"><a href="<?php echo BASE; ?>dashboard">Dashboard</a></li>
+                                            <li class="breadcrumb-item"><a href="./">My Classes</a></li>
+                                            <li class="breadcrumb-item active"><?php echo htmlspecialchars($classDetails['class_name']); ?></li>
+                                        </ol>
+                                    </nav>
+                                    <h1 class="page-title mb-1"><?php echo htmlspecialchars($classDetails['class_name']); ?></h1>
+                                    <div class="d-flex flex-wrap align-items-center gap-2">
+                                        <span class="badge bg-<?php echo $classDetails['status'] === 'active' ? 'success' : 'secondary'; ?>">
+                                            <?php echo ucfirst($classDetails['status']); ?>
                                         </span>
-                                    </p>
-                                    <p><strong>Your Progress:</strong> <?php echo $completed_sessions; ?>/<?php echo $total_sessions; ?> sessions</p>
-                                    <div class="progress" style="height: 6px;">
-                                        <div class="progress-bar" 
-                                             role="progressbar" 
-                                             style="width: <?php echo $progress_percentage; ?>%"
-                                             aria-valuenow="<?php echo $progress_percentage; ?>" 
-                                             aria-valuemin="0" 
-                                             aria-valuemax="100">
-                                        </div>
+                                        <?php if ($classDetails['is_free']): ?>
+                                            <span class="badge bg-info">Free Class</span>
+                                        <?php else: ?>
+                                            <span class="badge bg-primary">₱<?php echo number_format($classDetails['price'], 2); ?></span>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="mt-4">
-                                <h3 class="section-title mb-3">Description</h3>
-                                <p class="text-muted"><?php echo nl2br(htmlspecialchars($classDetails['class_desc'])); ?></p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Class Sessions -->
-                    <div class="content-section">
-                        <div class="class-info-card">
-                            <h2 class="section-title mb-4">Class Sessions</h2>
-                            <div class="table-responsive">
-                                <table class="session-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Date</th>
-                                            <th>Time</th>
-                                            <th>Duration</th>
-                                            <th>Status</th>
-                                            <th>Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($schedules as $schedule): ?>
-                                        <?php 
-
-                                            // Check if meeting is running from the meetings table
-                                            $stmt = $conn->prepare("
-                                                SELECT is_running 
-                                                FROM meetings 
-                                                WHERE schedule_id = ? 
-                                                ORDER BY created_at DESC 
-                                                LIMIT 1
-                                            ");
-                                            $stmt->bind_param("i", $schedule['schedule_id']);
-                                            $stmt->execute();
-                                            $meeting_result = $stmt->get_result()->fetch_assoc();
-
-                                            $session_date = new DateTime($schedule['session_date']);
-                                            $start_time = new DateTime($schedule['start_time']);
-                                            $end_time = new DateTime($schedule['end_time']);
-                                            $duration = $end_time->diff($start_time)->format('%H:%I');
-                                            
-                                            $now = new DateTime();
-                                            $session_start = new DateTime($schedule['session_date'] . ' ' . $schedule['start_time']);
-                                            $session_end = new DateTime($schedule['session_date'] . ' ' . $schedule['end_time']);
-                                            $is_ongoing = ($now >= $session_start && $now <= $session_end) || $meeting_result;
-                                            $is_upcoming = $now < $session_start;
-                                            $is_completed = $schedule['status'] === 'completed';
-                                        ?>
-                                        <tr>
-                                            <td><?php echo $session_date->format('M d, Y'); ?></td>
-                                            <td>
-                                                <?php echo $start_time->format('g:i A'); ?> - 
-                                                <?php echo $end_time->format('g:i A'); ?>
-                                            </td>
-                                            <td><?php echo $duration; ?> hrs</td>
-                                            <td>
-                                                <span class="badge bg-<?php 
-                                                    if ($is_completed) echo 'success';
-                                                    elseif ($is_ongoing) echo 'primary';
-                                                    elseif ($is_upcoming) echo 'info';
-                                                    else echo 'secondary';
-                                                ?>">
-                                                    <?php 
-                                                    if ($is_completed) echo 'Completed';
-                                                    elseif ($is_ongoing) echo 'Ongoing';
-                                                    elseif ($is_upcoming) echo 'Upcoming';
-                                                    else echo 'Missed';
-                                                    ?>
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <?php if ($is_ongoing): ?>
-                                                    <a href="#" onclick="joinMeeting(<?php echo $schedule['schedule_id']; ?>)" 
-                                                       class="btn btn-success btn-sm">
-                                                        <i class="bi bi-camera-video-fill me-1"></i>
-                                                        Join Meeting
-                                                    </a>
-                                                <?php elseif ($is_upcoming): ?>
-                                                    <button class="btn btn-outline-primary btn-sm" disabled>
-                                                        <i class="bi bi-clock me-1"></i>
-                                                        Starts in <?php 
-                                                            $diff = $now->diff($session_start);
-                                                            if ($diff->days > 0) echo $diff->days . ' days';
-                                                            elseif ($diff->h > 0) echo $diff->h . ' hours';
-                                                            else echo $diff->i . ' minutes';
-                                                        ?>
-                                                    </button>
-                                                <?php elseif ($is_completed): ?>
-                                                    <?php 
-                                                        $ratingManager = new RatingManagement();
-                                                        $hasRated = $ratingManager->hasStudentRatedSession(
-                                                            $schedule['schedule_id'], 
-                                                            $_SESSION['user']
-                                                        );
-                                                    ?>
-                                                    <?php if (!$hasRated): ?>
-                                                    <button type="button" 
-                                                            class="btn btn-sm btn-primary" 
-                                                            onclick="showFeedbackModal(<?php echo $schedule['schedule_id']; ?>, <?php echo $classDetails['techguru_id']; ?>)"
-                                                            data-toggle="tooltip"
-                                                            title="Rate this session">
-                                                        <i class="fas fa-star me-1"></i> Give Feedback
-                                                    </button>
-                                                    <?php else: ?>
-                                                    <span class="badge bg-success">
-                                                        <i class="fas fa-check me-1"></i> Feedback Submitted
-                                                    </span>
-                                                    <?php endif; ?>
-                                                <?php else: ?>
-                                                    <button class="btn btn-outline-secondary btn-sm" disabled>
-                                                        <i class="bi bi-x-circle me-1"></i>
-                                                        Missed
-                                                    </button>
-                                                <?php endif; ?>
-                                            </td>
-                                        </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right Column -->
-                <div class="col-md-4">
-                    <!-- Class Resources -->
-                    <div class="content-section mb-4">
-                        <div class="class-info-card">
-                            <div class="d-flex justify-content-between align-items-center mb-4">
-                                <h2 class="section-title mb-0">Class Resources</h2>
-                                <a href="files?id=<?php echo $class_id; ?>" class="btn btn-primary btn-sm">
-                                    <i class="bi bi-folder2"></i> View All Resources
+                                <a href="./" class="btn btn-outline-primary">
+                                    <i class="bi bi-arrow-left"></i> Back to Classes
                                 </a>
                             </div>
-                            <div class="resources-list">
-                                <?php if (empty($files)): ?>
-                                    <div class="text-center text-muted py-4">
-                                        <i class="bi bi-folder2-open" style="font-size: 2rem;"></i>
-                                        <p class="mt-2 mb-0">No resources available yet</p>
-                                    </div>
-                                <?php else: ?>
-                                    <?php 
-                                    // Show only the first 3 files
-                                    $displayFiles = array_slice($files, 0, 3); 
-                                    foreach ($displayFiles as $file): 
-                                    ?>
-                                        <div class="resource-item">
-                                            <i class="bi bi-file-earmark-text"></i>
-                                            <div class="resource-info">
-                                                <div class="resource-name"><?php echo htmlspecialchars($file['file_name']); ?></div>
-                                                <div class="resource-meta">
-                                                    Uploaded by <?php echo htmlspecialchars($file['first_name'] . ' ' . $file['last_name']); ?>
-                                                    on <?php echo date('M d, Y', strtotime($file['upload_time'])); ?>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Content -->
+                <div class="row g-4">
+                    <!-- Left Column -->
+                    <div class="col-md-8">
+                        <!-- Class Information -->
+                        <div class="content-section mb-4">
+                            <div class="content-card bg-snow">
+                                <div class="card-body">
+                                    <h2 class="section-title mb-4">Class Information</h2>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p><strong>Subject:</strong> <?php echo htmlspecialchars($classDetails['subject_name']); ?></p>
+                                            <p><strong>Course:</strong> <?php echo htmlspecialchars($classDetails['course_name']); ?></p>
+                                            <p><strong>Duration:</strong> <?php echo date('M d, Y', strtotime($classDetails['start_date'])); ?> - <?php echo date('M d, Y', strtotime($classDetails['end_date'])); ?></p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p>
+                                                <strong>Tutor:</strong> 
+                                                <span class="d-inline-flex align-items-center">
+                                                    <img src="<?php echo !empty($classDetails['techguru_profile']) ? USER_IMG . $classDetails['techguru_profile'] : USER_IMG . 'default.jpg'; ?>" 
+                                                         class="rounded-circle me-2" 
+                                                         width="24" 
+                                                         height="24"
+                                                         alt="Tutor">
+                                                    <?php echo htmlspecialchars($classDetails['techguru_name']); ?>
+                                                </span>
+                                            </p>
+                                            <p><strong>Your Progress:</strong> <?php echo $completed_sessions; ?>/<?php echo $total_sessions; ?> sessions</p>
+                                            <div class="progress" style="height: 6px;">
+                                                <div class="progress-bar" 
+                                                     role="progressbar" 
+                                                     style="width: <?php echo $progress_percentage; ?>%"
+                                                     aria-valuenow="<?php echo $progress_percentage; ?>" 
+                                                     aria-valuemin="0" 
+                                                     aria-valuemax="100">
                                                 </div>
                                             </div>
-                                            <a href="<?php echo BASE . 'uploads/class/' . $file['file_path']; ?>" 
-                                               class="btn btn-sm btn-outline-primary" 
-                                               download>
-                                                <i class="bi bi-download"></i>
-                                            </a>
                                         </div>
-                                    <?php endforeach; ?>
-                                    <?php if (count($files) > 3): ?>
-                                        <div class="text-center mt-3">
-                                            <a href="files?id=<?php echo $class_id; ?>" class="text-primary">
-                                                View <?php echo count($files) - 3; ?> more files...
-                                            </a>
-                                        </div>
-                                    <?php endif; ?>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Class Recordings -->
-                    <div class="content-section mb-4">
-                        <div class="class-info-card">
-                            <div class="d-flex justify-content-between align-items-center mb-4">
-                                <h2 class="section-title mb-0">Class Recordings</h2>
-                                <a href="recordings?id=<?php echo $class_id; ?>" class="btn btn-primary btn-sm">
-                                    <i class="bi bi-camera-video"></i> View All Recordings
-                                </a>
-                            </div>
-                            <div class="recordings-list">
-                                <?php 
-                                $recordings = getClassRecordings($class_id, 3); // Get only latest 3 recordings
-                                if (empty($recordings)): 
-                                ?>
-                                    <div class="text-center text-muted py-4">
-                                        <i class="bi bi-camera-video" style="font-size: 2rem;"></i>
-                                        <p class="mt-2 mb-0">No recordings available yet</p>
                                     </div>
-                                <?php else: ?>
-                                    <?php foreach ($recordings as $recording): ?>
-                                        <div class="recording-item d-flex align-items-center p-3 border-bottom">
-                                            <div class="flex-shrink-0 me-3">
-                                                <i class="bi bi-camera-video-fill text-primary" style="font-size: 1.5rem;"></i>
-                                            </div>
-                                            <div class="flex-grow-1">
-                                                <h6 class="mb-1">Session on <?php echo date('F d, Y', strtotime($recording['session_date'])); ?></h6>
-                                                <p class="text-muted small mb-0">
-                                                    Duration: <?php echo $recording['duration']; ?> minutes
-                                                    <span class="mx-2">•</span>
-                                                    Recorded: <?php echo date('g:i A', strtotime($recording['created_at'])); ?>
-                                                </p>
-                                            </div>
-                                            <a href="recordings?id=<?php echo $class_id; ?>&recording=<?php echo $recording['recording_id']; ?>" 
-                                               class="btn btn-sm btn-outline-primary">
-                                                <i class="bi bi-play-fill"></i> Watch
-                                            </a>
-                                        </div>
-                                    <?php endforeach; ?>
-                                    <?php 
-                                    $total_recordings = getClassRecordingsCount($class_id);
-                                    if ($total_recordings > 3): 
-                                    ?>
-                                        <div class="text-center mt-3">
-                                            <a href="recordings?id=<?php echo $class_id; ?>" class="text-primary">
-                                                View <?php echo $total_recordings - 3; ?> more recordings...
-                                            </a>
-                                        </div>
-                                    <?php endif; ?>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Quick Stats -->
-                    <div class="content-section">
-                        <div class="class-info-card">
-                            <h2 class="section-title mb-4">Quick Stats</h2>
-                            <div class="row g-3">
-                                <div class="col-6">
-                                    <div class="stat-card">
-                                        <div class="value"><?php echo $completed_sessions; ?></div>
-                                        <div class="label">Completed Sessions</div>
+                                    <div class="mt-4">
+                                        <h3 class="h5 mb-3">Description</h3>
+                                        <p class="text-muted"><?php echo nl2br(htmlspecialchars($classDetails['class_desc'])); ?></p>
                                     </div>
                                 </div>
-                                <div class="col-6">
-                                    <div class="stat-card">
-                                        <div class="value"><?php echo round($progress_percentage); ?>%</div>
-                                        <div class="label">Completion Rate</div>
+                            </div>
+                        </div>
+
+                        <!-- Class Sessions -->
+                        <div class="content-section">
+                            <div class="content-card bg-snow">
+                                <div class="card-body">
+                                    <h2 class="section-title mb-4">Class Sessions</h2>
+                                    <div class="session-list">
+                                        <?php if (empty($schedules)): ?>
+                                            <div class="text-center py-5">
+                                                <i class="bi bi-calendar-x text-muted" style="font-size: 48px;"></i>
+                                                <h3 class="h5 mt-3">No Sessions Scheduled</h3>
+                                                <p class="text-muted mb-0">There are no sessions scheduled for this class yet.</p>
+                                            </div>
+                                        <?php else: ?>
+                                            <?php foreach ($schedules as $schedule): ?>
+                                            <?php 
+                                                // Check if meeting is running from the meetings table
+                                                $stmt = $conn->prepare("
+                                                    SELECT is_running 
+                                                    FROM meetings 
+                                                    WHERE schedule_id = ? 
+                                                    ORDER BY created_at DESC 
+                                                    LIMIT 1
+                                                ");
+                                                $stmt->bind_param("i", $schedule['schedule_id']);
+                                                $stmt->execute();
+                                                $meeting_result = $stmt->get_result()->fetch_assoc();
+
+                                                $session_date = new DateTime($schedule['session_date']);
+                                                $start_time = new DateTime($schedule['start_time']);
+                                                $end_time = new DateTime($schedule['end_time']);
+                                                $duration = $end_time->diff($start_time)->format('%H:%I');
+                                                
+                                                $now = new DateTime();
+                                                $session_start = new DateTime($schedule['session_date'] . ' ' . $schedule['start_time']);
+                                                $session_end = new DateTime($schedule['session_date'] . ' ' . $schedule['end_time']);
+                                                $is_ongoing = ($now >= $session_start && $now <= $session_end) || $meeting_result;
+                                                $is_upcoming = $now < $session_start;
+                                                $is_completed = $schedule['status'] === 'completed';
+                                                
+                                                // Status label and class
+                                                $status_label = $is_completed ? 'Completed' : ($is_ongoing ? 'Ongoing' : ($is_upcoming ? 'Upcoming' : 'Missed'));
+                                                $status_class = $is_completed ? 'success' : ($is_ongoing ? 'primary' : ($is_upcoming ? 'info' : 'secondary'));
+                                                $icon_class = $is_completed ? 'bi-check-circle' : ($is_ongoing ? 'bi-broadcast' : ($is_upcoming ? 'bi-clock' : 'bi-x-circle'));
+                                            ?>
+                                            <div class="session-item mb-3">
+                                                <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-3">
+                                                    <div class="session-date text-center px-3 py-2 rounded bg-light">
+                                                        <div class="h5 mb-0"><?php echo $session_date->format('d'); ?></div>
+                                                        <div class="small text-muted"><?php echo $session_date->format('M'); ?></div>
+                                                    </div>
+                                                    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center flex-grow-1 gap-3">
+                                                        <div class="session-info">
+                                                            <h6 class="mb-1"><?php echo $session_date->format('l, F d, Y'); ?></h6>
+                                                            <p class="text-muted mb-0">
+                                                                <i class="bi bi-clock me-1"></i> 
+                                                                <?php echo $start_time->format('g:i A'); ?> - <?php echo $end_time->format('g:i A'); ?> 
+                                                                <span class="ms-2 text-muted">•</span>
+                                                                <span class="ms-2"><?php echo $duration; ?> hrs</span>
+                                                            </p>
+                                                        </div>
+                                                        <div class="ms-md-auto d-flex align-items-center">
+                                                            <span class="badge bg-<?php echo $status_class; ?> me-3">
+                                                                <i class="bi <?php echo $icon_class; ?> me-1"></i> <?php echo $status_label; ?>
+                                                            </span>
+                                                            
+                                                            <?php if ($is_ongoing): ?>
+                                                                <button onclick="joinMeeting(<?php echo $schedule['schedule_id']; ?>)" 
+                                                                    class="btn btn-success btn-sm">
+                                                                    <i class="bi bi-camera-video-fill me-1"></i> Join Now
+                                                                </button>
+                                                            <?php elseif ($is_upcoming): ?>
+                                                                <button class="btn btn-outline-primary btn-sm" disabled>
+                                                                    <i class="bi bi-clock me-1"></i>
+                                                                    <?php 
+                                                                        $diff = $now->diff($session_start);
+                                                                        if ($diff->days > 0) echo $diff->days . ' days';
+                                                                        elseif ($diff->h > 0) echo $diff->h . ' hours';
+                                                                        else echo $diff->i . ' minutes';
+                                                                    ?> left
+                                                                </button>
+                                                            <?php elseif ($is_completed): ?>
+                                                                <?php 
+                                                                    $ratingManager = new RatingManagement();
+                                                                    $hasRated = $ratingManager->hasStudentRatedSession(
+                                                                        $schedule['schedule_id'], 
+                                                                        $_SESSION['user']
+                                                                    );
+                                                                ?>
+                                                                <?php if (!$hasRated): ?>
+                                                                    <button type="button" 
+                                                                            class="btn btn-sm btn-primary" 
+                                                                            onclick="showFeedbackModal(<?php echo $schedule['schedule_id']; ?>, <?php echo $classDetails['techguru_id']; ?>)">
+                                                                        <i class="bi bi-star me-1"></i> Give Feedback
+                                                                    </button>
+                                                                <?php else: ?>
+                                                                    <span class="badge bg-success">
+                                                                        <i class="bi bi-check-circle me-1"></i> Feedback Submitted
+                                                                    </span>
+                                                                <?php endif; ?>
+                                                                
+                                                                <?php 
+                                                                // Check if recording exists
+                                                                $rec_stmt = $conn->prepare("SELECT recording_id FROM recordings WHERE schedule_id = ? LIMIT 1");
+                                                                $rec_stmt->bind_param("i", $schedule['schedule_id']);
+                                                                $rec_stmt->execute();
+                                                                $recording = $rec_stmt->get_result()->fetch_assoc();
+                                                                
+                                                                if ($recording): 
+                                                                ?>
+                                                                    <a href="recordings?id=<?php echo $class_id; ?>&recording=<?php echo $recording['recording_id']; ?>" 
+                                                                       class="btn btn-outline-secondary btn-sm ms-2">
+                                                                        <i class="bi bi-play-circle me-1"></i> View Recording
+                                                                    </a>
+                                                                <?php endif; ?>
+                                                            <?php else: ?>
+                                                                <button class="btn btn-outline-secondary btn-sm" disabled>
+                                                                    <i class="bi bi-x-circle me-1"></i> Missed
+                                                                </button>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column -->
+                    <div class="col-md-4">
+                        <!-- Class Resources -->
+                        <div class="content-section mb-4">
+                            <div class="content-card bg-snow">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-4">
+                                        <h2 class="section-title mb-0">Class Resources</h2>
+                                        <a href="files?id=<?php echo $class_id; ?>" class="btn btn-primary btn-sm">
+                                            <i class="bi bi-folder2"></i> View All
+                                        </a>
+                                    </div>
+                                    <div class="resources-list">
+                                        <?php if (empty($files)): ?>
+                                            <div class="text-center text-muted py-4">
+                                                <i class="bi bi-folder2-open" style="font-size: 2rem;"></i>
+                                                <p class="mt-2 mb-0">No resources available yet</p>
+                                            </div>
+                                        <?php else: ?>
+                                            <?php 
+                                            // Show only the first 3 files
+                                            $displayFiles = array_slice($files, 0, 3); 
+                                            foreach ($displayFiles as $file): 
+                                            ?>
+                                                <div class="resource-item">
+                                                    <i class="bi bi-file-earmark-text"></i>
+                                                    <div class="resource-info">
+                                                        <div class="resource-name"><?php echo htmlspecialchars($file['file_name']); ?></div>
+                                                        <div class="resource-meta">
+                                                            <?php echo date('M d, Y', strtotime($file['upload_time'])); ?>
+                                                        </div>
+                                                    </div>
+                                                    <a href="<?php echo BASE . 'uploads/class/' . $file['file_path']; ?>" 
+                                                       class="btn btn-sm btn-outline-primary" 
+                                                       download>
+                                                        <i class="bi bi-download"></i>
+                                                    </a>
+                                                </div>
+                                            <?php endforeach; ?>
+                                            <?php if (count($files) > 3): ?>
+                                                <div class="text-center mt-3">
+                                                    <a href="files?id=<?php echo $class_id; ?>" class="text-primary">
+                                                        View <?php echo count($files) - 3; ?> more files...
+                                                    </a>
+                                                </div>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Stats -->
+                        <div class="content-section mb-4">
+                            <div class="content-card bg-snow">
+                                <div class="card-body">
+                                    <h2 class="section-title mb-4">Quick Stats</h2>
+                                    <div class="row g-3">
+                                        <div class="col-6">
+                                            <div class="stat-card">
+                                                <div class="value"><?php echo $completed_sessions; ?></div>
+                                                <div class="label">Completed Sessions</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="stat-card">
+                                                <div class="value"><?php echo round($progress_percentage); ?>%</div>
+                                                <div class="label">Completion Rate</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Class Recordings -->
+                        <div class="content-section">
+                            <div class="content-card bg-snow">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-4">
+                                        <h2 class="section-title mb-0">Recordings</h2>
+                                        <a href="recordings?id=<?php echo $class_id; ?>" class="btn btn-primary btn-sm">
+                                            <i class="bi bi-camera-video"></i> View All
+                                        </a>
+                                    </div>
+                                    <div class="recordings-list">
+                                        <?php 
+                                        $recordings = getClassRecordings($class_id, 3); // Get only latest 3 recordings
+                                        if (empty($recordings)): 
+                                        ?>
+                                            <div class="text-center text-muted py-4">
+                                                <i class="bi bi-camera-video" style="font-size: 2rem;"></i>
+                                                <p class="mt-2 mb-0">No recordings available yet</p>
+                                            </div>
+                                        <?php else: ?>
+                                            <?php foreach ($recordings as $recording): ?>
+                                                <div class="recording-item d-flex align-items-center p-3 border-bottom">
+                                                    <div class="flex-shrink-0 me-3">
+                                                        <i class="bi bi-camera-video-fill text-primary" style="font-size: 1.5rem;"></i>
+                                                    </div>
+                                                    <div class="flex-grow-1">
+                                                        <h6 class="mb-1">Session on <?php echo date('F d, Y', strtotime($recording['session_date'])); ?></h6>
+                                                        <p class="text-muted small mb-0">
+                                                            Duration: <?php echo $recording['duration']; ?> minutes
+                                                        </p>
+                                                    </div>
+                                                    <a href="recordings?id=<?php echo $class_id; ?>&recording=<?php echo $recording['recording_id']; ?>" 
+                                                       class="btn btn-sm btn-outline-primary">
+                                                        <i class="bi bi-play-fill"></i> Watch
+                                                    </a>
+                                                </div>
+                                            <?php endforeach; ?>
+                                            <?php 
+                                            $total_recordings = getClassRecordingsCount($class_id);
+                                            if ($total_recordings > 3): 
+                                            ?>
+                                                <div class="text-center mt-3">
+                                                    <a href="recordings?id=<?php echo $class_id; ?>" class="text-primary">
+                                                        View <?php echo $total_recordings - 3; ?> more recordings...
+                                                    </a>
+                                                </div>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
@@ -360,91 +382,9 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </main>
 
-    <?php include ROOT_PATH . '/components/footer.php'; ?>
-
-        <style>
-            .dashboard-content {
-                background-color: #F5F5F5;
-                min-height: calc(100vh - 60px);
-                padding: 1.5rem;
-                border-radius: 12px;
-            }
-            .content-card {
-                background: #fff;
-                border-radius: 10px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-                overflow: hidden;
-            }
-            .card-body {
-                padding: 1.5rem;
-            }
-            .page-title {
-                font-size: 1.5rem;
-                font-weight: 600;
-                margin: 0;
-            }
-            .section-title {
-                font-size: 1.25rem;
-                font-weight: 600;
-                margin: 0;
-            }
-            .progress {
-                background-color: #e9ecef;
-                border-radius: 3px;
-            }
-            .progress-bar {
-                background-color: var(--bs-primary);
-            }
-            .resource-item:hover {
-                background-color: #f8f9fa;
-            }
-            .stat-label {
-                color: #6c757d;
-            }
-            .stat-value {
-                font-weight: 500;
-            }
-            @media (max-width: 768px) {
-                .dashboard-content {
-                    padding: 1rem;
-                }
-                .card-body {
-                    padding: 1rem;
-                }
-                .page-title {
-                    font-size: 1.25rem;
-                }
-                .section-title {
-                    font-size: 1.1rem;
-                }
-            }
-            .rating-stars {
-                display: inline-flex;
-                flex-direction: row-reverse;
-                gap: 0.25rem;
-            }
-            .rating-stars input {
-                display: none;
-            }
-            .rating-stars label {
-                cursor: pointer;
-                color: #ddd;
-                font-size: 1.5rem;
-            }
-            .rating-stars label:hover,
-            .rating-stars label:hover ~ label,
-            .rating-stars input:checked ~ label {
-                color: #ffd700;
-            }
-            .resource-name {
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                max-width: 200px;
-            }
-        </style>
+        <?php include ROOT_PATH . '/components/footer.php'; ?>
 
         <!-- Feedback Modal -->
         <div class="modal fade" id="feedbackModal" tabindex="-1">
@@ -465,7 +405,7 @@
                                     <?php for($i = 5; $i >= 1; $i--): ?>
                                     <input type="radio" name="rating" value="<?php echo $i; ?>" id="star<?php echo $i; ?>">
                                     <label for="star<?php echo $i; ?>">
-                                        <i class="fas fa-star"></i>
+                                        <i class="bi bi-star-fill"></i>
                                     </label>
                                     <?php endfor; ?>
                                 </div>
@@ -507,7 +447,7 @@
             // Show loading
             showLoading(true);
 
-            fetch(BASE + 'submit-feedback', {
+            fetch(`${BASE}api/submit-feedback`, {
                 method: 'POST',
                 body: formData
             })
@@ -528,18 +468,19 @@
                 console.error('Error:', error);
             });
         }
+
         function joinMeeting(scheduleId) {
             showLoading(true);
 
-            fetch(BASE+'api/meeting?action=join-meeting', {
+            fetch(`${BASE}api/meeting?action=join-meeting`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
                 body: new URLSearchParams({
-                        schedule_id: scheduleId,
-                        role: '<?php echo $_SESSION['role']; ?>'
-                    })
+                    schedule_id: scheduleId,
+                    role: '<?php echo $_SESSION['role']; ?>'
+                })
             })
             .then(response => response.json())
             .then(data => {
@@ -556,6 +497,204 @@
                 showToast('error', 'An error occurred. Please try again.');
             });
         }
+
+        function showLoading(show) {
+            // Create or find loading overlay
+            let loadingOverlay = document.getElementById('loading-overlay');
+            if (!loadingOverlay && show) {
+                loadingOverlay = document.createElement('div');
+                loadingOverlay.id = 'loading-overlay';
+                loadingOverlay.innerHTML = `
+                    <div class="d-flex justify-content-center align-items-center h-100">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                `;
+                loadingOverlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center;';
+                document.body.appendChild(loadingOverlay);
+            } else if (loadingOverlay && !show) {
+                loadingOverlay.remove();
+            }
+        }
+        
+        function showToast(type, message) {
+            // Toast notification implementation
+            const toastContainer = document.getElementById('toast-container') || document.createElement('div');
+            if (!document.getElementById('toast-container')) {
+                toastContainer.id = 'toast-container';
+                toastContainer.className = 'position-fixed bottom-0 end-0 p-3';
+                document.body.appendChild(toastContainer);
+            }
+            
+            const toastId = 'toast-' + Date.now();
+            const toastHTML = `
+                <div id="${toastId}" class="toast align-items-center border-0 border-start border-4 border-${type === 'success' ? 'success' : 'danger'}" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="bi bi-${type === 'success' ? 'check-circle' : 'x-circle'} me-2"></i>
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
+            
+            toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement, { delay: 5000 });
+            toast.show();
+            
+            toastElement.addEventListener('hidden.bs.toast', () => {
+                toastElement.remove();
+            });
+        }
         </script>
-</body>
+
+        <style>
+            .dashboard-content {
+                padding: 1.5rem;
+            }
+            .content-section {
+                margin-bottom: 1.5rem;
+            }
+            .content-card {
+                background: #fff;
+                border-radius: 12px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                overflow: hidden;
+            }
+            .card-body {
+                padding: 1.5rem;
+            }
+            .page-title {
+                font-size: 1.5rem;
+                font-weight: 600;
+                margin: 0;
+            }
+            .section-title {
+                font-size: 1.25rem;
+                font-weight: 600;
+                margin: 0;
+            }
+            .progress {
+                background-color: #e9ecef;
+                border-radius: 3px;
+                height: 6px;
+            }
+            .progress-bar {
+                background-color: var(--bs-primary);
+            }
+            .session-item {
+                background: #fff;
+                border-radius: 8px;
+                padding: 1rem;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                transition: transform 0.2s ease-in-out;
+            }
+            .session-item:hover {
+                transform: translateY(-2px);
+            }
+            .session-date {
+                min-width: 60px;
+            }
+            .resource-item {
+                display: flex;
+                align-items: center;
+                padding: 0.75rem;
+                border-radius: 8px;
+                margin-bottom: 0.5rem;
+                background-color: #f8f9fa;
+                transition: all 0.2s ease;
+            }
+            .resource-item:hover {
+                background-color: #e9ecef;
+            }
+            .resource-item i {
+                font-size: 1.5rem;
+                color: var(--bs-primary);
+                margin-right: 1rem;
+            }
+            .resource-info {
+                flex-grow: 1;
+                overflow: hidden;
+            }
+            .resource-name {
+                font-weight: 500;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 200px;
+            }
+            .resource-meta {
+                font-size: 0.75rem;
+                color: #6c757d;
+            }
+            .recording-item {
+                border-radius: 8px;
+                margin-bottom: 0.5rem;
+                transition: all 0.2s ease;
+            }
+            .recording-item:hover {
+                background-color: #f8f9fa;
+            }
+            .stat-card {
+                background: #f8f9fa;
+                border-radius: 8px;
+                padding: 1rem;
+                text-align: center;
+            }
+            .stat-card .value {
+                font-size: 1.5rem;
+                font-weight: bold;
+                color: var(--bs-primary);
+            }
+            .stat-card .label {
+                font-size: 0.9rem;
+                color: #6c757d;
+            }
+            .session-info h6 {
+                font-weight: 600;
+            }
+            .rating-stars {
+                display: inline-flex;
+                flex-direction: row-reverse;
+                gap: 0.25rem;
+            }
+            .rating-stars input {
+                display: none;
+            }
+            .rating-stars label {
+                cursor: pointer;
+                color: #ddd;
+                font-size: 1.5rem;
+            }
+            .rating-stars label:hover,
+            .rating-stars label:hover ~ label,
+            .rating-stars input:checked ~ label {
+                color: #ffd700;
+            }
+            @media (max-width: 768px) {
+                .dashboard-content {
+                    padding: 1rem;
+                }
+                .card-body {
+                    padding: 1rem;
+                }
+                .page-title {
+                    font-size: 1.25rem;
+                }
+                .section-title {
+                    font-size: 1.1rem;
+                }
+                .session-item {
+                    padding: 0.75rem;
+                }
+                .session-info {
+                    width: 100%;
+                    margin-bottom: 0.5rem;
+                }
+            }
+        </style>
+    </body>
 </html>

@@ -252,14 +252,114 @@ function getAllCourses() {
 }
 
 function getUpcomingClassSchedules($student_id) {
-    return [];
+    global $conn;
+
+    try {
+        $stmt = $conn->prepare("
+            SELECT 
+                cs.schedule_id,
+                cs.class_id,
+                cs.session_date,
+                cs.start_time,
+                cs.end_time,
+                cs.status as schedule_status,
+                c.class_name,
+                c.thumbnail,
+                CONCAT(cs.session_date, ' ', cs.start_time) as datetime,
+                CONCAT(
+                    DATE_FORMAT(cs.start_time, '%H:%i'), 
+                    ' - ', 
+                    DATE_FORMAT(cs.end_time, '%H:%i')
+                ) as time,
+                TIMESTAMPDIFF(MINUTE, cs.start_time, cs.end_time) AS duration_minutes,
+                u.first_name AS tutor_first_name,
+                u.last_name AS tutor_last_name,
+                CONCAT(u.first_name, ' ', u.last_name) AS tutor_name,
+                u.profile_picture AS tutor_avatar,
+                CASE 
+                    WHEN cs.session_date = CURDATE() AND 
+                         TIME(NOW()) BETWEEN cs.start_time AND cs.end_time 
+                    THEN 1 
+                    ELSE 0 
+                END as active,
+                CASE 
+                    WHEN cs.session_date = CURDATE() AND 
+                         TIME(NOW()) BETWEEN cs.start_time AND cs.end_time 
+                    THEN 'Live Now'
+                    WHEN cs.session_date = CURDATE() 
+                    THEN 'Today'
+                    WHEN cs.session_date = DATE_ADD(CURDATE(), INTERVAL 1 DAY) 
+                    THEN 'Tomorrow'
+                    ELSE DATE_FORMAT(cs.session_date, '%a, %d %b')
+                END as status
+            FROM enrollments e
+            JOIN class c ON e.class_id = c.class_id
+            JOIN class_schedule cs ON c.class_id = cs.class_id
+            JOIN users u ON c.tutor_id = u.uid
+            LEFT JOIN meetings m ON cs.schedule_id = m.schedule_id
+            WHERE e.student_id = ? 
+            AND e.status = 'active'
+            AND CONCAT(cs.session_date, ' ', cs.end_time) >= NOW()
+            ORDER BY cs.session_date ASC, cs.start_time ASC
+            LIMIT 5
+        ");
+        
+        $stmt->bind_param("i", $student_id);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+    } catch (Exception $e) {
+        log_error("Error fetching upcoming schedules: " . $e->getMessage(), 'database');
+        return [];
+    }
 }
 
 function getStudentLearningStats($student_id) {
-    return [
-        'hours_spent' => 0,
-        'completed_classes' => 0
-    ];
+    global $conn;
+    
+    try {
+        // Query to get statistics about classes and time spent
+        $stmt = $conn->prepare("
+            SELECT 
+                COUNT(DISTINCT e.class_id) AS enrolled_classes,
+                COUNT(DISTINCT CASE WHEN e.status = 'completed' THEN e.class_id END) AS completed_classes,
+                COUNT(DISTINCT CASE WHEN a.status = 'present' THEN a.attendance_id END) AS sessions_attended,
+                COALESCE(SUM(
+                    CASE WHEN a.status = 'present' 
+                    THEN TIMESTAMPDIFF(MINUTE, cs.start_time, cs.end_time) 
+                    ELSE 0 END
+                ), 0) AS total_minutes
+            FROM enrollments e
+            LEFT JOIN class_schedule cs ON e.class_id = cs.class_id
+            LEFT JOIN attendance a ON cs.schedule_id = a.schedule_id AND a.student_id = e.student_id
+            WHERE e.student_id = ?
+        ");
+        
+        $stmt->bind_param("i", $student_id);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        
+        // Calculate hours rounded to 1 decimal place
+        $hours_spent = round($result['total_minutes'] / 60, 1);
+        
+        return [
+            'enrolled_classes' => $result['enrolled_classes'],
+            'completed_classes' => $result['completed_classes'],
+            'sessions_attended' => $result['sessions_attended'],
+            'hours_spent' => $hours_spent,
+            'total_minutes' => $result['total_minutes']
+        ];
+        
+    } catch (Exception $e) {
+        log_error("Error getting student learning stats: " . $e->getMessage(), 'database');
+        return [
+            'enrolled_classes' => 0,
+            'completed_classes' => 0,
+            'sessions_attended' => 0,
+            'hours_spent' => 0,
+            'total_minutes' => 0
+        ];
+    }
 }
 
 function getStudentClasses($student_id) {
@@ -359,10 +459,12 @@ function getStudentFiles($student_id) {
     return [];
 }
 
-function getStudentSchedule($student_id) {
+function getStudentSchedule($student_id, $include_completed = false) {
     global $conn;
 
     try {
+        $condition = $include_completed ? "IN ('active','completed') " : "= 'active' AND cs.session_date >= CURDATE()";
+        
         $stmt = $conn->prepare("
             SELECT 
                 cs.schedule_id,
@@ -377,17 +479,25 @@ function getStudentSchedule($student_id) {
                 s.subject_name,
                 CONCAT(u.first_name,' ',u.last_name) AS tutor_name,
                 u.profile_picture AS tutor_avatar,
-                e.status as enrollment_status
+                e.status as enrollment_status,
+                CASE 
+                    WHEN cs.session_date < CURDATE() OR 
+                         (cs.session_date = CURDATE() AND cs.end_time < CURRENT_TIME() OR e.status = 'completed') 
+                    THEN 'completed'
+                    WHEN cs.session_date = CURDATE() AND 
+                         CURRENT_TIME() BETWEEN cs.start_time AND cs.end_time 
+                    THEN 'in_progress'
+                    ELSE 'upcoming'
+                END as session_status
             FROM enrollments e
             JOIN class c ON e.class_id = c.class_id
             JOIN class_schedule cs ON c.class_id = cs.class_id
             JOIN subject s ON c.subject_id = s.subject_id
             JOIN users u ON c.tutor_id = u.uid
             WHERE e.student_id = ? 
-            AND e.status = 'active'
-            AND cs.session_date >= CURDATE()
+            AND e.status 
+            $condition
             ORDER BY cs.session_date ASC, cs.start_time ASC
-            LIMIT 10
         ");
         $stmt->bind_param("i", $student_id);
         $stmt->execute();
@@ -400,7 +510,7 @@ function getStudentSchedule($student_id) {
 }
 
 function getStudentCertificates($student_id) {
-    require_once BACKEND . 'management/certificate_management.php';
+    require_once BACKEND . 'certificate_management.php';
     return getStudentCertificatesDetails($student_id);
 }
 
@@ -643,6 +753,42 @@ function checkStudentEnrollment($student_id, $class_id) {
         return $stmt->get_result()->fetch_assoc();
     } catch (Exception $e) {
         log_error("Error checking enrollment: " . $e->getMessage(), "student");
+        return null;
+    }
+}
+
+/**
+ * Check if a student has been invited to a class
+ * @param int $student_id The student's ID
+ * @param int $class_id The class ID
+ * @return array|null Returns invitation details if invited, null otherwise
+ */
+function checkPendingInvitation($student_id, $class_id) {
+    global $conn;
+    
+    try {
+        $stmt = $conn->prepare("
+            SELECT 
+                e.enrollment_id,
+                e.enrollment_date,
+                e.status,
+                c.class_name,
+                c.tutor_id,
+                c.class_id,
+                CONCAT(u.first_name, ' ', u.last_name) as tutor_name
+            FROM enrollments e
+            JOIN class c ON e.class_id = c.class_id
+            JOIN users u ON c.tutor_id = u.uid
+            WHERE e.student_id = ? 
+            AND e.class_id = ?
+            AND e.status = 'pending'
+        ");
+        
+        $stmt->bind_param("ii", $student_id, $class_id);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_assoc();
+    } catch (Exception $e) {
+        log_error("Error checking pending invitation: " . $e->getMessage(), "student");
         return null;
     }
 }

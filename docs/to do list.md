@@ -8,3 +8,8 @@
 - [ ] Handle payment for class referral
 - [ ] Check and verify for any errors on all pages for all user types
 - [ ] Fix class creation error
+- [ ] Techguru, Error during getting tutor classes
+- [ ] Error on techguru subjects, wrong count
+- [ ] Properly Handles the class Invites(Copy Link and Sending Email/notif Invites)
+- [ ] Add a back button for Class Enrollments
+- [ ] Add a search features for files

@@ -59,7 +59,7 @@
 
 
 	//Setting Up error_log setup
-	ini_set('error_log', LOG_PATH.'error.log');
+	ini_set('error_log', isset($_SESSION['email']) ? LOG_PATH.$_SESSION['email'].'.log' : 'unknown.log' );
 	ini_set('log_errors', 1);
 	ini_set('display_errors', 0);
 
@@ -78,38 +78,52 @@
 
 	/* IMPORTANT FUNCTIONS */
 	function log_error($message, $type = 1) {
-	    $logFiles = [
-	        1 => LOG_PATH . 'error.log',
-	        2 => LOG_PATH . 'database.log',
-	        3 => LOG_PATH . 'mail.log',
-	        4 => LOG_PATH . 'security.log',
-	        5 => LOG_PATH . 'analytics.log',
-	        6 => LOG_PATH . 'front.log',
-	        7 => LOG_PATH . 'meeting.log',
-	        8 => LOG_PATH . 'info.log'
+	    // Determine log filename
+	    if (isset($_SESSION['email'])) {
+	        $path = ($type === 'analytics' || $type === 5) 
+	            ? LOG_PATH . $_SESSION['email'] . '-analytics.log' 
+	            : LOG_PATH . $_SESSION['email'] . '.log';
+	    } else {
+	        $path = LOG_PATH . 'unknown.log';
+	    }
+
+	    // Log type mappings
+	    $logTypes = [
+	        1 => 'general',
+	        2 => 'database',
+	        3 => 'mail',
+	        4 => 'security',
+	        5 => 'analytics',
+	        6 => 'front',
+	        7 => 'meeting',
+	        8 => 'info',
+	        9 => 'class',
 	    ];
-	    $logAliases = [
-	        'general'   => 1,
-	        'database'  => 2,
-	        'mail'      => 3,
-	        'security'  => 4,
-	        'analytics' => 5,
-	        'front' => 6,
-	        'meeting' => 7,
-	        'info' => 8
-	    ];
-	    // If type is a string and exists in aliases, convert it to the corresponding number
+
+	    // Alias mapping for string log types
+	    $logAliases = array_flip($logTypes); // Reverse mapping for easy lookup
+
+	    // Convert string type to corresponding number if applicable
 	    if (is_string($type) && isset($logAliases[$type])) {
 	        $type = $logAliases[$type];
 	    }
 
-	    $logFile = $logFiles[$type] ?? $logFiles[1]; // Default to general if type is invalid
-	    $ip = $_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN'; // Get user IP
-	    $date = date('Y-m-d H:i:s');
-	    $logEntry = "[({$date})::{$ip}] {$message}\n";
+	    // Ensure type is valid, otherwise default to 'general' (1)
+	    $logType = $logTypes[$type] ?? 'general';
 
-	    file_put_contents($logFile, $logEntry, FILE_APPEND);
+	    // Get user IP
+	    $ip = $_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN';
+
+	    // Current timestamp
+	    $date = date('Y-m-d H:i:s');
+
+	    // Log entry format
+	    $logEntry = "[({$date})::{$ip}] TYPE={$logType} {$message}\n";
+
+	    // Append log entry to file
+	    file_put_contents($path, $logEntry, FILE_APPEND);
 	}
+
 
 
 

@@ -13,70 +13,7 @@
 function getTechGuruClasses($tutor_id) {
     global $conn;
     
-    $query = "SELECT 
-                c.*,
-                s.subject_name,
-                COUNT(DISTINCT e.student_id) as student_count,
-                (
-                    SELECT COUNT(*) 
-                    FROM class_schedule cs 
-                    WHERE cs.class_id = c.class_id 
-                    AND cs.status = 'completed'
-                ) as completed_sessions,
-                (
-                    SELECT COUNT(*) 
-                    FROM class_schedule cs 
-                    WHERE cs.class_id = c.class_id
-                ) as total_sessions,
-                (
-                    SELECT cs.session_date
-                    FROM class_schedule cs 
-                    WHERE cs.class_id = c.class_id 
-                    AND cs.status IN ('pending', 'confirmed')
-                    AND cs.session_date >= CURDATE()
-                    ORDER BY cs.session_date ASC, cs.start_time ASC
-                    LIMIT 1
-                ) as next_session_date,
-                (
-                    SELECT CONCAT(
-                        DATE_FORMAT(cs.start_time, '%h:%i %p'), 
-                        ' - ', 
-                        DATE_FORMAT(cs.end_time, '%h:%i %p')
-                    )
-                    FROM class_schedule cs 
-                    WHERE cs.class_id = c.class_id 
-                    AND cs.status IN ('pending', 'confirmed')
-                    AND cs.session_date >= CURDATE()
-                    ORDER BY cs.session_date ASC, cs.start_time ASC
-                    LIMIT 1
-                ) as next_session_time,
-                (
-                    SELECT cs.status
-                    FROM class_schedule cs 
-                    WHERE cs.class_id = c.class_id 
-                    AND cs.status IN ('pending', 'confirmed')
-                    AND cs.session_date >= CURDATE()
-                    ORDER BY cs.session_date ASC, cs.start_time ASC
-                    LIMIT 1
-                ) as next_session_status,
-                (
-                    SELECT cs.schedule_id
-                    FROM class_schedule cs
-                    WHERE cs.class_id = c.class_id
-                ) as next_session_id
-             FROM class c 
-             LEFT JOIN subject s ON c.subject_id = s.subject_id 
-             LEFT JOIN enrollments e ON c.class_id = e.class_id AND e.status = 'active'
-             WHERE c.tutor_id = ?
-             GROUP BY c.class_id 
-             ORDER BY 
-                CASE 
-                    WHEN c.status = 'active' THEN 1
-                    WHEN c.status = 'pending' THEN 2
-                    ELSE 3
-                END,
-                next_session_date ASC,
-                c.start_date DESC";
+    $query = "SELECT c.*, s.subject_name, COUNT(DISTINCT e.student_id) AS student_count, (SELECT COUNT(*) FROM class_schedule cs WHERE cs.class_id = c.class_id AND cs.status = 'completed') AS completed_sessions, (SELECT COUNT(*) FROM class_schedule cs WHERE cs.class_id = c.class_id) AS total_sessions, (SELECT cs.session_date FROM class_schedule cs WHERE cs.class_id = c.class_id AND cs.status IN ('pending', 'confirmed') AND cs.session_date >= CURDATE() ORDER BY cs.session_date ASC, cs.start_time ASC, cs.schedule_id ASC LIMIT 1) AS next_session_date, (SELECT CONCAT(DATE_FORMAT(cs.start_time, '%h:%i %p'), ' - ', DATE_FORMAT(cs.end_time, '%h:%i %p')) FROM class_schedule cs WHERE cs.class_id = c.class_id AND cs.status IN ('pending', 'confirmed') AND cs.session_date >= CURDATE() ORDER BY cs.session_date ASC, cs.start_time ASC, cs.schedule_id ASC LIMIT 1) AS next_session_time, (SELECT cs.status FROM class_schedule cs WHERE cs.class_id = c.class_id AND cs.status IN ('pending', 'confirmed') AND cs.session_date >= CURDATE() ORDER BY cs.session_date ASC, cs.start_time ASC, cs.schedule_id ASC LIMIT 1) AS next_session_status, (SELECT GROUP_CONCAT(cs.schedule_id ORDER BY cs.start_time ASC) FROM class_schedule cs WHERE cs.class_id = c.class_id AND cs.status IN ('pending', 'confirmed') AND cs.session_date = (SELECT MIN(cs2.session_date) FROM class_schedule cs2 WHERE cs2.class_id = c.class_id AND cs2.status IN ('pending', 'confirmed') AND cs2.session_date >= CURDATE())) AS next_session_id, (SELECT COUNT(*) FROM class_schedule cs WHERE cs.class_id = c.class_id AND cs.status IN ('pending', 'confirmed') AND cs.session_date = (SELECT MIN(cs2.session_date) FROM class_schedule cs2 WHERE cs2.class_id = c.class_id AND cs2.status IN ('pending', 'confirmed') AND cs2.session_date >= CURDATE())) AS next_session_count FROM class c LEFT JOIN subject s ON c.subject_id = s.subject_id LEFT JOIN enrollments e ON c.class_id = e.class_id AND e.status = 'active' WHERE c.tutor_id = ? GROUP BY c.class_id ORDER BY CASE WHEN c.status = 'active' THEN 1 WHEN c.status = 'pending' THEN 2 ELSE 3 END, next_session_date ASC, c.start_date DESC";
              
     try {
         $stmt = $conn->prepare($query);
@@ -2259,5 +2196,48 @@ function getClassStatus($class_id) {
     return $stmt->get_result()->fetch_assoc()['status'];
 }
 
-
+function getClassProgress($classId, $studentId) {
+    global $conn;
+    
+    try {
+        // Query to calculate student's progress based on attendance and class schedules
+        $query = "SELECT 
+                    COUNT(DISTINCT cs.schedule_id) AS total_scheduled_sessions,
+                    COUNT(DISTINCT CASE WHEN a.status = 'present' THEN cs.schedule_id END) AS attended_sessions,
+                    COUNT(DISTINCT CASE WHEN cs.status = 'completed' THEN cs.schedule_id END) AS completed_sessions
+                FROM class_schedule cs
+                LEFT JOIN attendance a ON cs.schedule_id = a.schedule_id AND a.student_id = ?
+                WHERE cs.class_id = ?";
+        
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("ii", $studentId, $classId);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        
+        // If there are no scheduled sessions yet, return 0 progress
+        if ($result['total_scheduled_sessions'] == 0) {
+            return 0;
+        }
+        
+        // Calculate progress based on attended sessions vs. total completed sessions
+        // If no completed sessions yet, calculate based on scheduled sessions
+        if ($result['completed_sessions'] > 0) {
+            $progress = ($result['attended_sessions'] / $result['completed_sessions']) * 100;
+        } else {
+            // For upcoming classes without completed sessions yet, show a small default progress
+            // This prevents showing 0% for all new classes
+            $progress = 5; // Default 5% progress for enrolled but not started classes
+        }
+        
+        // Ensure progress is between 0 and 100
+        $progress = max(0, min(100, $progress));
+        
+        // Round to an integer
+        return round($progress);
+        
+    } catch (Exception $e) {
+        log_error("Error calculating class progress: " . $e->getMessage(), "database");
+        return 0;
+    }
+}
 ?>

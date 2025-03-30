@@ -46,8 +46,8 @@
                                         <span class="input-group-text bg-white border-end-0">
                                             <i class="bi bi-search text-muted"></i>
                                         </span>
-                                        <input type="text" class="form-control border-start-0" placeholder="Search">
-                        </div>
+                                        <input type="text" id="classSearchInput" class="form-control border-start-0" placeholder="Search classes...">
+                                    </div>
                                 </div>
                                 <a href="enrollments" class="btn btn-primary d-flex align-items-center">
                                     <i class="bi bi-plus-lg me-2"></i>Browse Available Classes
@@ -64,11 +64,20 @@
                         <div class="sticky-top bg-snow px-4 py-3 border-bottom">
                             <div class="d-flex justify-content-between align-items-center">
                                 <h2 class="section-title mb-0">Enrolled Classes</h2>
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-outline-primary active" data-filter="all">All</button>
-                                    <button type="button" class="btn btn-outline-primary" data-filter="active">Active</button>
-                                    <button type="button" class="btn btn-outline-primary" data-filter="completed">Completed</button>
-                                    <button type="button" class="btn btn-outline-primary" data-filter="dropped">Dropped</button>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white border-end-0">
+                                            <i class="bi bi-search"></i>
+                                        </span>
+                                        <input type="text" class="form-control border-start-0" id="classSearchInput" placeholder="Search classes...">
+                                    </div>
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="btn btn-outline-primary active" data-filter="all">All</button>
+                                        <button type="button" class="btn btn-outline-primary" data-filter="active">Active</button>
+                                        <button type="button" class="btn btn-outline-primary" data-filter="pending">Pending</button>
+                                        <button type="button" class="btn btn-outline-primary" data-filter="completed">Completed</button>
+                                        <button type="button" class="btn btn-outline-primary" data-filter="dropped">Dropped</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -113,7 +122,7 @@
                                                         'active' => 'bg-success',
                                                         'completed' => 'bg-primary',
                                                         'dropped' => 'bg-danger',
-                                                        'pending' => 'bg-secondary'
+                                                        'pending' => 'bg-warning'
                                                     ][$class['enrollment_status']];
                                                     ?>
                                                     <span class="badge <?php echo $status_class; ?>">
@@ -146,10 +155,22 @@
                                                 <span class="text-muted small">
                                                     <?php echo $class['completed_sessions']; ?>/<?php echo $class['total_sessions']; ?> sessions
                                                 </span>
+                                                
+                                                <?php if ($class['enrollment_status'] === 'pending'): ?>
+                                                <div>
+                                                    <button class="btn btn-success btn-sm me-1" onclick="updateEnrollment(<?php echo $class['class_id']; ?>, 'accept')">
+                                                        <i class="bi bi-check"></i> Accept
+                                                    </button>
+                                                    <button class="btn btn-danger btn-sm" onclick="updateEnrollment(<?php echo $class['class_id']; ?>, 'decline')">
+                                                        <i class="bi bi-x"></i> Decline
+                                                    </button>
+                                                </div>
+                                                <?php else: ?>
                                                 <a href="class/details?id=<?php echo $class['class_id']; ?>" 
                                                    class="btn btn-primary btn-sm">
                                                     View Details
                                                 </a>
+                                                <?php endif; ?>
                                             </div>
                                         </div>
                                     </div>
@@ -174,38 +195,21 @@
                                         <i class="bi bi-filter me-2"></i>Filter
                                     </button>
                                     <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item active" href="#" data-filter="all">All Sessions</a></li>
-                                        <li><a class="dropdown-item" href="#" data-filter="upcoming">Upcoming</a></li>
-                                        <li><a class="dropdown-item" href="#" data-filter="completed">Completed</a></li>
+                                        <li><a class="dropdown-item active schedule-filter" href="#" data-filter="all">All Sessions</a></li>
+                                        <li><a class="dropdown-item schedule-filter" href="#" data-filter="upcoming">Upcoming</a></li>
+                                        <li><a class="dropdown-item schedule-filter" href="#" data-filter="in_progress">In Progress</a></li>
+                                        <li><a class="dropdown-item schedule-filter" href="#" data-filter="completed">Completed</a></li>
                                     </ul>
                                 </div>
                             </div>
                             <div class="schedule-list">
                                 <?php 
-                                $schedule = getStudentSchedule($_SESSION['user']);
+                                // Get all sessions including completed ones
+                                $schedule = getStudentSchedule($_SESSION['user'], true);
                                 if (!empty($schedule)):
-                                    $current_date = date('Y-m-d');
                                     foreach ($schedule as $session): 
-                                        $session_date = date('Y-m-d', strtotime($session['session_date']));
-                                        $session_start = strtotime($session['session_date'] . ' ' . $session['start_time']);
-                                        $session_end = strtotime($session['session_date'] . ' ' . $session['end_time']);
-                                        $current_time = time();
-                                        
-                                        // Determine session status
-                                        $status = '';
-                                        $status_class = '';
-                                        if ($current_time > $session_end) {
-                                            $status = 'Completed';
-                                            $status_class = 'text-success';
-                                        } elseif ($current_time >= $session_start && $current_time <= $session_end) {
-                                            $status = 'In Progress';
-                                            $status_class = 'text-primary';
-                                        } else {
-                                            $status = 'Upcoming';
-                                            $status_class = 'text-warning';
-                                        }
                                 ?>
-                                <div class="schedule-item" data-status="<?php echo strtolower($status); ?>">
+                                <div class="schedule-item" data-status="<?php echo $session['session_status']; ?>">
                                     <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-3">
                                         <div class="schedule-date text-center px-3 py-2 rounded bg-light">
                                             <div class="h5 mb-0"><?php echo date('d', strtotime($session['session_date'])); ?></div>
@@ -228,25 +232,39 @@
                                                     <?php echo date('h:i A', strtotime($session['start_time'])); ?> - 
                                                     <?php echo date('h:i A', strtotime($session['end_time'])); ?>
                                                 </p>
+                                                <?php
+                                                    $status_label = ucfirst(str_replace('_', ' ', $session['session_status']));
+                                                    $status_class = [
+                                                        'in_progress' => 'text-primary',
+                                                        'upcoming' => 'text-warning',
+                                                        'completed' => 'text-success'
+                                                    ][$session['session_status']];
+                                                ?>
                                                 <p class="mb-0 small <?php echo $status_class; ?>">
-                                                    <i class="bi bi-circle-fill me-1"></i><?php echo $status; ?>
+                                                    <i class="bi bi-circle-fill me-1"></i><?php echo $status_label; ?>
                                                 </p>
-                            </div>
-                        </div>
+                                            </div>
+                                        </div>
                                         <div class="schedule-action">
-                                            <?php if ($status === 'In Progress'): ?>
+                                            <?php if ($session['session_status'] === 'in_progress'): ?>
                                             <a href="class/meeting?id=<?php echo $session['schedule_id']; ?>" 
                                                class="btn btn-primary">Join Now</a>
-                                            <?php elseif ($status === 'Upcoming'): ?>
+                                            <?php elseif ($session['session_status'] === 'upcoming'): ?>
                                             <button class="btn btn-outline-primary" disabled>
-                                                Starts in <?php echo human_time_diff($current_time, $session_start); ?>
+                                                <?php 
+                                                    $session_start = strtotime($session['session_date'] . ' ' . $session['start_time']);
+                                                    echo 'Starts in ' . human_time_diff(time(), $session_start); 
+                                                ?>
                                             </button>
-                        <?php else: ?>
-                                        <span class="badge bg-success">Completed</span>
+                                            <?php else: ?>
+                                            <a href="class/recordings?id=<?php echo $session['class_id']; ?>&session=<?php echo $session['schedule_id']; ?>" 
+                                               class="btn btn-outline-secondary btn-sm">
+                                                <i class="bi bi-play-circle me-1"></i>View Recording
+                                            </a>
                                             <?php endif; ?>
                                         </div>
                                     </div>
-                                    </div>
+                                </div>
                                 <?php 
                                     endforeach;
                                 else:
@@ -276,32 +294,133 @@
             </div>
         </div>
     </div>
-
+</main>
+</div>
     <?php include ROOT_PATH . '/components/footer.php'; ?>
 
     <script>
             document.addEventListener('DOMContentLoaded', function() {
+                // Class filter functionality
+                const classFilterButtons = document.querySelectorAll('.btn-group .btn-outline-primary');
+                const classItems = document.querySelectorAll('.class-item');
+                const noResultsMessage = document.getElementById('noResultsMessage');
+                
+                classFilterButtons.forEach(button => {
+                    button.addEventListener('click', function() {
+                        const filter = this.dataset.filter;
+                        
+                        // Update active state
+                        classFilterButtons.forEach(btn => btn.classList.remove('active'));
+                        this.classList.add('active');
+                        
+                        let visibleCount = 0;
+                        
+                        // Filter class items
+                        classItems.forEach(item => {
+                            if (filter === 'all' || item.dataset.status === filter) {
+                                item.style.display = '';
+                                visibleCount++;
+                            } else {
+                                item.style.display = 'none';
+                            }
+                        });
+                        
+                        // Show/hide no results message
+                        if (noResultsMessage) {
+                            noResultsMessage.style.display = visibleCount > 0 ? 'none' : '';
+                            
+                            // Update the text based on the filter
+                            if (visibleCount === 0) {
+                                const filterName = {
+                                    'all': 'enrolled classes',
+                                    'active': 'active classes',
+                                    'pending': 'pending invitations',
+                                    'completed': 'completed classes',
+                                    'dropped': 'dropped classes'
+                                }[filter];
+                                
+                                noResultsMessage.querySelector('h3').textContent = 'No Classes Found';
+                                noResultsMessage.querySelector('p').textContent = `No ${filterName} found`;
+                            }
+                        }
+                    });
+                });
+                
+                // Search functionality
+                const searchInput = document.getElementById('classSearchInput');
+                
+                if (searchInput) {
+                    searchInput.addEventListener('input', function() {
+                        const searchTerm = this.value.toLowerCase().trim();
+                        let visibleCount = 0;
+                        
+                        // Get the active filter
+                        const activeFilter = document.querySelector('.btn-group .btn-outline-primary.active').dataset.filter;
+                        
+                        classItems.forEach(item => {
+                            const className = item.querySelector('h3').textContent.toLowerCase();
+                            const tutorName = item.querySelector('.text-muted.small').textContent.toLowerCase();
+                            const status = item.dataset.status;
+                            
+                            // Match search term and respect current filter
+                            const matchesSearch = className.includes(searchTerm) || tutorName.includes(searchTerm);
+                            const matchesFilter = activeFilter === 'all' || status === activeFilter;
+                            
+                            if (matchesSearch && matchesFilter) {
+                                item.style.display = '';
+                                visibleCount++;
+                            } else {
+                                item.style.display = 'none';
+                            }
+                        });
+                        
+                        // Show/hide no results message
+                        if (noResultsMessage) {
+                            noResultsMessage.style.display = visibleCount > 0 ? 'none' : '';
+                            
+                            if (visibleCount === 0) {
+                                const filterName = activeFilter === 'all' ? 'classes' : activeFilter + ' classes';
+                                noResultsMessage.querySelector('h3').textContent = 'No Classes Found';
+                                if (searchTerm) {
+                                    noResultsMessage.querySelector('p').textContent = `No ${filterName} match "${searchTerm}"`;
+                                } else {
+                                    noResultsMessage.querySelector('p').textContent = `No ${filterName} found`;
+                                }
+                            }
+                        }
+                    });
+                }
+                
                 // Filter functionality for schedule items
-                const filterButtons = document.querySelectorAll('.dropdown-item[data-filter]');
+                const scheduleFilterButtons = document.querySelectorAll('.schedule-filter');
                 const scheduleItems = document.querySelectorAll('.schedule-item');
                 
-                filterButtons.forEach(button => {
+                scheduleFilterButtons.forEach(button => {
                     button.addEventListener('click', function(e) {
                         e.preventDefault();
                         const filter = this.dataset.filter;
                         
                         // Update active state
-                        filterButtons.forEach(btn => btn.classList.remove('active'));
+                        scheduleFilterButtons.forEach(btn => btn.classList.remove('active'));
                         this.classList.add('active');
                         
                         // Filter schedule items
+                        let anyVisible = false;
                         scheduleItems.forEach(item => {
                             if (filter === 'all' || item.dataset.status === filter) {
                                 item.style.display = '';
-                    } else {
+                                anyVisible = true;
+                            } else {
                                 item.style.display = 'none';
                             }
                         });
+                        
+                        // Show "no schedules" message if needed
+                        const scheduleList = document.querySelector('.schedule-list');
+                        const noSchedulesMsg = scheduleList.querySelector('.text-center.py-5');
+                        if (noSchedulesMsg) {
+                            noSchedulesMsg.style.display = anyVisible ? 'none' : '';
+                        }
                     });
                 });
 
@@ -359,6 +478,40 @@
                 });
                 calendar.render();
             });
+
+            // Function to handle enrollment status updates
+            async function updateEnrollment(classId, action) {
+                if (!confirm(`Are you sure you want to ${action} this class invitation?`)) {
+                    return;
+                }
+                
+                try {
+                    showLoading(true);
+                    const response = await fetch(`${BASE}api/update-enrollment-status`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            class_id: classId,
+                            action: action
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    showLoading(false);
+                    if (data.success) {
+                        showToast('success', data.message);
+                        // Reload the page after a short delay
+                        setTimeout(() => location.reload(), 2000);
+                    } else {
+                        showToast('error', data.message || 'An error occurred');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showToast('error', 'Failed to update enrollment status');
+                }
+            }
         </script>
 
         <style>

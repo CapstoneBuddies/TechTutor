@@ -337,8 +337,9 @@ $title = 'My Classes';
             </div>
         </div>
     </div>
-
-    <?php include ROOT_PATH . '/components/footer.php'; ?>
+</main>
+</div>
+    <?php include '../../components/footer.php'; ?>
     <script>
         function confirmDelete(classId) {
             document.getElementById('deleteClassId').value = classId;

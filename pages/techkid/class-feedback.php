@@ -278,7 +278,9 @@ $existingRating = $stmt->get_result()->fetch_assoc();
             </div>
         <?php endif; ?>
     </div>
-
+</main>
+</div>
+<?php include '../../components/footer.php'; ?>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const form = document.getElementById('feedbackForm');
@@ -338,7 +340,5 @@ $existingRating = $stmt->get_result()->fetch_assoc();
             });
         });
     </script>
-
-    <?php include '../../components/footer.php'; ?>
 </body>
 </html> 

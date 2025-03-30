@@ -176,7 +176,8 @@ $courses = getCoursesWithSubjects();
                 ?>
             </div>
         </div>
-
+    </main>
+</div>
         <?php include ROOT_PATH . '/components/footer.php'; ?>
 
         <script>

@@ -169,7 +169,8 @@ $current_file = isset($_GET['file']) ? $_GET['file'] : '';
             </div>
         </div>
     </div>
-
+</main>
+</div>
     <?php include ROOT_PATH . '/components/footer.php'; ?>
 
         <style>

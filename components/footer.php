@@ -9,7 +9,7 @@ $noFooterPages = ['login.php', 'signup.php', 'forgot-password.php', 'reset-passw
 $currentPage = basename($_SERVER['PHP_SELF']);
 
 if (!in_array($currentPage, $noFooterPages)): ?>
-<footer class="footer bg-light py-4 mt-5">
+<footer class="footer bg-light py-4">
     <div class="container">
         <div class="row">
             <!-- Branding & Description -->

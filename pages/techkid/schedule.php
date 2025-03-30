@@ -296,12 +296,12 @@
                     $end = $session['session_date'] . ' ' . $session['end_time'];
                     $current_time = time();
                     $session_start = strtotime($start);
-                    
+                    $session_end = strtotime($end);;
                     // Determine event color based on status
                     $color = '';
                     if ($current_time > strtotime($end)) {
                         $color = '#198754'; // Completed - Success color
-                    } elseif ($current_time >= $session_start && $current_time <= strtotime($end)) {
+                    } elseif ($current_time >= $session_start && $current_time <= $session_end) {
                         $color = '#0d6efd'; // In Progress - Primary color
                     } else {
                         $color = '#ffc107'; // Upcoming - Warning color
@@ -311,13 +311,14 @@
                         'title' => $session['class_name'],
                         'start' => $start,
                         'end' => $end,
-                        'color' => $color,
+                        'backgroundColor' => $color,
+                        'borderColor' => $color,
                         'url' => $current_time >= $session_start && $current_time <= strtotime($end) 
-                            ? BASE . 'techkid/meeting?id=' . $session['schedule_id']
-                            : null,
+                            ? 'class/meeting?id=' . $session['schedule_id'] 
+                            : 'class/details?id='.$session['class_id'],
                         'extendedProps' => [
                             'tutor' => $session['tutor_name'],
-                            'status' => $current_time > strtotime($end) ? 'completed' : 
+                            'status' => $current_time > $session_end ? 'completed' : 
                                       ($current_time >= $session_start ? 'in-progress' : 'upcoming')
                         ]
                     ];
