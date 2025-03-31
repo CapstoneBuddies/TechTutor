@@ -223,7 +223,7 @@ $archivedCount = 0;
                                             <div class="d-flex gap-2">
                                                 <button type="button" 
                                                         class="btn btn-sm <?php echo $isVisible ? 'btn-warning' : 'btn-success'; ?> flex-grow-1"
-                                                        onclick="toggleStudentVisibility('<?php echo $recording['recordID']; ?>', <?php echo $isVisible ? 'false' : 'true'; ?>, <?php echo $class_id; ?>)">
+                                                        onclick="toggleStudentVisibility('<?php echo $recording['recordID']; ?>', <?php echo $isVisible ? 'false' : 'true'; ?>, <?php echo $class_id; ?>, '<?php echo $recording['meetingID']; ?>')">
                                                     <i class="bi bi-<?php echo $isVisible ? 'eye-slash' : 'eye'; ?> me-1"></i>
                                                     <?php echo $isVisible ? 'Hide from Students' : 'Show to Students'; ?>
                                                 </button>
@@ -347,7 +347,7 @@ $archivedCount = 0;
             });
             
             // Toggle student visibility (show/hide to students)
-            function toggleStudentVisibility(recordId, visible, classId) {
+            function toggleStudentVisibility(recordId, visible, classId, meetingId) {
                 if (!confirm('Are you sure you want to ' + (visible ? 'show' : 'hide') + ' this recording ' + (visible ? 'to' : 'from') + ' students?')) {
                     return;
                 }
@@ -361,7 +361,8 @@ $archivedCount = 0;
                     body: JSON.stringify({
                         record_id: recordId,
                         class_id: classId,
-                        visible: visible
+                        visible: visible,
+                        meeting_id: meetingId
                     })
                 })
                 .then(response => response.json())
@@ -388,7 +389,7 @@ $archivedCount = 0;
                 }
 
                 showLoading(true);
-                fetch(`${BASE}backends/handler/meeting_handlers.php?action=archive-recording&recording_id=${recordId}&archive=${archive}`)
+                fetch(`${BASE}api/meeting?action=archive-recording&recording_id=${recordId}&archive=${archive}`)
                     .then(response => response.json())
                     .then(data => {
                         showLoading(false);

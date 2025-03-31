@@ -322,6 +322,12 @@ switch ($action) {
             $meeting_data = $stmt->get_result()->fetch_assoc();
 
             if (!$meeting_data) {
+                $stmt = $conn->prepare("
+                    UPDATE class_schedule
+                    SET status = 'pending'
+                    WHERE schedule_id = ?
+                ");
+                $stmt->execute([$scheduleId]);
                 throw new Exception('Meeting not found');
             }
 
@@ -688,12 +694,13 @@ switch ($action) {
                 $visible = isset($_GET['visible']) ? ($_GET['visible'] === 'true' || $_GET['visible'] === '1') : false;
             } else {
                 // Validate required parameters from JSON input
-                if (!isset($input['record_id']) || !isset($input['class_id']) || !isset($input['visible'])) {
-                    throw new Exception('Recording ID, class ID, and visibility flag are required');
+                if (!isset($input['record_id']) || !isset($input['class_id']) || !isset($input['visible'])|| !isset($input['meeting_id'])) {
+                    throw new Exception('Recording ID, class ID, visibility flag, and meeting ID are required');
                 }
                 $record_id = $input['record_id'];
                 $class_id = (int)$input['class_id'];
                 $visible = (bool)$input['visible'];
+                $meeting_id = $input['meeting_id'];
             }
 
             // First check if class belongs to this tutor
@@ -717,10 +724,16 @@ switch ($action) {
                 $visibleValue = $visible ? 1 : 0;
                 $stmt->bind_param("is", $visibleValue, $record_id);
             } else {
+                // Select the connected schedule id
+                $stmt_schedule = $conn->prepare("SELECT schedule_id FROM meetings WHERE meeting_uid = ?");
+                $stmt_schedule->bind_param('s', $meeting_id);
+                $stmt_schedule->execute();
+                $results = $stmt->get_result()->fetch_assoc();
+
                 // Create new entry
-                $stmt = $conn->prepare("INSERT INTO recording_visibility (recording_id, class_id, is_visible, is_archived, created_by) VALUES (?, ?, ?, 0, ?)");
+                $stmt = $conn->prepare("INSERT INTO recording_visibility (recording_id, class_id, is_visible, is_archived, created_by, schedule_id) VALUES (?, ?, ?, 0, ?, ?)");
                 $visibleValue = $visible ? 1 : 0;
-                $stmt->bind_param("siis", $record_id, $class_id, $visibleValue, $_SESSION['user']);
+                $stmt->bind_param("siisi", $record_id, $class_id, $visibleValue, $_SESSION['user'], $results['schedule_id']);
             }
             
             if ($stmt->execute()) {

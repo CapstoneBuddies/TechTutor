@@ -14,6 +14,11 @@ ErrorDocument 500 /pages/error/500.php
     </FilesMatch>
 </IfModule>
 
+<IfModule mod_rewrite.c>
+     RewriteEngine On
+     RewriteRule ^meeting_webhook\.php$ - [L]
+</IfModule>
+
 RewriteEngine On
 
 # 🔹 Remove trailing slashes except for root "/"
@@ -149,6 +154,7 @@ RewriteRule ^update-subject-cover$ backends/admin/course_handler.php [L]
 RewriteRule ^api/toggle-class-status$ backends/api/toggle-class-status.php [L]
 RewriteRule ^api/enroll-class$ backends/api/enroll-class.php [L]
 RewriteRule ^api/update-enrollment-status$ backends/api/update-enrollment-status.php [L]
+RewriteRule ^api/submit-feedback$ backends/api/submit-feedback.php [L]
 
 # Materials API endpoints
 RewriteRule ^api/materials$ backends/handler/unified_file_handler.php [QSA,L]
@@ -163,7 +169,6 @@ RewriteRule ^delete-notification$ backends/api/delete-notif.php [L]
 RewriteRule ^mark-all-notifications-read$ backends/api/mark-all-notif-read.php [L]
 RewriteRule ^check-notifications$ backends/api/check-notifications.php [L]
 RewriteRule ^fix-permissions$ backends/api/fix-permissions.php [L]
-RewriteRule ^submit-feedback$ backends/api/submit-feedback.php [L]
 
 # Class feedback page
 RewriteRule ^techkid/class-feedback$ pages/techkid/class-feedback.php [QSA,L]

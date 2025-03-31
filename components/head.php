@@ -65,6 +65,41 @@ if (function_exists('log_error')) {
     <link rel="stylesheet" href="<?php echo CSS; ?>footer.css">
     <!-- <link rel="stylesheet" href="<?php echo CSS; ?>responsive.css"> -->
 
+    <!-- Loading Screen CSS -->
+    <style>
+        #page-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
+        }
+        
+        #page-loader.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+        
+        #page-loader .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            color: var(--bs-primary);
+        }
+        
+        #page-loader .loading-text {
+            margin-top: 1rem;
+            color: var(--bs-primary);
+            font-weight: 500;
+        }
+    </style>
+
     <?php
     // Role-specific CSS
     if (isset($_SESSION['role'])) {
@@ -90,6 +125,97 @@ if (function_exists('log_error')) {
     <!-- Common JavaScript -->
     <!-- FullCalendar JS -->
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+    <script> 
+        // Page loading functionality
+        document.addEventListener("DOMContentLoaded", function() {
+            // Hide page loader when content is fully loaded
+            hidePageLoader();
+        });
+        
+        // Show page loader (globally accessible)
+        function showPageLoader() {
+            const loader = document.getElementById('page-loader');
+            if (loader) {
+                loader.classList.remove('hidden');
+            }
+        }
+        
+        // Hide page loader (globally accessible)
+        function hidePageLoader() {
+            const loader = document.getElementById('page-loader');
+            if (loader) {
+                setTimeout(() => {
+                    loader.classList.add('hidden');
+                    // Remove loader from DOM after transition completes
+                    setTimeout(() => {
+                        if (loader.parentNode) {
+                            loader.parentNode.removeChild(loader);
+                        }
+                    }, 500); // Match this with the CSS transition time
+                }, 500); // Delay to ensure content is rendered
+            }
+        }
+        
+        // Helper function to show/hide loading indicator
+        function showLoading(show) {
+            // Option 1: Use page loader for all loading operations
+            if (show) {
+                showPageLoader();
+            } else {
+                hidePageLoader();
+            }
+            
+            // Option 2: Use separate loading indicator if present
+            const loadingIndicator = document.getElementById("loadingIndicator");
+            if (loadingIndicator) {
+                if (show) {
+                    loadingIndicator.classList.remove("d-none");
+                } else {
+                    loadingIndicator.classList.add("d-none");
+                }
+            }
+        }
+        
+        // Helper to show the Toast
+        function showToast(type, message) {
+            const toastContainer = document.createElement('div');
+            toastContainer.style.position = 'fixed';
+            toastContainer.style.top = '20px';
+            toastContainer.style.right = '20px';
+            toastContainer.style.zIndex = '9999';
+
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
+
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'}-fill me-2"></i>
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            `;
+
+            toastContainer.appendChild(toast);
+            document.body.appendChild(toastContainer);
+
+            const bsToast = new bootstrap.Toast(toast, {
+                animation: true,
+                autohide: true,
+                delay: 1000
+            });
+
+            bsToast.show();
+
+            toast.addEventListener('hidden.bs.toast', () => {
+                document.body.removeChild(toastContainer);
+            });
+        }
+    </script>
     <?php
     // Role-specific JavaScript
     if (isset($_SESSION['role'])) {

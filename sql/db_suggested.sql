@@ -90,3 +90,5 @@ BEGIN
     END IF;
 END//
 DELIMITER ; 
+ALTER TABLE `recording_visibility` 
+ADD COLUMN `schedule_id` INT(11) NOT NULL DEFAULT 0 AFTER `class_id`;

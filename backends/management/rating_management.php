@@ -14,9 +14,9 @@ class RatingManagement {
         try {
             // Verify the session exists and belongs to the tutor
             $sql = "SELECT schedule_id FROM class_schedule 
-                    WHERE schedule_id = ? AND user_id = ? AND status = 'completed'";
+                    WHERE schedule_id = ? AND status = 'completed'";
             $stmt = $this->db->prepare($sql);
-            $stmt->bind_param("ii", $sessionId, $tutorId);
+            $stmt->bind_param("i", $sessionId);
             $stmt->execute();
             if (!$stmt->get_result()->num_rows) {
                 throw new Exception("Invalid session or not completed yet");

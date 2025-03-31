@@ -36,6 +36,11 @@ $courses = getCoursesWithSubjects();
                                     <input type="text" class="form-control border-start-0" id="searchInput" placeholder="Search classes...">
                                 </div>
                             </div>
+                            <div class="d-flex justify-content-end mt-3">
+                                <a href="class" class="btn btn-primary">
+                                    <i class="bi bi-arrow-left me-2"></i>Back to Class
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>

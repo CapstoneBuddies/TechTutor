@@ -13,3 +13,5 @@
 - [ ] Properly Handles the class Invites(Copy Link and Sending Email/notif Invites)
 - [ ] Add a back button for Class Enrollments
 - [ ] Add a search features for files
+- [ ] Add a request recording button
+- [ ] Techkid, Able to edit a feedback

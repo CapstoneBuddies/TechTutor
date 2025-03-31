@@ -31,6 +31,7 @@ class MeetingManagement {
                 'disableRecording' => $options['disableRecording'] ?? 'false',
                 'webcamsOnlyForModerator' => $options['webcamsOnlyForModerator'] ?? 'false',
                 'muteOnStart' => $options['muteOnStart'] ?? 'true',
+                'meta_classId' => $options['muteOnStart'] ?? null,
             ];
 
             $response = $this->makeRequest('create', $params);
@@ -201,7 +202,8 @@ class MeetingManagement {
                     'size' => $recording['size'] ?? 0,
                     'duration' => $recording['duration'] ?? 0,
                     'url' => $recording['playback']['format']['url'] ?? null,
-                    'created_at' => strtotime($recording['startTime'])
+                    'created_at' => strtotime($recording['startTime']),
+                    'participants' => $recording['participants'] ?? 0,
                 ];
             }
 
@@ -276,7 +278,7 @@ class MeetingManagement {
                 'publish' => $publish ? 'true' : 'false'
             ];
             $response = $this->makeRequest('publishRecordings', $params);
-            log_error(print_r($response,true));
+
 
             if ($response['returncode'] === 'SUCCESS' && $response['published'] === ($publish ? 'true' : 'false')) {
                 $action = $publish ? 'published' : 'unpublished';
@@ -493,10 +495,11 @@ class MeetingManagement {
             // Get all visibility settings for this class
             $visibilitySettings = $this->getRecordingVisibilitySettings($class_id);
 
-            // Get recordings for each meeting
+            // Get recordings for each meetingparticipants
             $recordings = [];
             foreach ($meetings as $meeting_data) {
                 $meetingRecordings = $this->getRecordings($meeting_data['meeting_uid']);
+
                 if (!empty($meetingRecordings)) {
                     foreach ($meetingRecordings as $recording) {
                         $recording['session_date'] = $meeting_data['session_date'];

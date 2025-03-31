@@ -938,12 +938,17 @@ function updateClassSchedules($class_id, $schedules, $tutor_id) {
     }
 }
 
-function getClassRecordings() {
-    return [];
+function getClassRecordings($classId) {
+    require_once BACKEND.'meeting_management.php';
+    return (new MeetingManagement())->getClassRecordings($classId);
 }
 
-function getClassRecordingsCount() {
-    return 0;
+function getClassRecordingsCount($classId) {
+    require_once BACKEND.'meeting_management.php';
+    $recordings = new MeetingManagement();
+    $recording = $recordings->getClassRecordings($classId);
+
+    return count($recording['recordings']);
 }
 function getScheduleStatus($schedule_id) {
     global $conn;

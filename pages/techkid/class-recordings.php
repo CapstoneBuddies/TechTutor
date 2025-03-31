@@ -24,9 +24,23 @@
     $per_page = 10;
     $offset = ($page - 1) * $per_page;
     
-    $recordings = getClassRecordings($class_id, $per_page, $offset);
-    $total_recordings = getClassRecordingsCount($class_id);
+    $recordings = getClassRecordings($class_id)['recordings'];
+
+    $total_recordings = getClassRecordingsCount($class_id); 
     $total_pages = ceil($total_recordings / $per_page);
+
+    // GET the recording id from the url
+    if(isset($_GET['recording']) && !empty($recordings)) {
+        $record_id = $_GET['recording'];
+        $recordingIds = array_column($recordings, 'recordID');
+        
+        // Find the index of the specified recording ID
+        $index = array_search($record_id, $recordingIds);
+        if($index !== false) {
+            $url = $recordings[$index]['url'];
+            header("Location: ".$url);
+        }
+    }
 
     $title = "Class Recordings - " . htmlspecialchars($classDetails['class_name']);
 ?>
@@ -68,7 +82,7 @@
                                 <?php foreach ($recordings as $recording): ?>
                                     <div class="recording-card">
                                         <div class="recording-thumbnail">
-                                            <img src="<?php echo $recording['thumbnail_url'] ?? BASE . 'assets/img/video-placeholder.jpg'; ?>" 
+                                            <img src="<?php echo $recording['thumbnail_url'] ?? BASE . 'assets/img/video-placeholder.png'; ?>" 
                                                  alt="Recording thumbnail"
                                                  class="img-fluid">
                                             <span class="duration-badge">
@@ -86,9 +100,10 @@
                                             </p>
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <span class="badge bg-primary">
-                                                    <?php echo $recording['views']; ?> views
+                                                    <?php echo $recording['participants']; ?> Participants
                                                 </span>
-                                                <a href="watch?id=<?php echo $recording['recording_id']; ?>" 
+                                                <a href="#"
+                                                    onclick="window.open('<?php echo htmlspecialchars($recording['url']); ?>', '_blank')"
                                                    class="btn btn-primary btn-sm">
                                                     <i class="bi bi-play-fill"></i> Watch Now
                                                 </a>
@@ -179,6 +194,7 @@
                 width: 100%;
                 height: 100%;
                 object-fit: cover;
+                border-radius: 1rem;
             }
             .duration-badge {
                 position: absolute;

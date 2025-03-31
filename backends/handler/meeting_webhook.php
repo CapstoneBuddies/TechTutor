@@ -5,8 +5,23 @@ require_once BACKEND.'meeting_management.php';
 // Initialize meeting management
 $meeting = new MeetingManagement();
 
+// Security verification
+$headers = getallheaders();
+$signature = isset($headers['X-Checksum']) ? $headers['X-Checksum'] : '';
+$secret = "YourSecretTokenHere"; // Same as in BBB config
+
 // Get the raw POST data
-$rawData = file_get_contents('php://input');
+$rawData = file_get_contents("php://input");
+
+// Verify the webhook signature
+$calculatedSignature = hash('sha1', $rawData . $secret);
+if ($signature !== $calculatedSignature) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Invalid signature']);
+    exit;
+}
+
+// Process the data
 $data = json_decode($rawData, true);
 
 // Verify the request is from BigBlueButton

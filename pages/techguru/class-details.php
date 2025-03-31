@@ -1223,7 +1223,7 @@ function getFileIconClass($fileType) {
                 if (data.success) {
                     window.location.href = data.data.join_url;
                 } else {
-                    showToast('error', data.message || 'Failed to join meeting.');
+                    setTimeout(() => {showToast('error', data.message || 'Failed to join meeting.');} ,3000);
                 }
             })
             .catch(error => {

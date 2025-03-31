@@ -156,7 +156,8 @@
                                                 $now = new DateTime();
                                                 $session_start = new DateTime($schedule['session_date'] . ' ' . $schedule['start_time']);
                                                 $session_end = new DateTime($schedule['session_date'] . ' ' . $schedule['end_time']);
-                                                $is_ongoing = ($now >= $session_start && $now <= $session_end) || $meeting_result;
+                                                $is_ongoing = ($now >= $session_start && $now <= $session_end) || $meeting_result ;
+                                                log_error($schedule['status'] === 'confirmed');
                                                 $is_upcoming = $now < $session_start && $schedule['status'] !== 'completed';
                                                 $is_completed = $schedule['status'] === 'completed';
 
