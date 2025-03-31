@@ -66,13 +66,12 @@ switch ($action) {
                 'welcome' => "Welcome to {$schedule['class_name']}!",
                 'duration' => ceil((strtotime($schedule['end_time']) - strtotime($schedule['start_time'])) / 60),
                 'record' => 'true',
-                'autoStartRecording' => 'true',
                 'allowStartStopRecording' => 'true',
                 'disableRecording' => 'false',
                 'muteOnStart' => 'true',
-                // Add custom meta data to indicate this is a recorded class
-                'meta_bbb-recording-ready-url' => 'https://' . $_SERVER['SERVER_NAME'] . '/api/meeting?action=recording-ready',
-                'meta_recording-name' => $schedule['class_name'] . ' - ' . date('Y-m-d', strtotime($schedule['session_date']))
+                'recording-name' => $schedule['class_name'] . ' - ' . date('Y-m-d', strtotime($schedule['session_date'])),
+                'schedule-id' => $scheduleId,
+                'logoutURL' => $_SERVER['SERVER_NAME'].'/dashboard/u/class?id='.$schedule['class_id'].'&ended='.$scheduleId
             ];
 
             $result = $meeting->createMeeting($meetingId, $schedule['class_name'], $options);
@@ -311,8 +310,9 @@ switch ($action) {
             $stmt = $conn->prepare("
                 SELECT 
                     m.*,
-                    cs.class_id,
-                    c.tutor_id
+                    cs.*,
+                    c.tutor_id,
+                    c.class_name
                 FROM meetings m
                 JOIN class_schedule cs ON m.schedule_id = cs.schedule_id
                 JOIN class c ON cs.class_id = c.class_id
@@ -363,14 +363,16 @@ switch ($action) {
                 if ($isTeacher) {
                     // Rerun the meeting if the teacher is joining
                     $options = [
+                        'welcome' => "Welcome to {$meeting_data['class_name']}!",
                         'attendeePW' => $meeting_data['attendee_pw'],
                         'moderatorPW' => $meeting_data['moderator_pw'],
-                        'duration' => 0, // No duration limit
                         'record' => 'true',
-                        'autoStartRecording' => 'true',
                         'allowStartStopRecording' => 'true',
                         'disableRecording' => 'false',
-                        'meta_recording-name' => $meeting_data['meeting_name'] . ' - ' . date('Y-m-d')
+                        'muteOnStart' => 'true',
+                        'recording-name' => $meeting_data['class_name'] . ' - ' . date('Y-m-d', strtotime($meeting_data['session_date'])),
+                        'schedule-id' => $scheduleId,
+                        'logoutURL' => $_SERVER['SERVER_NAME'].'/dashboard/u/class?id='.$meeting_data['class_id'].'&ended='.$scheduleId
                     ];
                     
                     $result = $meeting->createMeeting(

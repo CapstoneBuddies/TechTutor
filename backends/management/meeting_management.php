@@ -26,13 +26,17 @@ class MeetingManagement {
                 'maxParticipants' => $options['maxParticipants'] ?? -1,
                 'duration' => $options['duration'] ?? 0,
                 'record' => $options['record'] ?? 'true',
-                'autoStartRecording' => $options['autoStartRecording'] ?? 'true',
+                'autoStartRecording' => $options['autoStartRecording'] ?? 'false',
                 'allowStartStopRecording' => $options['allowStartStopRecording'] ?? 'true',
                 'disableRecording' => $options['disableRecording'] ?? 'false',
                 'webcamsOnlyForModerator' => $options['webcamsOnlyForModerator'] ?? 'false',
                 'muteOnStart' => $options['muteOnStart'] ?? 'true',
-                'meta_classId' => $options['muteOnStart'] ?? null,
+                'meta_schedule-id' => $options['schedule-id'] ?? null,
+                'meta_recording-name' => $options['recording-name'] ?? null,
+                'logoutURL' => $options['logoutURL'] ?? $_SERVER['SERVER_NAME'].'/dashboard/u/class'
             ];
+            log_error("OPTIONS: ".print_r($options,true));
+            log_error("PARAMS: ".print_r($params,true));
 
             $response = $this->makeRequest('create', $params);
             

@@ -12,6 +12,11 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
 // Get class ID from URL parameter
 $class_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
+if($class_id === 0) {
+    header("location: ./");
+    exit();
+}
+
 // Process form submission for completing class (backward compatibility)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'completeClass') {
     require_once BACKEND.'class_management.php';
@@ -26,7 +31,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 $status = getClassStatus($class_id);
-log_error($status);
 
 // Get class details or redirect if invalid
 $classDetails = getClassDetails($class_id, $_SESSION['user']);

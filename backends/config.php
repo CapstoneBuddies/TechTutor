@@ -80,11 +80,20 @@
 	function log_error($message, $type = 1) {
 	    // Determine log filename
 	    if (isset($_SESSION['email'])) {
-	        $path = ($type === 'analytics' || $type === 5) 
-	            ? LOG_PATH . $_SESSION['email'] . '-analytics.log' 
-	            : LOG_PATH . $_SESSION['email'] . '.log';
-	    } else {
-	        $path = LOG_PATH . 'unknown.log';
+		    if ($type === 'analytics' || $type === 5) {
+		        $path = LOG_PATH . $_SESSION['email'] . '-analytics.log';
+		    } else {
+		        $path = LOG_PATH . $_SESSION['email'] . '.log';
+		    } 
+	    } 
+		else {
+		    $path = LOG_PATH . 'unknown.log';
+		}
+	    if ($type === 'meeting' || $type === 7) {
+	        $path = LOG_PATH . 'meeting.log';
+	    } 
+	    elseif ($type === 'webhooks' || $type === 10) {
+	        $path = LOG_PATH . 'webhook.log';
 	    }
 
 	    // Log type mappings
@@ -98,6 +107,7 @@
 	        7 => 'meeting',
 	        8 => 'info',
 	        9 => 'class',
+	        10 => 'webhooks',
 	    ];
 
 	    // Alias mapping for string log types

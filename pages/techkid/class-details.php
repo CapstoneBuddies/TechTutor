@@ -37,6 +37,58 @@
 <html lang="en">
     <?php include ROOT_PATH . '/components/head.php'; ?>
     <body data-base="<?php echo BASE; ?>">
+        <!-- Page Loader -->
+        <div id="page-loader">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <div class="loading-text">Loading content...</div>
+        </div>
+        
+        <script>
+            // Show loading screen at the start of page load
+            // This will be automatically hidden when DOMContentLoaded fires
+            document.addEventListener('DOMContentLoaded', function() {
+                // Initialize any page-specific components after page loads
+                initializePage();
+            });
+            
+            function initializePage() {
+                // Any class-details specific initialization can go here
+                console.log('Class details page initialized');
+            }
+            
+            // Use showLoading for AJAX operations
+            function joinMeeting(scheduleId) {
+                showLoading(true);
+
+                fetch(`${BASE}api/meeting?action=join-meeting`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        schedule_id: scheduleId,
+                        role: '<?php echo $_SESSION['role']; ?>'
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    showLoading(false);
+                    if (data.success) {
+                        window.location.href = data.data.join_url;
+                    } else {
+                        showToast('error', data.message || 'Failed to join meeting.');
+                    }
+                })
+                .catch(error => {
+                    showLoading(false);
+                    console.error('Error joining meeting:', error);
+                    showToast('error', 'An error occurred. Please try again.');
+                });
+            }
+        </script>
+        
         <?php include ROOT_PATH . '/components/header.php'; ?>
 
         <main class="container py-4">
@@ -156,15 +208,55 @@
                                                 $now = new DateTime();
                                                 $session_start = new DateTime($schedule['session_date'] . ' ' . $schedule['start_time']);
                                                 $session_end = new DateTime($schedule['session_date'] . ' ' . $schedule['end_time']);
-                                                $is_ongoing = ($now >= $session_start && $now <= $session_end) || $meeting_result ;
-                                                log_error($schedule['status'] === 'confirmed');
-                                                $is_upcoming = $now < $session_start && $schedule['status'] !== 'completed';
-                                                $is_completed = $schedule['status'] === 'completed';
 
-                                                // Status label and class
-                                                $status_label = $is_completed ? 'Completed' : ($is_ongoing ? 'Ongoing' : ($is_upcoming ? 'Upcoming' : 'Missed'));
-                                                $status_class = $is_completed ? 'success' : ($is_ongoing ? 'primary' : ($is_upcoming ? 'info' : 'secondary'));
-                                                $icon_class = $is_completed ? 'bi-check-circle' : ($is_ongoing ? 'bi-broadcast' : ($is_upcoming ? 'bi-clock' : 'bi-x-circle'));
+                                                // First check if there's an active meeting
+                                                $is_meeting_active = $meeting_result && $meeting_result['is_running'];
+                                                // Determine status based on database status first
+                                                switch($schedule['status']) {
+                                                    case 'completed':
+                                                        $status_label = 'Completed';
+                                                        $status_class = 'success';
+                                                        $icon_class = 'bi-check-circle';
+                                                        break;
+                                                        
+                                                    case 'canceled':
+                                                        $status_label = 'Canceled';
+                                                        $status_class = 'danger';
+                                                        $icon_class = 'bi-x-circle';
+                                                        break;
+
+                                                    case 'confirmed':
+                                                        // For confirmed sessions, check if it's ongoing
+                                                        if ($is_meeting_active || ($now >= $session_start && $now <= $session_end)) {
+                                                            $status_label = 'Ongoing';
+                                                            $status_class = 'primary';
+                                                            $icon_class = 'bi-broadcast';
+                                                        }
+                                                        else {
+                                                            $status_label = 'Pending';
+                                                            $status_class = 'warning';
+                                                            $icon_class = 'bi-hourglass-split';
+                                                        }
+                                                        break;
+                                                        
+                                                    case 'pending':
+                                                        if ($now <= $session_start) {
+                                                            $status_label = 'Upcoming';
+                                                            $status_class = 'info';
+                                                            $icon_class = 'bi-clock';
+                                                        } 
+                                                        break;
+                                                    default:
+                                                            $status_label = 'Missed';
+                                                            $status_class = 'secondary';
+                                                            $icon_class = 'bi-x-circle';
+                                                            break;
+                                                }
+
+                                                // Set boolean flags for UI control
+                                                $is_ongoing = $status_label === 'Ongoing';
+                                                $is_upcoming = $status_label === 'Upcoming';
+                                                $is_completed = $status_label === 'Completed';
                                             ?>
                                             <div class="session-item mb-3">
                                                 <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-3">
@@ -190,7 +282,12 @@
                                                             <?php if ($is_ongoing): ?>
                                                                 <button onclick="joinMeeting(<?php echo $schedule['schedule_id']; ?>)" 
                                                                     class="btn btn-success btn-sm">
-                                                                    <i class="bi bi-camera-video-fill me-1"></i> Join Now
+                                                                    <i class="bi bi-camera-video-fill me-1"></i> 
+                                                                    <?php if(isset($_GET['ended']) && $_GET['ended'] == $schedule['schedule_id']): ?>
+                                                                    Rejoin Now
+                                                                    <?php else: ?>
+                                                                    Join Now
+                                                                    <?php endif; ?>
                                                                 </button>
                                                             <?php elseif ($is_upcoming): ?>
                                                                 <button class="btn btn-outline-primary btn-sm" disabled>
@@ -225,20 +322,23 @@
                                                                     
                                                                     <?php 
                                                                     // Check if recording exists
-                                                                    $rec_stmt = $conn->prepare("SELECT recording_id FROM recording_visibility 
-                                                                        WHERE class_id = ? AND is_visible = 1 LIMIT 1");
-                                                                    $rec_stmt->bind_param("i", $schedule['class_id']);
+                                                                    $rec_stmt = $conn->prepare("SELECT recording_id FROM recording_visibility WHERE schedule_id = ? AND is_visible = 1 ");
+                                                                    $rec_stmt->bind_param("i", $schedule['schedule_id']);
                                                                     $rec_stmt->execute();
                                                                     $recording = $rec_stmt->get_result()->fetch_assoc();
-                                                                    
                                                                     if ($recording): 
                                                                     ?>
-                                                                        <a href="recordings?id=<?php echo $class_id; ?>&recording=<?php echo $recording['recording_id']; ?>" 
+                                                                        <a href="#"
+                                                                            onclick="window.open('recordings?id=<?php echo $class_id; ?>&recording=<?php echo $recording['recording_id']; ?>', '_blank')"
                                                                            class="btn btn-outline-secondary btn-sm">
-                                                                            <i class="bi bi-play-circle me-1"></i> View Recording
+                                                                            <i class="bi bi-play-circle me-1"></i> Watch Recording
                                                                         </a>
                                                                     <?php endif; ?>
                                                                 </div>
+                                                            <?php elseif ($status_label === 'Pending'): ?>
+                                                                <button class="btn btn-outline-secondary btn-sm" disabled>
+                                                                    <i class="bi bi-info-circle me-1"></i> Waiting for the Session to Start
+                                                                </button>
                                                             <?php else: ?>
                                                                 <button class="btn btn-outline-secondary btn-sm" disabled>
                                                                     <i class="bi bi-x-circle me-1"></i> Missed
@@ -288,7 +388,7 @@
                                                             <?php echo date('M d, Y', strtotime($file['upload_time'])); ?>
                                                         </div>
                                                     </div>
-                                                    <a href="<?php echo BASE . 'uploads/class/' . $file['file_path']; ?>" 
+                                                    <a href="https://drive.google.com/uc?export=download&id=<?php echo $file['google_file_id']; ?>" 
                                                        class="btn btn-sm btn-outline-primary" 
                                                        download>
                                                         <i class="bi bi-download"></i>
@@ -343,7 +443,7 @@
                                     </div>
                                     <div class="recordings-list">
                                         <?php 
-                                        $recordings = getClassRecordings($class_id, 3); // Get only latest 3 recordings
+                                        $recordings = getClassRecordings($class_id); // Get only latest 3 recordings
                                         if (empty($recordings)): 
                                         ?>
                                             <div class="text-center text-muted py-4">
@@ -351,7 +451,7 @@
                                                 <p class="mt-2 mb-0">No recordings available yet</p>
                                             </div>
                                         <?php else: ?>
-                                            <?php foreach ($recordings as $recording): ?>
+                                            <?php foreach ($recordings['recordings'] as $recording): ?>
                                                 <div class="recording-item d-flex align-items-center p-3 border-bottom">
                                                     <div class="flex-shrink-0 me-3">
                                                         <i class="bi bi-camera-video-fill text-primary" style="font-size: 1.5rem;"></i>
@@ -362,7 +462,7 @@
                                                             Duration: <?php echo $recording['duration']; ?> minutes
                                                         </p>
                                                     </div>
-                                                    <a href="recordings?id=<?php echo $class_id; ?>&recording=<?php echo $recording['recording_id']; ?>" 
+                                                    <a href="#" onclick="window.open('recordings?id=<?php echo $class_id; ?>&recording=<?php echo $recording['recording_id']; ?>', '_blank')"
                                                        class="btn btn-sm btn-outline-primary">
                                                         <i class="bi bi-play-fill"></i> Watch
                                                     </a>
@@ -470,87 +570,6 @@
                 showLoading(false);
                 showToast('error', 'Failed to submit feedback');
                 console.error('Error:', error);
-            });
-        }
-
-        function joinMeeting(scheduleId) {
-            showLoading(true);
-
-            fetch(`${BASE}api/meeting?action=join-meeting`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    schedule_id: scheduleId,
-                    role: '<?php echo $_SESSION['role']; ?>'
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                showLoading(false);
-                if (data.success) {
-                    window.location.href = data.data.join_url;
-                } else {
-                    showToast('error', data.message || 'Failed to join meeting.');
-                }
-            })
-            .catch(error => {
-                showLoading(false);
-                console.error('Error joining meeting:', error);
-                showToast('error', 'An error occurred. Please try again.');
-            });
-        }
-
-        function showLoading(show) {
-            // Create or find loading overlay
-            let loadingOverlay = document.getElementById('loading-overlay');
-            if (!loadingOverlay && show) {
-                loadingOverlay = document.createElement('div');
-                loadingOverlay.id = 'loading-overlay';
-                loadingOverlay.innerHTML = `
-                    <div class="d-flex justify-content-center align-items-center h-100">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                    </div>
-                `;
-                loadingOverlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center;';
-                document.body.appendChild(loadingOverlay);
-            } else if (loadingOverlay && !show) {
-                loadingOverlay.remove();
-            }
-        }
-        
-        function showToast(type, message) {
-            // Toast notification implementation
-            const toastContainer = document.getElementById('toast-container') || document.createElement('div');
-            if (!document.getElementById('toast-container')) {
-                toastContainer.id = 'toast-container';
-                toastContainer.className = 'position-fixed bottom-0 end-0 p-3';
-                document.body.appendChild(toastContainer);
-            }
-            
-            const toastId = 'toast-' + Date.now();
-            const toastHTML = `
-                <div id="${toastId}" class="toast align-items-center border-0 border-start border-4 border-${type === 'success' ? 'success' : 'danger'}" role="alert" aria-live="assertive" aria-atomic="true">
-                    <div class="d-flex">
-                        <div class="toast-body">
-                            <i class="bi bi-${type === 'success' ? 'check-circle' : 'x-circle'} me-2"></i>
-                            ${message}
-                        </div>
-                        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                    </div>
-                </div>
-            `;
-            
-            toastContainer.insertAdjacentHTML('beforeend', toastHTML);
-            const toastElement = document.getElementById(toastId);
-            const toast = new bootstrap.Toast(toastElement, { delay: 5000 });
-            toast.show();
-            
-            toastElement.addEventListener('hidden.bs.toast', () => {
-                toastElement.remove();
             });
         }
         </script>

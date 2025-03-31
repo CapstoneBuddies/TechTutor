@@ -42,6 +42,9 @@ RewriteRule ^dashboard/[sta]/settings$ pages/settings.php [L]
 RewriteRule ^dashboard/[sta]/transactions$ pages/transactions.php [L]
 RewriteRule ^dashboard/[sta]/notifications$ pages/notifications.php [L]
 
+# BBB End Meeting Redirect
+RewriteRule ^dashboard/u/class$ backends/class_redirect.php [L,QSA]
+
 # ----------------------------------
 # 🔹 Authentication and User Actions
 # ----------------------------------
@@ -76,9 +79,7 @@ RewriteRule ^export-transactions$ backends/route.php [L]
 # 🏠 Dashboard Routing by Role
 # ----------------------------------
 RewriteRule ^dashboard$ backends/role_redirect.php [L]
-RewriteRule ^dashboard/s$ backends/role_redirect.php [L]
-RewriteRule ^dashboard/t$ backends/role_redirect.php [L]
-RewriteRule ^dashboard/a$ backends/role_redirect.php [L]
+RewriteRule ^dashboard/[a-z]$ backends/role_redirect.php [L]
 
 # ----------------------------------
 # 👨‍🎓 TechKids (Students) Routes
