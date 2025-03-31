@@ -8,7 +8,7 @@ $meeting = new MeetingManagement();
 // Security verification
 $headers = getallheaders();
 $signature = isset($headers['X-Checksum']) ? $headers['X-Checksum'] : '';
-$secret = "YourSecretTokenHere"; // Same as in BBB config
+$secret = "4dd7af870cc54df5efd67353e8bfddaf1d510997296089a3a806eb342fc56fa6"; // Same as in BBB config
 
 // Get the raw POST data
 $rawData = file_get_contents("php://input");
