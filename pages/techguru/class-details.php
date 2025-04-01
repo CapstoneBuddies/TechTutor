@@ -31,7 +31,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 $status = getClassStatus($class_id);
-
 // Get class details or redirect if invalid
 $classDetails = getClassDetails($class_id, $_SESSION['user']);
 if (!$classDetails) {
@@ -46,9 +45,9 @@ $files = getClassFiles($class_id);
 $folders = getClassFolders($class_id);
 
 // Calculate class statistics
-$completion_rate = $classDetails['total_students'] > 0 
-    ? ($classDetails['completed_students'] / $classDetails['total_students']) * 100 
-    : 0;
+$completion = getClassSessionRate($class_id);
+$completion_rate = $classDetails['completion_rate'];
+
 $rating = number_format($classDetails['average_rating'] ?? 0, 1);
 $title = htmlspecialchars($classDetails['class_name']);
 
@@ -620,12 +619,11 @@ function getFileIconClass($fileType) {
                         // Show Complete Class button if:
                         // 1. Class status is active, AND
                         // 2. Class has been active for at least 10 days since start date
+                        // 3. All session/s are completed
                         $tenDaysAfterStart = date('Y-m-d', strtotime($classDetails['start_date'] . ' + 10 days'));
                         $today = date('Y-m-d');
 
-                        log_error($classDetails['status']);
-
-                        if (in_array($classDetails['status'], ['active','completed']) && ($today >= $tenDaysAfterStart || $today >= $classDetails['end_date']) ): 
+                        if ( $status === 'active' || ($today >= $tenDaysAfterStart || $today >= $classDetails['end_date']) ): 
                         ?>
                         <button type="button" class="btn btn-dark quick-action w-100" onclick="completeClass(<?php echo $class_id; ?>)">
                             <i class="bi bi-check-circle me-2"></i> Complete Class

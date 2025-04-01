@@ -5,7 +5,7 @@ class UnifiedFileManagement {
     private $db;
     private $client;
     private $service;
-    private $personalLimit = 524288000; // 500MB in bytes
+    private $personalLimit = 1073741824; // 1GB in bytes
     private $classLimit = 5368709120;   // 5GB in bytes
 
     /**
@@ -80,8 +80,24 @@ class UnifiedFileManagement {
             // Generate UUID for file
             $fileUuid = generateUuid();
             
-            // Get folder ID if provided
-            $dbFolderId = $folderId;
+            // Validate folder ID if provided
+            $dbFolderId = null;
+            if ($folderId) {
+                // Check if folder exists
+                $sql = "SELECT folder_id FROM file_folders WHERE folder_id = ?";
+                $stmt = $this->db->prepare($sql);
+                $stmt->bind_param("i", $folderId);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                
+                if ($result->num_rows > 0) {
+                    $dbFolderId = $folderId;
+                } else {
+                    // Folder doesn't exist, set to NULL
+                    log_error("Warning: Provided folder_id $folderId does not exist. Setting to NULL.");
+                    $dbFolderId = null;
+                }
+            }
             
             // Insert file into database
             $sql = "INSERT INTO unified_files 
@@ -163,6 +179,17 @@ class UnifiedFileManagement {
     
     /**
      * Get or create appropriate Google Drive folder ID based on context
+     * 
+     * Folder Structure:
+     * - TechTutor (Root)
+     *   - CLASS
+     *     - [Class Name]
+     *       - Materials (for class_material)
+     *       - Assignments (for assignment)
+     *       - Submissions (for submission)
+     *   - PERSONAL
+     *     - [User Role] (TECHKID, TECHGURU, ADMIN)
+     *       - [User ID]
      */
     private function getGoogleFolderId($folderId, $classId, $userId, $filePurpose) {
         try {
@@ -183,24 +210,33 @@ class UnifiedFileManagement {
             $rootFolder = $this->getOrCreateRootFolder('TechTutor');
             
             if ($filePurpose === 'personal') {
-                // Get user's email for folder name
-                $sql = "SELECT email FROM users WHERE uid = ?";
+                // Step 1: Create or get PERSONAL folder
+                $personalFolder = $this->getOrCreateSubFolder($rootFolder, 'PERSONAL');
+                
+                // Step 2: Get user role for the role-specific folder
+                $sql = "SELECT role FROM users WHERE uid = ?";
                 $stmt = $this->db->prepare($sql);
                 $stmt->bind_param("i", $userId);
                 $stmt->execute();
-                $userEmail = $stmt->get_result()->fetch_assoc()['email'];
+                $userRole = $stmt->get_result()->fetch_assoc()['role'];
                 
-                $usersFolder = $this->getOrCreateSubFolder($rootFolder, 'Users');
-                return $this->getOrCreateSubFolder($usersFolder, $userEmail);
+                // Step 3: Create role-specific folder
+                $roleFolder = $this->getOrCreateSubFolder($personalFolder, $userRole);
+                
+                // Step 4: Create user-specific folder using uid
+                return $this->getOrCreateSubFolder($roleFolder, (string)$userId);
             } else if ($filePurpose === 'class_material' || $filePurpose === 'assignment' || $filePurpose === 'submission') {
-                // Get class name
+                // Step 1: Create or get CLASS folder
+                $classesFolder = $this->getOrCreateSubFolder($rootFolder, 'CLASS');
+                
+                // Step 2: Get class name
                 $sql = "SELECT class_name FROM class WHERE class_id = ?";
                 $stmt = $this->db->prepare($sql);
                 $stmt->bind_param("i", $classId);
                 $stmt->execute();
                 $className = $stmt->get_result()->fetch_assoc()['class_name'];
                 
-                $classesFolder = $this->getOrCreateSubFolder($rootFolder, 'Classes');
+                // Step 3: Create class-specific folder
                 $classFolder = $this->getOrCreateSubFolder($classesFolder, $className);
                 
                 // Add purpose-specific subfolder if needed
@@ -370,6 +406,14 @@ class UnifiedFileManagement {
     /**
      * Create a new folder
      * 
+     * Follows folder structure:
+     * - TechTutor (Root)
+     *   - CLASS
+     *     - [Class Name]
+     *   - PERSONAL
+     *     - [User Role] (TECHKID, TECHGURU, ADMIN)
+     *       - [User ID]
+     * 
      * @param int $userId User creating the folder
      * @param string $folderName Name of the folder
      * @param int|null $classId Class ID (if applicable)
@@ -399,25 +443,36 @@ class UnifiedFileManagement {
                 $rootFolder = $this->getOrCreateRootFolder('TechTutor');
                 
                 if ($classId) {
-                    // Get class name
+                    // Class-related folder structure
+                    // Step 1: Create or get CLASS folder
+                    $classesFolder = $this->getOrCreateSubFolder($rootFolder, 'CLASS');
+                    
+                    // Step 2: Get class name
                     $sql = "SELECT class_name FROM class WHERE class_id = ?";
                     $stmt = $this->db->prepare($sql);
                     $stmt->bind_param("i", $classId);
                     $stmt->execute();
                     $className = $stmt->get_result()->fetch_assoc()['class_name'];
                     
-                    $classesFolder = $this->getOrCreateSubFolder($rootFolder, 'Classes');
+                    // Step 3: Use class folder as parent
                     $parentGoogleFolderId = $this->getOrCreateSubFolder($classesFolder, $className);
                 } else {
-                    // Personal folder - use user's email
-                    $sql = "SELECT email FROM users WHERE uid = ?";
+                    // Personal folder structure
+                    // Step 1: Create or get PERSONAL folder
+                    $personalFolder = $this->getOrCreateSubFolder($rootFolder, 'PERSONAL');
+                    
+                    // Step 2: Get user role
+                    $sql = "SELECT role FROM users WHERE uid = ?";
                     $stmt = $this->db->prepare($sql);
                     $stmt->bind_param("i", $userId);
                     $stmt->execute();
-                    $userEmail = $stmt->get_result()->fetch_assoc()['email'];
+                    $userRole = $stmt->get_result()->fetch_assoc()['role'];
                     
-                    $usersFolder = $this->getOrCreateSubFolder($rootFolder, 'Users');
-                    $parentGoogleFolderId = $this->getOrCreateSubFolder($usersFolder, $userEmail);
+                    // Step 3: Create role-specific folder
+                    $roleFolder = $this->getOrCreateSubFolder($personalFolder, $userRole);
+                    
+                    // Step 4: Use user folder as parent
+                    $parentGoogleFolderId = $this->getOrCreateSubFolder($roleFolder, (string)$userId);
                 }
             }
             
@@ -443,6 +498,9 @@ class UnifiedFileManagement {
                 $this->service->permissions->create($folder->getId(), $permission);
             }
             
+            // Store Google folder ID in a variable
+            $googleFolderId = $folder->getId();
+            
             // Create folder in database
             $sql = "INSERT INTO file_folders 
                    (class_id, user_id, folder_name, parent_folder_id, 
@@ -453,7 +511,7 @@ class UnifiedFileManagement {
             $stmt->bind_param(
                 "iisiss", 
                 $classId, $userId, $folderName, $parentFolderId, 
-                $folder->getId(), $visibility
+                $googleFolderId, $visibility
             );
             
             if (!$stmt->execute()) {
@@ -667,10 +725,10 @@ class UnifiedFileManagement {
             return [
                 'personal' => [
                     'used' => $personalSize,
-                    'total' => $this->personalLimit,
+                    'limit' => $this->personalLimit,
                     'used_formatted' => formatBytes($personalSize),
                     'total_formatted' => formatBytes($this->personalLimit),
-                    'percentage' => round($personalPercentage, 2)
+                    'percentage' => round($personalPercentage, 2),
                 ],
                 'class' => [
                     'used' => $classSize,
@@ -937,6 +995,20 @@ class UnifiedFileManagement {
      */
     public function getFolderFiles($classId, $folderId) {
         try {
+            // Validate that the folder exists
+            if ($folderId) {
+                $folderCheck = "SELECT folder_id FROM file_folders WHERE folder_id = ?";
+                $stmt = $this->db->prepare($folderCheck);
+                $stmt->bind_param("i", $folderId);
+                $stmt->execute();
+                if ($stmt->get_result()->num_rows === 0) {
+                    log_error("Warning: Requested folder_id $folderId does not exist.");
+                    return [];
+                }
+            } else {
+                return [];
+            }
+            
             $sql = "SELECT f.*, c.category_name,
                            ff.folder_name, ff.folder_id,
                            u.first_name, u.last_name, u.email
@@ -944,11 +1016,21 @@ class UnifiedFileManagement {
                     LEFT JOIN file_categories c ON f.category_id = c.category_id
                     LEFT JOIN file_folders ff ON f.folder_id = ff.folder_id
                     JOIN users u ON f.user_id = u.uid
-                    WHERE f.class_id = ? AND f.folder_id = ?
-                    ORDER BY f.upload_time DESC";
+                    WHERE f.folder_id = ?";
+            
+            $params = [$folderId];
+            $types = "i";
+            
+            if ($classId) {
+                $sql .= " AND f.class_id = ?";
+                $params[] = $classId;
+                $types .= "i";
+            }
+            
+            $sql .= " ORDER BY f.upload_time DESC";
             
             $stmt = $this->db->prepare($sql);
-            $stmt->bind_param("ii", $classId, $folderId);
+            $stmt->bind_param($types, ...$params);
             $stmt->execute();
             
             return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -1665,5 +1747,242 @@ class UnifiedFileManagement {
         preg_match('/\/d\/([a-zA-Z0-9_-]+)\//', $url, $matches);
         
         return isset($matches[1]) ? "https://drive.google.com/uc?export=download&id=".$matches[1] : null;
+    }
+
+    /**
+     * Get upload requests for a student
+     * 
+     * @param int $studentId The student's user ID
+     * @return array Array of upload requests
+     */
+    public function getUploadRequests($studentId) {
+        try {
+            $sql = "SELECT fr.*, c.class_name, 
+                    CONCAT(u.first_name, ' ', u.last_name) as tutor_name
+                    FROM file_requests fr
+                    JOIN class c ON fr.class_id = c.class_id
+                    JOIN users u ON fr.requester_id = u.uid
+                    WHERE fr.recipient_id = ? 
+                    AND fr.status IN ('pending', 'submitted')
+                    AND fr.due_date >= NOW()
+                    ORDER BY fr.due_date ASC";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->bind_param("i", $studentId);
+            $stmt->execute();
+            
+            $result = $stmt->get_result();
+            $requests = [];
+            
+            while ($row = $result->fetch_assoc()) {
+                $requests[] = $row;
+            }
+            
+            return $requests;
+        } catch (Exception $e) {
+            log_error("Error getting upload requests: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get personal folders for a user
+     * 
+     * @param int $userId User ID to get folders for
+     * @param int|null $parentFolderId Parent folder ID (null for root folders)
+     * @return array Array of folder information
+     */
+    public function getPersonalFolders($userId, $parentFolderId = null) {
+        try {
+            $sql = "SELECT f.*, u.first_name, u.last_name, u.email,
+                    (SELECT COUNT(*) FROM unified_files WHERE folder_id = f.folder_id) as file_count,
+                    (SELECT COUNT(*) FROM file_folders WHERE parent_folder_id = f.folder_id) as subfolder_count
+                    FROM file_folders f
+                    JOIN users u ON f.user_id = u.uid
+                    WHERE f.user_id = ? AND f.class_id IS NULL";
+            
+            $params = [$userId];
+            $types = "i";
+            
+            if ($parentFolderId === null) {
+                $sql .= " AND (f.parent_folder_id IS NULL OR f.parent_folder_id = 0)";
+            } else {
+                $sql .= " AND f.parent_folder_id = ?";
+                $params[] = $parentFolderId;
+                $types .= "i";
+            }
+            
+            $sql .= " ORDER BY f.folder_name ASC";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->bind_param($types, ...$params);
+            $stmt->execute();
+            
+            return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        } catch (Exception $e) {
+            log_error("Error in getPersonalFolders: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Get folder by ID
+     * 
+     * @param int $folderId Folder ID
+     * @param int $userId User ID (for permission check)
+     * @return array|bool Folder information if successful, false otherwise
+     */
+    public function getFolderById($folderId, $userId) {
+        try {
+            // Query folder with permission check
+            $sql = "SELECT f.*, u.first_name, u.last_name, u.email,
+                    (SELECT COUNT(*) FROM unified_files WHERE folder_id = f.folder_id) as file_count,
+                    (SELECT COUNT(*) FROM file_folders WHERE parent_folder_id = f.folder_id) as subfolder_count
+                    FROM file_folders f
+                    JOIN users u ON f.user_id = u.uid
+                    WHERE f.folder_id = ? AND (
+                        f.user_id = ? 
+                        OR f.visibility = 'public'
+                        OR EXISTS (
+                            SELECT 1 FROM file_permissions p
+                            WHERE p.folder_id = f.folder_id
+                            AND p.user_id = ?
+                        )
+                    )";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->bind_param("iii", $folderId, $userId, $userId);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            if ($result->num_rows === 0) {
+                return false;
+            }
+            
+            return $result->fetch_assoc();
+        } catch (Exception $e) {
+            log_error("Error in getFolderById: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Get the full path to a folder (breadcrumb)
+     * 
+     * @param int $folderId Folder ID
+     * @return array Array of folder information for the path
+     */
+    public function getFolderPath($folderId) {
+        try {
+            $path = [];
+            $currentFolderId = $folderId;
+            
+            while ($currentFolderId) {
+                $sql = "SELECT folder_id, folder_name, parent_folder_id 
+                        FROM file_folders 
+                        WHERE folder_id = ?";
+                $stmt = $this->db->prepare($sql);
+                $stmt->bind_param("i", $currentFolderId);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                
+                if ($result->num_rows === 0) {
+                    break;
+                }
+                
+                $folder = $result->fetch_assoc();
+                array_unshift($path, $folder);
+                $currentFolderId = $folder['parent_folder_id'];
+            }
+            
+            return $path;
+        } catch (Exception $e) {
+            log_error("Error in getFolderPath: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Get subfolders for a parent folder
+     * 
+     * @param int $parentFolderId Parent folder ID
+     * @param int|null $userId User ID (for permission check, null skips check)
+     * @return array Array of subfolder information
+     */
+    public function getSubfolders($parentFolderId, $userId = null) {
+        try {
+            $sql = "SELECT f.*, u.first_name, u.last_name, u.email,
+                    (SELECT COUNT(*) FROM unified_files WHERE folder_id = f.folder_id) as file_count,
+                    (SELECT COUNT(*) FROM file_folders WHERE parent_folder_id = f.folder_id) as subfolder_count
+                    FROM file_folders f
+                    JOIN users u ON f.user_id = u.uid
+                    WHERE f.parent_folder_id = ?";
+            
+            $params = [$parentFolderId];
+            $types = "i";
+            
+            if ($userId !== null) {
+                $sql .= " AND (
+                    f.user_id = ? 
+                    OR f.visibility = 'public'
+                    OR EXISTS (
+                        SELECT 1 FROM file_permissions p
+                        WHERE p.folder_id = f.folder_id
+                        AND p.user_id = ?
+                    )
+                )";
+                $params[] = $userId;
+                $params[] = $userId;
+                $types .= "ii";
+            }
+            
+            $sql .= " ORDER BY f.folder_name ASC";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->bind_param($types, ...$params);
+            $stmt->execute();
+            
+            return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        } catch (Exception $e) {
+            log_error("Error in getSubfolders: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get user's personal root folder path
+     * Returns path: TechTutor/PERSONAL/[ROLE]/[USER_ID]
+     * 
+     * @param int $userId The user ID
+     * @return string|bool Google folder ID if successful, false on failure
+     */
+    public function getUserPersonalRootFolder($userId) {
+        try {
+            // Get root folder
+            $rootFolder = $this->getOrCreateRootFolder('TechTutor');
+            
+            // Get user role
+            $sql = "SELECT role FROM users WHERE uid = ?";
+            $stmt = $this->db->prepare($sql);
+            $stmt->bind_param("i", $userId);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            if ($result->num_rows === 0) {
+                throw new Exception("User not found");
+            }
+            
+            $userRole = $result->fetch_assoc()['role'];
+            
+            // Create path to user's personal folder
+            $personalFolder = $this->getOrCreateSubFolder($rootFolder, 'PERSONAL');
+            $roleFolder = $this->getOrCreateSubFolder($personalFolder, $userRole);
+            $userFolder = $this->getOrCreateSubFolder($roleFolder, (string)$userId);
+            
+            return $userFolder;
+        } catch (Exception $e) {
+            log_error("Error in getUserPersonalRootFolder: " . $e->getMessage());
+            return false;
+        }
     }
 }

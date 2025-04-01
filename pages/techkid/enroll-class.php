@@ -155,14 +155,14 @@ $title = htmlspecialchars($classDetails['class_name']);
                             
                             <?php 
                             // Fetch invitation message if it exists
-                            $stmt = $conn->prepare("SELECT invitation_message FROM enrollments WHERE enrollment_id = ?");
+                            $stmt = $conn->prepare("SELECT message FROM enrollments WHERE enrollment_id = ?");
                             $stmt->bind_param("i", $invitation['enrollment_id']);
                             $stmt->execute();
                             $msg_result = $stmt->get_result();
                             $invitation_message = '';
                             if ($msg_result && $msg_result->num_rows > 0) {
                                 $msg_row = $msg_result->fetch_assoc();
-                                $invitation_message = $msg_row['invitation_message'];
+                                $invitation_message = $msg_row['message'];
                             }
                             
                             if (!empty($invitation_message)): 

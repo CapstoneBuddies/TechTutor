@@ -1,7 +1,6 @@
 <?php
-require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../main.php';
-require_once __DIR__ . '/../management/file_management.php';
+require_once BACKEND. 'unified_file_management.php';
 
 header('Content-Type: application/json');
 

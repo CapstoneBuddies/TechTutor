@@ -387,5 +387,289 @@ function checkNewNotifications($user_id, $last_id = 0) {
             'error' => 'Failed to check notifications'
         ];
     }
-} 
+}
+
+/**
+ * Send a message from a TechGuru to a TechKid
+ * 
+ * @param int $sender_id The ID of the TechGuru sending the message
+ * @param int $recipient_id The ID of the TechKid receiving the message
+ * @param int $class_id The class ID related to the message
+ * @param string $subject The subject of the message
+ * @param string $message The message content
+ * @param bool $send_email Whether to send an email notification
+ * @return array Success status and message
+ */
+function sendTechGuruMessage($sender_id, $recipient_id, $class_id, $subject, $message, $send_email = false) {
+    global $conn;
+    
+    try {
+        // Verify the sender is a TechGuru
+        $stmt = $conn->prepare("SELECT role FROM users WHERE uid = ? AND role = 'TECHGURU'");
+        $stmt->bind_param("i", $sender_id);
+        $stmt->execute();
+        if ($stmt->get_result()->num_rows === 0) {
+            return ['success' => false, 'message' => 'Unauthorized access'];
+        }
+        
+        // Verify the recipient is a TechKid enrolled in the class
+        $stmt = $conn->prepare("
+            SELECT u.first_name, u.last_name, u.email 
+            FROM users u 
+            JOIN enrollments e ON u.uid = e.student_id 
+            WHERE u.uid = ? AND e.class_id = ? AND u.role = 'TECHKID'
+        ");
+        $stmt->bind_param("ii", $recipient_id, $class_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows === 0) {
+            return ['success' => false, 'message' => 'Recipient is not enrolled in this class'];
+        }
+        
+        $recipient = $result->fetch_assoc();
+        
+        // Get class name and sender info
+        $stmt = $conn->prepare("
+            SELECT c.class_name, u.first_name, u.last_name, u.email
+            FROM class c 
+            JOIN users u ON c.tutor_id = u.uid
+            WHERE c.class_id = ? AND c.tutor_id = ?
+        ");
+        $stmt->bind_param("ii", $class_id, $sender_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows === 0) {
+            return ['success' => false, 'message' => 'Class not found or you are not the tutor'];
+        }
+        
+        $data = $result->fetch_assoc();
+        $class_name = $data['class_name'];
+        $sender_name = $data['first_name'] . ' ' . $data['last_name'];
+        $sender_email = $data['email'];
+        
+        $conn->begin_transaction();
+        
+        // Insert notification
+        $stmt = $conn->prepare("
+            INSERT INTO notifications (
+                recipient_id, recipient_role, class_id, message, icon, icon_color
+            ) VALUES (?, 'TECHKID', ?, ?, 'bi-envelope-fill', 'text-primary')
+        ");
+        
+        $notification_message = "<strong>Message from {$sender_name} (TechGuru):</strong><br>" . 
+                               "<strong>Subject:</strong> {$subject}<br>" . 
+                               "<p>{$message}</p>";
+        
+        $stmt->bind_param("iis", $recipient_id, $class_id, $notification_message);
+        $stmt->execute();
+        
+        // Send email if requested
+        if ($send_email) {
+            try {
+                $mail = getMailerInstance();
+                $mail->setFrom($sender_email, $sender_name);
+                $mail->addAddress($recipient['email'], $recipient['first_name'] . ' ' . $recipient['last_name']);
+                $mail->Subject = "[TechTutor] {$subject} - {$class_name}";
+                
+                // Create HTML email body
+                $email_body = createEmailTemplate(
+                    'Message from Your TechGuru',
+                    $class_name,
+                    $recipient['first_name'],
+                    $sender_name,
+                    $subject,
+                    $message,
+                    'TechGuru'
+                );
+                
+                $mail->Body = $email_body;
+                $mail->send();
+            } catch (Exception $e) {
+                log_error("Failed to send email: " . $e->getMessage(), "messaging");
+                // Continue execution even if email fails
+            }
+        }
+        
+        $conn->commit();
+        
+        return [
+            'success' => true, 
+            'message' => 'Message sent successfully',
+            'data' => [
+                'recipient' => $recipient['first_name'] . ' ' . $recipient['last_name'],
+                'class_name' => $class_name
+            ]
+        ];
+        
+    } catch (Exception $e) {
+        if ($conn->inTransaction()) {
+            $conn->rollback();
+        }
+        log_error("Error in sendTechGuruMessage: " . $e->getMessage(), "messaging");
+        return ['success' => false, 'message' => 'Failed to send message: ' . $e->getMessage()];
+    }
+}
+
+/**
+ * Send a message from a TechKid to a TechGuru
+ * 
+ * @param int $sender_id The ID of the TechKid sending the message
+ * @param int $class_id The class ID related to the message
+ * @param string $subject The subject of the message
+ * @param string $message The message content
+ * @return array Success status and message
+ */
+function sendTechKidMessage($sender_id, $class_id, $subject, $message) {
+    global $conn;
+    
+    try {
+        // Verify the sender is a TechKid
+        $stmt = $conn->prepare("
+            SELECT u.role, u.first_name, u.last_name, u.email 
+            FROM users u 
+            WHERE u.uid = ? AND u.role = 'TECHKID'
+        ");
+        $stmt->bind_param("i", $sender_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows === 0) {
+            return ['success' => false, 'message' => 'Unauthorized access'];
+        }
+        
+        $sender = $result->fetch_assoc();
+        $sender_name = $sender['first_name'] . ' ' . $sender['last_name'];
+        $sender_email = $sender['email'];
+        
+        // Get class and tutor info
+        $stmt = $conn->prepare("
+            SELECT c.class_name, c.tutor_id, u.first_name, u.last_name, u.email
+            FROM class c 
+            JOIN users u ON c.tutor_id = u.uid
+            JOIN enrollments e ON c.class_id = e.class_id
+            WHERE c.class_id = ? AND e.student_id = ?
+        ");
+        $stmt->bind_param("ii", $class_id, $sender_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows === 0) {
+            return ['success' => false, 'message' => 'Class not found or you are not enrolled'];
+        }
+        
+        $data = $result->fetch_assoc();
+        $class_name = $data['class_name'];
+        $tutor_id = $data['tutor_id'];
+        $tutor_name = $data['first_name'] . ' ' . $data['last_name'];
+        $tutor_email = $data['email'];
+        
+        $conn->begin_transaction();
+        
+        // Insert notification
+        $stmt = $conn->prepare("
+            INSERT INTO notifications (
+                recipient_id, recipient_role, class_id, message, icon, icon_color
+            ) VALUES (?, 'TECHGURU', ?, ?, 'bi-envelope-fill', 'text-info')
+        ");
+        
+        $notification_message = "<strong>Message from {$sender_name} (Student):</strong><br>" . 
+                               "<strong>Subject:</strong> {$subject}<br>" . 
+                               "<p>{$message}</p>";
+        
+        $stmt->bind_param("iis", $tutor_id, $class_id, $notification_message);
+        $stmt->execute();
+        
+        // Try to send an email notification to the tutor
+        try {
+            $mail = getMailerInstance($sender_name); 
+            $mail->addAddress($tutor_email, $tutor_name);
+            $mail->Subject = "[TechTutor Student Message] {$subject} - {$class_name}";
+            
+            // Create HTML email body
+            $email_body = createEmailTemplate(
+                'Message from Your Student',
+                $class_name,
+                $tutor_name,
+                $sender_name,
+                $subject,
+                $message,
+                'Student'
+            );
+            $mail->Body = $email_body;
+            $mail->send();
+        } catch (Exception $e) {
+            // Log email error but continue with the notification
+            log_error("Failed to send email notification: " . $e->getMessage(), "mail");
+        }
+        
+        $conn->commit();
+        
+        return [
+            'success' => true, 
+            'message' => 'Message sent successfully to your TechGuru',
+            'data' => [
+                'tutor_name' => $tutor_name,
+                'class_name' => $class_name
+            ]
+        ];
+        
+    } catch (Exception $e) {
+        if ($conn->inTransaction()) {
+            $conn->rollback();
+        }
+        log_error("Error in sendTechKidMessage: " . $e->getMessage(), "messaging");
+        return ['success' => false, 'message' => 'Failed to send message: ' . $e->getMessage()];
+    }
+}
+
+/**
+ * Create an email template for messages
+ * 
+ * @param string $title The email title
+ * @param string $class_name The class name
+ * @param string $recipient_first_name The recipient's first name
+ * @param string $sender_name The sender's name
+ * @param string $subject The message subject
+ * @param string $message The message content
+ * @param string $sender_role The role of the sender (TechGuru or Student)
+ * @return string HTML email template
+ */
+function createEmailTemplate($title, $class_name, $recipient_first_name, $sender_name, $subject, $message, $sender_role) {
+    $email_template = '
+    <div style="max-width: 600px; margin: auto; font-family: Arial, sans-serif; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+        <div style="background: #0dcaf0; padding: 20px; text-align: center; color: white;">
+            <h2 style="margin: 0; font-size: 22px;">' . htmlspecialchars($title) . '</h2>
+        </div>
+        <div style="padding: 20px; background: #f9f9f9;">
+            <p style="font-size: 16px; color: #333;">Hello <strong>' . htmlspecialchars($recipient_first_name) . '</strong>,</p>
+            <p style="font-size: 16px; color: #555;">
+                You have received a new message from <strong>' . htmlspecialchars($sender_name) . ' (' . htmlspecialchars($sender_role) . ')</strong> 
+                regarding the class <strong>' . htmlspecialchars($class_name) . '</strong>.
+            </p>
+            <div style="margin: 20px 0; padding: 15px; border-left: 4px solid #0dcaf0; background: #f0f0f0;">
+                <h3 style="margin-top: 0; color: #444; font-size: 18px;">Subject: ' . htmlspecialchars($subject) . '</h3>
+                <div style="color: #555; font-size: 16px;">
+                    ' . nl2br(htmlspecialchars($message)) . '
+                </div>
+            </div>
+            <p style="font-size: 15px; color: #666;">
+                You can view all your notifications and messages by logging into your TechTutor account.
+            </p>
+            <div style="text-align: center; margin: 25px 0 15px;">
+                <a href="' . BASE . 'dashboard" 
+                   style="background: #0dcaf0; color: white; padding: 10px 20px; text-decoration: none; font-size: 16px; border-radius: 5px;">
+                    Go to Dashboard
+                </a>
+            </div>
+        </div>
+        <div style="background: #ddd; padding: 10px; text-align: center; font-size: 14px; color: #666;">
+            <p style="margin: 5px 0;">This is an automated message, please do not reply directly to this email.</p>
+            <p style="margin: 5px 0;">Best regards,<br><strong>The TechTutor Team</strong></p>
+        </div>
+    </div>';
+    
+    return $email_template;
+}
 ?>

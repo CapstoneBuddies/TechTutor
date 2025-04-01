@@ -249,7 +249,9 @@ class RatingManagement {
                     'four_star' => 0,
                     'three_star' => 0,
                     'two_star' => 0,
-                    'one_star' => 0
+                    'one_star' => 0,
+                    'first_name' => '',
+                    'last_name' => ''
                 ];
             }
 
@@ -257,7 +259,270 @@ class RatingManagement {
 
         } catch (Exception $e) {
             log_error("Error in getTutorRatingStats: " . $e->getMessage(), 'database');
+            return [
+                'total_ratings' => 0,
+                'average_rating' => 0,
+                'rating_count' => 0,
+                'five_star' => 0,
+                'four_star' => 0,
+                'three_star' => 0,
+                'two_star' => 0,
+                'one_star' => 0,
+                'first_name' => '',
+                'last_name' => ''
+            ];
+        }
+    }
+
+    /**
+     * Get all feedback given by a student for a specific class
+     * 
+     * @param int $class_id The class ID
+     * @param int $student_id The student ID
+     * @return array List of feedback entries
+     */
+    public function getStudentFeedbacks($class_id, $student_id) {
+        try {
+            $stmt = $this->db->prepare("
+                SELECT sf.rating_id, sf.rating, sf.feedback, sf.created_at, sf.is_archived,
+                       cs.session_date, cs.start_time, cs.end_time, cs.schedule_id
+                FROM session_feedback sf
+                JOIN class_schedule cs ON sf.session_id = cs.schedule_id
+                WHERE cs.class_id = ? AND sf.student_id = ?
+                ORDER BY sf.created_at DESC
+            ");
+            
+            $stmt->bind_param("ii", $class_id, $student_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            $feedbacks = [];
+            while ($row = $result->fetch_assoc()) {
+                $feedbacks[] = $row;
+            }
+            
+            return $feedbacks;
+        } catch (Exception $e) {
+            log_error("Error retrieving student feedbacks: " . $e->getMessage(), "feedback");
+            return [];
+        }
+    }
+
+    /**
+     * Get a specific feedback entry and verify access permissions
+     * 
+     * @param int $rating_id The feedback ID
+     * @param int $student_id The student ID for access verification
+     * @return array|null The feedback entry or null if not found/unauthorized
+     */
+    public function getFeedbackById($rating_id, $student_id) {
+        try {
+            $stmt = $this->db->prepare("
+                SELECT sf.*, cs.class_id, cs.session_date
+                FROM session_feedback sf
+                JOIN class_schedule cs ON sf.session_id = cs.schedule_id
+                WHERE sf.rating_id = ? AND sf.student_id = ?
+            ");
+            
+            $stmt->bind_param("ii", $rating_id, $student_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            if ($result->num_rows === 0) {
+                return null;
+            }
+            
+            return $result->fetch_assoc();
+        } catch (Exception $e) {
+            log_error("Error retrieving feedback: " . $e->getMessage(), "feedback");
             return null;
+        }
+    }
+
+    /**
+     * Update a feedback entry
+     * 
+     * @param int $rating_id The feedback ID
+     * @param int $student_id The student ID for access verification
+     * @param int $rating The new rating value (1-5)
+     * @param string $feedback The new feedback text
+     * @return array Status and message
+     */
+    public function updateFeedback($rating_id, $student_id, $rating, $feedback) {
+        try {
+            // Get the feedback and check permissions
+            $feedback_data = $this->getFeedbackById($rating_id, $student_id);
+            
+            if (!$feedback_data) {
+                return ['success' => false, 'message' => 'Feedback not found or you are not authorized to edit it'];
+            }
+            
+            // Check if it's within 24 hours of creation
+            if (time() - strtotime($feedback_data['created_at']) >= 86400) {
+                return ['success' => false, 'message' => 'Feedback can only be edited within 24 hours of submission'];
+            }
+            
+            // Validate rating
+            if ($rating < 1 || $rating > 5) {
+                return ['success' => false, 'message' => 'Rating must be between 1 and 5'];
+            }
+            
+            // Update the feedback
+            $stmt = $this->db->prepare("
+                UPDATE session_feedback 
+                SET rating = ?, feedback = ?
+                WHERE rating_id = ? AND student_id = ?
+            ");
+            
+            $stmt->bind_param("isii", $rating, $feedback, $rating_id, $student_id);
+            
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to update feedback: " . $stmt->error);
+            }
+            
+            // Get the updated feedback
+            $updated_feedback = $this->getFeedbackById($rating_id, $student_id);
+            
+            return [
+                'success' => true,
+                'message' => 'Feedback updated successfully',
+                'data' => $updated_feedback
+            ];
+            
+        } catch (Exception $e) {
+            log_error("Error updating feedback: " . $e->getMessage(), "feedback");
+            return ['success' => false, 'message' => 'Failed to update feedback: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * Archive a feedback entry (hide from TechGuru)
+     * 
+     * @param int $rating_id The feedback ID
+     * @param int $student_id The student ID for access verification
+     * @return array Status and message
+     */
+    public function archiveFeedback($rating_id, $student_id) {
+        try {
+            // Get the feedback and check permissions
+            $feedback_data = $this->getFeedbackById($rating_id, $student_id);
+            
+            if (!$feedback_data) {
+                return ['success' => false, 'message' => 'Feedback not found or you are not authorized to archive it'];
+            }
+            
+            // Archive the feedback
+            $stmt = $this->db->prepare("
+                UPDATE session_feedback 
+                SET is_archived = 1
+                WHERE rating_id = ? AND student_id = ?
+            ");
+            
+            $stmt->bind_param("ii", $rating_id, $student_id);
+            
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to archive feedback: " . $stmt->error);
+            }
+            
+            return [
+                'success' => true,
+                'message' => 'Feedback archived successfully'
+            ];
+            
+        } catch (Exception $e) {
+            log_error("Error archiving feedback: " . $e->getMessage(), "feedback");
+            return ['success' => false, 'message' => 'Failed to archive feedback: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * Unarchive a feedback entry (make visible to TechGuru again)
+     * 
+     * @param int $rating_id The feedback ID
+     * @param int $student_id The student ID for access verification
+     * @return array Status and message
+     */
+    public function unarchiveFeedback($rating_id, $student_id) {
+        try {
+            // Get the feedback and check permissions
+            $feedback_data = $this->getFeedbackById($rating_id, $student_id);
+            
+            if (!$feedback_data) {
+                return ['success' => false, 'message' => 'Feedback not found or you are not authorized to unarchive it'];
+            }
+            
+            // Unarchive the feedback
+            $stmt = $this->db->prepare("
+                UPDATE session_feedback 
+                SET is_archived = 0
+                WHERE rating_id = ? AND student_id = ?
+            ");
+            
+            $stmt->bind_param("ii", $rating_id, $student_id);
+            
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to unarchive feedback: " . $stmt->error);
+            }
+            
+            return [
+                'success' => true,
+                'message' => 'Feedback unarchived successfully'
+            ];
+            
+        } catch (Exception $e) {
+            log_error("Error unarchiving feedback: " . $e->getMessage(), "feedback");
+            return ['success' => false, 'message' => 'Failed to unarchive feedback: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get all visible feedback for a specific class (for TechGuru view)
+     * 
+     * @param int $class_id The class ID
+     * @param int $tutor_id The tutor ID for access verification
+     * @return array List of feedback entries
+     */
+    public function getClassFeedbacks($class_id, $tutor_id) {
+        try {
+            // Verify the tutor owns this class
+            $stmt = $this->db->prepare("
+                SELECT class_id 
+                FROM class 
+                WHERE class_id = ? AND tutor_id = ?
+            ");
+            
+            $stmt->bind_param("ii", $class_id, $tutor_id);
+            $stmt->execute();
+            
+            if ($stmt->get_result()->num_rows === 0) {
+                return [];
+            }
+            
+            // Get all non-archived feedback for this class
+            $stmt = $this->db->prepare("
+                SELECT sf.rating_id, sf.rating, sf.feedback, sf.created_at,
+                       cs.session_date, cs.start_time, cs.schedule_id,
+                       u.first_name, u.last_name, u.profile_picture
+                FROM session_feedback sf
+                JOIN class_schedule cs ON sf.session_id = cs.schedule_id
+                JOIN users u ON sf.student_id = u.uid
+                WHERE cs.class_id = ? AND sf.tutor_id = ? AND sf.is_archived = 0
+                ORDER BY sf.created_at DESC
+            ");
+            
+            $stmt->bind_param("ii", $class_id, $tutor_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            $feedbacks = [];
+            while ($row = $result->fetch_assoc()) {
+                $feedbacks[] = $row;
+            }
+            
+            return $feedbacks;
+        } catch (Exception $e) {
+            log_error("Error retrieving class feedbacks: " . $e->getMessage(), "feedback");
+            return [];
         }
     }
 }

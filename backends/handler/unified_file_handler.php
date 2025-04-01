@@ -198,7 +198,7 @@ function handleFolderCreation($fileManager) {
     }
     
     // Create folder
-    $folderId = $fileManager->createFolder(
+    $folderId = $fileManager->createFolder( 
         $_SESSION['user'],
         $folderName,
         $classId,

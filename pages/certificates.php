@@ -10,7 +10,6 @@ if (empty($cert_uuid)) {
     $request_uri = $_SERVER['REQUEST_URI'];
     $url_path = parse_url($request_uri, PHP_URL_PATH);
     $path_segments = explode('/', trim($url_path, '/'));
-    log_error($url_path);
     
     // If the URL is in format /certificate/UUID or /certificates/UUID
     if (in_array('certificate', $path_segments) || in_array('certificates', $path_segments)) {
@@ -133,16 +132,11 @@ $title = $certificate ? "Certificate: " . $certificate['award'] : "Certificate N
                            class="btn btn-primary">
                             <i class="bi bi-download me-2"></i> Download Certificate
                         </a>
-                        <a href="<?php echo BASE; ?>" class="btn btn-outline-secondary ms-2">
-                            Return to Home
-                        </a>
                     </div>
                 <?php endif; ?>
             </div>
         </div>
     </main>
-    
-    <?php include ROOT_PATH . '/components/footer.php'; ?>
     
     <style>
         .certificate-container {

@@ -128,6 +128,7 @@ CREATE TABLE `class_schedule` (
   `start_time` time NOT NULL,
   `end_time` time NOT NULL,
   `status` enum('pending','confirmed','completed','canceled') DEFAULT 'pending',
+  `status_changed_at` DATETIME DEFAULT NULL,
   PRIMARY KEY (`schedule_id`),
   KEY `idx_schedule_class` (`class_id`),
   KEY `idx_schedule_date` (`session_date`),
@@ -141,7 +142,7 @@ CREATE TABLE `enrollments` (
   `student_id` int(11) NOT NULL,
   `enrollment_date` timestamp NOT NULL DEFAULT current_timestamp(),
   `status` enum('active','completed','dropped','pending') NOT NULL DEFAULT 'active',
-  `invitation_message` TEXT NULL,
+  `message` TEXT NULL,
   PRIMARY KEY (`enrollment_id`),
   UNIQUE KEY `unique_enrollment` (`class_id`,`student_id`),
   KEY `idx_enrollment_class` (`class_id`),
@@ -581,7 +582,18 @@ BEGIN
         END IF;
     END IF;
 END//
-DELIMITER ; 
+DELIMITER ;
+
+CREATE TRIGGER update_status_changed_at BEFORE UPDATE ON `class_schedule`
+FOR EACH ROW
+BEGIN
+    IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
+        SET NEW.status_changed_at = NOW();
+    END IF;
+END $$
+
+DELIMITER ;
+ 
 --
 -- Dumped Values
 --

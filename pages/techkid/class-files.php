@@ -17,12 +17,18 @@ try {
     // Get storage usage
     $storageInfo = $fileManager->getStorageInfo($_SESSION['user']);
     
-} catch (Exception $e) {
+    } catch (Exception $e) {
     log_error("Error in files page: " . $e->getMessage());
-}
+    }
 
 // Get class ID from URL parameter
 $class_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+// Check if student is enrolled in the class
+$check = checkStudentEnrollment($_SESSION['user'], $class_id);
+if(!$check) {
+    header("location: ".BASE."dashboard/s/enrollments/class?id=".$class_id);
+    exit();
+}
 
 // Get class details
 $classDetails = getClassDetails($class_id);
@@ -41,7 +47,7 @@ $current_file = isset($_GET['file']) ? $_GET['file'] : '';
 <!DOCTYPE html>
 <html lang="en">
 <?php include ROOT_PATH . '/components/head.php'; ?>
-<body data-base="<?php echo BASE; ?>">
+    <body data-base="<?php echo BASE; ?>">
     <!-- Page Loader -->
     <div id="page-loader">
         <div class="spinner-border" role="status">
@@ -122,37 +128,37 @@ $current_file = isset($_GET['file']) ? $_GET['file'] : '';
             <!-- Header Section -->
             <div class="content-section mb-4">
                 <div class="content-card bg-snow">
-                    <div class="card-body">
+            <div class="card-body">
                         <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
                             <div>
-                                <nav aria-label="breadcrumb" class="breadcrumb-nav">
-                                    <ol class="breadcrumb mb-2">
-                                        <li class="breadcrumb-item"><a href="<?php echo BASE; ?>dashboard">Dashboard</a></li>
-                                        <li class="breadcrumb-item"><a href="./">My Classes</a></li>
-                                        <li class="breadcrumb-item"><a href="details?id=<?php echo $class_id; ?>"><?php echo htmlspecialchars($classDetails['class_name']); ?></a></li>
-                                        <li class="breadcrumb-item active">Resources</li>
-                                    </ol>
-                                </nav>
-                                <h1 class="page-title mb-0">Class Resources</h1>
+                        <nav aria-label="breadcrumb" class="breadcrumb-nav">
+                            <ol class="breadcrumb mb-2">
+                                <li class="breadcrumb-item"><a href="<?php echo BASE; ?>dashboard">Dashboard</a></li>
+                                <li class="breadcrumb-item"><a href="./">My Classes</a></li>
+                                <li class="breadcrumb-item"><a href="details?id=<?php echo $class_id; ?>"><?php echo htmlspecialchars($classDetails['class_name']); ?></a></li>
+                                <li class="breadcrumb-item active">Resources</li>
+                            </ol>
+                        </nav>
+                        <h1 class="page-title mb-0">Class Resources</h1>
                             </div>
                             <a href="details?id=<?php echo $class_id; ?>" class="btn btn-outline-primary">
                                 <i class="bi bi-arrow-left"></i> Back to Class
                             </a>
                         </div>
-                    </div>
                 </div>
             </div>
+        </div>
 
             <!-- Files Section -->
             <div class="content-section">
                 <div class="content-card">
                     <div class="card-body p-0">
-                        <?php if (empty($files)): ?>
-                            <div class="text-center text-muted py-5">
-                                <i class="bi bi-folder2-open" style="font-size: 3rem;"></i>
-                                <p class="mt-3 mb-0">No resources available yet</p>
-                            </div>
-                        <?php else: ?>
+                                <?php if (empty($files)): ?>
+                                    <div class="text-center text-muted py-5">
+                                        <i class="bi bi-folder2-open" style="font-size: 3rem;"></i>
+                                        <p class="mt-3 mb-0">No resources available yet</p>
+                                    </div>
+                                <?php else: ?>
                             <div class="files-container">
                                 <!-- Folder Structure (Left Side) -->
                                 <div class="folder-structure">
@@ -179,7 +185,7 @@ $current_file = isset($_GET['file']) ? $_GET['file'] : '';
                                         if ($current_folder): 
                                             $parent_folder = dirname($current_folder);
                                             if ($parent_folder == '.') $parent_folder = '';
-                                        ?>
+                                            ?>
                                             <a href="?id=<?php echo $class_id; ?>&folder=<?php echo urlencode($parent_folder); ?>" 
                                                class="folder-item d-flex align-items-center p-2 text-decoration-none">
                                                 <i class="bi bi-arrow-up-circle me-2"></i>
@@ -263,8 +269,8 @@ $current_file = isset($_GET['file']) ? $_GET['file'] : '';
                                                     <div class="d-flex gap-2">
                                                         <a href="https://drive.google.com/uc?export=download&id=<?php echo $file_details['google_file_id']; ?>" 
                                                            class="btn btn-primary" download>
-                                                            <i class="bi bi-download me-2"></i>
-                                                            Download
+                                                        <i class="bi bi-download me-2"></i>
+                                                        Download
                                                         </a>
                                                         <button class="btn btn-outline-secondary" id="toggle-fullscreen">
                                                             <i class="bi bi-arrows-fullscreen"></i>
@@ -307,81 +313,81 @@ $current_file = isset($_GET['file']) ? $_GET['file'] : '';
                                         <div class="text-center text-muted py-5">
                                             <i class="bi bi-file-earmark-text" style="font-size: 3rem;"></i>
                                             <p class="mt-3 mb-0">Select a file to view details</p>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
+                                    </div>
+                                <?php endif; ?>
                             </div>
+                        </div>
                         <?php endif; ?>
-                    </div>
                 </div>
             </div>
         </div>
-    </main>
+    </div>
+</main>
 
     <?php include ROOT_PATH . '/components/footer.php'; ?>
 
-    <style>
-        .dashboard-content {
-            background-color: #F5F5F5;
-            min-height: calc(100vh - 60px);
-            padding: 1.5rem;
-            border-radius: 12px;
-        }
-        .content-card {
-            background: #fff;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            overflow: hidden;
-        }
-        .page-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin: 0;
-        }
-        .files-container {
-            display: flex;
-            min-height: 500px;
-        }
-        .folder-structure {
-            width: 300px;
-            border-right: 1px solid #e9ecef;
-            overflow-y: auto;
-            background: #f8f9fa;
-        }
-        .folder-content {
-            height: calc(100vh - 250px);
-            overflow-y: auto;
-        }
-        .folder-item, .file-item {
-            color: #212529;
-            border-radius: 4px;
-            margin-bottom: 2px;
+        <style>
+            .dashboard-content {
+                background-color: #F5F5F5;
+                min-height: calc(100vh - 60px);
+                padding: 1.5rem;
+                border-radius: 12px;
+            }
+            .content-card {
+                background: #fff;
+                border-radius: 10px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                overflow: hidden;
+            }
+            .page-title {
+                font-size: 1.5rem;
+                font-weight: 600;
+                margin: 0;
+            }
+            .files-container {
+                display: flex;
+                min-height: 500px;
+            }
+            .folder-structure {
+                width: 300px;
+                border-right: 1px solid #e9ecef;
+                overflow-y: auto;
+                background: #f8f9fa;
+            }
+            .folder-content {
+                height: calc(100vh - 250px);
+                overflow-y: auto;
+            }
+            .folder-item, .file-item {
+                color: #212529;
+                border-radius: 4px;
+                margin-bottom: 2px;
             transition: all 0.2s ease;
-        }
-        .folder-item:hover, .file-item:hover {
-            background-color: #e9ecef;
-        }
+            }
+            .folder-item:hover, .file-item:hover {
+                background-color: #e9ecef;
+            }
         .folder-item.active, .file-item.active {
-            background-color: var(--bs-primary);
-            color: white;
-        }
+                background-color: var(--bs-primary);
+                color: white;
+            }
         .folder-item.active i, .file-item.active i,
         .folder-item.active .badge, .file-item.active .badge {
             color: white !important;
-        }
-        .file-preview {
-            flex: 1;
-            overflow-y: auto;
-            background: white;
-        }
-        .file-details {
+            }
+            .file-preview {
+                flex: 1;
+                overflow-y: auto;
+                background: white;
+            }
+            .file-details {
             max-width: 900px;
-            margin: 0 auto;
-        }
-        .file-description {
+                margin: 0 auto;
+            }
+            .file-description {
             padding-top: 1rem;
-            border-top: 1px solid #e9ecef;
-        }
+                border-top: 1px solid #e9ecef;
+            }
         .file-viewer-container {
             position: relative;
             width: 100%;
@@ -413,19 +419,19 @@ $current_file = isset($_GET['file']) ? $_GET['file'] : '';
         
         /* Mobile responsiveness */
         @media (max-width: 768px) {
-            .files-container {
-                flex-direction: column;
-            }
-            .folder-structure {
-                width: 100%;
-                border-right: none;
-                border-bottom: 1px solid #e9ecef;
-            }
-            .folder-content {
-                height: auto;
+                .files-container {
+                    flex-direction: column;
+                }
+                .folder-structure {
+                    width: 100%;
+                    border-right: none;
+                    border-bottom: 1px solid #e9ecef;
+                }
+                .folder-content {
+                    height: auto;
                 max-height: 200px;
-                display: none;
-            }
+                    display: none;
+                }
             .folder-content.show-mobile {
                 display: block;
             }

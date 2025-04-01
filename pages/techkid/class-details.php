@@ -13,6 +13,13 @@
     // Get class ID from URL parameter
     $class_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
+    // Check if student is enrolled in the class
+    $check = checkStudentEnrollment($_SESSION['user'], $class_id);
+    if(!$check) {
+        header("location: ".BASE."dashboard/s/enrollments/class?id=".$class_id);
+        exit();
+    }
+
     // Get class details
     $classDetails = getClassDetails($class_id);
     if (!$classDetails) {
@@ -84,6 +91,94 @@
                 .catch(error => {
                     showLoading(false);
                     console.error('Error joining meeting:', error);
+                    showToast('error', 'An error occurred. Please try again.');
+                });
+            }
+
+            // Function to send a message to the TechGuru
+            function sendMessageToTechGuru() {
+                const subject = document.getElementById('messageSubject').value.trim();
+                const message = document.getElementById('messageContent').value.trim();
+                
+                if (!subject) {
+                    showToast('error', 'Please enter a subject for your message');
+                    return;
+                }
+                
+                if (!message) {
+                    showToast('error', 'Please enter a message');
+                    return;
+                }
+                
+                showLoading(true);
+                
+                fetch(`${BASE}api/student-message`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        class_id: <?php echo $class_id; ?>,
+                        subject: subject,
+                        message: message
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    showLoading(false);
+                    if (data.success) {
+                        showToast('success', 'Message sent successfully');
+                        bootstrap.Modal.getInstance(document.getElementById('messageModal')).hide();
+                        document.getElementById('messageForm').reset();
+                    } else {
+                        showToast('error', data.message || 'Failed to send message');
+                    }
+                })
+                .catch(error => {
+                    showLoading(false);
+                    console.error('Error sending message:', error);
+                    showToast('error', 'An error occurred. Please try again.');
+                });
+            }
+
+            // Function to drop a class
+            function dropClass() {
+                // Show confirmation dialog
+                if (!confirm('Are you sure you want to drop this class? This action cannot be undone.')) {
+                    return;
+                }
+                
+                // Ask for a reason (optional)
+                const reason = prompt('Please provide a reason for dropping this class (optional):');
+                
+                showLoading(true);
+                
+                fetch(`${BASE}api/drop-class`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        class_id: <?php echo $class_id; ?>,
+                        reason: reason || ''
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    showLoading(false);
+                    if (data.success) {
+                        showToast('success', data.message || 'Class dropped successfully');
+                        // Redirect to classes page after a short delay
+                        setTimeout(() => {
+                            window.location.href = './'
+                        }, 1500);
+                    } else {
+                        showToast('error', data.error || 'Failed to drop class');
+                    }
+                })
+                .catch(error => {
+                    showLoading(false);
+                    console.error('Error dropping class:', error);
                     showToast('error', 'An error occurred. Please try again.');
                 });
             }
@@ -308,15 +403,22 @@
                                                                     );
                                                                 ?>
                                                                 <div class="d-flex gap-2">
-                                                                    <?php if (!$hasRated): ?>
+                                                                    <?php 
+                                                                    $time_limit = isWithin24Hours($schedule['schedule_id']);
+                                                                    if (!$hasRated && (!empty($time_limit) && $time_limit)): 
+                                                                    ?>
                                                                         <button type="button" 
                                                                                 class="btn btn-sm btn-primary" 
                                                                                 onclick="showFeedbackModal(<?php echo $schedule['schedule_id']; ?>, <?php echo $classDetails['techguru_id']; ?>)">
                                                                             <i class="bi bi-star me-1"></i> Give Feedback
                                                                         </button>
-                                                                    <?php else: ?>
+                                                                    <?php elseif ($hasRated): ?>
                                                                         <span class="badge bg-success">
                                                                             <i class="bi bi-check-circle me-1"></i> Feedback Submitted
+                                                                        </span>
+                                                                    <?php else: ?>
+                                                                        <span class="badge bg-secondary">
+                                                                            <i class="bi bi-clock me-1"></i> Feedback Period Expired
                                                                         </span>
                                                                     <?php endif; ?>
                                                                     
@@ -358,6 +460,26 @@
 
                     <!-- Right Column -->
                     <div class="col-md-4">
+                        <!-- Quick Actions Card -->
+                        <div class="content-section mb-4">
+                            <div class="content-card bg-snow">
+                                <div class="card-body">
+                                    <h2 class="section-title mb-3">Quick Actions</h2>
+                                    <div class="d-grid gap-2">
+                                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#messageModal">
+                                            <i class="bi bi-chat-left-text"></i> Message TechGuru
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger" onclick="dropClass()">
+                                            <i class="bi bi-box-arrow-right"></i> Drop Class
+                                        </button>
+                                        <a href="details/feedbacks?id=<?php echo $class_id; ?>" class="btn btn-outline-primary">
+                                            <i class="bi bi-star"></i> View Feedbacks
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Class Resources -->
                         <div class="content-section mb-4">
                             <div class="content-card bg-snow">
@@ -487,6 +609,34 @@
                 </div>
             </div>
         </main>
+
+        <!-- Message Modal -->
+        <div class="modal fade" id="messageModal" tabindex="-1" aria-labelledby="messageModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="messageModalLabel">Message to TechGuru</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="messageForm">
+                            <div class="mb-3">
+                                <label for="messageSubject" class="form-label">Subject</label>
+                                <input type="text" class="form-control" id="messageSubject" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="messageContent" class="form-label">Message</label>
+                                <textarea class="form-control" id="messageContent" rows="6" required></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="sendMessageToTechGuru()">Send Message</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <?php include ROOT_PATH . '/components/footer.php'; ?>
 

@@ -233,4 +233,15 @@ function getCertificateByUUID($cert_uuid) {
         error_log("Error getting certificate details: " . $e->getMessage());
         return null;
     }
+}
+
+/**
+ * Get certificate details by UUID - alias for getCertificateByUUID
+ * Used in certificate viewing pages
+ * 
+ * @param string $cert_uuid The UUID of the certificate
+ * @return array|null The certificate details or null if not found
+ */
+function getCertificateDetails($cert_uuid) {
+    return getCertificateByUUID($cert_uuid);
 } 

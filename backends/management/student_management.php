@@ -745,7 +745,7 @@ function checkStudentEnrollment($student_id, $class_id) {
             JOIN class c ON e.class_id = c.class_id
             WHERE e.student_id = ? 
             AND e.class_id = ?
-            AND e.status != 'dropped'
+            AND e.status NOT IN ('dropped', 'pending')
         ");
         
         $stmt->bind_param("ii", $student_id, $class_id);
@@ -792,5 +792,191 @@ function checkPendingInvitation($student_id, $class_id) {
         return null;
     }
 }
+/**
+ * This function will return if the current date is within 24hr from the session completion date
+ * @param int $scheduleId The class' session id
+ * @return true|false if current datetime is within the specified limit
+ */
+function isWithin24Hours($scheduleId) {
+    global $conn;
 
+    $stmt = $conn->prepare("SELECT status_changed_at FROM class_schedule WHERE schedule_id = ? LIMIT 1");
+    $stmt->bind_param('i',$scheduleId);
+    $stmt->execute();
+
+    $result = $stmt->get_result();
+    if($row = $result->fetch_assoc()) {
+        $completionDateTime  = new DateTime($row['status_changed_at']);
+        $completionDateTime->add(new DateInterval('PT24H'));
+        $currentDateTime = new DateTime();
+    
+        if($currentDateTime < $completionDateTime) {
+            return true;
+        }
+        return false;
+    }
+    return null;
+}
+
+/**
+ * Drop a class (unenroll a student from a class)
+ * 
+ * @param int $student_id The ID of the student dropping the class
+ * @param int $class_id The ID of the class to drop
+ * @param string $reason Optional reason for dropping the class
+ * @return array Status and message
+ */
+function dropClass($student_id, $class_id, $reason = '') {
+    global $conn;
+    
+    try {
+        // Start transaction
+        $conn->begin_transaction();
+        
+        // Verify the student is enrolled in this class
+        $stmt = $conn->prepare("
+            SELECT e.enrollment_id, e.status, c.class_name, c.tutor_id, 
+                   CONCAT(u.first_name, ' ', u.last_name) AS tutor_name
+            FROM enrollments e
+            JOIN class c ON e.class_id = c.class_id
+            JOIN users u ON c.tutor_id = u.uid
+            WHERE e.class_id = ? AND e.student_id = ? AND e.status = 'active'
+        ");
+        $stmt->bind_param("ii", $class_id, $student_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows === 0) {
+            return [
+                'success' => false, 
+                'message' => 'You are not actively enrolled in this class or the class does not exist'
+            ];
+        }
+        
+        $enrollment = $result->fetch_assoc();
+        
+        // Get student name
+        $stmt = $conn->prepare("
+            SELECT CONCAT(first_name, ' ', last_name) AS student_name, email
+            FROM users
+            WHERE uid = ?
+        ");
+        $stmt->bind_param("i", $student_id);
+        $stmt->execute();
+        $student = $stmt->get_result()->fetch_assoc();
+        
+        // Update enrollment status to 'dropped'
+        $stmt = $conn->prepare("
+            UPDATE enrollments
+            SET status = 'dropped',enrollment_date = NOW(), message = ?
+            WHERE enrollment_id = ?
+        ");
+        $notes = empty($reason) ? 'Student initiated drop' : 'Reason: ' . $reason;
+        $stmt->bind_param("si", $notes, $enrollment['enrollment_id']);
+        $stmt->execute();
+
+        // Send notification to the tutor
+        $notification_message = "<strong>{$student['student_name']}</strong> has dropped the class <strong>{$enrollment['class_name']}</strong>.";
+        if (!empty($reason)) {
+            $notification_message .= "<br><strong>Reason:</strong> " . htmlspecialchars($reason);
+        }
+        
+        $stmt = $conn->prepare("
+            INSERT INTO notifications (
+                recipient_id, recipient_role, class_id, message, icon, icon_color
+            ) VALUES (?, 'TECHGURU', ?, ?, 'bi-person-dash-fill', 'text-danger')
+        ");
+        $stmt->bind_param("iis", $enrollment['tutor_id'], $class_id, $notification_message);
+        $stmt->execute();
+        
+        // Try to send an email notification to the tutor
+        try {
+            // Get tutor email
+            $stmt = $conn->prepare("SELECT email FROM users WHERE uid = ?");
+            $stmt->bind_param("i", $enrollment['tutor_id']);
+            $stmt->execute();
+            $tutor_email = $stmt->get_result()->fetch_assoc()['email'];
+            
+            $mail = getMailerInstance();
+            $mail->addAddress($tutor_email, $enrollment['tutor_name']);
+            $mail->Subject = "Student Dropped Class - {$enrollment['class_name']}";
+            
+            $email_body = '
+            <div style="max-width: 600px; margin: auto; font-family: Arial, sans-serif; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                <div style="background: #dc3545; padding: 20px; text-align: center; color: white;">
+                    <h2 style="margin: 0; font-size: 22px;">Student Dropped Class</h2>
+                </div>
+                <div style="padding: 20px; background: #f9f9f9;">
+                    <p style="font-size: 16px; color: #333;">Hello <strong>' . htmlspecialchars($enrollment['tutor_name']) . '</strong>,</p>
+                    <p style="font-size: 16px; color: #555;">
+                        <strong>' . htmlspecialchars($student['student_name']) . '</strong> has dropped your class <strong>' . htmlspecialchars($enrollment['class_name']) . '</strong>.
+                    </p>';
+            
+            if (!empty($reason)) {
+                $email_body .= '
+                    <div style="margin: 20px 0; padding: 15px; border-left: 4px solid #dc3545; background: #f0f0f0;">
+                        <h3 style="margin-top: 0; color: #444; font-size: 18px;">Reason for Dropping:</h3>
+                        <div style="color: #555; font-size: 16px;">
+                            ' . htmlspecialchars($reason) . '
+                        </div>
+                    </div>';
+            }
+            
+            $email_body .= '
+                    <p style="font-size: 15px; color: #666;">
+                        You can view this update in your TechTutor dashboard.
+                    </p>
+                    <div style="text-align: center; margin: 25px 0 15px;">
+                        <a href="' . BASE . 'dashboard" 
+                           style="background: #0dcaf0; color: white; padding: 10px 20px; text-decoration: none; font-size: 16px; border-radius: 5px;">
+                            Go to Dashboard
+                        </a>
+                    </div>
+                </div>
+                <div style="background: #ddd; padding: 10px; text-align: center; font-size: 14px; color: #666;">
+                    <p style="margin: 5px 0;">Best regards,<br><strong>The TechTutor Team</strong></p>
+                </div>
+            </div>';
+            
+            $mail->Body = $email_body;
+            $mail->send();
+        } catch (Exception $e) {
+            // Log email error but continue with the process
+            log_error("Failed to send class drop email to tutor: " . $e->getMessage(), "mail");
+        }
+        
+        // Commit transaction
+        $conn->commit();
+        
+        return [
+            'success' => true,
+            'message' => 'You have successfully dropped the class',
+            'data' => [
+                'class_name' => $enrollment['class_name']
+            ]
+        ];
+        
+    } catch (Exception $e) {
+        // Rollback transaction on error
+        $conn->rollback();
+        log_error("Error dropping class: " . $e->getMessage());
+        return ['success' => false, 'message' => 'Failed to drop class: ' . $e->getMessage()];
+    }
+}
+/**
+ * This function will get all of the student's enrolled class
+ * @param int $studentId The ID of the student to be used as reference
+ * @return $classIds[], will return all of the enrolled class Ids
+*/
+function getEnrolledClass($studentId) {
+    global $conn;
+    
+    $stmt = $conn->prepare("SELECT class_id FROM enrollments WHERE student_id = ? AND status IN ('active', 'completed')");
+    $stmt->bind_param('i', $studentId);
+    $stmt->execute();
+
+    $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+    return array_column($result, 'class_id');
+}
 ?>

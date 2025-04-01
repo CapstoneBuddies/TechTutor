@@ -403,7 +403,7 @@ function getSubjectDetails($identifier, $by = 'course_id') {
                 (SELECT AVG(sf.rating) 
                  FROM class cl 
                  JOIN session_feedback sf ON cl.tutor_id = sf.tutor_id 
-                 WHERE cl.subject_id = s.subject_id) AS average_rating,
+                 WHERE cl.subject_id = s.subject_id AND sf.is_archived = 0) AS average_rating,
                 (SELECT 
                     CASE 
                         WHEN COUNT(DISTINCT e2.student_id) = 0 THEN 0 
@@ -583,7 +583,13 @@ function getClassDetails($class_id, $tutor_id = null) {
                         WHEN c.start_date > NOW() THEN 'upcoming'
                         WHEN c.status = 'inactive' THEN 'inactive'
                         ELSE 'ongoing'
-                    END AS status
+                    END AS status,
+                    (SELECT COUNT(*)
+                    FROM enrollments
+                    WHERE class_id = c.class_id) AS enrolled_students,
+                    (SELECT AVG(sf.rating)
+                    FROM session_feedback sf
+                    WHERE tutor_id = techguru_id) AS average_rating
                   FROM class c
                   JOIN subject s ON c.subject_id = s.subject_id
                   JOIN course co ON s.course_id = co.course_id
@@ -1100,7 +1106,7 @@ function getClassFeedbacks($class_id) {
              FROM session_feedback sf
              JOIN class_schedule cs ON sf.session_id = cs.schedule_id
              JOIN users u ON sf.student_id = u.uid
-             WHERE cs.class_id = ?
+             WHERE cs.class_id = ? AND sf.is_archived = 0
              ORDER BY sf.created_at DESC";
              
     try {
@@ -2244,5 +2250,25 @@ function getClassProgress($classId, $studentId) {
         log_error("Error calculating class progress: " . $e->getMessage(), "database");
         return 0;
     }
+}
+
+/**
+ * This function will grab the total sessions and total completed sessions
+ * @param $classId, the class id to be referred
+ */
+function getClassSessionRate($classId) {
+    global $conn;
+
+    $stmt = $conn->prepare("
+        SELECT 
+            COUNT(*) AS total_class_session,
+            SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS total_completed_session,
+            SUM(CASE WHEN status != 'completed' THEN 1 ELSE 0 END) AS total_pending_session
+        FROM class_schedule
+        WHERE class_id = ?
+    ");
+    $stmt->bind_param("i",$classId);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_assoc();
 }
 ?>

@@ -92,3 +92,21 @@ END//
 DELIMITER ; 
 ALTER TABLE `recording_visibility` 
 ADD COLUMN `schedule_id` INT(11) NOT NULL DEFAULT 0 AFTER `class_id`;
+-- (04-01-2025)
+ALTER TABLE `class_schedule`
+ADD COLUMN `status_changed_at` DATETIME DEFAULT NULL;
+DELIMITER $$
+
+CREATE TRIGGER update_status_changed_at BEFORE UPDATE ON `class_schedule`
+FOR EACH ROW
+BEGIN
+    IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
+        SET NEW.status_changed_at = NOW();
+    END IF;
+END $$
+
+DELIMITER ;
+
+alter table enrollments
+drop column invitation_message,
+add column `message` TEXT NULL;

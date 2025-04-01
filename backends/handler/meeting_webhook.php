@@ -113,12 +113,12 @@ try {
             if ($row) {
                 try {
                     $meetingInfo = $meeting->getMeetingInfo($meetingId, $row['moderator_pw']);
-                    
-                    $query = "UPDATE meeting_analytics 
-                             SET end_time = ?,
-                                 participant_count = ?,
-                                 duration = ?
-                             WHERE meeting_id = ?";
+                
+                $query = "UPDATE meeting_analytics 
+                         SET end_time = ?,
+                             participant_count = ?,
+                             duration = ?
+                         WHERE meeting_id = ?";
                     
                     $stmt = $conn->prepare($query);
                     if (!$stmt) {
@@ -214,4 +214,4 @@ try {
         'event' => $eventName,
         'meetingId' => $meetingId
     ]);
-}
+} 

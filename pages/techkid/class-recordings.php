@@ -12,6 +12,13 @@
     // Get class ID from URL parameter
     $class_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
+    // Check if student is enrolled in the class
+    $check = checkStudentEnrollment($_SESSION['user'], $class_id);
+    if(!$check) {
+        header("location: ".BASE."dashboard/s/enrollments/class?id=".$class_id);
+        exit();
+    }
+
     // Get class details
     $classDetails = getClassDetails($class_id);
     if (!$classDetails) {

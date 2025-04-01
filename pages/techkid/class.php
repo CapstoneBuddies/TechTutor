@@ -26,6 +26,8 @@
     } catch (Exception $e) {
         log_error("Class page error: " . $e->getMessage(), "database");
     }
+
+    $title = "My Class";
 ?>
 <!DOCTYPE html>
 <html lang="en">
