@@ -1,22 +1,77 @@
 <?php
-require_once '../main.php';
-require_once BACKEND.'management/meeting_management.php';
+// Error reporting (comment out in production)
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// Force content type for response
+header('Content-Type: application/json');
+
+// Try to include required files
+try {
+    require_once '../main.php';
+    require_once BACKEND.'meeting_management.php';
+} catch (Exception $e) {
+    // Fallback if includes fail
+    echo json_encode([
+        'success' => false, 
+        'error' => 'Failed to load dependencies',
+        'message' => $e->getMessage()
+    ]);
+    exit;
+}
+
+// Create a manual log function in case regular logging fails
+function manual_log($message) {
+    $logFile = __DIR__ . '/../../logs/webhook_manual.log';
+    $entry = date('Y-m-d H:i:s') . " - " . $message . "\n";
+    file_put_contents($logFile, $entry, FILE_APPEND);
+}
+
+// Start of webhook handling
+manual_log("New webhook request received from " . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
 
 // Initialize meeting management
-$meeting = new MeetingManagement();
-global $conn;
+try {
+    $meeting = new MeetingManagement();
+    global $conn;
+} catch (Exception $e) {
+    manual_log("Failed to initialize: " . $e->getMessage());
+    echo json_encode(['success' => false, 'error' => 'Initialization failed']);
+    exit;
+}
 
 // Initial receipt logging
-log_error("========= NEW WEBHOOK REQUEST =========", "webhooks");
-log_error("Request Time: " . date('Y-m-d H:i:s'), "webhooks");
+try {
+    log_error("========= NEW WEBHOOK REQUEST =========", "webhooks");
+    log_error("Request Time: " . date('Y-m-d H:i:s'), "webhooks");
+} catch (Exception $e) {
+    manual_log("Failed to log: " . $e->getMessage());
+}
 
 // Log headers
-$headers = getallheaders();
-log_error("Received Headers: " . json_encode($headers), "webhooks-debug");
+try {
+    $headers = getallheaders();
+    log_error("Received Headers: " . json_encode($headers), "webhooks-debug");
+} catch (Exception $e) {
+    manual_log("Failed to get headers: " . $e->getMessage());
+    // Fallback for getallheaders if it doesn't exist
+    $headers = [];
+    foreach ($_SERVER as $name => $value) {
+        if (substr($name, 0, 5) == 'HTTP_') {
+            $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
+        }
+    }
+}
 
 // Get and log raw data
-$rawData = file_get_contents("php://input");
-log_error("Raw Data: " . $rawData, "webhooks-debug");
+try {
+    $rawData = file_get_contents("php://input");
+    log_error("Raw Data: " . $rawData, "webhooks-debug");
+} catch (Exception $e) {
+    manual_log("Failed to get raw data: " . $e->getMessage());
+    $rawData = '';
+}
 
 // Check if this is a test/browser request or an actual webhook
 $isTestRequest = empty($rawData) && 
@@ -25,19 +80,24 @@ $isTestRequest = empty($rawData) &&
 
 if ($isTestRequest) {
     // This appears to be a browser request or test
-    header('Content-Type: application/json');
     echo json_encode([
         'status' => 'test_mode',
         'message' => 'This is the BigBlueButton webhook endpoint. Direct browser access is informational only.',
         'info' => 'When accessed by BigBlueButton, this endpoint receives meeting events with proper authentication.',
-        'webhook_url' => BBB_WEBHOOK_URL ?? 'Not configured',
-        'time' => date('Y-m-d H:i:s')
+        'webhook_url' => $_ENV['BBB_WEBHOOK_URL'] ?? 'https://techtutor.cfd/backends/handler/meeting_webhook.php',
+        'time' => date('Y-m-d H:i:s'),
+        'headers' => $headers,
+        'server' => $_SERVER,
+        'data' => $rawData
     ]);
     exit;
 }
 
 // Security verification for real webhook requests
 $signature = isset($headers['X-Checksum']) ? $headers['X-Checksum'] : '';
+if (empty($signature) && isset($headers['x-checksum'])) {
+    $signature = $headers['x-checksum']; // Try lowercase version
+}
 
 // Get webhook secret from env with fallback
 $secret = $_ENV['BBB_WEBHOOK_SECRET'] ?? null;
@@ -52,34 +112,58 @@ if (empty($secret)) {
 }
 
 // Log signature check
-log_error("Received Signature: " . $signature, "webhooks-debug");
-$calculatedSignature = hash('sha1', $rawData . $secret);
-log_error("Calculated Signature: " . $calculatedSignature, "webhooks-debug");
+try {
+    log_error("Received Signature: " . $signature, "webhooks-debug");
+    $calculatedSignature = hash('sha1', $rawData . $secret);
+    log_error("Calculated Signature: " . $calculatedSignature, "webhooks-debug");
+} catch (Exception $e) {
+    manual_log("Failed to calculate signature: " . $e->getMessage());
+}
 
 // Verify signature
 if ($signature !== $calculatedSignature) {
-    log_error("Signature verification failed!", "error");
-    http_response_code(403);
+    try {
+        log_error("Signature verification failed!", "error");
+    } catch (Exception $e) {
+        manual_log("Signature verification failed! Failed to log error: " . $e->getMessage());
+    }
     echo json_encode(['success' => false, 'message' => 'Invalid signature']);
     exit;
 }
 
 // Process the data
-$data = json_decode($rawData, true);
+try {
+    $data = json_decode($rawData, true);
+} catch (Exception $e) {
+    manual_log("Failed to decode JSON: " . $e->getMessage());
+    echo json_encode(['success' => false, 'error' => 'Invalid JSON data']);
+    exit;
+}
 
 // Log the complete data structure to understand format
-log_error("Full webhook data structure: " . print_r($data, true), "webhooks-debug");
+try {
+    log_error("Full webhook data structure: " . print_r($data, true), "webhooks-debug");
+} catch (Exception $e) {
+    manual_log("Failed to log data structure: " . $e->getMessage());
+}
 
 // Extract event name with fallbacks for different formats
 $eventName = $data['event']['name'] ?? $data['event'] ?? $data['name'] ?? 'unknown';
-log_error("Processed Event Type: " . $eventName, "webhooks");
+try {
+    log_error("Processed Event Type: " . $eventName, "webhooks");
+} catch (Exception $e) {
+    manual_log("Event type: " . $eventName . " - Failed to log: " . $e->getMessage());
+}
 
 // Extract meeting ID with fallbacks for different formats
 $meetingId = $data['meetingId'] ?? $data['meeting_id'] ?? $data['data']['meetingId'] ?? $data['data']['meeting_id'] ?? null;
 
 if (!$meetingId) {
-    log_error("Could not find meeting ID in webhook data", "error");
-    http_response_code(400);
+    try {
+        log_error("Could not find meeting ID in webhook data", "error");
+    } catch (Exception $e) {
+        manual_log("Could not find meeting ID in webhook data - Failed to log: " . $e->getMessage());
+    }
     echo json_encode(['success' => false, 'message' => 'Missing meeting ID']);
     exit;
 }
@@ -223,7 +307,6 @@ try {
     }
 
     // Send success response
-    http_response_code(200);
     echo json_encode([
         'success' => true,
         'message' => 'Webhook processed successfully',
@@ -236,7 +319,6 @@ try {
 
 } catch (Exception $e) {
     log_error("Webhook error: " . $e->getMessage(), "error");
-    http_response_code(500);
     echo json_encode([
         'success' => false, 
         'error' => $e->getMessage(),

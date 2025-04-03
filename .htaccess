@@ -6,7 +6,7 @@ ErrorDocument 500 /pages/error/500.php
     # Allow CORS for all resources (images, JS, CSS, etc.)
     Header set Access-Control-Allow-Origin "*"
     Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
-    Header set Access-Control-Allow-Headers "Origin, Content-Type, X-Auth-Token"
+    Header set Access-Control-Allow-Headers "Origin, Content-Type, X-Auth-Token, X-Checksum"
     
     # Allow for image content specifically (images, etc.)
     <FilesMatch "\.(jpg|jpeg|png|gif|bmp|svg|webp)$">
@@ -24,6 +24,10 @@ ErrorDocument 500 /pages/error/500.php
      RewriteRule ^admin/register-webhook$ backends/admin/register_bbb_webhook.php [QSA,L]
      RewriteRule ^admin/test-webhook$ backends/admin/test_bbb_webhook.php [QSA,L]
      RewriteRule ^admin/send-test-webhook$ backends/admin/send_test_webhook.php [QSA,L]
+     
+     # Allow direct access to webhook endpoints without restrictions
+     RewriteCond %{REQUEST_URI} ^/backends/handler/meeting_webhook\.php
+     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization},L]
 </IfModule>
 
 RewriteEngine On

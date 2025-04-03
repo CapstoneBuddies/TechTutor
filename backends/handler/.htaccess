@@ -1,0 +1,16 @@
+# Allow direct access to webhook handlers
+<IfModule mod_rewrite.c>
+    RewriteEngine Off
+</IfModule>
+
+# Allow all methods
+<Limit GET POST PUT DELETE OPTIONS>
+    Require all granted
+</Limit>
+
+# Set cors headers
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+    Header set Access-Control-Allow-Headers "Origin, Content-Type, X-Auth-Token, X-Checksum"
+</IfModule> 
