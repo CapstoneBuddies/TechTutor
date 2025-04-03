@@ -25,10 +25,15 @@ ErrorDocument 500 /pages/error/500.php
      RewriteRule ^admin/test-webhook$ backends/admin/test_bbb_webhook.php [QSA,L]
      RewriteRule ^admin/send-test-webhook$ backends/admin/send_test_webhook.php [QSA,L]
      
+     # Block the problematic hook/list endpoint that exposes ENV data
+     RewriteRule ^hook/list$ - [F,L]
+     
      # Allow direct access to webhook endpoints without restrictions
      RewriteCond %{REQUEST_URI} ^/backends/handler/meeting_webhook\.php
      RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization},L]
 </IfModule>
+
+
 
 RewriteEngine On
 
@@ -52,6 +57,9 @@ RewriteRule ^dashboard/[sta]/profile$ pages/profile.php [L]
 RewriteRule ^dashboard/[sta]/settings$ pages/settings.php [L]
 RewriteRule ^dashboard/[sta]/transactions$ pages/transactions.php [L]
 RewriteRule ^dashboard/[sta]/notifications$ pages/notifications.php [L]
+
+#Webhook
+RewriteRule ^webhooks$ backends/handler/meeting_webhook.php [QSA,L]
 
 # BBB End Meeting Redirect
 RewriteRule ^dashboard/u/class$ backends/class_redirect.php [L,QSA]

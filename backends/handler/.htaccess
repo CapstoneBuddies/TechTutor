@@ -1,16 +1,41 @@
 # Allow direct access to webhook handlers
 <IfModule mod_rewrite.c>
-    RewriteEngine Off
+    RewriteEngine On
+    
+    # Only allow access to specific webhook files
+    RewriteCond %{REQUEST_FILENAME} !^(.*/)(meeting_webhook\.php)$
+    RewriteRule ^(.*)$ - [F,L]
 </IfModule>
 
-# Allow all methods
-<Limit GET POST PUT DELETE OPTIONS>
+# Allow specific methods for webhook handlers
+<Limit GET POST OPTIONS>
     Require all granted
 </Limit>
+
+# Block other methods
+<LimitExcept GET POST OPTIONS>
+    Require all denied
+</LimitExcept>
 
 # Set cors headers
 <IfModule mod_headers.c>
     Header set Access-Control-Allow-Origin "*"
     Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
     Header set Access-Control-Allow-Headers "Origin, Content-Type, X-Auth-Token, X-Checksum"
-</IfModule> 
+</IfModule>
+
+# Protect hook management
+<FilesMatch "^hook.*\.php$">
+    # Only allow access to specific webhook files
+    <FilesMatch "^(meeting_webhook\.php)$">
+        Require all granted
+    </FilesMatch>
+    <FilesMatch "^(?!(meeting_webhook\.php)).*$">
+        Require all denied
+    </FilesMatch>
+</FilesMatch>
+
+# Prevent direct access to any PHP file that might expose system information
+<FilesMatch "^(test|info|debug|phpinfo|env|config|setup|install).*\.php$">
+    Require all denied
+</FilesMatch> 

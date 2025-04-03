@@ -11,16 +11,8 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'ADMIN') {
 }
 
 // Get webhook URL from env or fallback
-$webhookUrl = $_ENV['BBB_WEBHOOK_URL'] ?? null;
-if (empty($webhookUrl)) {
-    // Read from the .env file directly
-    $envFile = file_get_contents(__DIR__ . '/../../backends/.env');
-    if (preg_match('/BBB_WEBHOOK_URL="([^"]+)"/', $envFile, $matches)) {
-        $webhookUrl = $matches[1];
-    } else {
-        $webhookUrl = "https://techtutor.cfd/backends/handler/meeting_webhook.php";
-    }
-}
+$webhookUrl = BBB_WEBHOOK_URL ?? null;
+
 ?>
 
 <div class="container-fluid">

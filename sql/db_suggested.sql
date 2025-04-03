@@ -110,3 +110,29 @@ DELIMITER ;
 alter table enrollments
 drop column invitation_message,
 add column `message` TEXT NULL;
+
+-- Database schema updates to fix webhook handling
+
+-- Option 1: Add tutor_id to the meetings table (simplest solution)
+ALTER TABLE `meetings` 
+ADD COLUMN `tutor_id` int(11) AFTER `schedule_id`,
+ADD KEY `idx_meetings_tutor` (`tutor_id`),
+ADD CONSTRAINT `meetings_ibfk_2` FOREIGN KEY (`tutor_id`) REFERENCES `users` (`uid`);
+
+-- Update existing meetings with the tutor_id from the class table
+UPDATE meetings m
+JOIN class_schedule cs ON m.schedule_id = cs.schedule_id
+JOIN class c ON cs.class_id = c.class_id
+SET m.tutor_id = c.tutor_id
+WHERE m.tutor_id IS NULL;
+
+-- Update the meeting_analytics table to enforce the foreign key constraint
+ALTER TABLE `meeting_analytics` MODIFY `meeting_id` varchar(50) NOT NULL;
+
+-- Drop the existing foreign key constraint
+ALTER TABLE `meeting_analytics` DROP FOREIGN KEY `meeting_analytics_ibfk_1`;
+
+-- Add the new foreign key constraint
+ALTER TABLE `meeting_analytics` 
+ADD CONSTRAINT `meeting_analytics_ibfk_1` FOREIGN KEY (`meeting_id`) 
+REFERENCES `meetings` (`meeting_uid`) ON DELETE CASCADE;

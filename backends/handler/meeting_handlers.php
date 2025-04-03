@@ -87,14 +87,15 @@ switch ($action) {
                 // Save meeting details
                 $stmt = $conn->prepare("
                     INSERT INTO meetings (
-                        meeting_uid, schedule_id, meeting_name, 
+                        meeting_uid, schedule_id, tutor_id, meeting_name, 
                         attendee_pw, moderator_pw, createtime, 
                         is_running, end_time
-                    ) VALUES (?, ?, ?, ?, ?, UNIX_TIMESTAMP(), true, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, UNIX_TIMESTAMP(), true, ?)
                 ");
                 $stmt->execute([
                     $meetingId,
                     $scheduleId,
+                    $schedule['tutor_id'],
                     $schedule['class_name'],
                     $result['attendeePW'],
                     $result['moderatorPW'],
