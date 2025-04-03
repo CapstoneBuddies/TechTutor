@@ -14,7 +14,7 @@ if (php_sapi_name() !== 'cli' && (!isset($_SESSION['role']) || $_SESSION['role']
 
 // Get webhook URL from env or fallback
 $webhookUrl = BBB_WEBHOOK_URL ?? null;
-$webhookSecret = BBB_WEBHOOK_SECRET ?? null;
+$webhookSecret = BBB_WEBHOOK_SECRET ?? null; 
 
 // Fallback if env vars aren't loaded
 if (empty($webhookUrl)) {
