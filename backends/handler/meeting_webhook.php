@@ -20,7 +20,7 @@ log_error("Raw Data: " . $rawData, "webhooks-debug");
 
 // Security verification - Use only one verification method
 $signature = isset($headers['X-Checksum']) ? $headers['X-Checksum'] : '';
-$secret = BBB_WEBHOOK_SECRET;
+$secret = BBB_SECRET;
 
 // Log signature check
 log_error("Received Signature: " . $signature, "webhooks-debug");

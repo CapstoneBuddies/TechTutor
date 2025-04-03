@@ -298,58 +298,6 @@ $title = htmlspecialchars($classDetails['class_name']);
                     showLoading(false);
                 }
             }
-            
-            function showLoading(show) {
-                // Create or find loading overlay
-                let loadingOverlay = document.getElementById('loading-overlay');
-                if (!loadingOverlay && show) {
-                    loadingOverlay = document.createElement('div');
-                    loadingOverlay.id = 'loading-overlay';
-                    loadingOverlay.innerHTML = `
-                        <div class="d-flex justify-content-center align-items-center h-100">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                        </div>
-                    `;
-                    loadingOverlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center;';
-                    document.body.appendChild(loadingOverlay);
-                } else if (loadingOverlay && !show) {
-                    loadingOverlay.remove();
-                }
-            }
-            
-            function showToast(type, message) {
-                // Toast notification implementation
-                const toastContainer = document.getElementById('toast-container') || document.createElement('div');
-                if (!document.getElementById('toast-container')) {
-                    toastContainer.id = 'toast-container';
-                    toastContainer.className = 'position-fixed bottom-0 end-0 p-3';
-                    document.body.appendChild(toastContainer);
-                }
-                
-                const toastId = 'toast-' + Date.now();
-                const toastHTML = `
-                    <div id="${toastId}" class="toast align-items-center border-0 border-start border-4 border-${type === 'success' ? 'success' : 'danger'}" role="alert" aria-live="assertive" aria-atomic="true">
-                        <div class="d-flex">
-                            <div class="toast-body">
-                                <i class="bi bi-${type === 'success' ? 'check-circle' : 'x-circle'} me-2"></i>
-                                ${message}
-                            </div>
-                            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                        </div>
-                    </div>
-                `;
-                
-                toastContainer.insertAdjacentHTML('beforeend', toastHTML);
-                const toastElement = document.getElementById(toastId);
-                const toast = new bootstrap.Toast(toastElement, { delay: 5000 });
-                toast.show();
-                
-                toastElement.addEventListener('hidden.bs.toast', () => {
-                    toastElement.remove();
-                });
-            }
         </script>
         
         <style>

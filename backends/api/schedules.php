@@ -13,7 +13,6 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHGURU') {
 
 // Get the request method
 $method = $_SERVER['REQUEST_METHOD'];
-
 try {
     switch ($method) {
         case 'GET':
@@ -124,7 +123,7 @@ try {
                     JOIN class c ON cs.class_id = c.class_id
                     WHERE cs.schedule_id IN ($placeholders)
                     AND c.tutor_id = ?
-                    AND cs.status NOT IN ('completed', 'cancelled')
+                    AND cs.status = 'pending'
                 ");
                 
                 $params = array_merge($ids, [$_SESSION['user']]);

@@ -566,17 +566,6 @@
                 window.history.pushState({}, '', url);
             }
             
-            // Helper function to show/hide loading indicator
-            function showLoading(show) {
-                if (show) {
-                    loadingIndicator.classList.remove('d-none');
-                    usersTableBody.innerHTML = '';
-                    noResults.classList.add('d-none');
-                } else {
-                    loadingIndicator.classList.add('d-none');
-                }
-            }
-            
             // Helper function to format date
             function formatDate(dateString) {
                 if (!dateString) return 'Never';

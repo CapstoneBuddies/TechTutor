@@ -46,7 +46,7 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
         } else {
             $_SESSION['success'] = "Schedules updated successfully!";
         }
-        header('Location: ' . $_SERVER['PHP_SELF'] . '?id=' . $class_id);
+        header('Location: schedules?id=' . $class_id);
         exit();
     }
 }
@@ -341,7 +341,7 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
                                 <i class="bi bi-calendar-week"></i> Current Schedules
                             </h3>
                             <div class="d-flex gap-2">
-                            <button id="toggleDelete" class="btn btn-outline-danger" onclick="toggleDeleteMode()">
+                            <button id="toggleDelete" class="btn btn-outline-danger">
                                     <i class="bi bi-trash"></i> Delete Mode
                                 </button>
                                 <button id="deleteSelected" class="btn btn-danger d-none">
@@ -687,21 +687,6 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
                 }
             }
 
-            function showToast(message, type = 'info') {
-                const toast = document.createElement('div');
-                toast.className = `toast align-items-center text-white bg-${type} border-0`;
-                toast.setAttribute('role', 'alert');
-                toast.innerHTML = `
-                    <div class="d-flex">
-                        <div class="toast-body">${message}</div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                    </div>
-                `;
-                document.body.appendChild(toast);
-                new bootstrap.Toast(toast).show();
-                toast.addEventListener('hidden.bs.toast', () => toast.remove());
-            }
-
             function updateRemoveButtons() {
                 const entries = document.getElementsByClassName('schedule-entry');
                 const removeButtons = document.querySelectorAll('.remove-btn');
@@ -744,6 +729,7 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
                     if (!isDeleteMode) {
                         selectAll.checked = false;
                         document.querySelectorAll('.schedule-checkbox').forEach(cb => cb.checked = false);
+                        toggleBtn.innerHTML = "<i class='bi bi-trash'></i> Delete Mode";
                     }
                 });
                 
@@ -821,6 +807,7 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
             }
 
             function deleteSchedules(ids) {
+                showLoading(true);
                 fetch(BASE+'api/schedules', {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
@@ -828,10 +815,12 @@ if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
                 })
                 .then(response => response.json())
                 .then(data => {
+                    showLoading(false);
                     if (data.success) {
-                        location.reload();
+                        showToast('success', 'Schedule/s has been deleted');
+                        setTimeout(() => {location.reload();},1500);
                     } else {
-                        alert(data.error);
+                        showToast('error',data.message || 'An error occured during deletion');
                     }
                 });
             }

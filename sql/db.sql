@@ -388,6 +388,7 @@ CREATE TABLE `meetings` (
   `meeting_id` int(11) NOT NULL AUTO_INCREMENT,
   `meeting_uid` varchar(50) NOT NULL,
   `schedule_id` int(11) NOT NULL,
+  `tutor_id` int(11) NOT NULL,
   `meeting_name` varchar(255) NOT NULL,
   `attendee_pw` varchar(255) DEFAULT NULL,
   `moderator_pw` varchar(255) DEFAULT NULL,
@@ -399,7 +400,8 @@ CREATE TABLE `meetings` (
   UNIQUE KEY `meeting_uid` (`meeting_uid`),
   KEY `idx_meeting_uid` (`meeting_uid`),
   KEY `idx_meeting_schedule` (`schedule_id`),
-  CONSTRAINT `meetings_ibfk_1` FOREIGN KEY (`schedule_id`) REFERENCES `class_schedule` (`schedule_id`)
+  CONSTRAINT `meetings_ibfk_1` FOREIGN KEY (`schedule_id`) REFERENCES `class_schedule` (`schedule_id`),
+  CONSTRAINT `meetings_ibfk_2` FOREIGN KEY (`tutor_id`) REFERENCES `users` (`uid`)
 );
 
 CREATE TABLE `meeting_analytics` (

@@ -35,8 +35,6 @@ class MeetingManagement {
                 'meta_recording-name' => $options['recording-name'] ?? null,
                 'logoutURL' => $options['logoutURL'] ?? $_SERVER['SERVER_NAME'].'/dashboard/u/class'
             ];
-            log_error("OPTIONS: ".print_r($options,true));
-            log_error("PARAMS: ".print_r($params,true));
 
             $response = $this->makeRequest('create', $params);
             

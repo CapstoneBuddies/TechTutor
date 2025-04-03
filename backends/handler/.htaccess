@@ -1,41 +1,35 @@
-# Allow direct access to webhook handlers
+# Allow access to handler files but maintain security
 <IfModule mod_rewrite.c>
     RewriteEngine On
     
-    # Only allow access to specific webhook files
-    RewriteCond %{REQUEST_FILENAME} !^(.*/)(meeting_webhook\.php)$
-    RewriteRule ^(.*)$ - [F,L]
+    # Allow all handler files to be accessed
+    # We'll use FilesMatch directives to restrict specific files if needed
 </IfModule>
 
-# Allow specific methods for webhook handlers
-<Limit GET POST OPTIONS>
+# Allow common HTTP methods for API handlers
+<Limit GET POST OPTIONS PUT DELETE>
     Require all granted
 </Limit>
 
 # Block other methods
-<LimitExcept GET POST OPTIONS>
+<LimitExcept GET POST OPTIONS PUT DELETE>
     Require all denied
 </LimitExcept>
 
-# Set cors headers
+# Set CORS headers for API endpoints
 <IfModule mod_headers.c>
     Header set Access-Control-Allow-Origin "*"
-    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
-    Header set Access-Control-Allow-Headers "Origin, Content-Type, X-Auth-Token, X-Checksum"
+    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS, PUT, DELETE"
+    Header set Access-Control-Allow-Headers "Origin, Content-Type, X-Auth-Token, X-Checksum, Authorization"
 </IfModule>
 
-# Protect hook management
-<FilesMatch "^hook.*\.php$">
-    # Only allow access to specific webhook files
-    <FilesMatch "^(meeting_webhook\.php)$">
-        Require all granted
-    </FilesMatch>
-    <FilesMatch "^(?!(meeting_webhook\.php)).*$">
-        Require all denied
-    </FilesMatch>
+# Prevent direct access to any PHP file that might expose system information
+<FilesMatch "^(phpinfo|env|config|setup|install).*\.php$">
+    Require all denied
 </FilesMatch>
 
-# Prevent direct access to any PHP file that might expose system information
-<FilesMatch "^(test|info|debug|phpinfo|env|config|setup|install).*\.php$">
-    Require all denied
-</FilesMatch> 
+# Allow test files only for admins or local development
+# <FilesMatch "^(test|debug|info).*\.php$">
+#     # Uncomment and customize the following if needed
+#     # Require ip 127.0.0.1 ::1
+# </FilesMatch> 

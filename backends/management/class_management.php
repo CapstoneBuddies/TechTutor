@@ -905,7 +905,6 @@ function updateClassSchedules($class_id, $schedules, $tutor_id) {
     
     try {
         $conn->begin_transaction();
-        log_error("was called");
         // Verify class ownership
         $verify = $conn->prepare("SELECT tutor_id FROM class WHERE class_id = ?");
         $verify->bind_param("i", $class_id);
@@ -915,8 +914,16 @@ function updateClassSchedules($class_id, $schedules, $tutor_id) {
         if (!$result || $result['tutor_id'] != $tutor_id) {
             throw new Exception("Unauthorized schedule update attempt");
         }
+        // Check the total number of schedules of the class
+        $total_stmt = $conn->prepare("SELECT COUNT(*) AS total_schedule FROM class_schedule WHERE class_id = ?");
+        $total_stmt->bind_param("i", $class_id);
+        $total_stmt->execute();
+        $total = $total_stmt->get_result()->fetch_assoc();
+
+        // Check if the total >= 1 after the operation
+
         // Delete existing schedules
-        $delete = $conn->prepare("DELETE FROM class_schedule WHERE class_id = ?");
+        $delete = $conn->prepare("DELETE FROM class_schedule WHERE class_id = ? AND status='pending'");
         $delete->bind_param("i", $class_id);
         $delete->execute();
         
@@ -959,7 +966,7 @@ function getScheduleStatus($schedule_id) {
     
     try {
         // First, check if the status is already completed or canceled in the database
-        $stmt = $conn->prepare("SELECT session_date, start_time, status FROM class_schedule WHERE schedule_id = ?");
+        $stmt = $conn->prepare("SELECT session_date, start_time, status, (SELECT COUNT(*) FROM meetings WHERE meetings.schedule_id = class_schedule.schedule_id) AS has_meeting FROM class_schedule WHERE schedule_id = ?");
         $stmt->bind_param("i", $schedule_id);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -973,6 +980,10 @@ function getScheduleStatus($schedule_id) {
         // If status is already completed or canceled, return that
         if ($schedule['status'] === 'completed' || $schedule['status'] === 'canceled') {
             return $schedule['status'];
+        }
+        // If status is already started and has a meeting
+        if ($schedule['status'] === 'confirmed' || $schedule['has_meeting'] == 1) {
+            return 'ongoing';
         }
         
         // Otherwise calculate status based on date and time
