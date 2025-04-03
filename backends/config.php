@@ -45,6 +45,9 @@
 
 	define('BBB_API_URI',$_ENV['BBB_URI']);
 	define('BBB_SECRET',$_ENV['BBB_SECRET']);
+
+	define('BBB_WEBHOOK_SECRET',$_ENV['BBB_WEBHOOK_SECRET']);
+	define('BBB_WEBHOOK_UR',$_ENV['BBB_WEBHOOK_URL']);
 	
 	define('SMTP_HOST',$_ENV['MAIL_HOST']);
 	define('SMTP_USER',$_ENV['MAIL_USER']);
@@ -92,7 +95,7 @@
 	    if ($type === 'meeting' || $type === 7) {
 	        $path = LOG_PATH . 'meeting.log';
 	    } 
-	    elseif ($type === 'webhooks' || $type === 10) {
+	    elseif ($type === 'webhooks' || $type === 10 || $type === 'webhooks-debug') {
 	        $path = LOG_PATH . 'webhook.log';
 	    }
 

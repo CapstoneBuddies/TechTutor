@@ -8,7 +8,7 @@ global $conn;
 
 // Initial receipt logging
 log_error("========= NEW WEBHOOK REQUEST =========", "webhooks");
-log_error("Request Time: " . date('Y-m-d H:i:s'), "webhooks-debug");
+log_error("Request Time: " . date('Y-m-d H:i:s'), "webhooks");
 
 // Log headers
 $headers = getallheaders();
@@ -18,9 +18,38 @@ log_error("Received Headers: " . json_encode($headers), "webhooks-debug");
 $rawData = file_get_contents("php://input");
 log_error("Raw Data: " . $rawData, "webhooks-debug");
 
-// Security verification - Use only one verification method
+// Check if this is a test/browser request or an actual webhook
+$isTestRequest = empty($rawData) && 
+                (!isset($headers['X-Checksum']) || empty($headers['X-Checksum'])) && 
+                (isset($headers['User-Agent']) && strpos($headers['User-Agent'], 'Mozilla') !== false);
+
+if ($isTestRequest) {
+    // This appears to be a browser request or test
+    header('Content-Type: application/json');
+    echo json_encode([
+        'status' => 'test_mode',
+        'message' => 'This is the BigBlueButton webhook endpoint. Direct browser access is informational only.',
+        'info' => 'When accessed by BigBlueButton, this endpoint receives meeting events with proper authentication.',
+        'webhook_url' => BBB_WEBHOOK_URL ?? 'Not configured',
+        'time' => date('Y-m-d H:i:s')
+    ]);
+    exit;
+}
+
+// Security verification for real webhook requests
 $signature = isset($headers['X-Checksum']) ? $headers['X-Checksum'] : '';
-$secret = "4dd7af870cc54df5efd67353e8bfddaf1d510997296089a3a806eb342fc56fa6"; // Same as in BBB config
+
+// Get webhook secret from env with fallback
+$secret = $_ENV['BBB_WEBHOOK_SECRET'] ?? null;
+if (empty($secret)) {
+    // Read from the .env file directly
+    $envFile = file_get_contents(__DIR__ . '/../../backends/.env');
+    if (preg_match('/BBB_WEBHOOK_SECRET="([^"]+)"/', $envFile, $matches)) {
+        $secret = $matches[1];
+    } else {
+        $secret = "4dd7af870cc54df5efd67353e8bfddaf1d510997296089a3a806eb342fc56fa6";
+    }
+}
 
 // Log signature check
 log_error("Received Signature: " . $signature, "webhooks-debug");

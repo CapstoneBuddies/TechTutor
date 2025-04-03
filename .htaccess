@@ -17,6 +17,13 @@ ErrorDocument 500 /pages/error/500.php
 <IfModule mod_rewrite.c>
      RewriteEngine On
      RewriteRule ^meeting_webhook\.php$ - [L]
+     # Allow direct access to webhook endpoints without rewrites
+     RewriteRule ^backends/handler/meeting_webhook\.php$ - [L]
+     # Admin webhook management endpoints
+     RewriteRule ^admin/webhooks$ backends/admin/manage_bbb_webhooks.php [QSA,L]
+     RewriteRule ^admin/register-webhook$ backends/admin/register_bbb_webhook.php [QSA,L]
+     RewriteRule ^admin/test-webhook$ backends/admin/test_bbb_webhook.php [QSA,L]
+     RewriteRule ^admin/send-test-webhook$ backends/admin/send_test_webhook.php [QSA,L]
 </IfModule>
 
 RewriteEngine On
@@ -124,6 +131,7 @@ RewriteRule ^dashboard/t/class/feedbacks$ pages/techguru/feedbacks.php [L]
 RewriteRule ^dashboard/a/logs$ pages/admin/view-logs.php [L]
 RewriteRule ^dashboard/a/users$ pages/admin/view-users.php [L]
 RewriteRule ^dashboard/a/users/details$ pages/admin/user-details.php [L,QSA]
+RewriteRule ^dashboard/a/webhooks$ pages/admin/manage-webhooks.php [L]
 
 RewriteRule ^dashboard/a/certificates$ pages/admin/certificates.php [L]
 RewriteRule ^dashboard/a/verify-certificate$ pages/admin/verify-certificate.php [L,QSA]
