@@ -979,4 +979,18 @@ function getEnrolledClass($studentId) {
 
     return array_column($result, 'class_id');
 }
+
+/**
+ * This function will get all of the student's enrolled class
+ * @param int $classId The ID of the class to be used as reference
+ * @return $students[], will return all students not enrolled to the class
+*/
+function getAvailableStudentsForClass($classId) {
+    global $conn;
+    $stmt = $conn->prepare("SELECT CONCAT(u.first_name,' ',u.last_name) AS name, u.uid AS student_id, u.email FROM users u WHERE role = 'TECHKID' AND u.uid NOT IN ( SELECT student_id FROM enrollments WHERE class_id = ? AND status != 'dropped')");
+    $stmt->bind_param('i',$classId);
+    $stmt->execute();
+
+    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+}
 ?>

@@ -73,8 +73,7 @@
             
             function downloadCertificate(certUuid, award) {
                 showLoading(true);
-                
-                fetch(`${BASE}api/download-certificate`, {
+                fetch(`${BASE}certificate/${certUuid}?download=1`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

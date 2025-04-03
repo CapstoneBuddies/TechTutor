@@ -36,7 +36,7 @@ RewriteRule ^verify$ pages/verify.php [L]
 RewriteRule ^forgot$ pages/forgot-password.php [L]
 RewriteRule ^terms$ pages/terms.php [L]
 RewriteRule ^reset$ pages/reset-password.php [L,QSA]
-RewriteRule ^certificate/([0-9a-fA-F]{32})$ pages/certificates.php [L]
+RewriteRule ^certificate/([0-9a-fA-F]{32})$ pages/certificates.php [L,QSA]
 RewriteRule ^dashboard/[sta]/profile$ pages/profile.php [L]
 RewriteRule ^dashboard/[sta]/settings$ pages/settings.php [L]
 RewriteRule ^dashboard/[sta]/transactions$ pages/transactions.php [L]
@@ -121,20 +121,28 @@ RewriteRule ^dashboard/t/class/feedbacks$ pages/techguru/feedbacks.php [L]
 # ----------------------------------
 # 🔧 Admin Routes
 # ----------------------------------
-RewriteRule ^a/delete-user$ backends/route.php [L]
-RewriteRule ^a/restrict-user$ backends/route.php [L]
-RewriteRule ^a/activate-user$ backends/route.php [L]
-RewriteRule ^update-role$ backends/admin/update_user_role.php [L]
+RewriteRule ^dashboard/a/logs$ pages/admin/view-logs.php [L]
 RewriteRule ^dashboard/a/users$ pages/admin/view-users.php [L]
 RewriteRule ^dashboard/a/users/details$ pages/admin/user-details.php [L,QSA]
+
+RewriteRule ^dashboard/a/certificates$ pages/admin/certificates.php [L]
+RewriteRule ^dashboard/a/verify-certificate$ pages/admin/verify-certificate.php [L,QSA]
+
 RewriteRule ^dashboard/a/courses$ pages/admin/view-course.php [L]
 RewriteRule ^dashboard/a/classes$ pages/admin/view-class.php [L]
+
 RewriteRule ^dashboard/a/classes/details$ pages/admin/class-details.php [L,QSA]
+RewriteRule ^dashboard/a/classes/details/edit$ pages/admin/class-edit.php [L]
+RewriteRule ^dashboard/a/classes/details/sessions$ pages/admin/class-sessions.php [L,QSA]
+RewriteRule ^dashboard/a/classes/details/recordings$ pages/admin/class-recordings.php [L,QSA]
+RewriteRule ^dashboard/a/classes/details/feedback$ pages/admin/class-feedback.php [L,QSA]
+RewriteRule ^dashboard/a/classes/details/enroll$ pages/admin/class-enroll.php [L,QSA]
 
 # ----------------------------------
 # 🛠 AJAX Actions
 # ----------------------------------
 RewriteRule ^logs$ backends/logs.php [L]
+RewriteRule ^admin/logs$ backends/handler/log_handler.php [QSA,L]
 RewriteRule ^get-users$ backends/admin/get_users.php [L]
 RewriteRule ^toggle-user-status$ backends/admin/toggle_user_status.php [L]
 RewriteRule ^delete-user$ backends/admin/delete_user.php [L]
@@ -149,6 +157,14 @@ RewriteRule ^edit-subject$ backends/admin/course_handler.php [L]
 RewriteRule ^delete-subject$ backends/admin/course_handler.php [L]
 RewriteRule ^toggle-subject$ backends/admin/course_handler.php [L,QSA]
 RewriteRule ^update-subject-cover$ backends/admin/course_handler.php [L]
+RewriteRule ^api/class$ backends/admin/class_handler.php [L,QSA]
+RewriteRule ^a/delete-user$ backends/route.php [L]
+RewriteRule ^a/restrict-user$ backends/route.php [L]
+RewriteRule ^a/activate-user$ backends/route.php [L]
+RewriteRule ^update-role$ backends/admin/update_user_role.php [L]
+RewriteRule ^certificate-handling$ backends/admin/certificate_handler.php [L]
+RewriteRule ^api/feedback$ backends/api/feedback.php [L,QSA]
+RewriteRule ^api/download-certificate$ backends/api/download-certificate.php [L,QSA]
 
 # ----------------------------------
 # 🌍 API Endpoints
@@ -159,8 +175,6 @@ RewriteRule ^api/drop-class$ backends/api/drop-class.php [L]
 RewriteRule ^api/update-enrollment-status$ backends/api/update-enrollment-status.php [L]
 RewriteRule ^api/submit-feedback$ backends/api/submit-feedback.php [L]
 RewriteRule ^api/student-message$ backends/api/student-message.php [L]
-RewriteRule ^api/feedback$ backends/api/feedback.php [L,QSA]
-RewriteRule ^api/download-certificate$ backends/api/download-certificate.php [L,QSA]
 
 # Materials API endpoints
 RewriteRule ^api/materials$ backends/handler/unified_file_handler.php [QSA,L]

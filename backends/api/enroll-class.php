@@ -124,7 +124,7 @@ try {
         // Send notification to tutor with more details
         $student_name = $_SESSION['name'];
         sendNotification(
-            null, 
+            $_SESSION['user'], 
             'TECHGURU', 
             "New student {$student_name} enrolled in '{$class['class_name']}'", 
             BASE . "dashboard/t/class", 

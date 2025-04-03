@@ -482,17 +482,31 @@ class RatingManagement {
      * @param int $tutor_id The tutor ID for access verification
      * @return array List of feedback entries
      */
-    public function getClassFeedbacks($class_id, $tutor_id) {
+    public function getClassFeedbacks($class_id, $tutor_id = null) {
         try {
-            // Verify the tutor owns this class
-            $stmt = $this->db->prepare("
-                SELECT class_id 
-                FROM class 
-                WHERE class_id = ? AND tutor_id = ?
-            ");
             
-            $stmt->bind_param("ii", $class_id, $tutor_id);
-            $stmt->execute();
+            if(empty($tutor_id)) {
+                // Get Class details
+                $stmt = $this->db->prepare("
+                    SELECT class_id 
+                    FROM class 
+                    WHERE class_id = ?
+                ");
+                
+                $stmt->bind_param("i", $class_id);
+                $stmt->execute();
+            }
+            else {
+                // Verify the tutor owns this class
+                $stmt = $this->db->prepare("
+                    SELECT class_id 
+                    FROM class 
+                    WHERE class_id = ? AND tutor_id = ?
+                ");
+                
+                $stmt->bind_param("ii", $class_id, $tutor_id);
+                $stmt->execute();   
+            }
             
             if ($stmt->get_result()->num_rows === 0) {
                 return [];
@@ -507,6 +521,70 @@ class RatingManagement {
                 JOIN class_schedule cs ON sf.session_id = cs.schedule_id
                 JOIN users u ON sf.student_id = u.uid
                 WHERE cs.class_id = ? AND sf.tutor_id = ? AND sf.is_archived = 0
+                ORDER BY sf.created_at DESC
+            ");
+            
+            $stmt->bind_param("ii", $class_id, $tutor_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            $feedbacks = [];
+            while ($row = $result->fetch_assoc()) {
+                $feedbacks[] = $row;
+            }
+            
+            return $feedbacks;
+        } catch (Exception $e) {
+            log_error("Error retrieving class feedbacks: " . $e->getMessage(), "feedback");
+            return [];
+        }
+    }
+    /**
+     * Get all archived feedback for a specific class (for TechGuru view)
+     * 
+     * @param int $class_id The class ID
+     * @param int $tutor_id The tutor ID for access verification
+     * @return array List of feedback entries
+     */
+    public function getArchivedClassFeedbacks($class_id, $tutor_id = null) {
+        try {
+            
+            if(empty($tutor_id)) {
+                // Get Class details
+                $stmt = $this->db->prepare("
+                    SELECT class_id 
+                    FROM class 
+                    WHERE class_id = ?
+                ");
+                
+                $stmt->bind_param("i", $class_id);
+                $stmt->execute();
+            }
+            else {
+                // Verify the tutor owns this class
+                $stmt = $this->db->prepare("
+                    SELECT class_id 
+                    FROM class 
+                    WHERE class_id = ? AND tutor_id = ?
+                ");
+                
+                $stmt->bind_param("ii", $class_id, $tutor_id);
+                $stmt->execute();   
+            }
+            
+            if ($stmt->get_result()->num_rows === 0) {
+                return [];
+            }
+            
+            // Get all non-archived feedback for this class
+            $stmt = $this->db->prepare("
+                SELECT sf.rating_id, sf.rating, sf.feedback, sf.created_at,
+                       cs.session_date, cs.start_time, cs.schedule_id,
+                       u.first_name, u.last_name, u.profile_picture
+                FROM session_feedback sf
+                JOIN class_schedule cs ON sf.session_id = cs.schedule_id
+                JOIN users u ON sf.student_id = u.uid
+                WHERE cs.class_id = ? AND sf.tutor_id = ? AND sf.is_archived = 1
                 ORDER BY sf.created_at DESC
             ");
             

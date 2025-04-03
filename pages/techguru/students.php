@@ -29,6 +29,7 @@
                             <nav aria-label="breadcrumb" class="breadcrumb-nav">
                                 <ol class="breadcrumb">
                                     <li class="breadcrumb-item"><a href="<?php echo BASE; ?>dashboard">Dashboard</a></li>
+                                    <li class="breadcrumb-item"><a href="<?php echo BASE; ?>dashboard/t/class">My Class</a></li>
                                     <li class="breadcrumb-item active">My Students</li>
                                 </ol>
                             </nav>
@@ -258,7 +259,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> 
 
     <?php include ROOT_PATH . '/components/footer.php'; ?>
     <style>

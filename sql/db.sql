@@ -420,10 +420,11 @@ CREATE TABLE `meeting_analytics` (
   CONSTRAINT `meeting_analytics_ibfk_2` FOREIGN KEY (`tutor_id`) REFERENCES `users` (`uid`)
 );
 
-CREATE TABLE `recording_visibility` (
+CREATE TABLE `recording_visibility` ( 
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `recording_id` varchar(255) NOT NULL,
   `class_id` int(11) NOT NULL,
+  `schedule_id` INT(11) NOT NULL DEFAULT 0,
   `is_visible` tinyint(1) NOT NULL DEFAULT 0,
   `is_archived` tinyint(1) NOT NULL DEFAULT 0,
   `created_by` int(11) NOT NULL,

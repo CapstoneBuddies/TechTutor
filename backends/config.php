@@ -59,7 +59,7 @@
 
 
 	//Setting Up error_log setup
-	ini_set('error_log', isset($_SESSION['email']) ? LOG_PATH.$_SESSION['email'].'.log' : 'unknown.log' );
+	ini_set('error_log', isset($_SESSION['email']) ? LOG_PATH.$_SESSION['email'].'.log' : LOG_PATH.'unknown.log' );
 	ini_set('log_errors', 1);
 	ini_set('display_errors', 0);
 

@@ -69,13 +69,21 @@
                     <i class="bi bi-people"></i>
                     <span>View All Users</span>
                 </a>
-                <a href="<?php echo BASE.$role; ?>classes" class="nav-item <?php echo $current_page == 'view-class.php' ? 'active' : ''; ?>">
-                    <i class="bi bi-book-fill"></i>
-                    <span>View All Classes</span>
-                </a>
+                <a href="<?php echo BASE.$role; ?>classes" class="nav-item <?php echo in_array($current_page, ['view-class.php', 'class-details.php', 'class-sessions.php', 'class-recordings.php', 'class-feedback.php', 'class-enroll.php']) ? 'active' : ''; ?>">
+                        <i class="bi bi-book-fill"></i>
+                        <span>Classes</span>
+                    </a>
                 <a href="<?php echo BASE.$role; ?>courses" class="nav-item <?php echo $current_page == 'view-course.php' ? 'active' : ''; ?>">
                     <i class="bi bi-journal-bookmark-fill"></i>
                     <span>Courses</span>
+                </a>
+                <a href="<?php echo BASE.$role; ?>logs" class="nav-item <?php echo $current_page == 'view-logs.php' ? 'active' : ''; ?>">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <span>Logs</span>
+                </a>
+                <a href="<?php echo BASE.$role; ?>certificates" class="nav-item <?php echo in_array($current_page, ['certificates.php', 'verify-certificate.php']) ? 'active' : ''; ?>">
+                    <i class="bi bi-award"></i>
+                    <span>Certificate Management</span>
                 </a>
             <!-- END ADMIN DASHBOARD SELECTION -->
             <?php elseif ($_SESSION['role'] == 'TECHGURU'): ?>

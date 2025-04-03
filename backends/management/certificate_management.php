@@ -62,7 +62,7 @@ function getStudentCertificatesDetails($recipient_id) {
                 s.subject_name
              FROM certificate c 
              JOIN users u ON c.donor = u.uid 
-             LEFT JOIN class cl ON c.class_id = cl.class_id
+             LEFT JOIN class cl ON c.donor = cl.tutor_id
              LEFT JOIN subject s ON cl.subject_id = s.subject_id
              WHERE c.recipient = ? 
              ORDER BY c.issue_date DESC";
@@ -96,8 +96,8 @@ function createCertificate($donor_id, $recipient_id, $award, $class_id = null) {
     $issue_date = date('Y-m-d');
     
     try {
-        $stmt = $conn->prepare("INSERT INTO certificate (cert_uuid, recipient, award, donor, issue_date, class_id) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("sisssi", $cert_uuid, $recipient_id, $award, $donor_id, $issue_date, $class_id);
+        $stmt = $conn->prepare("INSERT INTO certificate (cert_uuid, recipient, award, donor, issue_date) VALUES ( ?, ?, ?, ?, ?)");
+        $stmt->bind_param("sisss", $cert_uuid, $recipient_id, $award, $donor_id, $issue_date);
         
         if ($stmt->execute()) {
             // Create notification for recipient
@@ -219,7 +219,7 @@ function getCertificateByUUID($cert_uuid) {
              FROM certificate c 
              JOIN users recipient_user ON c.recipient = recipient_user.uid 
              JOIN users donor_user ON c.donor = donor_user.uid
-             LEFT JOIN class cl ON c.class_id = cl.class_id
+             LEFT JOIN class cl ON donor_user.uid = cl.tutor_id
              LEFT JOIN subject s ON cl.subject_id = s.subject_id
              WHERE c.cert_uuid = ?";
              

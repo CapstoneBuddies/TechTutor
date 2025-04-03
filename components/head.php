@@ -98,6 +98,133 @@ if (function_exists('log_error')) {
             color: var(--bs-primary);
             font-weight: 500;
         }
+
+        /* Navigation Group Styles */
+        .nav-group {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-subgroup {
+            margin-left: 1.5rem;
+            border-left: 2px solid rgba(255, 255, 255, 0.1);
+            padding-left: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .nav-subitem {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .nav-subitem:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .nav-subitem.active {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+        }
+
+        .nav-subitem i {
+            margin-right: 0.5rem;
+            font-size: 1rem;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .nav-subgroup {
+                margin-left: 1rem;
+            }
+
+            .nav-subitem {
+                padding: 0.4rem 0.75rem;
+            }
+        }
+
+        /* Container styles for consistent layout */
+        .container-fluid {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        .card {
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            background-color: rgba(0, 0, 0, 0.02);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            padding: 1rem 1.25rem;
+        }
+
+        .table-responsive {
+            margin: 0;
+        }
+
+        /* Button styles */
+        .btn-group {
+            gap: 0.25rem;
+        }
+
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        /* Status badges */
+        .status-badge {
+            padding: 0.35rem 0.65rem;
+            border-radius: 50rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        /* Feedback styles */
+        .feedback-item {
+            transition: background-color 0.2s;
+        }
+
+        .feedback-item:hover {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+
+        .rating-display {
+            font-size: 1.1rem;
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .container-fluid {
+                padding: 1rem;
+            }
+
+            .d-flex.gap-2 {
+                flex-wrap: wrap;
+            }
+
+            .btn-group {
+                flex-wrap: wrap;
+            }
+
+            .table-responsive {
+                margin: 0 -1rem;
+            }
+
+            .card-body {
+                padding: 1rem;
+            }
+        }
     </style>
 
     <?php

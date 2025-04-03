@@ -1,6 +1,7 @@
 <?php 
 require_once '../backends/main.php';
 require_once BACKEND . 'certificate_management.php';
+require_once ROOT_PATH . '/assets/vendor/autoload.php'; // Include composer autoload for TCPDF
 
 // Get certificate UUID from URL parameter
 $cert_uuid = isset($_GET['uuid']) ? $_GET['uuid'] : '';
@@ -40,14 +41,171 @@ if (!empty($cert_uuid)) {
 
 // Handle download request
 if (isset($_GET['download']) && $certificate) {
-    // We'll generate a PDF and force download
-    header('Content-Type: application/pdf');
-    header('Content-Disposition: attachment; filename="certificate_' . substr($cert_uuid, 0, 8) . '.pdf"');
+    // Create new PDF instance
+    class MYPDF extends TCPDF {
+        public function Header() {
+            // Empty header
+        }
+        
+        public function Footer() {
+            // Position at 15 mm from bottom
+            $this->SetY(-15);
+            // Set font
+            $this->SetFont('helvetica', 'I', 8);
+            // Page number
+            $this->Cell(0, 10, 'Page '.$this->getAliasNumPage().'/'.$this->getAliasNbPages(), 0, false, 'C', 0, '', 0, false, 'T', 'M');
+        }
+    }
     
-    // In a real implementation, you would generate a PDF here
-    // For now, we'll just include the certificate page content
-    // and let the browser handle it (this won't actually download as PDF)
-    // You would need a PDF library like TCPDF, FPDF, or mPDF for actual PDF generation
+    // Create new PDF document
+    $pdf = new MYPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+    
+    // Set document information
+    $pdf->SetCreator(SITE_NAME);
+    $pdf->SetAuthor(SITE_NAME);
+    $pdf->SetTitle('Certificate: ' . $certificate['award']);
+    $pdf->SetSubject('Certificate of Achievement');
+    $pdf->SetKeywords('Certificate, Achievement, ' . SITE_NAME);
+    
+    // Set default header data
+    $pdf->SetHeaderData(PDF_HEADER_LOGO, PDF_HEADER_LOGO_WIDTH, PDF_HEADER_TITLE, PDF_HEADER_STRING);
+    
+    // Set default monospaced font
+    $pdf->SetDefaultMonospacedFont(PDF_FONT_MONOSPACED);
+    
+    // Set margins
+    $pdf->SetMargins(10, 10, 10);
+    $pdf->SetHeaderMargin(0);
+    $pdf->SetFooterMargin(0);
+    
+    // Set auto page breaks
+    $pdf->SetAutoPageBreak(TRUE, 10);
+    
+    // Set image scale factor
+    $pdf->setImageScale(PDF_IMAGE_SCALE_RATIO);
+    
+    // Add a page
+    $pdf->AddPage('L');
+    
+    // Set background image or color
+    $pdf->setFillColor(255, 255, 255);
+    $pdf->Rect(0, 0, $pdf->getPageWidth(), $pdf->getPageHeight(), 'F');
+    
+    // Add watermark (with very low opacity, before other elements)
+    $pdf->SetAlpha(0.07); // Set transparency level (0.07 = 7% opacity)
+    $pdf->SetFont('helvetica', 'B', 80);
+    $pdf->SetTextColor(100, 100, 100); // Light gray color
+    $pdf->StartTransform();
+    $pdf->Rotate(45, $pdf->getPageWidth() / 2, $pdf->getPageHeight() / 2);
+    $pdf->Text($pdf->getPageWidth() / 2 - 120, $pdf->getPageHeight() / 2, SITE_NAME);
+    $pdf->StopTransform();
+    $pdf->SetAlpha(1.0); // Reset transparency for subsequent elements
+    
+    // Border decoration
+    $border_color = array(41, 128, 185); // #2980b9
+    $pdf->SetLineStyle(array('width' => 1, 'color' => $border_color));
+    $pdf->Rect(5, 5, $pdf->getPageWidth() - 10, $pdf->getPageHeight() - 10);
+    $pdf->SetLineStyle(array('width' => 2, 'color' => $border_color));
+    $pdf->Rect(10, 10, $pdf->getPageWidth() - 20, $pdf->getPageHeight() - 20);
+    
+    // Draw corner decorations
+    $pdf->SetLineStyle(array('width' => 3, 'color' => $border_color));
+    // Top left
+    $pdf->Line(10, 10, 30, 10);
+    $pdf->Line(10, 10, 10, 30);
+    // Top right
+    $pdf->Line($pdf->getPageWidth() - 10, 10, $pdf->getPageWidth() - 30, 10);
+    $pdf->Line($pdf->getPageWidth() - 10, 10, $pdf->getPageWidth() - 10, 30);
+    // Bottom left
+    $pdf->Line(10, $pdf->getPageHeight() - 10, 30, $pdf->getPageHeight() - 10);
+    $pdf->Line(10, $pdf->getPageHeight() - 10, 10, $pdf->getPageHeight() - 30);
+    // Bottom right
+    $pdf->Line($pdf->getPageWidth() - 10, $pdf->getPageHeight() - 10, $pdf->getPageWidth() - 30, $pdf->getPageHeight() - 10);
+    $pdf->Line($pdf->getPageWidth() - 10, $pdf->getPageHeight() - 10, $pdf->getPageWidth() - 10, $pdf->getPageHeight() - 30);
+    
+    // Add logo
+    $logo_path = ROOT_PATH . '/assets/img/stand_alone_logo.png';
+    if (file_exists($logo_path)) {
+        $pdf->Image($logo_path, ($pdf->getPageWidth() / 2) - 25, 20, 50, 0, 'PNG');
+    }
+    
+    // Set font for title
+    $pdf->SetFont('times', 'B', 28);
+    $pdf->SetTextColor(44, 62, 80); // #2c3e50
+    $pdf->SetY(60);
+    $pdf->Cell(0, 0, 'CERTIFICATE OF ACHIEVEMENT', 0, 1, 'C');
+    
+    // Certificate text
+    $pdf->SetFont('helvetica', '', 14);
+    $pdf->SetTextColor(85, 85, 85); // #555
+    $pdf->SetY(80);
+    $pdf->Cell(0, 0, 'This certifies that', 0, 1, 'C');
+    
+    // Recipient name
+    $pdf->SetFont('times', 'B', 24);
+    $pdf->SetTextColor(44, 62, 80); // #2c3e50
+    $pdf->SetY(90);
+    $pdf->Cell(0, 0, $certificate['recipient_name'], 0, 1, 'C');
+    
+    // More certificate text
+    $pdf->SetFont('helvetica', '', 14);
+    $pdf->SetTextColor(85, 85, 85); // #555
+    $pdf->SetY(105);
+    $pdf->Cell(0, 0, 'has successfully completed', 0, 1, 'C');
+    
+    // Award name
+    $pdf->SetFont('times', 'B', 20);
+    $pdf->SetTextColor(44, 62, 80); // #2c3e50
+    $pdf->SetY(115);
+    $pdf->Cell(0, 0, $certificate['award'], 0, 1, 'C');
+    
+    // Class name if available
+    if (!empty($certificate['class_name'])) {
+        $pdf->SetFont('helvetica', '', 14);
+        $pdf->SetTextColor(85, 85, 85); // #555
+        $pdf->SetY(130);
+        $class_text = 'for the class "' . $certificate['class_name'] . '"';
+        if (!empty($certificate['subject_name'])) {
+            $class_text .= ' in ' . $certificate['subject_name'];
+        }
+        $pdf->Cell(0, 0, $class_text, 0, 1, 'C');
+    }
+    
+    // Issue date
+    $pdf->SetFont('helvetica', '', 14);
+    $pdf->SetY(145);
+    $pdf->Cell(0, 0, 'Issued on ' . date('F d, Y', strtotime($certificate['issue_date'])), 0, 1, 'C');
+    
+    // Signatures
+    $pdf->SetLineStyle(array('width' => 0.5, 'color' => array(0, 0, 0)));
+    
+    // Instructor signature
+    $pdf->Line(60, 180, 120, 180); // Signature line
+    $pdf->SetFont('helvetica', 'B', 12);
+    $pdf->SetXY(60, 182);
+    $pdf->Cell(60, 0, $certificate['donor_name'], 0, 1, 'C');
+    $pdf->SetFont('helvetica', '', 10);
+    $pdf->SetXY(60, 188);
+    $pdf->Cell(60, 0, 'Instructor', 0, 1, 'C');
+    
+    // Organization signature
+    $pdf->Line($pdf->getPageWidth() - 60, 180, $pdf->getPageWidth() - 120, 180); // Signature line
+    $pdf->SetFont('helvetica', 'B', 12);
+    $pdf->SetXY($pdf->getPageWidth() - 120, 182);
+    $pdf->Cell(60, 0, SITE_NAME, 0, 1, 'C');
+    $pdf->SetFont('helvetica', '', 10);
+    $pdf->SetXY($pdf->getPageWidth() - 120, 188);
+    $pdf->Cell(60, 0, 'Official Certificate', 0, 1, 'C');
+    
+    // Certificate ID
+    $pdf->SetFont('helvetica', '', 8);
+    $pdf->SetTextColor(100, 100, 100);
+    $pdf->SetY($pdf->getPageHeight() - 15);
+    $pdf->Cell(0, 0, 'Certificate ID: ' . $certificate['cert_uuid'], 0, 1, 'C');
+    
+    // Close and output PDF document
+    $pdf->Output('certificate_' . substr($cert_uuid, 0, 8) . '.pdf', 'D');
+    exit;
 }
 
 $title = $certificate ? "Certificate: " . $certificate['award'] : "Certificate Not Found";
@@ -126,13 +284,15 @@ $title = $certificate ? "Certificate: " . $certificate['award'] : "Certificate N
                             </div>
                         </div>
                     </div>
-                    
+                    <?php if(!isset($_GET['view'])): ?>
                     <div class="text-center mt-4">
+
                         <a href="<?php echo BASE; ?>certificate/<?php echo $certificate['cert_uuid']; ?>?download=1" 
                            class="btn btn-primary">
                             <i class="bi bi-download me-2"></i> Download Certificate
                         </a>
                     </div>
+                <?php endif; ?>
                 <?php endif; ?>
             </div>
         </div>
@@ -194,9 +354,10 @@ $title = $certificate ? "Certificate: " . $certificate['award'] : "Certificate N
             left: 50%;
             transform: translate(-50%, -50%) rotate(-45deg);
             font-size: 100px;
-            color: rgba(200, 200, 200, 0.1);
+            color: rgba(200, 200, 200, 0.07); /* Lower opacity for watermark */
             white-space: nowrap;
             pointer-events: none;
+            z-index: 0; /* Ensure it stays in the background */
         }
         
         /* Add another subtle design element */
@@ -367,29 +528,6 @@ $title = $certificate ? "Certificate: " . $certificate['award'] : "Certificate N
         }
     </style>
     
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Enable printing when download button is clicked
-            const downloadBtn = document.querySelector('a[href*="download=1"]');
-            if (downloadBtn) {
-                downloadBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    
-                    // Prepare for print
-                    document.body.classList.add('printing');
-                    
-                    // Print after a small delay to ensure styles are applied
-                    setTimeout(function() {
-                        window.print();
-                        
-                        // Reset after printing
-                        setTimeout(function() {
-                            document.body.classList.remove('printing');
-                        }, 1000);
-                    }, 300);
-                });
-            }
-        });
-    </script>
+    
 </body>
 </html> 

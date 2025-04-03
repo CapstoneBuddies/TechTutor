@@ -24,12 +24,17 @@
     <body data-base="<?php echo BASE; ?>">
         <?php include ROOT_PATH . '/components/header.php'; ?>
 
-    <main class="dashboard-content">
         <div class="container-fluid">
             <div class="row">
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header">
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb mb-1">
+                                    <li class="breadcrumb-item"><a href="./">Dashboard</a></li>
+                                    <li class="breadcrumb-item active">Classes</li>
+                                </ol>
+                            </nav>
                             <h5 class="card-title">Class Management</h5>
                         </div>
                         <div class="card-body">
@@ -51,32 +56,77 @@
                                             <th>TechGuru</th>
                                             <th>Students Enrolled</th>
                                             <th>Status</th>
-                                            <th>Actions</th>
+                                            <th class="text-end">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php foreach ($classes as $class): ?>
-                                            <tr>
-                                                <td><?php echo htmlspecialchars($class['class_name']); ?></td>
-                                                <td><?php echo htmlspecialchars($class['subject_name']); ?></td>
-                                                <td><?php echo htmlspecialchars($class['techguru_name']); ?></td>
-                                                <td><?php echo $class['enrolled_students']; ?></td>
-                                                <td>
-                                                    <span class="status-badge status-<?php echo $class['status']; ?>">
-                                                        <?php echo ucfirst($class['status']); ?>
-                                                    </span>
-                                                </td>
-                                                <td class="action-buttons">
-                                                    <a href="classes/details?id=<?php echo $class['class_id']; ?>" class="btn btn-primary">
-                                                        <i class="bi bi-eye"></i> View
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <img src="<?php echo CLASS_IMG . (!empty($class['thumbnail']) ? $class['thumbnail'] : 'default.jpg'); ?>" 
+                                                         alt="Class thumbnail" 
+                                                         class="class-thumbnail me-2"
+                                                         onerror="this.src='<?php echo IMG; ?>default-placeholder.png'; this.classList.add('img-error');">
+                                                    <div>
+                                                        <div class="class-name"><?php echo htmlspecialchars($class['class_name']); ?></div>
+                                                        <small class="text-muted"><?php echo !empty($class['start_date']) ? date('M d, Y', strtotime($class['start_date'])) : 'N/A'; ?> - <?php echo !empty($class['end_date']) ? date('M d, Y', strtotime($class['end_date'])) : 'N/A'; ?></small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td><?php echo htmlspecialchars($class['subject_name']); ?></td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <img src="<?php echo USER_IMG . (!empty($class['techguru_profile']) ? $class['techguru_profile'] : 'default.jpg'); ?>" 
+                                                         alt="TechGuru" 
+                                                         class="tutor-avatar me-2"
+                                                         onerror="this.src='<?php echo IMG; ?>default-placeholder.png'; this.classList.add('img-error');">
+                                                    <?php echo htmlspecialchars($class['techguru_name']); ?>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <?php 
+                                                        $total_students = isset($class['enrolled_students']) ? (int)$class['enrolled_students'] : 0;
+                                                        $class_size = isset($class['class_size']) ? (int)$class['class_size'] : 1; // Use 1 as minimum to avoid division by zero
+                                                        if ($class_size == 0) $class_size = 1; // Extra safety check
+                                                        $percentage = ($total_students / $class_size) * 100;
+                                                    ?>
+                                                    <div class="progress flex-grow-1 me-2" style="height: 6px;">
+                                                        <div class="progress-bar" role="progressbar" 
+                                                             style="width: <?php echo $percentage; ?>%" 
+                                                             aria-valuenow="<?php echo $total_students; ?>" 
+                                                             aria-valuemin="0" 
+                                                             aria-valuemax="<?php echo $class_size; ?>">
+                                                        </div>
+                                                    </div>
+                                                    <span class="text-muted small"><?php echo $total_students; ?>/<?php echo $class_size; ?></span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-<?php 
+                                                    echo $class['status'] === 'active' ? 'success' : 
+                                                        ($class['status'] === 'completed' ? 'primary' : 
+                                                        ($class['status'] === 'cancelled' ? 'danger' : 'warning')); 
+                                                ?>">
+                                                    <?php echo ucfirst($class['status']); ?>
+                                                </span>
+                                            </td>
+                                            <td class="text-end">
+                                                <div class="btn-group">
+                                                    <a href="classes/details?id=<?php echo $class['class_id']; ?>" 
+                                                       class="btn btn-sm btn-outline-primary">
+                                                        <i class="bi bi-eye"></i>
+                                                        <span class="d-none d-md-inline"> View</span>
                                                     </a>
-                                                    <?php if ($class['status'] === 'active' || $class['status'] === 'restricted'): ?>
-                                                    <button class="btn btn-warning toggle-status" data-class-id="<?php echo $class['class_id']; ?>" data-current-status="<?php echo $class['status']; ?>">
-                                                        <i class="bi bi-shield"></i> <?php echo $class['status'] === 'active' ? 'Restrict' : 'Activate'; ?>
-                                                    </button>
-                                                    <?php endif; ?>
-                                                </td>
-                                            </tr>
+                                                    <a href="classes/details/edit?id=<?php echo $class['class_id']; ?>" 
+                                                       class="btn btn-sm btn-outline-secondary">
+                                                        <i class="bi bi-pencil"></i>
+                                                        <span class="d-none d-md-inline"> Edit</span>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
@@ -99,9 +149,6 @@
                 </div>
             </div>
         </div>
-    </main>
-    </main> <!-- Ending All Main Content -->
-    </div>
 
     <?php include ROOT_PATH . '/components/footer.php'; ?>
     <script>
@@ -115,6 +162,16 @@
                 tableRows.forEach(row => {
                     const text = row.textContent.toLowerCase();
                     row.style.display = text.includes(searchTerm) ? '' : 'none';
+                });
+            });
+
+            // Handle image errors
+            document.querySelectorAll('.class-thumbnail, .tutor-avatar').forEach(img => {
+                img.addEventListener('error', function() {
+                    // Set a default image or just a background
+                    this.src = '<?php echo IMG; ?>default-placeholder.png';
+                    // Add a class for styling
+                    this.classList.add('img-error');
                 });
             });
 
@@ -172,5 +229,200 @@
             });
         });
     </script>
+
+    <style>
+        /* Class listing styles */
+        .class-thumbnail {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            background-color: #f0f0f0; /* Fallback background color */
+            border: 1px solid #e0e0e0;
+        }
+        
+        .tutor-avatar {
+            width: 32px;
+            height: 32px;
+            object-fit: cover;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            background-color: #f0f0f0; /* Fallback background color */
+            border: 1px solid #e0e0e0;
+        }
+        
+        /* Add error handling for broken images */
+        .class-thumbnail:error, .tutor-avatar:error {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 10px;
+            color: #999;
+            background-color: #f8f9fa;
+        }
+        
+        .img-error {
+            opacity: 0.7;
+            background-color: #f8f9fa !important;
+            border: 1px dashed #ccc !important;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .class-table td {
+            vertical-align: middle;
+            padding: 0.75rem 0.5rem;
+        }
+        
+        .class-name {
+            font-weight: 500;
+            color: var(--text-color);
+            margin-bottom: 0.25rem;
+        }
+        
+        .search-container {
+            max-width: 400px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .search-container .input-group {
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+        
+        .search-container .input-group-text {
+            background-color: #f8f9fa;
+            border-right: none;
+        }
+        
+        .search-container .form-control {
+            border-left: none;
+            padding-left: 0;
+        }
+        
+        .search-container .form-control:focus {
+            box-shadow: none;
+            border-color: #ced4da;
+        }
+        
+        .progress {
+            height: 6px;
+            border-radius: 10px;
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        
+        .progress-bar {
+            border-radius: 10px;
+        }
+        
+        .pagination {
+            margin-top: 1.5rem;
+            justify-content: center;
+        }
+        
+        .pagination .page-item.active .page-link {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .pagination .page-link {
+            color: var(--primary-color);
+            border-radius: 4px;
+            margin: 0 2px;
+        }
+        
+        .btn-group .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.375rem 0.75rem;
+            transition: all 0.2s;
+        }
+        
+        .btn-group .btn i {
+            margin-right: 0.25rem;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 1199px) {
+            .class-table th:nth-child(2),
+            .class-table td:nth-child(2) {
+                display: table-cell;
+            }
+            
+            .class-name {
+                font-size: 0.95rem;
+            }
+        }
+        
+        @media (max-width: 991px) {
+            .class-table th:nth-child(2),
+            .class-table td:nth-child(2),
+            .class-table th:nth-child(4),
+            .class-table td:nth-child(4) {
+                display: none;
+            }
+            
+            .class-thumbnail {
+                width: 36px;
+                height: 36px;
+            }
+            
+            .tutor-avatar {
+                width: 28px;
+                height: 28px;
+            }
+        }
+        
+        @media (max-width: 767px) {
+            .class-table th:nth-child(3),
+            .class-table td:nth-child(3) {
+                display: none;
+            }
+            
+            .btn-group .btn {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.875rem;
+            }
+            
+            .btn-group .btn span {
+                display: none;
+            }
+            
+            .btn-group .btn i {
+                margin-right: 0;
+            }
+            
+            .search-container {
+                max-width: 100%;
+            }
+            
+            .class-thumbnail {
+                width: 32px;
+                height: 32px;
+            }
+        }
+        
+        @media (max-width: 575px) {
+            .class-table th:nth-child(5),
+            .class-table td:nth-child(5) {
+                display: none;
+            }
+            
+            .class-table th,
+            .class-table td {
+                padding: 0.5rem 0.25rem;
+                font-size: 0.875rem;
+            }
+            
+            .pagination .page-link {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.875rem;
+            }
+        }
+    </style>
 </body>
 </html>
