@@ -1,17 +1,26 @@
 <?php
-// Simple script to test if the webhook endpoint is accessible
-$webhookUrl = "https://techtutor.cfd/backends/handler/meeting_webhook.php";
-$webhookSecret = "4dd7af870cc54df5efd67353e8bfddaf1d510997296089a3a806eb342fc56fa6";
+require_once 'backends/config.php';
+
+// Webhook URL
+$webhookUrl = "https://techtutor.cfd/webhooks";
+$webhookSecret = "vsJTVvEsf3hSkK6b4amA7mW04Eiql4G0zJ3eRzbMLc";
 
 // Create a test payload
+$timestamp = time() * 1000;
+$meetingId = 'test_meeting_' . time();
+
 $payload = json_encode([
     'event' => 'meeting-created',
-    'meetingId' => 'test_meeting_' . time(),
-    'timestamp' => time() * 1000
+    'meetingId' => $meetingId,
+    'timestamp' => $timestamp
 ]);
 
-// Calculate checksum
-$checksum = hash('sha1', $payload . $webhookSecret);
+// Calculate checksum correctly
+$checksumString = "hook/event=meeting-created&meetingId={$meetingId}&timestamp={$timestamp}{$webhookSecret}";
+$checksum = sha1($checksumString);
+
+log_error("String: ".$checksumString,'webhooks');
+log_error("checksumString: ".$checksum,'webhooks');
 
 // Send the request
 $ch = curl_init($webhookUrl);
@@ -23,6 +32,7 @@ curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
     'Content-Type: application/json',
+    'Accept: application/json',
     'X-Checksum: ' . $checksum
 ]);
 
@@ -31,11 +41,11 @@ $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $error = curl_error($ch);
 curl_close($ch);
 
-echo "HTTP Response Code: $httpCode\n";
-
-if ($httpCode >= 200 && $httpCode < 300) {
-    echo "Success! Response: $response\n";
+// Print response for debugging
+if ($response === false) {
+    echo "cURL Error: $error\n";
 } else {
-    echo "Error: $error\n";
+    echo "HTTP Response Code: $httpCode\n";
     echo "Response: $response\n";
-} 
+}
+?>

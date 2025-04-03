@@ -46,7 +46,6 @@
 	define('BBB_API_URI',$_ENV['BBB_URI']);
 	define('BBB_SECRET',$_ENV['BBB_SECRET']);
 
-	define('BBB_WEBHOOK_SECRET',$_ENV['BBB_WEBHOOK_SECRET']);
 	define('BBB_WEBHOOK_URL',$_ENV['BBB_WEBHOOK_URL']);
 	
 	define('SMTP_HOST',$_ENV['MAIL_HOST']);

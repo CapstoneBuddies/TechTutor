@@ -761,21 +761,18 @@ switch ($action) {
 // Helper function for formatting file size
 function formatFileSize($bytes) {
     if ($bytes >= 1073741824) {
-        $bytes = number_format($bytes / 1073741824, 2) . ' GB';
+        return sprintf('%.2f GB', $bytes / 1073741824);
     } elseif ($bytes >= 1048576) {
-        $bytes = number_format($bytes / 1048576, 2) . ' MB';
+        return sprintf('%.2f MB', $bytes / 1048576);
     } elseif ($bytes >= 1024) {
-        $bytes = number_format($bytes / 1024, 2) . ' KB';
-    } elseif ($bytes > 1) {
-        $bytes = $bytes . ' bytes';
+        return sprintf('%.2f KB', $bytes / 1024);
     } elseif ($bytes == 1) {
-        $bytes = $bytes . ' byte';
+        return '1 byte';
     } else {
-        $bytes = '0 bytes';
+        return $bytes . ' bytes';
     }
-
-    return $bytes;
 }
+
 
 // Send JSON response
 header('Content-Type: application/json');

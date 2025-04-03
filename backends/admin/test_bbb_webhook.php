@@ -18,7 +18,7 @@ $meeting = new MeetingManagement();
 
 // Get webhook details from .env
 $webhookUrl = BBB_WEBHOOK_URL ?? null;
-$webhookSecret = BBB_WEBHOOK_SECRET ?? null;
+$webhookSecret = BBB_SECRET ?? null;
 
 // Fallback if env vars aren't loaded
 if (empty($webhookUrl)) {
@@ -27,17 +27,7 @@ if (empty($webhookUrl)) {
     if (preg_match('/BBB_WEBHOOK_URL="([^"]+)"/', $envFile, $matches)) {
         $webhookUrl = $matches[1];
     } else {
-        $webhookUrl = "https://techtutor.cfd/backends/handler/meeting_webhook.php";
-    }
-}
-
-if (empty($webhookSecret)) {
-    // Read from the .env file directly
-    $envFile = file_get_contents(__DIR__ . '/../../backends/.env');
-    if (preg_match('/BBB_WEBHOOK_SECRET="([^"]+)"/', $envFile, $matches)) {
-        $webhookSecret = $matches[1];
-    } else {
-        $webhookSecret = "4dd7af870cc54df5efd67353e8bfddaf1d510997296089a3a806eb342fc56fa6";
+        $webhookUrl = "https://techtutor.cfd/bigbluebutton/api/hooks";
     }
 }
 

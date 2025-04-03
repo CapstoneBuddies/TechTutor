@@ -25,6 +25,12 @@ ErrorDocument 500 /pages/error/500.php
      RewriteRule ^admin/test-webhook$ backends/admin/test_bbb_webhook.php [QSA,L]
      RewriteRule ^admin/send-test-webhook$ backends/admin/send_test_webhook.php [QSA,L]
      
+     # BigBlueButton API hooks endpoint
+     RewriteRule ^bigbluebutton/api/hooks(.*)$ backends/handler/meeting_webhook.php [QSA,L]
+     
+     # Test endpoint for BBB Webhook
+     RewriteRule ^test-bbb-hooks$ test_bbb_hooks.php [QSA,L]
+     
      # Block the problematic hook/list endpoint that exposes ENV data
      RewriteRule ^hook/list$ - [F,L]
      
