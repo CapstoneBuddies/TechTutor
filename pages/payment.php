@@ -363,12 +363,12 @@ if ($class_id > 0) {
             const description = `Token purchase - ${amount} tokens`;
 
             if (!amount || amount < 100) {
-                showAlert('error', 'Please enter a valid amount (minimum 100 tokens)');
+                showToast('error', 'Please enter a valid amount (minimum 100 tokens)');
                 return;
             }
 
             if (!selectedMethod) {
-                showAlert('error', 'Please select a payment method');
+                showToast('error', 'Please select a payment method');
                 return;
             }
 
@@ -401,22 +401,24 @@ if ($class_id > 0) {
                 console.log('Payment intent created:', data);
                 
                 if (data.success) {
+
                         if (selectedMethod === 'card') {
                             // Handle card payment
                         processCardPayment(data.clientKey);
+
                     } else {
                         // Redirect to e-wallet payment page
                         window.location.href = data.checkoutUrl;
                     }
                 } else {
                     loadingModal.hide();
-                    showAlert('error', data.message || 'Payment failed. Please try again.');
+                    showToast('error', data.message || 'Payment failed. Please try again.');
                 }
             })
             .catch(error => {
                 console.error('Payment creation error:', error);
                 loadingModal.hide();
-                showAlert('error', 'An error occurred. Please try again.');
+                showToast('error', 'An error occurred. Please try again.');
             });
         }
 
@@ -427,7 +429,7 @@ if ($class_id > 0) {
 
             if (!cardNumber || !expiryDate || !cvv) {
                 loadingModal.hide();
-                showAlert('error', 'Please fill in all card details');
+                showToast('error', 'Please fill in all card details');
                 return;
             }
 
@@ -458,42 +460,19 @@ if ($class_id > 0) {
                     loadingModal.hide();
                 
                 if (data.success) {
-                        showAlert('success', 'Payment successful!');
+                        showToast('success', 'Payment successful!');
                         setTimeout(() => {
                         window.location.href = '<?php echo BASE; ?>payment-success';
                         }, 2000);
                     } else {
-                    showAlert('error', data.message || 'Payment failed. Please try again.');
+                    showToast('error', data.message || 'Payment failed. Please try again.');
                     }
             })
             .catch(error => {
                 console.error('Card payment error:', error);
                     loadingModal.hide();
-                    showAlert('error', 'An error occurred. Please try again.');
+                    showToast('error', 'An error occurred. Please try again.');
             });
-        }
-
-        function showAlert(type, message) {
-            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
-            const alertHtml = `
-                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            `;
-            
-            // Add alert to the page
-            const container = document.querySelector('.container-fluid');
-            container.insertAdjacentHTML('afterbegin', alertHtml);
-            
-            // Auto dismiss after 5 seconds
-            setTimeout(function() {
-                const alert = document.querySelector('.alert');
-                if (alert) {
-                    const bsAlert = new bootstrap.Alert(alert);
-                    bsAlert.close();
-                }
-            }, 5000);
         }
     </script>
 

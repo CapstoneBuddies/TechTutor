@@ -189,3 +189,6 @@ ADD COLUMN `class_id` int(11) DEFAULT NULL AFTER `transaction_type`,
 ADD KEY `idx_transaction_type` (`transaction_type`),
 ADD KEY `idx_class_id` (`class_id`),
 ADD CONSTRAINT `transactions_ibfk_2` FOREIGN KEY (`class_id`) REFERENCES `class` (`class_id`) ON DELETE SET NULL;
+ALTER TABLE transactions
+DROP FOREIGN KEY transactions_ibfk_2,
+drop class_id;

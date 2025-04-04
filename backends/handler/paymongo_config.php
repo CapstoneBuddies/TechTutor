@@ -106,10 +106,7 @@ class PayMongoHelper {
         }
 
         $response = $this->sendRequest('/payment_methods', 'POST', $data);
-        
-        // Log the response for debugging
-        log_error("Payment method creation response: " . json_encode($response), 'payment_debug');
-        
+                
         return $response;
     }
 
@@ -160,8 +157,6 @@ class PayMongoHelper {
      * @return array Response from PayMongo
      */
     private function sendRequest($endpoint, $method = 'POST', $data = []) {
-        // Log the API call details for debugging
-        log_error("PayMongo API request to {$endpoint}: " . (!empty($data) ? json_encode($data) : 'No data'), 'payment_debug');
         
         $ch = curl_init();
         

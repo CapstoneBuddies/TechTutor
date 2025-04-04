@@ -38,17 +38,17 @@ function handleCreatePayment($conn) {
         }
 
         // Store payment intent in database with transaction type
-        $query = "INSERT INTO transactions (user_id, payment_intent_id, amount, currency, status, payment_method_type, description, transaction_type, class_id) 
-                 VALUES (?, ?, ?, 'PHP', 'pending', ?, ?, ?, ?)";
+        $query = "INSERT INTO transactions (user_id, payment_intent_id, amount, currency, status, payment_method_type, description, metadata) 
+                 VALUES (?, ?, ?, 'PHP', 'pending', ?, ?, ?)";
         $stmt = $conn->prepare($query);
-        $stmt->bind_param('isdssis', 
+        $metadata = json_encode(['class' => $classId, 'transaction_type' => $transactionType]);
+        $stmt->bind_param('isdsss', 
             $_SESSION['user'],
             $paymentIntent['data']['id'],
             $amount,
             $paymentMethod,
             $description,
-            $transactionType,
-            $classId
+            $metadata
         );
         $stmt->execute();
 
@@ -141,16 +141,7 @@ function handleCardPayment($conn) {
         if ($expMonth < 1 || $expMonth > 12) {
             echo json_encode(['success' => false, 'message' => 'Invalid expiry month']);
             exit;
-        }
-        
-        // Log formatting for debugging
-        log_error("Formatting card details: " . json_encode([
-            'card_number' => substr($cardNumber, 0, 4) . '****', // Only log first 4 digits for security
-            'exp_month' => $expMonth,
-            'exp_year' => $expYear,
-            'cvc' => '***' // Don't log CVV
-        ]), 'payment_debug');
-        
+        }        
         // Create payment method with properly formatted data
         $paymentMethod = $payMongo->createPaymentMethod([
             'type' => 'card',
@@ -188,7 +179,7 @@ function handleCardPayment($conn) {
 
         if (isset($result['data']['attributes']['status']) && $result['data']['attributes']['status'] === 'succeeded') {
             // Find the transaction by payment intent
-            $query = "SELECT t.transaction_id, t.user_id, t.amount, t.description, t.transaction_type, t.class_id 
+            $query = "SELECT t.transaction_id, t.user_id, t.amount, t.description, t.metadata 
                       FROM transactions t 
                       WHERE t.payment_intent_id = ?";
             $stmt = $conn->prepare($query);
@@ -201,8 +192,10 @@ function handleCardPayment($conn) {
                 $userId = $row['user_id'];
                 $amount = $row['amount'];
                 $description = $row['description'];
-                $transactionType = $row['transaction_type'];
-                $classId = $row['class_id'];
+                $metadata = json_decode($row['metadata'], true);
+
+                $classId = $metadata['class'];
+                $transactionType = $metadata['transaction_type'];
                 
                 // Start a transaction for database updates
                 $conn->begin_transaction();
@@ -217,7 +210,7 @@ function handleCardPayment($conn) {
                     $stmt = $conn->prepare($query);
                     $stmt->bind_param('si', $paymentMethod['data']['id'], $transactionId);
                     $stmt->execute();
-                    
+
                     // Check if this is a token purchase
                     if ($transactionType === 'token') {
                         // Convert PHP amount to tokens (1:1 ratio for simplicity, adjust as needed)
@@ -237,7 +230,6 @@ function handleCardPayment($conn) {
                         $_SESSION['transaction_amount'] = $tokenAmount;
                         
                         // Create a notification for the user about their token purchase
-                        require_once BACKEND . 'management/notifications_management.php';
                         sendNotification(
                             $userId,
                             '', // Send to any role
@@ -416,7 +408,7 @@ function handlePaymentPaid($conn, $event) {
     }
     
     // Find transaction by payment intent ID
-    $query = "SELECT t.transaction_id, t.user_id, t.amount, t.description, t.transaction_type, t.class_id 
+    $query = "SELECT t.transaction_id, t.user_id, t.amount, t.description, t.class_id 
               FROM transactions t 
               WHERE t.payment_intent_id = ?";
     $stmt = $conn->prepare($query);
@@ -429,8 +421,6 @@ function handlePaymentPaid($conn, $event) {
         $userId = $row['user_id'];
         $amount = $row['amount'];
         $description = $row['description'];
-        $transactionType = $row['transaction_type'];
-        $classId = $row['class_id'];
         
         // Begin transaction
         $conn->begin_transaction();
@@ -491,7 +481,6 @@ function handlePaymentPaid($conn, $event) {
                 log_error("Payment for class #{$classId} enrollment completed for user ID {$userId}", 'class_enrollment');
                 
                 // Create a notification for the user
-                require_once BACKEND . 'management/notifications_management.php';
                 sendNotification(
                     $userId,
                     '', // Send to any role
@@ -597,7 +586,6 @@ function updateUserTokenBalance($conn, $userId, $amount, $transactionId) {
         return false;
     }
 }
-log_error(print_r($_POST,true));
 // Simple router to handle direct API calls
 if (isset($_POST['action'])) {
 
