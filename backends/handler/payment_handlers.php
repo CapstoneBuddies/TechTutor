@@ -1,24 +1,38 @@
 <?php
-require_once '../main.php';
+require_once __DIR__.'/../main.php';
 require_once ROOT_PATH . '/backends/handler/paymongo_config.php';
 require_once BACKEND . 'transactions_management.php';
 
 /**
  * Check if the user has pending or processing transactions within the last 15 minutes
+ * Also check for recent completed transactions to avoid double charges
  * @param mysqli $conn Database connection
  * @param int $userId User ID to check
  * @return array Status and any pending transaction details
  */
 function checkRecentPendingTransactions($conn, $userId) {
+    // Initialize return array with default values to prevent undefined index errors
+    $returnData = [
+        'hasPending' => false,
+        'hasRecentSuccess' => false
+    ];
+    
     try {
         // Check for any pending or processing transactions created in the last 15 minutes
-        $query = "SELECT transaction_id, amount, status, created_at, 
-                  TIMESTAMPDIFF(MINUTE, created_at, NOW()) as minutes_ago
+        $query = "SELECT transaction_id, payment_intent_id, payment_method_id, amount, status, description, 
+                  created_at, updated_at, 
+                  TIMESTAMPDIFF(MINUTE, created_at, NOW()) as minutes_ago,
+                  TIMESTAMPDIFF(MINUTE, updated_at, NOW()) as minutes_since_update
                   FROM transactions 
                   WHERE user_id = ? 
-                  AND (status = 'pending' OR status = 'processing')
-                  AND created_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE) 
-                  ORDER BY created_at DESC 
+                  AND (
+                      (status IN ('pending', 'processing') AND 
+                       (created_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE) OR
+                        updated_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE)))
+                      OR 
+                      (status = 'succeeded' AND updated_at > DATE_SUB(NOW(), INTERVAL 30 MINUTE))
+                  )
+                  ORDER BY updated_at DESC, created_at DESC 
                   LIMIT 1";
         
         $stmt = $conn->prepare($query);
@@ -27,29 +41,73 @@ function checkRecentPendingTransactions($conn, $userId) {
         $result = $stmt->get_result();
         
         if ($row = $result->fetch_assoc()) {
-            // Found a recent pending transaction
             $minutesAgo = $row['minutes_ago'];
-            $minutesRemaining = 15 - $minutesAgo;
+            $minutesSinceUpdate = $row['minutes_since_update'];
+            $status = $row['status'];
             
-            return [
-                'hasPending' => true,
-                'transaction' => [
+            // For pending/processing transactions, calculate remaining time
+            if ($status == 'pending' || $status == 'processing') {
+                $minutesRemaining = 15 - min($minutesAgo, $minutesSinceUpdate);
+                
+                $returnData['hasPending'] = true;
+                $returnData['transaction'] = [
                     'id' => $row['transaction_id'],
+                    'payment_intent_id' => $row['payment_intent_id'],
+                    'payment_method_id' => $row['payment_method_id'],
                     'amount' => $row['amount'],
-                    'status' => $row['status'],
+                    'status' => $status,
+                    'description' => $row['description'],
                     'created_at' => $row['created_at'],
+                    'updated_at' => $row['updated_at'],
                     'minutes_ago' => $minutesAgo,
+                    'minutes_since_update' => $minutesSinceUpdate,
                     'minutes_remaining' => $minutesRemaining
-                ]
-            ];
+                ];
+                
+                return $returnData;
+            } 
+            // For succeeded transactions, check with PayMongo to avoid double payments
+            else if ($status == 'succeeded') {
+                // If there's a payment intent ID, verify with PayMongo
+                if (!empty($row['payment_intent_id']) && class_exists('PayMongoHelper')) {
+                    try {
+                        $payMongo = new PayMongoHelper();
+                        $statusCheck = $payMongo->checkPaymentIntentStatus($row['payment_intent_id']);
+                        
+                        // If payment was actually successful, warn about recent payment
+                        if ($statusCheck['exists'] && $statusCheck['status'] === 'succeeded') {
+                            $minutesSinceSuccess = $minutesSinceUpdate;
+                            
+                            $returnData['hasRecentSuccess'] = true;
+                            $returnData['transaction'] = [
+                                'id' => $row['transaction_id'],
+                                'payment_intent_id' => $row['payment_intent_id'],
+                                'payment_method_id' => $row['payment_method_id'],
+                                'amount' => $row['amount'],
+                                'status' => 'succeeded',
+                                'description' => $row['description'],
+                                'created_at' => $row['created_at'],
+                                'updated_at' => $row['updated_at'],
+                                'minutes_since_success' => $minutesSinceSuccess
+                            ];
+                            
+                            return $returnData;
+                        }
+                    } catch (Exception $e) {
+                        log_error("Error verifying payment with PayMongo: " . $e->getMessage(), 'payment_error');
+                        // Continue if PayMongo check fails - don't block transactions
+                    }
+                }
+            }
         }
         
-        // No pending transactions found
-        return ['hasPending' => false];
+        // Return the default values when no matching transaction is found
+        return $returnData;
     } catch (Exception $e) {
         log_error("Error checking pending transactions: " . $e->getMessage(), 'payment_error');
         // If there's an error, proceed with caution - don't block the transaction
-        return ['hasPending' => false, 'error' => $e->getMessage()];
+        $returnData['error'] = $e->getMessage();
+        return $returnData;
     }
 }
 
@@ -63,6 +121,7 @@ function handleCreatePayment($conn) {
     $paymentMethod = isset($_POST['payment_method']) ? $_POST['payment_method'] : '';
     $transactionType = isset($_POST['transaction_type']) ? $_POST['transaction_type'] : '';
     $classId = isset($_POST['class_id']) ? (int)$_POST['class_id'] : 0;
+    $ignoreRecentSuccess = isset($_POST['ignore_recent_success']) && $_POST['ignore_recent_success'] === 'true';
 
     if ($amount < 25) {
         echo json_encode(['success' => false, 'message' => 'Minimum amount is ₱25']);
@@ -75,14 +134,53 @@ function handleCreatePayment($conn) {
         exit;
     }
     
-    // Check for recent pending transactions
+    // Check for recent pending or successful transactions
     $pendingCheck = checkRecentPendingTransactions($conn, $_SESSION['user']);
-    if ($pendingCheck['hasPending']) {
-        $minutesRemaining = $pendingCheck['transaction']['minutes_remaining'];
+    
+    // If there's a pending transaction, prevent new creation
+    if (isset($pendingCheck['hasPending']) && $pendingCheck['hasPending']) {
+        $tx = $pendingCheck['transaction'];
+        $minutesRemaining = $tx['minutes_remaining'];
+
+        // Create a more detailed message
+        $message = "You have a pending transaction in progress (#{$tx['id']} for ₱{$tx['amount']}).";
+        $message .= " Please wait {$minutesRemaining} " . ($minutesRemaining == 1 ? "minute" : "minutes");
+        $message .= " before trying again, check your transaction history, or contact support if you need assistance.";
+        
+        // Check if we have payment intent ID to provide more options to the user
+        $paymentOptions = null;
+        if (!empty($tx['payment_intent_id'])) {
+            // Get the original payment method type
+            $paymentOptions = [
+                'payment_intent_id' => $tx['payment_intent_id'],
+                'payment_method' => $tx['payment_method_type'] ?? $paymentMethod,
+                'amount' => $tx['amount']
+            ];
+        }
+        
         echo json_encode([
             'success' => false, 
-            'message' => "You have a pending transaction in progress. Please wait {$minutesRemaining} minutes before trying again or check your transaction history.",
-            'pendingTransaction' => $pendingCheck['transaction']
+            'message' => $message,
+            'pendingTransaction' => $tx,
+            'paymentOptions' => $paymentOptions
+        ]);
+        exit;
+    }
+    
+    // If there's a recent successful transaction and user hasn't explicitly ignored it, warn them
+    if (!$ignoreRecentSuccess && isset($pendingCheck['hasRecentSuccess']) && $pendingCheck['hasRecentSuccess']) {
+        $tx = $pendingCheck['transaction'];
+        $minutesSinceSuccess = $tx['minutes_since_success'];
+        
+        // Create a warning message about recent successful transaction
+        $message = "You have a recent successful transaction (#{$tx['id']} for ₱{$tx['amount']}) that was completed {$minutesSinceSuccess} minutes ago.";
+        $message .= " Please check your token balance before proceeding to avoid duplicate payments.";
+        
+        echo json_encode([
+            'success' => false, 
+            'message' => $message,
+            'recentSuccessfulTransaction' => $tx,
+            'shouldIgnore' => true // Tell the frontend this can be ignored
         ]);
         exit;
     }
@@ -279,8 +377,11 @@ function handleCardPayment($conn) {
 
                     // Check if this is a token purchase
                     if ($transactionType === 'token') {
-                        // Convert PHP amount to tokens (1:1 ratio for simplicity, adjust as needed)
-                        $tokenAmount = $amount;
+                        // Calculate the actual token amount (remove VAT and service charge)
+                        $VAT_RATE = 0.1;  // 10%
+                        $SERVICE_RATE = 0.002;  // 0.2%
+                        $baseAmount = $amount / (1 + $VAT_RATE + $SERVICE_RATE);
+                        $tokenAmount = round($baseAmount);  // Round to nearest whole token
                         
                         // Update user's token balance
                         $query = "UPDATE users SET token_balance = token_balance + ? WHERE uid = ?";
@@ -288,18 +389,15 @@ function handleCardPayment($conn) {
                         $stmt->bind_param('di', $tokenAmount, $userId);
                         $stmt->execute();
                         
-                        // Log the update for debugging
-                        log_error("Token balance update for user {$userId}: Amount: {$tokenAmount}", 'tokens');
+                        // Log token purchase
+                        log_error("Added {$tokenAmount} tokens to user ID {$userId} from transaction #{$transactionId} (payment amount: {$amount})", 'tokens');
                         
-                        // Store token update message and transaction type in session for post-redirect display
-                        $_SESSION['transaction_type'] = 'token';
-                        $_SESSION['transaction_amount'] = $tokenAmount;
-                        
-                        // Create a notification for the user about their token purchase
+                        // Create a notification for the user
+                        $notificationMessage = "Your payment of ₱" . number_format($amount, 2) . " was successful! {$tokenAmount} tokens have been added to your account.";
                         sendNotification(
                             $userId,
                             '', // Send to any role
-                            "Your payment of ₱" . number_format($amount, 2) . " was successful! {$tokenAmount} tokens have been added to your account.",
+                            $notificationMessage,
                             BASE . "dashboard", 
                             null, 
                             'bi-coin', 
@@ -500,8 +598,11 @@ function handlePaymentPaid($conn, $event) {
             
             // Check if this is a token purchase
             if ($transactionType === 'token') {
-                // Convert PHP amount to tokens (1:1 ratio for simplicity, adjust as needed)
-                $tokenAmount = $amount;
+                // Calculate the actual token amount (remove VAT and service charge)
+                $VAT_RATE = 0.1;  // 10%
+                $SERVICE_RATE = 0.002;  // 0.2%
+                $baseAmount = $amount / (1 + $VAT_RATE + $SERVICE_RATE);
+                $tokenAmount = round($baseAmount);  // Round to nearest whole token
                 
                 // Update user's token balance
                 $query = "UPDATE users SET token_balance = token_balance + ? WHERE uid = ?";
@@ -509,8 +610,8 @@ function handlePaymentPaid($conn, $event) {
                 $stmt->bind_param('di', $tokenAmount, $userId);
                 $stmt->execute();
                 
-                // Log token purchase without checking affected rows
-                log_error("Token balance update via webhook for user {$userId}: Amount: {$tokenAmount}", 'tokens');
+                // Log token purchase
+                log_error("Added {$tokenAmount} tokens to user ID {$userId} from transaction #{$transactionId} (payment amount: {$amount})", 'tokens');
                 
                 // Create a notification for the user
                 require_once BACKEND . 'management/notifications_management.php';
@@ -524,8 +625,6 @@ function handlePaymentPaid($conn, $event) {
                     'bi-coin', 
                     'text-success'
                 );
-                
-                // No need to set session variables here as webhook doesn't use the redirect flow
             } else {
                 // Create a notification for the user
                 require_once BACKEND . 'management/notifications_management.php';
@@ -619,15 +718,20 @@ function updateUserTokenBalance($conn, $userId, $amount, $transactionId) {
     $conn->begin_transaction();
     
     try {
-        // Update user's token balance (1:1 ratio for simplicity)
-        $tokenAmount = $amount;
+        // Calculate the actual token amount (remove VAT and service charge)
+        $VAT_RATE = 0.1;  // 10%
+        $SERVICE_RATE = 0.002;  // 0.2%
+        $baseAmount = $amount / (1 + $VAT_RATE + $SERVICE_RATE);
+        $tokenAmount = round($baseAmount);  // Round to nearest whole token
+        
+        // Update user's token balance
         $query = "UPDATE users SET token_balance = token_balance + ? WHERE uid = ?";
         $stmt = $conn->prepare($query);
         $stmt->bind_param('di', $tokenAmount, $userId);
         $stmt->execute();
         
         // Log the token balance update regardless of affected rows
-        log_error("Token balance update for user {$userId}: Amount: {$tokenAmount}", 'tokens');
+        log_error("Token balance update for user {$userId}: Amount: {$tokenAmount} (from payment: {$amount})", 'tokens');
         
         // Set token update message in session
         $_SESSION['token_update'] = "Your account has been credited with {$tokenAmount} tokens!";
@@ -673,8 +777,8 @@ if (isset($_POST['action'])) {
 } else if ($_SERVER['REQUEST_METHOD'] === 'POST' && strpos($_SERVER['REQUEST_URI'], 'webhook') !== false) {
     // Handle webhook
     handlePaymentWebhook($conn);
-} else {
-    // If no action is specified and not a webhook, redirect to payment page
+} else if (basename($_SERVER['PHP_SELF']) === basename(__FILE__)) {
+    // Only redirect if this file is accessed directly, not when included
     header("Location: " . BASE . "payment");
     exit;
 }

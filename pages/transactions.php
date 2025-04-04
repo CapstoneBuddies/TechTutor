@@ -246,8 +246,64 @@
             // Specifically initialize both dropdowns to ensure they work
             const filterDropdown = new bootstrap.Dropdown(document.getElementById('filterDropdown'));
             
-            // Load transactions
-            loadTransactions(currentPage, currentFilter);
+            // Check URL parameters to see which tab should be active
+            const urlParams = new URLSearchParams(window.location.search);
+            const activeTab = urlParams.get('tab');
+            
+            // Check if there are filter parameters
+            const txFilter = urlParams.get('txfilter');
+            const dFilter = urlParams.get('dfilter');
+            
+            // Check for page parameters
+            const txPage = urlParams.get('txpage');
+            const dPage = urlParams.get('dpage');
+            
+            // Apply transaction filter and page if present
+            if (txFilter) {
+                currentFilter = txFilter;
+                // Update filter button text if on transactions tab
+                if (activeTab !== 'disputes') {
+                    const filterBtn = document.querySelector('#filterDropdown');
+                    let filterText = 'All';
+                    switch(txFilter) {
+                        case 'completed': filterText = 'Completed'; break;
+                        case 'pending': filterText = 'Pending'; break;
+                        case 'failed': filterText = 'Failed'; break;
+                    }
+                    filterBtn.innerHTML = `<i class="bi bi-funnel"></i> ${filterText}`;
+                }
+            }
+            
+            if (txPage && !isNaN(parseInt(txPage))) {
+                currentPage = parseInt(txPage);
+            }
+            
+            // Apply dispute filter and page if present
+            if (dFilter) {
+                disputesCurrentFilter = dFilter;
+            }
+            
+            if (dPage && !isNaN(parseInt(dPage))) {
+                disputesCurrentPage = parseInt(dPage);
+            }
+            
+            if (activeTab === 'disputes') {
+                // Show disputes tab
+                document.getElementById('disputes-tab').classList.add('active');
+                document.getElementById('transactions-tab').classList.remove('active');
+                document.getElementById('disputes-content').classList.add('show', 'active');
+                document.getElementById('transactions-content').classList.remove('show', 'active');
+                // Load disputes with current page and filter
+                loadDisputes(disputesCurrentPage, disputesCurrentFilter);
+            } else {
+                // Show transactions tab (default)
+                document.getElementById('disputes-tab').classList.remove('active');
+                document.getElementById('transactions-tab').classList.add('active');
+                document.getElementById('disputes-content').classList.remove('show', 'active');
+                document.getElementById('transactions-content').classList.add('show', 'active');
+                // Load transactions with current page and filter
+                loadTransactions(currentPage, currentFilter);
+            }
             
             // Add direct click event listeners to filter items
             document.querySelectorAll('#filterDropdown + .dropdown-menu .dropdown-item').forEach(item => {
@@ -266,6 +322,31 @@
                 const dropdown = bootstrap.Dropdown.getInstance(this) || new bootstrap.Dropdown(this);
                 dropdown.toggle();
             });
+            
+            // Add tab change event listeners to update URL
+            const transactionsTabs = document.getElementById('transactionsTabs');
+            if (transactionsTabs) {
+                transactionsTabs.querySelectorAll('.nav-link').forEach(tab => {
+                    tab.addEventListener('shown.bs.tab', function(event) {
+                        // Get the tab id
+                        const tabId = event.target.id;
+                        
+                        // Update URL based on which tab is active
+                        const url = new URL(window.location.href);
+                        if (tabId === 'disputes-tab') {
+                            url.searchParams.set('tab', 'disputes');
+                            
+                            // Load disputes if not already loaded
+                            loadDisputes(disputesCurrentPage, disputesCurrentFilter);
+                        } else {
+                            url.searchParams.delete('tab');
+                        }
+                        
+                        // Update URL without reloading the page
+                        window.history.pushState({}, '', url);
+                    });
+                });
+            }
         });
 
         function loadTransactions(page, filter = 'all') {
@@ -401,22 +482,32 @@
 
             let paginationHtml = `
                 <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                    <a class="page-link" href="#" onclick="loadTransactions(${currentPage - 1}, '${currentFilter}')">&laquo;</a>
+                    <a class="page-link" href="#" onclick="navigateToPage(${currentPage - 1}); return false;">&laquo;</a>
                 </li>`;
 
             for (let i = 1; i <= totalPages; i++) {
                 paginationHtml += `
                     <li class="page-item ${currentPage === i ? 'active' : ''}">
-                        <a class="page-link" href="#" onclick="loadTransactions(${i}, '${currentFilter}')">${i}</a>
+                        <a class="page-link" href="#" onclick="navigateToPage(${i}); return false;">${i}</a>
                     </li>`;
             }
 
             paginationHtml += `
                 <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-                    <a class="page-link" href="#" onclick="loadTransactions(${currentPage + 1}, '${currentFilter}')">&raquo;</a>
+                    <a class="page-link" href="#" onclick="navigateToPage(${currentPage + 1}); return false;">&raquo;</a>
                 </li>`;
 
             pagination.innerHTML = paginationHtml;
+        }
+        
+        function navigateToPage(page) {
+            currentPage = page;
+            loadTransactions(page, currentFilter);
+            
+            // Update URL with page parameter
+            const url = new URL(window.location.href);
+            url.searchParams.set('txpage', page);
+            window.history.pushState({}, '', url);
         }
 
         function filterTransactions(filter) {
@@ -435,6 +526,12 @@
             }
             console.log('Updating button text to:', filterText);
             filterBtn.innerHTML = `<i class="bi bi-funnel"></i> ${filterText}`;
+            
+            // Update URL to preserve filter state
+            const url = new URL(window.location.href);
+            url.searchParams.set('txfilter', filter);
+            // Keep the tab parameter if it exists
+            window.history.pushState({}, '', url);
         }
 
         function viewTransactionDetails(transactionId) {
@@ -741,17 +838,6 @@
         let disputesCurrentPage = 1;
         let disputesCurrentFilter = 'all';
         
-        // Add event listener for tab switching
-        document.addEventListener('DOMContentLoaded', function() {
-            const disputesTab = document.getElementById('disputes-tab');
-            if (disputesTab) {
-                disputesTab.addEventListener('shown.bs.tab', function (e) {
-                    // Load disputes when the disputes tab is shown
-                    loadDisputes(disputesCurrentPage, disputesCurrentFilter);
-                });
-            }
-        });
-        
         function loadDisputes(page, status = 'all') {
             const loadingSpinner = document.getElementById('disputesLoadingSpinner');
             const noDisputes = document.getElementById('noDisputes');
@@ -821,28 +907,45 @@
 
             let paginationHtml = `
                 <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                    <a class="page-link" href="#" onclick="loadDisputes(${currentPage - 1}, '${disputesCurrentFilter}')">&laquo;</a>
+                    <a class="page-link" href="#" onclick="navigateToDisputePage(${currentPage - 1}); return false;">&laquo;</a>
                 </li>`;
 
             for (let i = 1; i <= totalPages; i++) {
                 paginationHtml += `
                     <li class="page-item ${currentPage === i ? 'active' : ''}">
-                        <a class="page-link" href="#" onclick="loadDisputes(${i}, '${disputesCurrentFilter}')">${i}</a>
+                        <a class="page-link" href="#" onclick="navigateToDisputePage(${i}); return false;">${i}</a>
                     </li>`;
             }
 
             paginationHtml += `
                 <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-                    <a class="page-link" href="#" onclick="loadDisputes(${currentPage + 1}, '${disputesCurrentFilter}')">&raquo;</a>
+                    <a class="page-link" href="#" onclick="navigateToDisputePage(${currentPage + 1}); return false;">&raquo;</a>
                 </li>`;
 
             pagination.innerHTML = paginationHtml;
+        }
+        
+        function navigateToDisputePage(page) {
+            disputesCurrentPage = page;
+            loadDisputes(page, disputesCurrentFilter);
+            
+            // Update URL with page parameter
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', 'disputes');
+            url.searchParams.set('dpage', page);
+            window.history.pushState({}, '', url);
         }
 
         function filterDisputes(status) {
             disputesCurrentFilter = status;
             disputesCurrentPage = 1;
             loadDisputes(disputesCurrentPage, status);
+            
+            // Update URL to preserve filter state
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', 'disputes');
+            url.searchParams.set('dfilter', status);
+            window.history.pushState({}, '', url);
         }
 
         function viewDisputeDetails(disputeId) {

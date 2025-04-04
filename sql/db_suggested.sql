@@ -192,3 +192,69 @@ ADD CONSTRAINT `transactions_ibfk_2` FOREIGN KEY (`class_id`) REFERENCES `class`
 ALTER TABLE transactions
 DROP FOREIGN KEY transactions_ibfk_2,
 drop class_id;
+
+-- ========================================
+-- Suggested database schema updates
+-- ========================================
+
+-- No structural changes are required to the transactions table as it already has:
+-- 1. status field (enum for pending/processing/succeeded/failed)
+-- 2. created_at and updated_at timestamps
+-- 3. payment_intent_id and payment_method_id fields
+-- 4. error_message field
+-- 5. proper indexes
+
+-- However, adding additional indexes might improve performance of our new queries
+
+-- Add index for finding pending/processing transactions
+ALTER TABLE `transactions` 
+ADD INDEX `idx_transaction_pending_status` (`status`, `created_at`);
+
+-- Add index for finding transactions by updated_at time
+ALTER TABLE `transactions` 
+ADD INDEX `idx_transaction_updated_at` (`updated_at`);
+
+-- Create database trigger to enforce transaction time limits
+-- This trigger will automatically update transactions that have been pending too long
+
+DELIMITER //
+
+-- Add trigger to automatically mark transactions as failed if they're in pending status for too long
+CREATE TRIGGER IF NOT EXISTS `transaction_auto_expire_trigger` 
+BEFORE UPDATE ON `transactions`
+FOR EACH ROW
+BEGIN
+    -- Only apply to pending/processing transactions that are being updated
+    IF (OLD.status IN ('pending', 'processing') AND NEW.status IN ('pending', 'processing')) THEN
+        -- Check if it's been pending for more than 12 hours (720 minutes)
+        IF TIMESTAMPDIFF(MINUTE, OLD.created_at, NOW()) > 720 THEN
+            SET NEW.status = 'failed';
+            SET NEW.error_message = CONCAT('Transaction automatically marked as failed after ', 
+                                          FLOOR(TIMESTAMPDIFF(MINUTE, OLD.created_at, NOW()) / 60), 
+                                          ' hours of inactivity');
+        END IF;
+    END IF;
+END//
+
+DELIMITER ;
+
+-- Add a new view to quickly identify stale transactions for the cron job
+CREATE OR REPLACE VIEW `vw_stale_transactions` AS
+SELECT 
+    transaction_id,
+    payment_intent_id,
+    payment_method_id,
+    user_id,
+    amount,
+    status,
+    created_at,
+    updated_at,
+    TIMESTAMPDIFF(MINUTE, created_at, NOW()) AS minutes_since_creation,
+    TIMESTAMPDIFF(MINUTE, updated_at, NOW()) AS minutes_since_update
+FROM 
+    transactions
+WHERE 
+    status IN ('pending', 'processing')
+    AND created_at < DATE_SUB(NOW(), INTERVAL 15 MINUTE)
+ORDER BY
+    created_at ASC;

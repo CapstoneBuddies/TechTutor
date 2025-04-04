@@ -75,6 +75,67 @@ if ($class_id > 0) {
                 </div>
             </div>
 
+        <?php
+        // Check for pending transactions
+        require_once ROOT_PATH . '/backends/handler/payment_handlers.php';
+        $pendingCheck = checkRecentPendingTransactions($conn, $_SESSION['user']);
+        if ($pendingCheck['hasPending']): 
+            $tx = $pendingCheck['transaction'];
+            $minutesRemaining = $tx['minutes_remaining'];
+        ?>
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert alert-warning">
+                    <div class="d-flex">
+                        <div class="flex-shrink-0 me-3">
+                            <i class="bi bi-exclamation-triangle-fill fs-3"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="alert-heading mb-1">Pending Transaction In Progress</h5>
+                            <p class="mb-0">You have a pending transaction (#<?php echo $tx['id']; ?> for ₱<?php echo number_format($tx['amount'], 2); ?>) that was created <?php echo $tx['minutes_ago']; ?> minutes ago.</p>
+                            <p class="mb-2">Please wait <?php echo $minutesRemaining; ?> more <?php echo ($minutesRemaining == 1) ? 'minute' : 'minutes'; ?> before attempting a new purchase, or check your <a href="<?php echo BASE; ?>dashboard/<?php echo strtolower($_SESSION['role'][0]); ?>/transactions" class="alert-link">transaction history</a>.</p>
+                            
+                            <div class="mt-3">
+                                <a href="<?php echo BASE; ?>dashboard/<?php echo strtolower($_SESSION['role'][0]); ?>/transactions" class="btn btn-sm btn-outline-warning">
+                                    <i class="bi bi-clock-history me-1"></i> View Transaction History
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php elseif (isset($pendingCheck['hasRecentSuccess']) && $pendingCheck['hasRecentSuccess']): 
+            $tx = $pendingCheck['transaction'];
+            $minutesSince = $tx['minutes_since_success'];
+        ?>
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <div class="d-flex">
+                        <div class="flex-shrink-0 me-3">
+                            <i class="bi bi-info-circle-fill fs-3"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="alert-heading mb-1">Recent Successful Transaction</h5>
+                            <p class="mb-0">You have a recent successful transaction (#<?php echo $tx['id']; ?> for ₱<?php echo number_format($tx['amount'], 2); ?>) that was completed <?php echo $minutesSince; ?> minutes ago.</p>
+                            <p class="mb-2">Please check your token balance and <a href="<?php echo BASE; ?>dashboard/<?php echo strtolower($_SESSION['role'][0]); ?>/transactions" class="alert-link">transaction history</a> before making another purchase to avoid double payments.</p>
+                            
+                            <div class="mt-3 d-flex gap-2">
+                                <a href="<?php echo BASE; ?>dashboard/<?php echo strtolower($_SESSION['role'][0]); ?>/transactions" class="btn btn-sm btn-outline-info">
+                                    <i class="bi bi-clock-history me-1"></i> View Transaction History
+                                </a>
+                                <button id="continueAnyway" class="btn btn-sm btn-outline-secondary">
+                                    Continue Anyway
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <?php if ($class_id > 0 && !empty($class_name)): ?>
         <div class="row mb-4">
             <div class="col-12">
@@ -318,6 +379,70 @@ if ($class_id > 0) {
         let selectedMethod = null;
         const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
         
+        // Check if there's a pending transaction and disable payment form
+        <?php if (isset($pendingCheck) && $pendingCheck['hasPending']): ?>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Disable payment method selection
+            const paymentOptions = document.querySelectorAll('.payment-method-option');
+            paymentOptions.forEach(option => {
+                option.classList.add('disabled');
+                option.style.opacity = '0.6';
+                option.style.cursor = 'not-allowed';
+                // Remove click events
+                option.style.pointerEvents = 'none';
+            });
+            
+            // Disable Pay button
+            const payButton = document.getElementById('payButton');
+            payButton.disabled = true;
+            payButton.innerHTML = '<i class="bi bi-clock-history me-2"></i>Transaction Pending';
+            payButton.classList.add('btn-secondary');
+            payButton.classList.remove('btn-primary');
+            
+            // Disable amount input
+            const amountInput = document.getElementById('amount');
+            amountInput.disabled = true;
+            
+            // Add countdown script
+            let remainingMinutes = <?php echo $pendingCheck['transaction']['minutes_remaining']; ?>;
+            let remainingSeconds = remainingMinutes * 60;
+            
+            const countdownTimer = setInterval(function() {
+                remainingSeconds--;
+                
+                if (remainingSeconds <= 0) {
+                    clearInterval(countdownTimer);
+                    location.reload();
+                    return;
+                }
+                
+                const minutes = Math.floor(remainingSeconds / 60);
+                const seconds = remainingSeconds % 60;
+                
+                payButton.innerHTML = 
+                    `<i class="bi bi-clock-history me-2"></i>Please Wait: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        });
+        <?php elseif (isset($pendingCheck['hasRecentSuccess']) && $pendingCheck['hasRecentSuccess']): ?>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle the "Continue Anyway" button for recent successful transactions
+            const continueButton = document.getElementById('continueAnyway');
+            if (continueButton) {
+                continueButton.addEventListener('click', function() {
+                    // Hide the alert
+                    const alertElement = this.closest('.alert').parentElement.parentElement;
+                    alertElement.style.display = 'none';
+                    
+                    // Show a brief toast notification
+                    showToast('Proceeding with new transaction', 'info');
+                    
+                    // Set a flag in session storage to ignore recent success
+                    sessionStorage.setItem('ignore_recent_success', 'true');
+                });
+            }
+        });
+        <?php endif; ?>
+        
         // Toast display function
         function showToast(message, type = 'info') {
             // Check if a toast container exists, if not create one
@@ -464,7 +589,7 @@ if ($class_id > 0) {
         });
         
         // Function to handle payment processing
-        function processPayment() {
+        function processPayment(ignoreRecentSuccess = false) {
             const amount = document.getElementById('amount').value;
             const baseAmount = parseFloat(amount);
             const vatAmount = baseAmount * 0.1;
@@ -505,6 +630,9 @@ if ($class_id > 0) {
                     return;
                 }
                 
+                // Show loading state
+                showLoading('Creating payment...');
+                
                 // Create payment intent
                 fetch('<?php echo BASE; ?>create-payment', {
                     method: 'POST',
@@ -518,11 +646,27 @@ if ($class_id > 0) {
                         description: 'Token purchase',
                         payment_method: 'card',
                         transaction_type: transactionType,
-                        class_id: classId
+                        class_id: classId,
+                        ignore_recent_success: ignoreRecentSuccess ? 'true' : 'false'
                     })
                 })
                 .then(response => response.json())
                 .then(data => {
+                    hideLoading();
+                    
+                    // Handle case where there's a recent successful transaction
+                    if (!data.success && data.shouldIgnore) {
+                        // Use confirm dialog to ask if they want to proceed
+                        const confirmMsg = data.message + "\n\nDo you want to proceed with a new purchase anyway?";
+                        if (confirm(confirmMsg)) {
+                            // Call processPayment again but with ignoreRecentSuccess=true
+                            processPayment(true);
+                            return;
+                        } else {
+                            return; // User cancelled
+                        }
+                    }
+                    
                     if (data.success) {
                         if (data.already_paid) {
                             showToast(data.message, 'success');
@@ -542,6 +686,7 @@ if ($class_id > 0) {
                     }
                 })
                 .catch(error => {
+                    hideLoading();
                     console.error('Error:', error);
                     showToast('An error occurred. Please try again.', 'error');
                 });
@@ -561,12 +706,27 @@ if ($class_id > 0) {
                         description: 'Token purchase',
                         payment_method: paymentMethod,
                         transaction_type: transactionType,
-                        class_id: classId
+                        class_id: classId,
+                        ignore_recent_success: ignoreRecentSuccess ? 'true' : 'false'
                     })
                 })
                 .then(response => response.json())
                 .then(data => {
                     hideLoading();
+                    
+                    // Handle case where there's a recent successful transaction
+                    if (!data.success && data.shouldIgnore) {
+                        // Use confirm dialog to ask if they want to proceed
+                        const confirmMsg = data.message + "\n\nDo you want to proceed with a new purchase anyway?";
+                        if (confirm(confirmMsg)) {
+                            // Call processPayment again but with ignoreRecentSuccess=true
+                            processPayment(true);
+                            return;
+                        } else {
+                            return; // User cancelled
+                        }
+                    }
+                    
                     if (data.success) {
                         if (data.already_paid) {
                             showToast(data.message, 'success');

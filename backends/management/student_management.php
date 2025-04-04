@@ -826,7 +826,7 @@ function isWithin24Hours($scheduleId) {
  * @param string $reason Optional reason for dropping the class
  * @return array Status and message
  */
-function dropClass($student_id, $class_id, $reason = '') {
+function dropClass($student_id, $class_id, $reason = '') { 
     global $conn;
     
     try {
@@ -876,12 +876,11 @@ function dropClass($student_id, $class_id, $reason = '') {
         $stmt->execute();
 
         // Remove attendance
-        $stmt = $conn->prepare("
-            DELETE attendance
-            WHERE student_id = ?
-        ");
-        $stmt->bind_param("i", $student_id);
+        $stmt = $conn->prepare("DELETE FROM attendance WHERE student_id = ? AND schedule_id IN (SELECT schedule_id FROM class_schedule WHERE class_id = ?)");
+        log_error("Did I fail here?");
+        $stmt->bind_param("ii", $student_id, $class_id);
         $stmt->execute();
+        log_error("Did I fail or here?");
 
         // Send notification to the tutor
         $notification_message = "<strong>{$student['student_name']}</strong> has dropped the class <strong>{$enrollment['class_name']}</strong>.";

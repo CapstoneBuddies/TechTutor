@@ -74,29 +74,36 @@ if (isset($_SESSION['class_name'])) unset($_SESSION['class_name']);
                 <div class="payment-summary-container mb-4">
                     <div class="payment-summary-card">
                         <h5 class="summary-header">Payment Summary</h5>
+                        <?php
+                            // Calculate components
+                            $totalAmount = (float)$transaction_amount;
+                            $VAT_RATE = 0.1;  // 10%
+                            $SERVICE_RATE = 0.002;  // 0.2%
+                            // Calculate base amount from total paid
+                            $baseAmount = $totalAmount / (1 + $VAT_RATE + $SERVICE_RATE);
+                            $vatAmount = $baseAmount * $VAT_RATE;
+                            $serviceAmount = $baseAmount * $SERVICE_RATE;
+                            $tokensReceived = round($baseAmount);
+                        ?>
                         <div class="summary-row">
-                            <span>Tokens Purchased:</span>
-                            <span class="value"><?php echo number_format($transaction_amount, 0); ?> Tokens</span>
+                            <span>Tokens Received:</span>
+                            <span class="value"><?php echo number_format($tokensReceived, 0); ?> Tokens</span>
                         </div>
                         <div class="summary-row">
                             <span>Base Amount:</span>
-                            <span class="value">₱<?php echo number_format($transaction_amount, 2); ?></span>
+                            <span class="value">₱<?php echo number_format($baseAmount, 2); ?></span>
                         </div>
                         <div class="summary-row">
                             <span>VAT (10%):</span>
-                            <span class="value">₱<?php echo number_format($transaction_amount * 0.1, 2); ?></span>
+                            <span class="value">₱<?php echo number_format($vatAmount, 2); ?></span>
                         </div>
                         <div class="summary-row">
                             <span>Service Charge (0.2%):</span>
-                            <span class="value">₱<?php echo number_format($transaction_amount * 0.002, 2); ?></span>
+                            <span class="value">₱<?php echo number_format($serviceAmount, 2); ?></span>
                         </div>
                         <div class="summary-row total">
                             <span>Total Amount Paid:</span>
-                            <span class="value">₱<?php 
-                                $vatAmount = $transaction_amount * 0.1;
-                                $serviceAmount = $transaction_amount * 0.002;
-                                echo number_format($transaction_amount + $vatAmount + $serviceAmount, 2); 
-                            ?></span>
+                            <span class="value">₱<?php echo number_format($totalAmount, 2); ?></span>
                         </div>
                     </div>
                 </div>
@@ -109,9 +116,9 @@ if (isset($_SESSION['class_name'])) unset($_SESSION['class_name']);
                         </div>
                         <div class="token-details">
                             <h5>Current Balance</h5>
-                            <div class="token-amount"><?php echo number_format($token_balance, 0); ?> Tokens</div>
+                            <div class="token-amount"><?php echo number_format((int)$token_balance, 0); ?> Tokens</div>
                             <?php if ($transaction_amount > 0): ?>
-                                <p class="token-message">Your account has been credited with <?php echo number_format($transaction_amount, 0); ?> tokens!</p>
+                                <p class="token-message">Your account has been credited with <?php echo number_format($tokensReceived, 0); ?> tokens!</p>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -142,7 +149,7 @@ if (isset($_SESSION['class_name'])) unset($_SESSION['class_name']);
                 
                 <!-- Class-specific action button -->
                 <div class="d-grid mb-4">
-                    <a href="<?php echo BASE; ?>techkid/enroll-class?id=<?php echo $class_id; ?>" class="btn btn-success">
+                    <a href="<?php echo BASE; ?>dashboard/s/enrollments/class?id=<?php echo $class_id; ?>" class="btn btn-success">
                         <i class="bi bi-mortarboard me-2"></i>Complete Enrollment
                     </a>
                 </div>
@@ -188,7 +195,12 @@ if (isset($_SESSION['class_name'])) unset($_SESSION['class_name']);
                 
                 if (seconds <= 0) {
                     clearInterval(countdownInterval);
-                    window.location.href = '<?php echo BASE; ?>dashboard';
+                    // Check if we have a class_id to redirect to
+                    <?php if (isset($class_id) && $class_id > 0): ?>
+                        window.location.href = '<?php echo BASE; ?>dashboard/s/enrollments/class?id=<?php echo $class_id; ?>';
+                    <?php else: ?>
+                        window.location.href = '<?php echo BASE; ?>dashboard';
+                    <?php endif; ?>
                 }
             }, 1000);
         });
