@@ -134,6 +134,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && $endpoint === 'get-disputes') {
     exit;
 }
 
+// Get dispute details
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && $endpoint === 'get-dispute-details') {
+    if (!isset($_GET['id'])) {
+        $response['message'] = 'Dispute ID is required';
+        echo json_encode($response);
+        exit;
+    }
+
+    $disputeId = (int)$_GET['id'];
+    $result = getDisputeDetails($disputeId);
+    
+    // Permission check is already handled in the getDisputeDetails function
+    echo json_encode($result);
+    exit;
+}
+
 // Update dispute status (Admin only)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $endpoint === 'update-dispute') {
     // Verify user is admin

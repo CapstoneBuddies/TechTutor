@@ -25,14 +25,14 @@ try {
 
 // Get transaction info from session if available
 $transaction_type = isset($_SESSION['transaction_type']) ? $_SESSION['transaction_type'] : 'general';
-$transaction_amount = isset($_SESSION['transaction_amount']) ? $_SESSION['transaction_amount'] : 0;
-$class_id = isset($_SESSION['class_id']) ? $_SESSION['class_id'] : 0;
+$transaction_amount = isset($_GET['amount']) ? $_GET['amount'] : 0;
+$class_id = isset($_GET['class_id']) ? $_GET['class_id'] : 0;
 $class_name = isset($_SESSION['class_name']) ? $_SESSION['class_name'] : '';
 
 // Clear session variables after using them
 if (isset($_SESSION['transaction_type'])) unset($_SESSION['transaction_type']);
-if (isset($_SESSION['transaction_amount'])) unset($_SESSION['transaction_amount']);
-if (isset($_SESSION['class_id'])) unset($_SESSION['class_id']);
+if (isset($_GET['amount'])) unset($_SESSION['amount']);
+if (isset($_GET['class_id'])) unset($_GET['class_id']);
 if (isset($_SESSION['class_name'])) unset($_SESSION['class_name']);
 ?>
 <!DOCTYPE html>
@@ -57,7 +57,7 @@ if (isset($_SESSION['class_name'])) unset($_SESSION['class_name']);
                 <div class="confetti"></div>
             </div>
             <div class="success-icon-container">
-                <i class="bi bi-check-circle-fill success-icon"></i>
+            <i class="bi bi-check-circle-fill success-icon"></i>
             </div>
             <h2 class="mb-3">Payment Successful!</h2>
             
@@ -69,6 +69,37 @@ if (isset($_SESSION['class_name'])) unset($_SESSION['class_name']);
                     </span>
                 </div>
                 <p class="text-muted mb-4">Your token purchase was successful. Your account has been credited with tokens.</p>
+                
+                <!-- Payment Summary -->
+                <div class="payment-summary-container mb-4">
+                    <div class="payment-summary-card">
+                        <h5 class="summary-header">Payment Summary</h5>
+                        <div class="summary-row">
+                            <span>Tokens Purchased:</span>
+                            <span class="value"><?php echo number_format($transaction_amount, 0); ?> Tokens</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Base Amount:</span>
+                            <span class="value">₱<?php echo number_format($transaction_amount, 2); ?></span>
+                        </div>
+                        <div class="summary-row">
+                            <span>VAT (10%):</span>
+                            <span class="value">₱<?php echo number_format($transaction_amount * 0.1, 2); ?></span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Service Charge (0.2%):</span>
+                            <span class="value">₱<?php echo number_format($transaction_amount * 0.002, 2); ?></span>
+                        </div>
+                        <div class="summary-row total">
+                            <span>Total Amount Paid:</span>
+                            <span class="value">₱<?php 
+                                $vatAmount = $transaction_amount * 0.1;
+                                $serviceAmount = $transaction_amount * 0.002;
+                                echo number_format($transaction_amount + $vatAmount + $serviceAmount, 2); 
+                            ?></span>
+                        </div>
+                    </div>
+                </div>
                 
                 <!-- Token Balance Card -->
                 <div class="token-update-container mb-4">
@@ -119,7 +150,7 @@ if (isset($_SESSION['class_name'])) unset($_SESSION['class_name']);
                 
             <?php else: ?>
                 <!-- General payment success -->
-                <p class="text-muted mb-4">Your payment has been processed successfully. You can view your transaction details in your transaction history.</p>
+            <p class="text-muted mb-4">Your payment has been processed successfully. You can view your transaction details in your transaction history.</p>
             <?php endif; ?>
             
             <div class="d-grid gap-2">
@@ -193,7 +224,7 @@ if (isset($_SESSION['class_name'])) unset($_SESSION['class_name']);
             animation: bounceIn 1s;
         }
         
-        .token-update-container, .class-details-container {
+        .token-update-container, .class-details-container, .payment-summary-container {
             margin: 1.5rem 0;
         }
         
@@ -205,6 +236,43 @@ if (isset($_SESSION['class_name'])) unset($_SESSION['class_name']);
             padding: 1.25rem;
             box-shadow: 0 4px 15px rgba(40, 167, 69, 0.1);
             animation: slideInUp 0.5s;
+        }
+        
+        .payment-summary-card {
+            background-color: rgba(13, 110, 253, 0.05);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(13, 110, 253, 0.1);
+            animation: slideInUp 0.5s;
+            text-align: left;
+        }
+        
+        .summary-header {
+            margin-bottom: 1rem;
+            font-weight: 600;
+            color: #0d6efd;
+            border-bottom: 1px solid rgba(13, 110, 253, 0.2);
+            padding-bottom: 0.75rem;
+        }
+        
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+        }
+        
+        .summary-row.total {
+            border-top: 1px solid rgba(13, 110, 253, 0.2);
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #0d6efd;
+        }
+        
+        .summary-row .value {
+            font-weight: 500;
         }
         
         .token-icon, .class-icon {
@@ -248,28 +316,21 @@ if (isset($_SESSION['class_name'])) unset($_SESSION['class_name']);
         
         .token-message, .class-message {
             margin: 0;
+            color: #666;
             font-size: 0.9rem;
-            color: #555;
         }
         
         .redirect-notice {
             margin-top: 2rem;
-            animation: fadeIn 1s;
+            color: #6c757d;
+            font-size: 0.9rem;
         }
         
         .progress {
-            height: 8px;
-            border-radius: 4px;
-            margin-top: 8px;
-            background-color: #e9ecef;
+            height: 6px;
+            margin-top: 0.5rem;
         }
         
-        .progress-bar {
-            background-color: #28a745;
-            transition: width 1s linear;
-        }
-        
-        /* Confetti animation */
         .confetti-container {
             position: absolute;
             top: 0;
@@ -283,92 +344,85 @@ if (isset($_SESSION['class_name'])) unset($_SESSION['class_name']);
         .confetti {
             position: absolute;
             width: 10px;
-            height: 20px;
-            background-color: #f00;
-            opacity: 0.7;
-            animation: fall 3s linear infinite;
-        }
-        
-        .confetti:nth-child(2n) {
-            width: 5px;
-            height: 15px;
-            background-color: #0f0;
-            animation-delay: 0.2s;
-            animation-duration: 2.5s;
-        }
-        
-        .confetti:nth-child(3n) {
-            width: 15px;
-            height: 7px;
-            background-color: #00f;
-            animation-delay: 0.4s;
-            animation-duration: 4s;
-        }
-        
-        .confetti:nth-child(4n) {
-            width: 8px;
-            height: 12px;
-            background-color: #ff0;
-            animation-delay: 0.6s;
-            animation-duration: 3.5s;
-        }
-        
-        .confetti:nth-child(5n) {
-            width: 12px;
-            height: 9px;
-            background-color: #f0f;
-            animation-delay: 0.8s;
-            animation-duration: 3.2s;
-        }
-        
-        .confetti:nth-child(6n) {
-            width: 6px;
-            height: 14px;
-            background-color: #0ff;
-            animation-delay: 1s;
-            animation-duration: 3.8s;
-        }
-        
-        .confetti:nth-child(7n) {
-            width: 14px;
-            height: 8px;
-            background-color: #f80;
-            animation-delay: 1.2s;
-            animation-duration: 3.3s;
-        }
-        
-        .confetti:nth-child(8n) {
-            width: 9px;
-            height: 11px;
-            background-color: #8f0;
-            animation-delay: 1.4s;
-            animation-duration: 3.1s;
-        }
-        
-        .confetti:nth-child(9n) {
-            width: 11px;
             height: 10px;
-            background-color: #f08;
-            animation-delay: 1.6s;
-            animation-duration: 3.7s;
+            background-color: #f0f;
+            opacity: 0.6;
+            top: -10px;
+            transform-origin: center;
+            border-radius: 0;
+            animation: confetti-fall 5s ease-out infinite;
         }
         
-        .confetti:nth-child(10n) {
-            width: 7px;
-            height: 13px;
+        .confetti:nth-child(1) {
+            left: 10%;
+            background-color: #f0f;
+            animation-delay: 0.1s;
+        }
+        
+        .confetti:nth-child(2) {
+            left: 20%;
+            background-color: #f80;
+            animation-delay: 0.3s;
+        }
+        
+        .confetti:nth-child(3) {
+            left: 30%;
+            background-color: #0cf;
+            animation-delay: 0.5s;
+        }
+        
+        .confetti:nth-child(4) {
+            left: 40%;
+            background-color: #f0f;
+            animation-delay: 0.7s;
+        }
+        
+        .confetti:nth-child(5) {
+            left: 50%;
+            background-color: #fc0;
+            animation-delay: 0.9s;
+        }
+        
+        .confetti:nth-child(6) {
+            left: 60%;
+            background-color: #0c0;
+            animation-delay: 1.1s;
+        }
+        
+        .confetti:nth-child(7) {
+            left: 70%;
+            background-color: #c0f;
+            animation-delay: 1.3s;
+        }
+        
+        .confetti:nth-child(8) {
+            left: 80%;
+            background-color: #0ff;
+            animation-delay: 1.5s;
+        }
+        
+        .confetti:nth-child(9) {
+            left: 90%;
+            background-color: #f80;
+            animation-delay: 1.7s;
+        }
+        
+        .confetti:nth-child(10) {
+            left: 95%;
             background-color: #08f;
-            animation-delay: 1.8s;
-            animation-duration: 3.4s;
+            animation-delay: 1.9s;
         }
         
-        @keyframes fall {
+        @keyframes confetti-fall {
             0% {
-                top: -100px;
-                transform: translateX(0) rotate(0deg);
+                top: -10px;
+                transform: translateX(0) rotateZ(0);
+                opacity: 0.6;
             }
             100% {
-                top: 100%;
-                transform: translateX(100px) rotate(360deg);
+                top: 105%;
+                transform: translateX(20px) rotateZ(360deg);
+                opacity: 0;
             }
         }
         
@@ -403,47 +457,12 @@ if (isset($_SESSION['class_name'])) unset($_SESSION['class_name']);
         
         @keyframes slideInUp {
             from {
-                transform: translate3d(0, 50px, 0);
+                transform: translateY(30px);
                 opacity: 0;
             }
             to {
-                transform: translate3d(0, 0, 0);
+                transform: translateY(0);
                 opacity: 1;
-            }
-        }
-        
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-        
-        /* Responsive adjustments */
-        @media (max-width: 576px) {
-            .success-card {
-                margin: 1rem;
-                padding: 1.5rem;
-            }
-            
-            .success-icon {
-                font-size: 4rem;
-            }
-            
-            .token-balance-card, .class-details-card {
-                flex-direction: column;
-                text-align: center;
-            }
-            
-            .token-icon, .class-icon {
-                margin-right: 0;
-                margin-bottom: 1rem;
-            }
-            
-            .token-details, .class-info {
-                text-align: center;
             }
         }
     </style>

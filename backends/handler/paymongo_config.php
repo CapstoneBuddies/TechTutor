@@ -45,6 +45,70 @@ class PayMongoHelper {
     }
 
     /**
+     * Check if a payment intent with the specified ID exists and return its current status
+     * @param string $paymentIntentId Payment Intent ID to check
+     * @return array Status information including 'exists', 'status', and 'data'
+     */
+    public function checkPaymentIntentStatus($paymentIntentId) {
+        if (empty($paymentIntentId)) {
+            return [
+                'exists' => false,
+                'status' => null,
+                'data' => null,
+                'message' => 'No payment intent ID provided'
+            ];
+        }
+        
+        $response = $this->sendRequest("/payment_intents/{$paymentIntentId}", 'GET');
+        
+        // Check if the request was successful and contains data
+        if (isset($response['data']) && isset($response['data']['id'])) {
+            $status = $response['data']['attributes']['status'] ?? 'unknown';
+            return [
+                'exists' => true,
+                'status' => $status,
+                'is_terminal' => in_array($status, ['succeeded', 'cancelled', 'processing']),
+                'data' => $response['data'],
+                'message' => "Payment intent exists with status: {$status}"
+            ];
+        }
+        
+        // If we have errors, the payment intent might exist but have issues
+        if (isset($response['errors'])) {
+            $errorCode = $response['errors'][0]['code'] ?? '';
+            $errorDetail = $response['errors'][0]['detail'] ?? 'Unknown error';
+            
+            // Check if the error indicates a payment intent that doesn't exist
+            if (strpos($errorCode, 'resource_not_found') !== false) {
+                return [
+                    'exists' => false,
+                    'status' => null,
+                    'data' => null,
+                    'message' => 'Payment intent not found'
+                ];
+            }
+            
+            // For other errors, log them but consider the payment intent might exist
+            log_error("PayMongo API error when checking payment intent: {$errorDetail}", 'payment_error');
+            return [
+                'exists' => true, // Assume it exists but has issues
+                'status' => 'error',
+                'is_terminal' => false,
+                'data' => null,
+                'message' => $errorDetail
+            ];
+        }
+        
+        // Default fallback for unexpected responses
+        return [
+            'exists' => false,
+            'status' => null,
+            'data' => null,
+            'message' => 'Could not determine payment intent status'
+        ];
+    }
+
+    /**
      * Create a Source for e-wallet payments
      * @param array $sourceDetails Source details including type, amount, and redirect URLs
      * @return array Response from PayMongo
@@ -117,6 +181,42 @@ class PayMongoHelper {
      * @return array Response from PayMongo
      */
     public function attachPaymentMethod($paymentIntentId, $paymentMethodId) {
+        // First check if the payment intent exists and its status
+        $statusCheck = $this->checkPaymentIntentStatus($paymentIntentId);
+        
+        // If payment intent already succeeded, return the success status instead of trying to attach
+        if ($statusCheck['exists'] && $statusCheck['status'] === 'succeeded') {
+            log_error("Payment intent {$paymentIntentId} already succeeded, skipping attachment", 'payment_info');
+            return [
+                'data' => [
+                    'id' => $paymentIntentId,
+                    'type' => 'payment_intent',
+                    'attributes' => [
+                        'status' => 'succeeded',
+                        'last_payment_error' => null
+                    ]
+                ],
+                'already_succeeded' => true
+            ];
+        }
+        
+        // If payment intent is in processing state, return that status
+        if ($statusCheck['exists'] && $statusCheck['status'] === 'processing') {
+            log_error("Payment intent {$paymentIntentId} is still processing, cannot attach payment method", 'payment_info');
+            return [
+                'data' => [
+                    'id' => $paymentIntentId,
+                    'type' => 'payment_intent',
+                    'attributes' => [
+                        'status' => 'processing',
+                        'last_payment_error' => null
+                    ]
+                ],
+                'already_processing' => true
+            ];
+        }
+        
+        // Proceed with normal attachment if not in a terminal state
         $data = [
             'data' => [
                 'attributes' => [

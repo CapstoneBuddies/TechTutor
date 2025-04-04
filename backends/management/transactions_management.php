@@ -540,4 +540,106 @@ function processRefund($transactionId, $disputeId, $amount, $adminId, $notes = n
         ];
     }
 }
+
+/**
+ * Get details of a specific dispute
+ * 
+ * @param int $disputeId The ID of the dispute to fetch
+ * @return array Response containing the dispute details or error message
+ */
+function getDisputeDetails($disputeId) {
+    global $conn;
+    
+    try {
+        // Prepare the query with all necessary joins to get comprehensive dispute info
+        $query = "SELECT 
+                    d.*,
+                    t.amount as transaction_amount,
+                    t.payment_method_type as payment_method,
+                    t.description as transaction_description,
+                    t.status as transaction_status,
+                    t.payment_intent_id,
+                    u.first_name,
+                    u.last_name,
+                    u.email,
+                    u.role as user_role
+                FROM 
+                    transaction_disputes d
+                LEFT JOIN 
+                    transactions t ON d.transaction_id = t.transaction_id
+                LEFT JOIN 
+                    users u ON d.user_id = u.uid
+                WHERE 
+                    d.dispute_id = ?";
+        
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param('i', $disputeId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($row = $result->fetch_assoc()) {
+            // Check if the user has permission to view this dispute
+            if ($_SESSION['role'] !== 'ADMIN' && $row['user_id'] != $_SESSION['user']) {
+                return [
+                    'success' => false,
+                    'message' => 'You do not have permission to view this dispute'
+                ];
+            }
+            
+            // Format the dispute data
+            $dispute = [
+                'id' => $row['dispute_id'],
+                'transactionId' => $row['transaction_id'],
+                'userId' => $row['user_id'],
+                'userName' => $row['first_name'] . ' ' . $row['last_name'],
+                'userEmail' => $row['email'],
+                'userRole' => $row['user_role'],
+                'reason' => $row['reason'],
+                'status' => $row['status'],
+                'adminNotes' => $row['admin_notes'],
+                'createdAt' => $row['created_at'],
+                'updatedAt' => $row['updated_at'],
+                'transactionAmount' => $row['transaction_amount'],
+                'paymentMethod' => $row['payment_method'],
+                'transactionDescription' => $row['transaction_description'],
+                'transactionStatus' => $row['transaction_status'],
+                'paymentIntentId' => $row['payment_intent_id']
+            ];
+            
+            // Get any refund information if available
+            $refundQuery = "SELECT * FROM transaction_refunds WHERE dispute_id = ? ORDER BY created_at DESC LIMIT 1";
+            $refundStmt = $conn->prepare($refundQuery);
+            $refundStmt->bind_param('i', $disputeId);
+            $refundStmt->execute();
+            $refundResult = $refundStmt->get_result();
+            
+            if ($refundRow = $refundResult->fetch_assoc()) {
+                $dispute['refund'] = [
+                    'id' => $refundRow['refund_id'],
+                    'amount' => $refundRow['amount'],
+                    'status' => $refundRow['status'],
+                    'notes' => $refundRow['notes'],
+                    'createdAt' => $refundRow['created_at']
+                ];
+            }
+            
+            return [
+                'success' => true,
+                'dispute' => $dispute
+            ];
+        }
+        
+        return [
+            'success' => false,
+            'message' => 'Dispute not found'
+        ];
+        
+    } catch (Exception $e) {
+        log_error("Error fetching dispute details: " . $e->getMessage(), 'database');
+        return [
+            'success' => false,
+            'message' => 'Failed to fetch dispute details'
+        ];
+    }
+}
 ?>

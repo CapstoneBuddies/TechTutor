@@ -15,71 +15,165 @@
     <?php include ROOT_PATH . '/components/header.php'; ?>
     <!-- Main Content -->
     <div class="container-fluid py-4">
-        <div class="row">
+        <!-- Tabs for switching between Transactions and Disputes -->
+        <div class="row mb-4">
             <div class="col-12">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <?php if ($_SESSION['role'] === 'ADMIN'): ?>
-                                All User Transactions
-                            <?php else: ?>
-                                My Transactions
-                            <?php endif; ?>
-                        </h5>
-                        <div>
-                            <?php if ($_SESSION['role'] === 'ADMIN'): ?>
-                            <button class="btn btn-sm btn-outline-secondary me-2" onclick="exportTransactions()">
-                                <i class="bi bi-download"></i> Export
-                            </button>
-                            <?php endif; ?>
-                            <div class="btn-group">
-                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="bi bi-funnel"></i> Filter
-                                </button>
-                                <ul class="dropdown-menu" aria-labelledby="filterDropdown">
-                                    <li><a class="dropdown-item" href="javascript:void(0)" data-filter="all">All</a></li>
-                                    <li><a class="dropdown-item" href="javascript:void(0)" data-filter="completed">Completed</a></li>
-                                    <li><a class="dropdown-item" href="javascript:void(0)" data-filter="pending">Pending</a></li>
-                                    <li><a class="dropdown-item" href="javascript:void(0)" data-filter="failed">Failed</a></li>
-                                </ul>
+                <ul class="nav nav-tabs" id="transactionsTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="transactions-tab" data-bs-toggle="tab" data-bs-target="#transactions-content" type="button" role="tab" aria-controls="transactions-content" aria-selected="true">
+                            <i class="bi bi-currency-exchange me-1"></i> Transactions
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="disputes-tab" data-bs-toggle="tab" data-bs-target="#disputes-content" type="button" role="tab" aria-controls="disputes-content" aria-selected="false">
+                            <i class="bi bi-exclamation-triangle me-1"></i> Disputes
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Tab Content -->
+        <div class="tab-content" id="transactionsTabsContent">
+            <!-- Transactions Tab -->
+            <div class="tab-pane fade show active" id="transactions-content" role="tabpanel" aria-labelledby="transactions-tab">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <?php if ($_SESSION['role'] === 'ADMIN'): ?>
+                                        All User Transactions
+                                    <?php else: ?>
+                                        My Transactions
+                                    <?php endif; ?>
+                                </h5>
+                                <div>
+                                    <?php if ($_SESSION['role'] === 'ADMIN'): ?>
+                                    <button class="btn btn-sm btn-outline-secondary me-2" onclick="exportTransactions()">
+                                        <i class="bi bi-download"></i> Export
+                                    </button>
+                                    <?php endif; ?>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-funnel"></i> Filter
+                                        </button>
+                                        <ul class="dropdown-menu" aria-labelledby="filterDropdown">
+                                            <li><a class="dropdown-item" href="javascript:void(0)" data-filter="all">All</a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0)" data-filter="completed">Completed</a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0)" data-filter="pending">Pending</a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0)" data-filter="failed">Failed</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Transaction ID</th>
+                                                <?php if ($_SESSION['role'] === 'ADMIN'): ?>
+                                                    <th>User</th>
+                                                    <th>Role</th>
+                                                <?php endif; ?>
+                                                <th>Date</th>
+                                                <th>Type</th>
+                                                <th>Amount</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="transactionsTableBody">
+                                            <!-- Transaction rows will be loaded here via AJAX -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div id="loadingSpinner" class="text-center d-none">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                                <div id="noTransactions" class="text-center d-none">
+                                    <p class="text-muted">No transactions found</p>
+                                </div>
+                                <nav aria-label="Page navigation" class="mt-4">
+                                    <ul class="pagination justify-content-center" id="pagination">
+                                        <!-- Pagination will be generated via JavaScript -->
+                                    </ul>
+                                </nav>
                             </div>
                         </div>
                     </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Transaction ID</th>
-                                        <?php if ($_SESSION['role'] === 'ADMIN'): ?>
-                                            <th>User</th>
-                                            <th>Role</th>
-                                        <?php endif; ?>
-                                        <th>Date</th>
-                                        <th>Type</th>
-                                        <th>Amount</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="transactionsTableBody">
-                                    <!-- Transaction rows will be loaded here via AJAX -->
-                                </tbody>
-                            </table>
-                        </div>
-                        <div id="loadingSpinner" class="text-center d-none">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+            
+            <!-- Disputes Tab -->
+            <div class="tab-pane fade" id="disputes-content" role="tabpanel" aria-labelledby="disputes-tab">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <?php if ($_SESSION['role'] === 'ADMIN'): ?>
+                                        All Transaction Disputes
+                                    <?php else: ?>
+                                        My Transaction Disputes
+                                    <?php endif; ?>
+                                </h5>
+                                <div>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="disputeFilterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-funnel"></i> Filter
+                                        </button>
+                                        <ul class="dropdown-menu" aria-labelledby="disputeFilterDropdown">
+                                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="filterDisputes('all')">All</a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="filterDisputes('pending')">Pending</a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="filterDisputes('under_review')">Under Review</a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="filterDisputes('resolved')">Resolved</a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="filterDisputes('rejected')">Rejected</a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="filterDisputes('cancelled')">Cancelled</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Dispute ID</th>
+                                                <th>Transaction ID</th>
+                                                <?php if ($_SESSION['role'] === 'ADMIN'): ?>
+                                                    <th>User</th>
+                                                    <th>Role</th>
+                                                <?php endif; ?>
+                                                <th>Date Filed</th>
+                                                <th>Amount</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="disputesTableBody">
+                                            <!-- Dispute rows will be loaded here via AJAX -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div id="disputesLoadingSpinner" class="text-center d-none">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                                <div id="noDisputes" class="text-center d-none">
+                                    <p class="text-muted">No disputes found</p>
+                                </div>
+                                <nav aria-label="Page navigation" class="mt-4">
+                                    <ul class="pagination justify-content-center" id="disputesPagination">
+                                        <!-- Disputes pagination will be generated via JavaScript -->
+                                    </ul>
+                                </nav>
                             </div>
                         </div>
-                        <div id="noTransactions" class="text-center d-none">
-                            <p class="text-muted">No transactions found</p>
-                        </div>
-                        <nav aria-label="Page navigation" class="mt-4">
-                            <ul class="pagination justify-content-center" id="pagination">
-                                <!-- Pagination will be generated via JavaScript -->
-                            </ul>
-                        </nav>
                     </div>
                 </div>
             </div>
@@ -97,6 +191,26 @@
                 <div class="modal-body">
                     <div class="transaction-details">
                         <!-- Details will be loaded here via JavaScript -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Dispute Details Modal -->
+    <div class="modal fade" id="disputeDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Dispute Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="dispute-details">
+                        <!-- Dispute details will be loaded here via JavaScript -->
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -129,11 +243,14 @@
             
             console.log('Dropdowns initialized', dropdownList);
             
+            // Specifically initialize both dropdowns to ensure they work
+            const filterDropdown = new bootstrap.Dropdown(document.getElementById('filterDropdown'));
+            
             // Load transactions
             loadTransactions(currentPage, currentFilter);
             
             // Add direct click event listeners to filter items
-            document.querySelectorAll('.dropdown-item').forEach(item => {
+            document.querySelectorAll('#filterDropdown + .dropdown-menu .dropdown-item').forEach(item => {
                 item.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
@@ -177,7 +294,7 @@
                 })
                 .catch(error => {
                     loadingSpinner.classList.add('d-none');
-                    showAlert('error', 'Failed to load transactions');
+                    showToast('error', 'Failed to load transactions');
                     console.error('Error:', error);
             });
         }
@@ -357,7 +474,7 @@
                                     <div class="col-md-6">
                                         <h6 class="mb-1">Amount</h6>
                                         <p class="mb-3">${formatAmount(transaction.amount)}</p>
-                                    </div>
+                            </div>
                                     <div class="col-md-6">
                                         <h6 class="mb-1">Payment Method</h6>
                                         <p class="mb-3">${formatTransactionType(transaction.type, transaction.description)}</p>
@@ -431,7 +548,7 @@
             const reason = document.getElementById('disputeReason').value.trim();
             
             if (!reason) {
-                showAlert('error', 'Please provide a reason for your dispute');
+                showToast('error', 'Please provide a reason for your dispute');
                 return;
             }
             
@@ -448,7 +565,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showAlert('success', data.message);
+                    showToast('success', data.message);
                     // Properly close the modal
                     const modalElement = document.getElementById('transactionDetailsModal');
                     const modal = bootstrap.Modal.getInstance(modalElement);
@@ -456,12 +573,12 @@
                     // Reload the transactions list
                     loadTransactions(currentPage, currentFilter);
                 } else {
-                    showAlert('error', data.message);
+                    showToast('error', data.message);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                showAlert('error', 'Failed to create dispute');
+                showToast('error', 'Failed to create dispute');
             });
         }
         
@@ -482,25 +599,25 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showAlert('success', data.message);
+                    showToast('success', data.message);
                     const modalElement = document.getElementById('transactionDetailsModal');
                     const modal = bootstrap.Modal.getInstance(modalElement);
                     modal.hide();
                     // Reload the transactions list
                     loadTransactions(currentPage, currentFilter);
                 } else {
-                    showAlert('error', data.message);
+                    showToast('error', data.message);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                showAlert('error', 'Failed to cancel dispute');
+                showToast('error', 'Failed to cancel dispute');
             });
         }
         
         function updateDisputeStatus(disputeId, status) {
             const adminNotes = document.getElementById('adminNotes').value.trim();
-            
+            showLoading(true);
             fetch('<?php echo BASE; ?>update-dispute', {
                 method: 'POST',
                 headers: {
@@ -514,20 +631,21 @@
             })
             .then(response => response.json())
             .then(data => {
+                showLoading(false);
                 if (data.success) {
-                    showAlert('success', data.message);
+                    showToast('success', data.message);
                     const modalElement = document.getElementById('transactionDetailsModal');
                     const modal = bootstrap.Modal.getInstance(modalElement);
                     modal.hide();
                     // Reload the transactions list
                     loadTransactions(currentPage, currentFilter);
                 } else {
-                    showAlert('error', data.message);
+                    showToast('error', data.message);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                showAlert('error', 'Failed to update dispute status');
+                showToast('error', 'Failed to update dispute status');
             });
         }
         
@@ -535,7 +653,7 @@
             const amount = document.getElementById('refundAmount').value;
             
             if (!amount || amount <= 0) {
-                showAlert('error', 'Please enter a valid refund amount');
+                showToast('error', 'Please enter a valid refund amount');
                 return;
             }
             
@@ -558,23 +676,23 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showAlert('success', data.message);
+                    showToast('success', data.message);
                     const modalElement = document.getElementById('transactionDetailsModal');
                     const modal = bootstrap.Modal.getInstance(modalElement);
                     modal.hide();
                     // Reload the transactions list
                     loadTransactions(currentPage, currentFilter);
                 } else {
-                    showAlert('error', data.message);
+                    showToast('error', data.message);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                showAlert('error', 'Failed to process refund');
+                showToast('error', 'Failed to process refund');
             });
         }
 
-        function showAlert(type, message) {
+        function showToast(type, message) {
             const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
             const alertHtml = `
                 <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
@@ -617,6 +735,215 @@
                     </div>
                 </div>
             `;
+        }
+        
+        // Disputes Tab functionality
+        let disputesCurrentPage = 1;
+        let disputesCurrentFilter = 'all';
+        
+        // Add event listener for tab switching
+        document.addEventListener('DOMContentLoaded', function() {
+            const disputesTab = document.getElementById('disputes-tab');
+            if (disputesTab) {
+                disputesTab.addEventListener('shown.bs.tab', function (e) {
+                    // Load disputes when the disputes tab is shown
+                    loadDisputes(disputesCurrentPage, disputesCurrentFilter);
+                });
+            }
+        });
+        
+        function loadDisputes(page, status = 'all') {
+            const loadingSpinner = document.getElementById('disputesLoadingSpinner');
+            const noDisputes = document.getElementById('noDisputes');
+            const tableBody = document.getElementById('disputesTableBody');
+            
+            if (!loadingSpinner || !noDisputes || !tableBody) return;
+
+            loadingSpinner.classList.remove('d-none');
+            tableBody.innerHTML = '';
+            noDisputes.classList.add('d-none');
+
+            fetch(`<?php echo BASE; ?>get-disputes?page=${page}&status=${status}`)
+                .then(response => response.json())
+                .then(data => {
+                    loadingSpinner.classList.add('d-none');
+                    
+                    if (data.disputes && data.disputes.length > 0) {
+                        data.disputes.forEach(dispute => {
+                            const row = createDisputeRow(dispute);
+                            tableBody.innerHTML += row;
+                        });
+                        updateDisputesPagination(data.totalPages, page);
+                    } else {
+                        noDisputes.classList.remove('d-none');
+                    }
+                })
+                .catch(error => {
+                    loadingSpinner.classList.add('d-none');
+                    showToast('error', 'Failed to load disputes');
+                    console.error('Error:', error);
+                });
+        }
+
+        function createDisputeRow(dispute) {
+            let row = `<tr>
+                <td>${dispute.id}</td>
+                <td>${dispute.transactionId}</td>`;
+            
+            <?php if ($_SESSION['role'] === 'ADMIN'): ?>
+                row += `<td>${dispute.userName}</td>
+                       <td><span class="badge bg-${getRoleBadgeColor(dispute.userRole)}">${dispute.userRole}</span></td>`;
+            <?php endif; ?>
+
+            row += `<td>${formatDate(dispute.createdAt)}</td>
+                   <td>${formatAmount(dispute.transactionAmount)}</td>
+                   <td><span class="badge bg-${getDisputeStatusBadgeColor(dispute.status)}">${getDisputeStatusText(dispute.status)}</span></td>
+                   <td>
+                       <button class="btn btn-sm btn-outline-primary" onclick="viewDisputeDetails(${dispute.id})">
+                           <i class="bi bi-eye"></i>
+                       </button>
+                       ${(dispute.status === 'pending' || dispute.status === 'under_review') ? 
+                        `<button class="btn btn-sm btn-outline-danger ms-1" onclick="cancelDispute(${dispute.id})">
+                            <i class="bi bi-x-circle"></i>
+                         </button>` : ''}
+                   </td>
+                </tr>`;
+            return row;
+        }
+
+        function updateDisputesPagination(totalPages, currentPage) {
+            const pagination = document.getElementById('disputesPagination');
+            if (!pagination) return;
+            
+            pagination.innerHTML = '';
+
+            if (totalPages <= 1) return;
+
+            let paginationHtml = `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="loadDisputes(${currentPage - 1}, '${disputesCurrentFilter}')">&laquo;</a>
+                </li>`;
+
+            for (let i = 1; i <= totalPages; i++) {
+                paginationHtml += `
+                    <li class="page-item ${currentPage === i ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="loadDisputes(${i}, '${disputesCurrentFilter}')">${i}</a>
+                    </li>`;
+            }
+
+            paginationHtml += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="loadDisputes(${currentPage + 1}, '${disputesCurrentFilter}')">&raquo;</a>
+                </li>`;
+
+            pagination.innerHTML = paginationHtml;
+        }
+
+        function filterDisputes(status) {
+            disputesCurrentFilter = status;
+            disputesCurrentPage = 1;
+            loadDisputes(disputesCurrentPage, status);
+        }
+
+        function viewDisputeDetails(disputeId) {
+            const modalBody = document.querySelector('.dispute-details');
+            modalBody.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"></div></div>';
+            
+            // Open modal
+            const modal = new bootstrap.Modal(document.getElementById('disputeDetailsModal'));
+            modal.show();
+            
+            // In a real implementation, you would fetch the dispute details via AJAX
+            fetch(`<?php echo BASE; ?>get-dispute-details?id=${disputeId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const dispute = data.dispute;
+                        let html = `
+                            <div class="mb-3">
+                                <strong>Dispute ID:</strong> ${dispute.id}
+                            </div>
+                            <div class="mb-3">
+                                <strong>Transaction ID:</strong> ${dispute.transactionId}
+                            </div>
+                            <div class="mb-3">
+                                <strong>Date Filed:</strong> ${formatDate(dispute.createdAt)}
+                            </div>
+                            <div class="mb-3">
+                                <strong>Status:</strong> 
+                                <span class="badge bg-${getDisputeStatusBadgeColor(dispute.status)}">${getDisputeStatusText(dispute.status)}</span>
+                            </div>
+                            ${<?php echo $_SESSION['role'] === 'ADMIN' ? 'true' : 'false'; ?> ? `
+                            <div class="mb-3">
+                                <strong>User:</strong> ${dispute.userName || 'N/A'}
+                            </div>` : ''}
+                            <div class="mb-3">
+                                <strong>Amount:</strong> ${formatAmount(dispute.transactionAmount)}
+                            </div>
+                            <div class="mb-3">
+                                <strong>Reason:</strong><br>
+                                <p class="text-muted">${dispute.reason || 'No reason provided'}</p>
+                            </div>
+                            ${dispute.adminNotes ? `
+                            <div class="mb-3">
+                                <strong>Admin Notes:</strong><br>
+                                <p class="text-muted">${dispute.adminNotes}</p>
+                            </div>` : ''}
+                        `;
+                        
+                        modalBody.innerHTML = html;
+                        
+                        // Add action buttons if applicable
+                        if (dispute.status === 'pending' || dispute.status === 'under_review') {
+                            let actionsHtml = `
+                                <hr>
+                                <div class="d-flex justify-content-end">
+                                    <button class="btn btn-danger" onclick="cancelDispute(${dispute.id})">
+                                        Cancel Dispute
+                                    </button>
+                                </div>
+                            `;
+                            
+                            // Add admin controls
+                            if (<?php echo $_SESSION['role'] === 'ADMIN' ? 'true' : 'false'; ?>) {
+                                actionsHtml = `
+                                    <hr>
+                                    <div class="admin-dispute-controls">
+                                        <h6>Admin Actions</h6>
+                                        <div class="mb-3">
+                                            <label for="adminNotes" class="form-label">Admin Notes</label>
+                                            <textarea class="form-control" id="adminNotes" rows="3">${dispute.adminNotes || ''}</textarea>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <div class="btn-group">
+                                                <button class="btn btn-sm btn-primary" onclick="updateDisputeStatus(${dispute.id}, 'under_review')">
+                                                    Mark Under Review
+                                                </button>
+                                                <button class="btn btn-sm btn-success" onclick="updateDisputeStatus(${dispute.id}, 'resolved')">
+                                                    Resolve
+                                                </button>
+                                                <button class="btn btn-sm btn-danger" onclick="updateDisputeStatus(${dispute.id}, 'rejected')">
+                                                    Reject
+                                                </button>
+                                            </div>
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="processRefund(${dispute.transactionId}, ${dispute.id})">
+                                                Process Refund
+                                            </button>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                            
+                            modalBody.innerHTML += actionsHtml;
+                        }
+                    } else {
+                        modalBody.innerHTML = `<div class="alert alert-danger">${data.message || 'Failed to load dispute details'}</div>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    modalBody.innerHTML = '<div class="alert alert-danger">Failed to load dispute details</div>';
+                });
         }
     </script>
 </body>

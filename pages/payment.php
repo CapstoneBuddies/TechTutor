@@ -42,7 +42,8 @@ if ($class_id > 0) {
         $stmt->execute();
         $result = $stmt->get_result();
         if ($row = $result->fetch_assoc()) {
-            $class_name = $row['class_name'];
+            $_SESSION['class_name'] = $class_name = $row['class_name'];
+            $_SESSION['transaction_type'] = 'class';
         }
     } catch (Exception $e) {
         log_error("Error fetching class details: " . $e->getMessage(), 'database');
@@ -65,22 +66,8 @@ if ($class_id > 0) {
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <h4 class="mb-0">Purchase Tokens</h4>
-                            <div class="d-flex align-items-center">
-                                <div class="me-4">
-                                    <span class="text-muted me-2">Current Balance:</span>
-                                    <span class="badge bg-primary-subtle text-primary px-3 py-2">
-                                        <i class="bi bi-coin me-1"></i> <?php echo number_format($token_balance, 0); ?> Tokens
-                                    </span>
-                                </div>
-                                <div class="dropdown">
-                                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="paymentOptions" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="bi bi-gear"></i> Options
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="paymentOptions">
-                                        <li><a class="dropdown-item" href="<?php echo BASE.$role; ?>transactions">View Transactions</a></li>
-                                        <li><a class="dropdown-item" href="<?php echo BASE.$role; ?>disputes">View Disputes</a></li>
-                                    </ul>
-                                </div>
+                            <div class="badge bg-primary-subtle text-primary px-3 py-2">
+                                <i class="bi bi-coin me-1"></i> Balance: <?php echo number_format($token_balance, 0); ?> Tokens
                             </div>
                         </div>
                     </div>
@@ -125,16 +112,46 @@ if ($class_id > 0) {
                             <label for="amount" class="form-label">Token Amount</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-coin"></i></span>
-                                <input type="number" class="form-control" id="amount" min="100" step="1" value="<?php echo $default_amount; ?>" required>
+                                <input type="number" class="form-control" id="amount" min="25" step="1" value="<?php echo $default_amount; ?>" required>
                                 <span class="input-group-text">tokens</span>
                             </div>
-                            <small class="text-muted">Minimum amount: 100 tokens (₱100)</small>
+                            <small class="text-muted">Minimum amount: 25 tokens (₱25)</small>
                             
                             <!-- Hidden redirect parameters -->
                             <?php if (!empty($redirect_url) && $class_id > 0): ?>
                             <input type="hidden" id="redirectUrl" value="<?php echo htmlspecialchars($redirect_url); ?>">
                             <input type="hidden" id="classId" value="<?php echo $class_id; ?>">
                             <?php endif; ?>
+            </div>
+
+            <!-- Payment Summary Section -->
+            <div class="card mb-4 bg-light">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">Payment Summary</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Base Amount:</span>
+                        <span>₱<span id="baseAmount">0.00</span></span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>VAT (10%):</span>
+                        <span>₱<span id="vatAmount">0.00</span></span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Service Charge (0.2%):</span>
+                        <span>₱<span id="serviceAmount">0.00</span></span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between fw-bold">
+                        <span>Total Amount:</span>
+                        <span>₱<span id="totalAmount">0.00</span></span>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2 text-primary">
+                        <span>Tokens to receive:</span>
+                        <span><span id="tokensToReceive">0</span> tokens</span>
+                    </div>
+                </div>
             </div>
 
             <!-- Payment Methods -->
@@ -279,13 +296,14 @@ if ($class_id > 0) {
     </div>
 
     <!-- Loading Modal -->
-    <div class="modal fade" id="loadingModal" data-bs-backdrop="static" tabindex="-1">
+    <div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-body text-center py-4">
-                    <div class="spinner-border text-primary mb-3" role="status"></div>
-                    <h5 class="modal-title">Processing Payment</h5>
-                    <p class="text-muted mb-0">Please wait while we process your payment...</p>
+                <div class="modal-body text-center p-4">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="text-muted mb-0">Processing your payment...</p>
                 </div>
             </div>
         </div>
@@ -299,6 +317,72 @@ if ($class_id > 0) {
     <script>
         let selectedMethod = null;
         const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+        
+        // Toast display function
+        function showToast(message, type = 'info') {
+            // Check if a toast container exists, if not create one
+            let toastContainer = document.getElementById('toast-container');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'toast-container';
+                toastContainer.className = 'position-fixed bottom-0 end-0 p-3';
+                toastContainer.style.zIndex = '5';
+                document.body.appendChild(toastContainer);
+            }
+            
+            // Create a unique ID for the toast
+            const toastId = 'toast-' + Date.now();
+            
+            // Set the bootstrap color class based on type
+            let bgClass = 'bg-primary';
+            switch(type) {
+                case 'success': bgClass = 'bg-success'; break;
+                case 'warning': bgClass = 'bg-warning text-dark'; break;
+                case 'error': bgClass = 'bg-danger'; break;
+                case 'info': bgClass = 'bg-info text-dark'; break;
+            }
+            
+            // Create the toast HTML
+            const toastHtml = `
+                <div id="${toastId}" class="toast align-items-center ${bgClass} text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
+            
+            // Add toast to container
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            
+            // Initialize and show the toast
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement, { delay: 5000 });
+            toast.show();
+            
+            // Remove toast from DOM after it's hidden
+            toastElement.addEventListener('hidden.bs.toast', () => {
+                toastElement.remove();
+            });
+        }
+        
+        // Loading modal display functions
+        function showLoading(message = 'Processing...') {
+            const loadingModalBody = document.querySelector('#loadingModal .modal-body');
+            if (loadingModalBody) {
+                const messageElement = loadingModalBody.querySelector('p.text-muted');
+                if (messageElement) {
+                    messageElement.textContent = message;
+                }
+            }
+            loadingModal.show();
+        }
+        
+        function hideLoading() {
+            loadingModal.hide();
+        }
         
         // Payment Method Selection
         document.querySelectorAll('.payment-method-option').forEach(option => {
@@ -321,6 +405,33 @@ if ($class_id > 0) {
                 }
             });
         });
+
+        // Calculate payment summary on amount change
+        document.getElementById('amount').addEventListener('input', calculatePaymentSummary);
+        
+        // Initial calculation
+        calculatePaymentSummary();
+        
+        // Function to calculate payment summary
+        function calculatePaymentSummary() {
+            const amount = parseFloat(document.getElementById('amount').value) || 0;
+            
+            // Base amount (same as tokens)
+            const baseAmount = amount;
+            // VAT (10%)
+            const vatAmount = baseAmount * 0.1;
+            // Service charge (0.2%)
+            const serviceAmount = baseAmount * 0.002;
+            // Total amount
+            const totalAmount = baseAmount + vatAmount + serviceAmount;
+            
+            // Update the display
+            document.getElementById('baseAmount').textContent = baseAmount.toFixed(2);
+            document.getElementById('vatAmount').textContent = vatAmount.toFixed(2);
+            document.getElementById('serviceAmount').textContent = serviceAmount.toFixed(2);
+            document.getElementById('totalAmount').textContent = totalAmount.toFixed(2);
+            document.getElementById('tokensToReceive').textContent = amount.toFixed(0);
+        }
 
         // Format card number with spaces
         document.getElementById('cardNumber')?.addEventListener('input', function(e) {
@@ -352,88 +463,150 @@ if ($class_id > 0) {
             target.value = value;
         });
         
-        // Process payment function
+        // Function to handle payment processing
         function processPayment() {
-            const amount = parseFloat(document.getElementById('amount').value);
+            const amount = document.getElementById('amount').value;
+            const baseAmount = parseFloat(amount);
+            const vatAmount = baseAmount * 0.1;
+            const serviceAmount = baseAmount * 0.002;
+            const totalAmount = baseAmount + vatAmount + serviceAmount;
+            <?php if(!empty($class_id) && !empty($required_tokens) ): ?>
+            let transactionType = 'class';
+            <?php else: ?>
+            let transactionType = 'token';
+            <?php endif; ?>
+
+            const selectedMethod = document.querySelector('.payment-method-option.selected');
+            
+            if (!selectedMethod) {
+                showToast('Please select a payment method', 'warning');
+                return;
+            }
+            
+            if (baseAmount < 25) {
+                showToast('Minimum token amount is 25 tokens', 'warning');
+                return;
+            }
+            
+            const paymentMethod = selectedMethod.dataset.method;
+            
+            // Get redirect parameters if they exist
             const redirectUrl = document.getElementById('redirectUrl')?.value || '';
             const classId = document.getElementById('classId')?.value || '';
             
-            // Always token purchase
-            const transactionType = 'token';
-            const description = `Token purchase - ${amount} tokens`;
-
-            if (!amount || amount < 100) {
-                showToast('error', 'Please enter a valid amount (minimum 100 tokens)');
-                return;
-            }
-
-            if (!selectedMethod) {
-                showToast('error', 'Please select a payment method');
-                return;
-            }
-
-            // Show loading modal
-            loadingModal.show();
-
-            // Create payment intent using fetch
-            fetch('<?php echo BASE; ?>create-payment', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    'amount': amount,
-                    'description': description,
-                    'payment_method': selectedMethod,
-                    'transaction_type': transactionType,
-                    'redirect_url': redirectUrl,
-                    'class_id': classId,
-                    'action': 'create_payment'
-                })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Payment intent created:', data);
+            if (paymentMethod === 'card') {
+                // For card payments, validate card inputs
+                const cardNumber = document.getElementById('cardNumber').value;
+                const expiryDate = document.getElementById('expiryDate').value;
+                const cvv = document.getElementById('cvv').value;
                 
-                if (data.success) {
-
-                        if (selectedMethod === 'card') {
-                            // Handle card payment
-                        processCardPayment(data.clientKey);
-
-                    } else {
-                        // Redirect to e-wallet payment page
-                        window.location.href = data.checkoutUrl;
-                    }
-                } else {
-                    loadingModal.hide();
-                    showToast('error', data.message || 'Payment failed. Please try again.');
+                if (!cardNumber || !expiryDate || !cvv) {
+                    showToast('Please fill in all card details', 'warning');
+                    return;
                 }
-            })
-            .catch(error => {
-                console.error('Payment creation error:', error);
-                loadingModal.hide();
-                showToast('error', 'An error occurred. Please try again.');
-            });
+                
+                // Create payment intent
+                fetch('<?php echo BASE; ?>create-payment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        action: 'create_payment',
+                        amount: totalAmount.toFixed(2),
+                        token_amount: baseAmount,
+                        description: 'Token purchase',
+                        payment_method: 'card',
+                        transaction_type: transactionType,
+                        class_id: classId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (data.already_paid) {
+                            showToast(data.message, 'success');
+                            setTimeout(() => {
+                                <?php if(!empty($class_id) && !empty($required_tokens)): ?>
+                                window.location.href = '<?php echo BASE.'payment-success?class_id='.urlencode($class_id).'&amount='.urlencode($required_tokens); ?>';
+                                <?php else: ?>
+                                window.location.href = '<?php echo BASE; ?>payment-success';
+                                <?php endif; ?>
+                            }, 2000);
+                            return;
+                        }
+                        // Process card payment with token
+                        processCardPayment(data.clientKey, cardNumber, expiryDate, cvv, data.transactionId);
+                    } else {
+                        showToast(data.message || 'Failed to create payment. Please try again.', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('An error occurred. Please try again.', 'error');
+                });
+            } else {
+                // For e-wallets, create source and redirect
+                showLoading('Creating payment...');
+                
+                fetch('<?php echo BASE; ?>create-payment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        action: 'create_payment',
+                        amount: totalAmount.toFixed(2),
+                        token_amount: baseAmount,
+                        description: 'Token purchase',
+                        payment_method: paymentMethod,
+                        transaction_type: transactionType,
+                        class_id: classId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    hideLoading();
+                    if (data.success) {
+                        if (data.already_paid) {
+                            showToast(data.message, 'success');
+                            setTimeout(() => {
+                                <?php if(!empty($class_id) && !empty($required_tokens)): ?>
+                                window.location.href = '<?php echo BASE.'payment-success?class_id='.urlencode($class_id).'&amount='.urlencode($required_tokens); ?>';
+                                <?php else: ?>
+                                window.location.href = '<?php echo BASE; ?>payment-success';
+                                <?php endif; ?>
+                            }, 2000);
+                            return;
+                        }
+                        
+                        if (data.checkoutUrl) {
+                            window.location.href = data.checkoutUrl;
+                        } else {
+                            showToast('Failed to create payment link', 'error');
+                        }
+                    } else {
+                        showToast(data.message || 'Failed to create payment. Please try again.', 'error');
+                    }
+                })
+                .catch(error => {
+                    hideLoading();
+                    console.error('Error:', error);
+                    showToast('An error occurred. Please try again.', 'error');
+                });
+            }
         }
 
-        function processCardPayment(clientKey) {
-            const cardNumber = document.getElementById('cardNumber').value;
-            const expiryDate = document.getElementById('expiryDate').value;
-            const cvv = document.getElementById('cvv').value;
-
+        function processCardPayment(clientKey, cardNumber, expiryDate, cvv, transactionId) {
             if (!cardNumber || !expiryDate || !cvv) {
-                loadingModal.hide();
-                showToast('error', 'Please fill in all card details');
+                showToast('Please fill in all card details', 'warning');
                 return;
             }
 
             console.log('Processing card payment with client key:', clientKey);
+            
+            // Show loading modal
+            loadingModal.show();
 
             // Process card payment using fetch
             fetch('<?php echo BASE; ?>process-card-payment', {
@@ -442,11 +615,12 @@ if ($class_id > 0) {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
                 body: new URLSearchParams({
-                    'client_key': clientKey,
+                    'action': 'process_card_payment',
+                    'payment_intent_id': clientKey,
                     'card_number': cardNumber,
                     'expiry_date': expiryDate,
                     'cvv': cvv,
-                    'action': 'process_card_payment'
+                    'transaction_id': transactionId
                 })
             })
             .then(response => {
@@ -457,21 +631,40 @@ if ($class_id > 0) {
             })
             .then(data => {
                 console.log('Card payment response:', data);
-                    loadingModal.hide();
+                loadingModal.hide();
                 
                 if (data.success) {
-                        showToast('success', 'Payment successful!');
-                        setTimeout(() => {
+                    showToast('Payment successful!', 'success');
+                    
+                    setTimeout(() => {
+
+                        <?php if(!empty($class_id) && !empty($required_tokens)): ?>
+                        window.location.href = '<?php echo BASE.'payment-success?class_id='.urlencode($class_id).'&amount='.urlencode($required_tokens); ?>';
+                        <?php else: ?>
                         window.location.href = '<?php echo BASE; ?>payment-success';
+                        <?php endif; ?>
+                        
+                    }, 2000);
+                } else {
+                    // If payment is already processed, handle as success
+                    if (data.message && data.message.includes('already been processed')) {
+                        showToast(data.message, 'success');
+                        setTimeout(() => {
+                            <?php if(!empty($class_id) && !empty($required_tokens)): ?>
+                            window.location.href = '<?php echo BASE.'payment-success?class_id='.urlencode($class_id).'&amount='.urlencode($required_tokens); ?>';
+                            <?php else: ?>
+                            window.location.href = '<?php echo BASE; ?>payment-success';
+                            <?php endif; ?>
                         }, 2000);
                     } else {
-                    showToast('error', data.message || 'Payment failed. Please try again.');
+                        showToast(data.message || 'Payment failed. Please try again.', 'error');
                     }
+                }
             })
             .catch(error => {
                 console.error('Card payment error:', error);
-                    loadingModal.hide();
-                    showToast('error', 'An error occurred. Please try again.');
+                loadingModal.hide();
+                showToast('An error occurred. Please try again.', 'error');
             });
         }
     </script>

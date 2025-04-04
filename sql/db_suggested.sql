@@ -185,8 +185,8 @@ AFTER `rating_count`;
 -- 04-04-2025 Update: Add transaction_type to transactions table
 ALTER TABLE transactions
 ADD COLUMN `transaction_type` varchar(50) DEFAULT 'token' AFTER `description`,
-ADD COLUMN `class_id` int(11) DEFAULT NULL AFTER `transaction_type`,
 ADD KEY `idx_transaction_type` (`transaction_type`),
+ADD COLUMN `class_id` int(11) DEFAULT NULL AFTER `transaction_type`,
 ADD KEY `idx_class_id` (`class_id`),
 ADD CONSTRAINT `transactions_ibfk_2` FOREIGN KEY (`class_id`) REFERENCES `class` (`class_id`) ON DELETE SET NULL;
 ALTER TABLE transactions

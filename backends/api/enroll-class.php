@@ -29,7 +29,7 @@ try {
 
     // Check if class exists and is active
     $stmt = $conn->prepare("SELECT c.class_id, c.class_name, c.class_size, c.is_free, c.price, 
-                             u.first_name, u.last_name, u.email,
+                             u.first_name, u.last_name, u.email, u.uid,
                              cs.schedule_id, cs.start_time, cs.end_time,
                              (SELECT COUNT(*) FROM enrollments WHERE class_id = c.class_id AND status = 'active') as enrolled_count 
                              FROM class c 
@@ -106,6 +106,19 @@ try {
             $stmt->execute();
             
             log_error("Tokens used: Student ID {$student_id} used {$class_price} tokens for class ID {$class_id}", "info");
+
+            // Add the percentage to the tutor
+            $add_token_stmt = $conn->prepare("UPDATE users JOIN class ON class.tutor_id = users.uid SET users.token_balance = (? * 0.8) WHERE class.class_id = ?");
+            $add_token_stmt->bind_param('ii',$class_price,$data['class_id']);
+            $add_token_stmt->execute();
+
+            // Create a transaction record for updating the tutor's token
+            $stmt = $conn->prepare("INSERT INTO transactions (user_id, amount, currency, status, payment_method_type, description) 
+                                   VALUES (?, (?*0.8), 'TOKENS', 'succeeded', 'token', ?)");
+            $description = "Enrollment Fee for class: " . $class['class_name'] . " by {$_SESSION['name']}";
+            $stmt->bind_param("ids", $class['uid'], $class_price, $description);
+            $stmt->execute();
+
         } catch (Exception $e) {
             $conn->rollback();
             log_error("Token deduction error: " . $e->getMessage(), 'database');

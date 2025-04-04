@@ -305,40 +305,6 @@ $title = htmlspecialchars($classDetails['class_name']);
                     showToast('error', "An error occurred. Please try again.");
                 }
             }
-            
-            // Function to show/hide loading indicator
-            function showLoading(show) {
-                // You can implement a loading indicator here
-                // For example, show/hide a spinner or disable buttons
-                document.querySelectorAll('button').forEach(button => {
-                    button.disabled = show;
-                });
-            }
-            
-            // Function to display toast messages
-            function showToast(type, message) {
-                const toastContainer = document.createElement('div');
-                toastContainer.className = `toast-container position-fixed bottom-0 end-0 p-3`;
-                toastContainer.innerHTML = `
-                    <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'}" role="alert" aria-live="assertive" aria-atomic="true">
-                        <div class="d-flex">
-                            <div class="toast-body">
-                                ${message}
-                            </div>
-                            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(toastContainer);
-                
-                const toastElement = toastContainer.querySelector('.toast');
-                const toast = new bootstrap.Toast(toastElement, { delay: 5000 });
-                toast.show();
-                
-                toastElement.addEventListener('hidden.bs.toast', () => {
-                    toastContainer.remove();
-                });
-            }
         </script>
         
         <style>

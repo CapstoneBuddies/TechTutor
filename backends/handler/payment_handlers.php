@@ -4,6 +4,56 @@ require_once ROOT_PATH . '/backends/handler/paymongo_config.php';
 require_once BACKEND . 'transactions_management.php';
 
 /**
+ * Check if the user has pending or processing transactions within the last 15 minutes
+ * @param mysqli $conn Database connection
+ * @param int $userId User ID to check
+ * @return array Status and any pending transaction details
+ */
+function checkRecentPendingTransactions($conn, $userId) {
+    try {
+        // Check for any pending or processing transactions created in the last 15 minutes
+        $query = "SELECT transaction_id, amount, status, created_at, 
+                  TIMESTAMPDIFF(MINUTE, created_at, NOW()) as minutes_ago
+                  FROM transactions 
+                  WHERE user_id = ? 
+                  AND (status = 'pending' OR status = 'processing')
+                  AND created_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE) 
+                  ORDER BY created_at DESC 
+                  LIMIT 1";
+        
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param('i', $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($row = $result->fetch_assoc()) {
+            // Found a recent pending transaction
+            $minutesAgo = $row['minutes_ago'];
+            $minutesRemaining = 15 - $minutesAgo;
+            
+            return [
+                'hasPending' => true,
+                'transaction' => [
+                    'id' => $row['transaction_id'],
+                    'amount' => $row['amount'],
+                    'status' => $row['status'],
+                    'created_at' => $row['created_at'],
+                    'minutes_ago' => $minutesAgo,
+                    'minutes_remaining' => $minutesRemaining
+                ]
+            ];
+        }
+        
+        // No pending transactions found
+        return ['hasPending' => false];
+    } catch (Exception $e) {
+        log_error("Error checking pending transactions: " . $e->getMessage(), 'payment_error');
+        // If there's an error, proceed with caution - don't block the transaction
+        return ['hasPending' => false, 'error' => $e->getMessage()];
+    }
+}
+
+/**
  * Handle payment creation request
  * @param mysqli $conn Database connection
  */
@@ -14,14 +64,26 @@ function handleCreatePayment($conn) {
     $transactionType = isset($_POST['transaction_type']) ? $_POST['transaction_type'] : '';
     $classId = isset($_POST['class_id']) ? (int)$_POST['class_id'] : 0;
 
-    if ($amount < 100) {
-        echo json_encode(['success' => false, 'message' => 'Minimum amount is ₱100']);
+    if ($amount < 25) {
+        echo json_encode(['success' => false, 'message' => 'Minimum amount is ₱25']);
         exit;
     }
 
     // Validate class ID if transaction type is 'class'
     if ($transactionType === 'class' && $classId <= 0) {
         echo json_encode(['success' => false, 'message' => 'Invalid class selection']);
+        exit;
+    }
+    
+    // Check for recent pending transactions
+    $pendingCheck = checkRecentPendingTransactions($conn, $_SESSION['user']);
+    if ($pendingCheck['hasPending']) {
+        $minutesRemaining = $pendingCheck['transaction']['minutes_remaining'];
+        echo json_encode([
+            'success' => false, 
+            'message' => "You have a pending transaction in progress. Please wait {$minutesRemaining} minutes before trying again or check your transaction history.",
+            'pendingTransaction' => $pendingCheck['transaction']
+        ]);
         exit;
     }
 
@@ -38,17 +100,18 @@ function handleCreatePayment($conn) {
         }
 
         // Store payment intent in database with transaction type
-        $query = "INSERT INTO transactions (user_id, payment_intent_id, amount, currency, status, payment_method_type, description, metadata) 
-                 VALUES (?, ?, ?, 'PHP', 'pending', ?, ?, ?)";
+        $query = "INSERT INTO transactions (user_id, payment_intent_id, amount, currency, status, payment_method_type, description, metadata, transaction_type) 
+                 VALUES (?, ?, ?, 'PHP', 'pending', ?, ?, ?, ?)";
         $stmt = $conn->prepare($query);
-        $metadata = json_encode(['class' => $classId, 'transaction_type' => $transactionType]);
-        $stmt->bind_param('isdsss', 
+        $metadata = json_encode(['class' => $classId]);
+        $stmt->bind_param('isdssss', 
             $_SESSION['user'],
             $paymentIntent['data']['id'],
             $amount,
             $paymentMethod,
             $description,
-            $metadata
+            $metadata,
+            $transactionType
         );
         $stmt->execute();
 
@@ -110,10 +173,13 @@ function handleCreatePayment($conn) {
  * @param mysqli $conn Database connection
  */
 function handleCardPayment($conn) {
-    $clientKey = isset($_POST['client_key']) ? $_POST['client_key'] : '';
+    $clientKey = isset($_POST['payment_intent_id']) ? $_POST['payment_intent_id'] : '';
     $cardNumber = isset($_POST['card_number']) ? $_POST['card_number'] : '';
     $expiryDate = isset($_POST['expiry_date']) ? $_POST['expiry_date'] : '';
     $cvv = isset($_POST['cvv']) ? $_POST['cvv'] : '';
+
+    // Add debug log for tracking
+    log_error("Processing card payment with payment_intent_id: {$clientKey}", 'payment_info');
 
     try {
         $payMongo = new PayMongoHelper();
@@ -169,7 +235,7 @@ function handleCardPayment($conn) {
 
         // Attach payment method to intent
         $result = $payMongo->attachPaymentMethod($clientKey, $paymentMethod['data']['id']);
-        
+
         // Check for API error or timeout
         if (isset($result['error'])) {
             log_error("Error attaching payment method: " . json_encode($result), 'payment_error');
@@ -179,7 +245,7 @@ function handleCardPayment($conn) {
 
         if (isset($result['data']['attributes']['status']) && $result['data']['attributes']['status'] === 'succeeded') {
             // Find the transaction by payment intent
-            $query = "SELECT t.transaction_id, t.user_id, t.amount, t.description, t.metadata 
+            $query = "SELECT t.transaction_id, t.user_id, t.amount, t.description, t.metadata, t.transaction_type
                       FROM transactions t 
                       WHERE t.payment_intent_id = ?";
             $stmt = $conn->prepare($query);
@@ -192,10 +258,10 @@ function handleCardPayment($conn) {
                 $userId = $row['user_id'];
                 $amount = $row['amount'];
                 $description = $row['description'];
+                $transactionType = $row['transaction_type'];
                 $metadata = json_decode($row['metadata'], true);
 
                 $classId = $metadata['class'];
-                $transactionType = $metadata['transaction_type'];
                 
                 // Start a transaction for database updates
                 $conn->begin_transaction();
