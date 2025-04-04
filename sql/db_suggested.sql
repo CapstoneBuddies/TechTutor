@@ -136,3 +136,56 @@ ALTER TABLE `meeting_analytics` DROP FOREIGN KEY `meeting_analytics_ibfk_1`;
 ALTER TABLE `meeting_analytics` 
 ADD CONSTRAINT `meeting_analytics_ibfk_1` FOREIGN KEY (`meeting_id`) 
 REFERENCES `meetings` (`meeting_uid`) ON DELETE CASCADE;
+-- 04-04-2025
+
+-- Transaction Dispute Table
+CREATE TABLE `transaction_disputes` (
+  `dispute_id` int(11) NOT NULL AUTO_INCREMENT,
+  `transaction_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `reason` text NOT NULL,
+  `status` enum('pending','under_review','resolved','rejected','cancelled') NOT NULL DEFAULT 'pending',
+  `admin_notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`dispute_id`),
+  KEY `idx_transaction_id` (`transaction_id`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_dispute_status` (`status`),
+  CONSTRAINT `transaction_disputes_ibfk_1` FOREIGN KEY (`transaction_id`) REFERENCES `transactions` (`transaction_id`) ON DELETE CASCADE,
+  CONSTRAINT `transaction_disputes_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`uid`) ON DELETE CASCADE
+);
+
+-- Optional: Transaction Refund Table
+CREATE TABLE `transaction_refunds` (
+  `refund_id` int(11) NOT NULL AUTO_INCREMENT,
+  `transaction_id` int(11) NOT NULL,
+  `dispute_id` int(11) DEFAULT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `status` enum('pending','processing','completed','failed') NOT NULL DEFAULT 'pending',
+  `refund_reference` varchar(255) DEFAULT NULL,
+  `admin_id` int(11) NOT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`refund_id`),
+  KEY `idx_refund_transaction` (`transaction_id`),
+  KEY `idx_refund_dispute` (`dispute_id`),
+  KEY `idx_refund_admin` (`admin_id`),
+  KEY `idx_refund_status` (`status`),
+  CONSTRAINT `transaction_refunds_ibfk_1` FOREIGN KEY (`transaction_id`) REFERENCES `transactions` (`transaction_id`) ON DELETE CASCADE,
+  CONSTRAINT `transaction_refunds_ibfk_2` FOREIGN KEY (`dispute_id`) REFERENCES `transaction_disputes` (`dispute_id`) ON DELETE SET NULL,
+  CONSTRAINT `transaction_refunds_ibfk_3` FOREIGN KEY (`admin_id`) REFERENCES `users` (`uid`) ON DELETE CASCADE
+);
+
+ALTER TABLE users
+ADD COLUMN `token_balance` double(5,2) NULL DEFAULT 0.00
+AFTER `rating_count`;
+
+-- 04-04-2025 Update: Add transaction_type to transactions table
+ALTER TABLE transactions
+ADD COLUMN `transaction_type` varchar(50) DEFAULT 'token' AFTER `description`,
+ADD COLUMN `class_id` int(11) DEFAULT NULL AFTER `transaction_type`,
+ADD KEY `idx_transaction_type` (`transaction_type`),
+ADD KEY `idx_class_id` (`class_id`),
+ADD CONSTRAINT `transactions_ibfk_2` FOREIGN KEY (`class_id`) REFERENCES `class` (`class_id`) ON DELETE SET NULL;

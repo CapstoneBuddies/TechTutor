@@ -148,7 +148,184 @@
     </nav>
 
     <main class="main-content expanded ">
-        
+        <!-- Topbar with notifications and tokens -->
+        <div class="topbar">
+            <div class="container-fluid">
+                <div class="d-flex justify-content-end align-items-center py-2">
+                    <!-- Token Balance -->
+                    <?php if (isset($_SESSION['user'])): 
+                        // Get user token balance
+                        $token_balance = 0;
+                        try {
+                            $query = "SELECT token_balance FROM users WHERE uid = ?";
+                            $stmt = $conn->prepare($query);
+                            $stmt->bind_param('i', $_SESSION['user']);
+                            $stmt->execute();
+                            $result = $stmt->get_result();
+                            if ($row = $result->fetch_assoc()) {
+                                $token_balance = $row['token_balance'] ?? 0;
+                            }
+                        } catch (Exception $e) {
+                            log_error("Error fetching token balance: " . $e->getMessage(), 'database');
+                        }
+                    ?>
+                    <div class="me-4">
+                        <a href="<?php echo BASE; ?>payment" class="token-balance-link">
+                            <span class="badge bg-primary-subtle text-primary px-3 py-2">
+                                <i class="bi bi-coin me-1"></i> <?php echo number_format($token_balance, 2); ?> Tokens
+                            </span>
+                        </a>
+                    </div>
+                    <?php endif; ?>
+
+                    <!-- Notifications -->
+                    <div class="dropdown me-3">
+                        <button class="btn btn-link text-dark position-relative p-0" type="button" id="notificationsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-bell fs-5"></i>
+                            <?php
+                            // Get notification count
+                            $notification_count = 0;
+                            if (isset($_SESSION['user'])) {
+                                try {
+                                    $query = "SELECT COUNT(*) as count FROM notifications WHERE recipient_id = ? AND is_read = 0";
+                                    $stmt = $conn->prepare($query);
+                                    $stmt->bind_param('i', $_SESSION['user']);
+                                    $stmt->execute();
+                                    $result = $stmt->get_result();
+                                    if ($row = $result->fetch_assoc()) {
+                                        $notification_count = $row['count'];
+                                    }
+                                } catch (Exception $e) {
+                                    log_error("Error fetching notification count: " . $e->getMessage(), 'database');
+                                }
+                            }
+                            
+                            if ($notification_count > 0): 
+                            ?>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-count">
+                                <?php echo $notification_count; ?>
+                                <span class="visually-hidden">unread notifications</span>
+                            </span>
+                            <?php endif; ?>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end p-0 overflow-hidden" aria-labelledby="notificationsDropdown" style="width: 350px; max-height: 450px; overflow-y: auto;">
+                            <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">Notifications</h6>
+                                <div>
+                                    <?php
+                                    // Get recent notifications
+                                    $notifications = [];
+                                    if (isset($_SESSION['user'])) {
+                                        try {
+                                            $query = "SELECT * FROM notifications WHERE recipient_id = ? ORDER BY created_at DESC LIMIT 5";
+                                            $stmt = $conn->prepare($query);
+                                            $stmt->bind_param('i', $_SESSION['user']);
+                                            $stmt->execute();
+                                            $result = $stmt->get_result();
+                                            while ($row = $result->fetch_assoc()) {
+                                                $notifications[] = $row;
+                                            }
+                                        } catch (Exception $e) {
+                                            log_error("Error fetching notifications: " . $e->getMessage(), 'database');
+                                        }
+                                    }
+                                    
+                                    if (count($notifications) > 0): ?>
+                                    <button class="btn btn-sm btn-link text-primary p-0 me-2" onclick="markAllAsRead()" type="button">
+                                        Mark all as read
+                                    </button>
+                                    <?php endif; ?>
+                                    <a href="<?php echo BASE.$role; ?>notifications" class="text-decoration-none small">View All</a>
+                                </div>
+                            </div>
+                            <?php
+                            if (count($notifications) > 0):
+                                foreach ($notifications as $notification):
+                            ?>
+                            <a href="<?php echo $notification['link']; ?>" class="dropdown-item p-3 border-bottom <?php echo $notification['is_read'] ? '' : 'bg-light'; ?>" data-notification-id="<?php echo $notification['notification_id']; ?>">
+                                <div class="d-flex">
+                                    <div class="notification-icon me-3 flex-shrink-0">
+                                        <i class="<?php echo $notification['icon'] ?? 'bi bi-bell'; ?> <?php echo $notification['icon_color'] ?? 'text-primary'; ?>"></i>
+                                    </div>
+                                    <div class="notification-content overflow-hidden">
+                                        <p class="mb-1 fw-semibold text-wrap"><?php echo htmlspecialchars($notification['message']); ?></p>
+                                        <p class="text-muted small mb-0"><?php echo date('M d, g:i a', strtotime($notification['created_at'])); ?></p>
+                                    </div>
+                                    <?php if (!$notification['is_read']): ?>
+                                    <div class="ms-2 flex-shrink-0">
+                                        <span class="badge bg-primary">New</span>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
+                            </a>
+                            <?php 
+                                endforeach;
+                            else:
+                            ?>
+                            <div class="p-3 text-center text-muted">
+                                <p class="mb-0">No notifications</p>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- User Profile -->
+                    <div class="dropdown">
+                        <button class="btn btn-link p-0 border-0" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <img src="<?php echo $_SESSION['profile']; ?>" alt="User Avatar" class="topbar-user-avatar">
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+                            <li class="dropdown-header">
+                                <h6 class="mb-0"><?php echo $_SESSION['name']; ?></h6>
+                                <span class="text-muted small"><?php echo $_SESSION['email']; ?></span>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="<?php echo BASE.$role; ?>profile"><i class="bi bi-person me-2"></i> My Profile</a></li>
+                            <li><a class="dropdown-item" href="<?php echo BASE.$role; ?>settings"><i class="bi bi-gear me-2"></i> Settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="<?php echo BASE; ?>user-logout"><i class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<style>
+    .topbar {
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        padding: 0.5rem 0;
+        background-color: #fff;
+    }
+    .topbar-user-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+    .notification-icon {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background-color: rgba(13, 110, 253, 0.1);
+    }
+    .token-balance-link {
+        text-decoration: none;
+        display: inline-block;
+    }
+    .token-balance-link:hover .badge {
+        background-color: rgba(13, 110, 253, 0.2) !important;
+    }
+    .notification-content {
+        max-width: 100%;
+        word-wrap: break-word;
+    }
+    .dropdown-item:hover .notification-icon {
+        background-color: rgba(13, 110, 253, 0.2);
+    }
+</style>
 
 <script>
     const BASE = '<?php echo BASE; ?>';
@@ -163,6 +340,42 @@
             const sidebarOverlay = document.querySelector('.sidebar-overlay');
             let isLogoHidden = false;
             let lastNotificationId = 0; // Track last notification ID
+
+            // Function to mark all notifications as read
+            window.markAllAsRead = function() {
+                const unreadNotificationIds = Array.from(document.querySelectorAll('.dropdown-item[data-notification-id]'))
+                    .filter(item => item.classList.contains('bg-light'))
+                    .map(item => item.dataset.notificationId);
+                
+                if (unreadNotificationIds.length === 0) return;
+                
+                fetch(BASE + 'mark-all-notifications-read', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        user_id: <?php echo isset($_SESSION['user']) ? $_SESSION['user'] : 0; ?>,
+                        notifIDs: unreadNotificationIds
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update UI to show all notifications as read
+                        document.querySelectorAll('.dropdown-item.bg-light').forEach(item => {
+                            item.classList.remove('bg-light');
+                            const badge = item.querySelector('.badge');
+                            if (badge) badge.remove();
+                        });
+                        
+                        // Hide notification count badge
+                        const countBadge = document.querySelector('.notification-count');
+                        if (countBadge) countBadge.style.display = 'none';
+                    }
+                })
+                .catch(error => console.error('Error marking notifications as read:', error));
+            };
 
             // Function to check for new notifications
             async function checkNewNotifications() {

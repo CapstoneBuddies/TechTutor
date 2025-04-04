@@ -183,9 +183,14 @@ $title = 'My Classes';
                                             </td>
                                             <td>
                                                 <?php 
-                                                    $completion = isset($class['completed_sessions']) && isset($class['total_sessions']) 
+                                                    try {
+                                                        $completion = isset($class['completed_sessions']) && isset($class['total_sessions']) 
                                                         ? ($class['completed_sessions'] / $class['total_sessions']) * 100 
                                                         : 0;
+                                                    }
+                                                    catch(Exception $e) {
+                                                        $completion = 0;
+                                                    }
                                                 ?>
                                                 <div class="progress" style="height: 6px;" data-bs-toggle="tooltip" 
                                                      title="<?php echo round($completion); ?>% Complete">

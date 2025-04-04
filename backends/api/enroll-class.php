@@ -63,8 +63,60 @@ try {
         throw new Exception('You are already enrolled in this class.');
     }
 
-    // Begin transaction
-    $conn->begin_transaction();
+    // If class is not free, check if user has enough tokens
+    if (!$class['is_free']) {
+        // Get user's token balance
+        $stmt = $conn->prepare("SELECT token_balance FROM users WHERE uid = ?");
+        $stmt->bind_param("i", $student_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $user = $result->fetch_assoc();
+        $stmt->close();
+        
+        $token_balance = $user['token_balance'] ?? 0;
+        $class_price = $class['price'];
+        
+        // If user doesn't have enough tokens, redirect to payment
+        if ($token_balance < $class_price) {
+            echo json_encode([
+                'success' => false,
+                'insufficient_tokens' => true,
+                'message' => 'You don\'t have enough tokens for this class. Please add tokens to your account.',
+                'redirect_to_payment' => true,
+                'class_id' => $class_id,
+                'price' => $class_price,
+                'token_balance' => $token_balance
+            ]);
+            exit;
+        }
+        
+        // User has enough tokens, deduct from their balance
+        $conn->begin_transaction();
+        try {
+            // Deduct tokens from user's balance
+            $stmt = $conn->prepare("UPDATE users SET token_balance = token_balance - ? WHERE uid = ?");
+            $stmt->bind_param("di", $class_price, $student_id);
+            $stmt->execute();
+            
+            // Create a transaction record
+            $stmt = $conn->prepare("INSERT INTO transactions (user_id, amount, currency, status, payment_method_type, description) 
+                                   VALUES (?, ?, 'TOKENS', 'succeeded', 'token', ?)");
+            $description = "Class enrollment for " . $class['class_name'] . " (Class #{$class_id})";
+            $stmt->bind_param("ids", $student_id, $class_price, $description);
+            $stmt->execute();
+            
+            log_error("Tokens used: Student ID {$student_id} used {$class_price} tokens for class ID {$class_id}", "info");
+        } catch (Exception $e) {
+            $conn->rollback();
+            log_error("Token deduction error: " . $e->getMessage(), 'database');
+            throw new Exception('Error processing token payment. Please try again.');
+        }
+    }
+
+    // Begin enrollment transaction
+    if (!isset($conn->in_transaction) || !$conn->in_transaction) {
+        $conn->begin_transaction();
+    }
 
     try {
         // Check if student has record for enrollment for this class and check the status
@@ -135,12 +187,6 @@ try {
 
         // Send email confirmation to student
         sendEnrollmentEmail($_SESSION['email'], $_SESSION['name'], $class['class_name'], $class['first_name'] . ' ' . $class['last_name']);
-
-        // If class is paid, handle payment (placeholder for future implementation)
-        if (!$class['is_free']) {
-            // Log this enrollment for payment processing
-            log_error("Paid class enrollment: Student ID {$student_id} enrolled in class ID {$class_id} for ₱{$class['price']}", "info");
-        }
 
         // Commit transaction
         $conn->commit();

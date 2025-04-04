@@ -78,31 +78,16 @@
 		}
 		exit();
 	}
-	// elseif ($link == 'add-course' || $link == 'toggle-subject-status' || $link == 'add-subject') {
-	// 	// Redirect old routes to new course handler
-	// 	$_POST['action'] = $link;
-	// 	require_once 'admin/course_handler.php';
-	// 	exit();
-	// }
-	elseif ($link == 'get-transactions' || $link == 'get-transaction-details' || $link == 'export-transactions') {
-		require_once 'transaction_handlers.php';
-		// transaction_handlers.php will handle the logic and exit
-	}
-	elseif ($link == 'create-payment' || $link == 'process-card-payment') {
+	elseif ($link == 'mark-all-notifications-read') {
 		if (!isset($_SESSION['user'])) {
 			http_response_code(401);
 			echo json_encode(['success' => false, 'message' => 'Please login to continue']);
 			exit;
 		}
-
-		require_once 'handler/paymongo_config.php';
-		require_once 'handler/payment_handlers.php';
 		
-		if ($link == 'create-payment') {
-			handleCreatePayment($conn);
-		} else {
-			handleCardPayment($conn);
-		}
+		require_once 'management/notifications_management.php';
+		$result = markNotificationsAsRead();
+		echo json_encode(['success' => true]);
 		exit;
 	}
 	elseif ($link == 'home') {

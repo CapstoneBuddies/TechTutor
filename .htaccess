@@ -89,16 +89,21 @@ RewriteRule ^(.*)/?user-change-password$ backends/route.php [L]
 RewriteRule ^payment$ pages/payment.php [L]
 RewriteRule ^payment-success$ pages/payment-success.php [L]
 RewriteRule ^payment-failed$ pages/payment-failed.php [L]
-RewriteRule ^create-payment$ backends/route.php [L]
-RewriteRule ^process-card-payment$ backends/route.php [L]
+RewriteRule ^create-payment$ backends/handler/payment_handlers.php [L]
+RewriteRule ^process-card-payment$ backends/handler/payment_handlers.php [L]
+RewriteRule ^webhook$ backends/handler/transaction_handlers.php [QSA,L]
 
 # ----------------------------------
 # 🔔 Notifications & Transactions
 # ----------------------------------
-#RewriteRule ^$  [L]
-RewriteRule ^get-transactions$ backends/route.php [L]
-RewriteRule ^get-transaction-details$ backends/route.php [L]
-RewriteRule ^export-transactions$ backends/route.php [L]
+RewriteRule ^get-transactions$ backends/handler/transaction_handlers.php [QSA,L]
+RewriteRule ^get-transaction-details$ backends/handler/transaction_handlers.php [QSA,L]
+RewriteRule ^export-transactions$ backends/handler/transaction_handlers.php [QSA,L]
+RewriteRule ^create-dispute$ backends/handler/transaction_handlers.php [QSA,L]
+RewriteRule ^update-dispute$ backends/handler/transaction_handlers.php [QSA,L]
+RewriteRule ^cancel-dispute$ backends/handler/transaction_handlers.php [QSA,L]
+RewriteRule ^process-refund$ backends/handler/transaction_handlers.php [QSA,L]
+RewriteRule ^get-disputes$ backends/handler/transaction_handlers.php [QSA,L]
 
 # ----------------------------------
 # 🏠 Dashboard Routing by Role

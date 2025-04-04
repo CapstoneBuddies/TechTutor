@@ -875,6 +875,14 @@ function dropClass($student_id, $class_id, $reason = '') {
         $stmt->bind_param("si", $notes, $enrollment['enrollment_id']);
         $stmt->execute();
 
+        // Remove attendance
+        $stmt = $conn->prepare("
+            DELETE attendance
+            WHERE student_id = ?
+        ");
+        $stmt->bind_param("i", $student_id);
+        $stmt->execute();
+
         // Send notification to the tutor
         $notification_message = "<strong>{$student['student_name']}</strong> has dropped the class <strong>{$enrollment['class_name']}</strong>.";
         if (!empty($reason)) {

@@ -1,92 +1,140 @@
 <?php
 require_once '../backends/main.php';
-require_once ROOT_PATH . '/backends/paymongo_config.php';
+require_once ROOT_PATH . '/backends/handler/paymongo_config.php';
+require_once BACKEND . 'transactions_management.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['user'])) {
     header("Location: " . BASE . "login");
     exit();
 }
+
+// Get user token balance if available
+$token_balance = 0;
+try {
+    $query = "SELECT token_balance FROM users WHERE uid = ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param('i', $_SESSION['user']);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($row = $result->fetch_assoc()) {
+        $token_balance = $row['token_balance'] ?? 0;
+    }
+} catch (Exception $e) {
+    log_error("Error fetching token balance: " . $e->getMessage(), 'database');
+}
+
+// Get redirect parameters if coming from class enrollment
+$redirect_url = isset($_GET['redirect']) ? $_GET['redirect'] : '';
+$class_id = isset($_GET['class_id']) ? intval($_GET['class_id']) : 0;
+$required_tokens = isset($_GET['tokens']) ? intval($_GET['tokens']) : 0;
+
+// If tokens were specified in URL, use them as default amount
+$default_amount = $required_tokens > 0 ? $required_tokens : '';
+
+// Get class details if coming from class enrollment
+$class_name = '';
+if ($class_id > 0) {
+    try {
+        $query = "SELECT class_name FROM class WHERE class_id = ?";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param('i', $class_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($row = $result->fetch_assoc()) {
+            $class_name = $row['class_name'];
+        }
+    } catch (Exception $e) {
+        log_error("Error fetching class details: " . $e->getMessage(), 'database');
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title>TechTutor | Payment</title>
-
-    <!-- Favicons -->
-    <link href="<?php echo IMG; ?>stand_alone_logo.png" rel="icon">
-    <link href="<?php echo IMG; ?>apple-touch-icon.png" rel="apple-touch-icon">
-
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com" rel="preconnect">
-    <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700;900&family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-
-    <!-- Vendor CSS Files -->
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-    <link href="<?php echo BASE; ?>assets/vendor/aos/aos.css" rel="stylesheet">
-
-    <!-- Template Main CSS File -->
-    <link href="<?php echo CSS; ?>dashboard.css" rel="stylesheet">
-
-    <style>
-        .payment-card {
-            max-width: 500px;
-            margin: 2rem auto;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-        }
-        .payment-method-option {
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            padding: 1.25rem;
-            margin-bottom: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .payment-method-option:hover {
-            border-color: #4154f1;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(65, 84, 241, 0.1);
-        }
-        .payment-method-option.selected {
-            border-color: #4154f1;
-            background-color: #f8f9ff;
-        }
-        .payment-method-option img {
-            height: 35px;
-            width: auto;
-            object-fit: contain;
-            margin-right: 1rem;
-        }
-    </style>
-</head>
-
+<?php include ROOT_PATH . '/components/head.php'; ?>
 <body>
     <!-- Header -->
     <?php include ROOT_PATH . '/components/header.php'; ?>
 
-    <main class="container py-4">
-        <div class="payment-card">
-            <h4 class="text-center mb-4">Make a Payment</h4>
-            
-            <!-- Amount Input -->
-            <div class="mb-4">
-                <label for="amount" class="form-label">Amount (PHP)</label>
-                <div class="input-group">
-                    <span class="input-group-text">₱</span>
-                    <input type="number" class="form-control" id="amount" min="100" step="0.01" required>
+    <!-- Main Content -->
+    <div class="container-fluid py-4">
+        <!-- Topbar with tokens -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h4 class="mb-0">Purchase Tokens</h4>
+                            <div class="d-flex align-items-center">
+                                <div class="me-4">
+                                    <span class="text-muted me-2">Current Balance:</span>
+                                    <span class="badge bg-primary-subtle text-primary px-3 py-2">
+                                        <i class="bi bi-coin me-1"></i> <?php echo number_format($token_balance, 0); ?> Tokens
+                                    </span>
+                                </div>
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="paymentOptions" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-gear"></i> Options
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="paymentOptions">
+                                        <li><a class="dropdown-item" href="<?php echo BASE.$role; ?>transactions">View Transactions</a></li>
+                                        <li><a class="dropdown-item" href="<?php echo BASE.$role; ?>disputes">View Disputes</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 </div>
             </div>
 
-            <!-- Description -->
+        <?php if ($class_id > 0 && !empty($class_name)): ?>
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert alert-primary">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <i class="bi bi-mortarboard fs-3"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="alert-heading mb-1">Purchase Tokens for Class Enrollment</h5>
+                            <p class="mb-0">You need more tokens to enroll in <strong><?php echo htmlspecialchars($class_name); ?></strong>. After purchasing tokens, you'll be redirected back to complete your enrollment.</p>
+                            <?php if ($required_tokens > 0): ?>
+                            <p class="mb-0 mt-2">
+                                <span class="badge bg-light text-dark">
+                                    <i class="bi bi-coin me-1"></i> Required: <?php echo number_format($required_tokens, 0); ?> tokens
+                                </span>
+                            </p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <div class="row justify-content-center">
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="card-title mb-0">Payment Details</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <!-- Token Amount Input -->
             <div class="mb-4">
-                <label for="description" class="form-label">Payment Description</label>
-                <textarea class="form-control" id="description" rows="2" required></textarea>
+                            <label for="amount" class="form-label">Token Amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-coin"></i></span>
+                                <input type="number" class="form-control" id="amount" min="100" step="1" value="<?php echo $default_amount; ?>" required>
+                                <span class="input-group-text">tokens</span>
+                            </div>
+                            <small class="text-muted">Minimum amount: 100 tokens (₱100)</small>
+                            
+                            <!-- Hidden redirect parameters -->
+                            <?php if (!empty($redirect_url) && $class_id > 0): ?>
+                            <input type="hidden" id="redirectUrl" value="<?php echo htmlspecialchars($redirect_url); ?>">
+                            <input type="hidden" id="classId" value="<?php echo $class_id; ?>">
+                            <?php endif; ?>
             </div>
 
             <!-- Payment Methods -->
@@ -103,7 +151,7 @@ if (!isset($_SESSION['user'])) {
                     </div>
                 </div>
                 
-                <div class="payment-method-option" data-method="maya">
+                            <div class="payment-method-option" data-method="paymaya">
                     <div class="d-flex align-items-center justify-content-between">
                         <div class="d-flex align-items-center">
                             <img src="<?php echo IMG; ?>payment/maya.png" alt="Maya">
@@ -113,7 +161,7 @@ if (!isset($_SESSION['user'])) {
                     </div>
                 </div>
                 
-                <div class="payment-method-option" data-method="grabpay">
+                            <div class="payment-method-option" data-method="grab_pay">
                     <div class="d-flex align-items-center justify-content-between">
                         <div class="d-flex align-items-center">
                             <img src="<?php echo IMG; ?>payment/grabpay.png" alt="GrabPay">
@@ -154,10 +202,81 @@ if (!isset($_SESSION['user'])) {
 
             <!-- Pay Button -->
             <button id="payButton" class="btn btn-primary w-100" onclick="processPayment()">
-                Pay Now
+                            Purchase Tokens
             </button>
+                    </div>
+                </div>
+
+                <!-- Payment Information Card -->
+                <div class="card border-0 shadow-sm mt-4">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="card-title mb-0">Payment Information</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="alert alert-info mb-4">
+                            <h6 class="alert-heading"><i class="bi bi-info-circle me-2"></i>Test Mode</h6>
+                            <p class="mb-0">You are currently in test mode. No actual payments will be processed.</p>
+                        </div>
+                        
+                        <div class="test-cards-section">
+                            <h6 class="mb-3">Test Cards</h6>
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Card Number</th>
+                                            <th>Expiry</th>
+                                            <th>CVV</th>
+                                            <th>Result</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>4343434343434345</td>
+                                            <td>Any future date</td>
+                                            <td>Any 3 digits</td>
+                                            <td><span class="badge bg-success">Success</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>4571736000000075</td>
+                                            <td>Any future date</td>
+                                            <td>Any 3 digits</td>
+                                            <td><span class="badge bg-success">Success (Visa debit)</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>5555444444444457</td>
+                                            <td>Any future date</td>
+                                            <td>Any 3 digits</td>
+                                            <td><span class="badge bg-success">Success (Mastercard)</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>4120000000000007</td>
+                                            <td>Any future date</td>
+                                            <td>Any 3 digits</td>
+                                            <td><span class="badge bg-primary">3DS Authentication</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>4200000000000018</td>
+                                            <td>Any future date</td>
+                                            <td>Any 3 digits</td>
+                                            <td><span class="badge bg-danger">Expired Card</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>5100000000000198</td>
+                                            <td>Any future date</td>
+                                            <td>Any 3 digits</td>
+                                            <td><span class="badge bg-warning text-dark">Insufficient Funds</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="small text-muted mt-2">These are official PayMongo test cards. Use them to simulate different payment scenarios.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-    </main>
+    </div>
 
     <!-- Loading Modal -->
     <div class="modal fade" id="loadingModal" data-bs-backdrop="static" tabindex="-1">
@@ -203,18 +322,48 @@ if (!isset($_SESSION['user'])) {
             });
         });
 
-        // Process Payment
+        // Format card number with spaces
+        document.getElementById('cardNumber')?.addEventListener('input', function(e) {
+            const target = e.target;
+            let value = target.value.replace(/\s+/g, '');
+            if (value.length > 0) {
+                value = value.match(new RegExp('.{1,4}', 'g')).join(' ');
+            }
+            target.value = value;
+        });
+
+        // Format expiry date with slash
+        document.getElementById('expiryDate')?.addEventListener('input', function(e) {
+            const target = e.target;
+            let value = target.value.replace(/\D/g, '');
+            if (value.length > 2) {
+                value = value.substring(0, 2) + '/' + value.substring(2, 4);
+            }
+            target.value = value;
+        });
+
+        // Limit CVV to 3 digits
+        document.getElementById('cvv')?.addEventListener('input', function(e) {
+            const target = e.target;
+            let value = target.value.replace(/\D/g, '');
+            if (value.length > 3) {
+                value = value.substring(0, 3);
+            }
+            target.value = value;
+        });
+        
+        // Process payment function
         function processPayment() {
-            const amount = document.getElementById('amount').value;
-            const description = document.getElementById('description').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const redirectUrl = document.getElementById('redirectUrl')?.value || '';
+            const classId = document.getElementById('classId')?.value || '';
+            
+            // Always token purchase
+            const transactionType = 'token';
+            const description = `Token purchase - ${amount} tokens`;
 
             if (!amount || amount < 100) {
-                showAlert('error', 'Please enter a valid amount (minimum ₱100)');
-                return;
-            }
-
-            if (!description) {
-                showAlert('error', 'Please enter a payment description');
+                showAlert('error', 'Please enter a valid amount (minimum 100 tokens)');
                 return;
             }
 
@@ -226,33 +375,48 @@ if (!isset($_SESSION['user'])) {
             // Show loading modal
             loadingModal.show();
 
-            // Create payment intent
-            $.ajax({
-                url: '<?php echo BASE; ?>create-payment',
-                type: 'POST',
-                data: {
-                    amount: amount,
-                    description: description,
-                    payment_method: selectedMethod
+            // Create payment intent using fetch
+            fetch('<?php echo BASE; ?>create-payment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                success: function(response) {
-                    if (response.success) {
+                body: new URLSearchParams({
+                    'amount': amount,
+                    'description': description,
+                    'payment_method': selectedMethod,
+                    'transaction_type': transactionType,
+                    'redirect_url': redirectUrl,
+                    'class_id': classId,
+                    'action': 'create_payment'
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Payment intent created:', data);
+                
+                if (data.success) {
                         if (selectedMethod === 'card') {
                             // Handle card payment
-                            processCardPayment(response.clientKey);
-                        } else {
-                            // Redirect to e-wallet payment page
-                            window.location.href = response.checkoutUrl;
-                        }
+                        processCardPayment(data.clientKey);
                     } else {
-                        loadingModal.hide();
-                        showAlert('error', response.message || 'Payment failed. Please try again.');
+                        // Redirect to e-wallet payment page
+                        window.location.href = data.checkoutUrl;
                     }
-                },
-                error: function() {
+                } else {
                     loadingModal.hide();
-                    showAlert('error', 'An error occurred. Please try again.');
+                    showAlert('error', data.message || 'Payment failed. Please try again.');
                 }
+            })
+            .catch(error => {
+                console.error('Payment creation error:', error);
+                loadingModal.hide();
+                showAlert('error', 'An error occurred. Please try again.');
             });
         }
 
@@ -267,48 +431,130 @@ if (!isset($_SESSION['user'])) {
                 return;
             }
 
-            // Process card payment using PayMongo
-            $.ajax({
-                url: '<?php echo BASE; ?>process-card-payment',
-                type: 'POST',
-                data: {
-                    client_key: clientKey,
-                    card_number: cardNumber,
-                    expiry_date: expiryDate,
-                    cvv: cvv
+            console.log('Processing card payment with client key:', clientKey);
+
+            // Process card payment using fetch
+            fetch('<?php echo BASE; ?>process-card-payment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                success: function(response) {
+                body: new URLSearchParams({
+                    'client_key': clientKey,
+                    'card_number': cardNumber,
+                    'expiry_date': expiryDate,
+                    'cvv': cvv,
+                    'action': 'process_card_payment'
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Card payment response:', data);
                     loadingModal.hide();
-                    if (response.success) {
+                
+                if (data.success) {
                         showAlert('success', 'Payment successful!');
                         setTimeout(() => {
-                            window.location.href = '<?php echo BASE; ?>transactions';
+                        window.location.href = '<?php echo BASE; ?>payment-success';
                         }, 2000);
                     } else {
-                        showAlert('error', response.message || 'Payment failed. Please try again.');
+                    showAlert('error', data.message || 'Payment failed. Please try again.');
                     }
-                },
-                error: function() {
+            })
+            .catch(error => {
+                console.error('Card payment error:', error);
                     loadingModal.hide();
                     showAlert('error', 'An error occurred. Please try again.');
-                }
             });
         }
 
         function showAlert(type, message) {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
-            alertDiv.style.zIndex = '9999';
-            alertDiv.innerHTML = `
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            const alertHtml = `
+                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
                 ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
             `;
-            document.body.appendChild(alertDiv);
             
-            setTimeout(() => {
-                alertDiv.remove();
+            // Add alert to the page
+            const container = document.querySelector('.container-fluid');
+            container.insertAdjacentHTML('afterbegin', alertHtml);
+            
+            // Auto dismiss after 5 seconds
+            setTimeout(function() {
+                const alert = document.querySelector('.alert');
+                if (alert) {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }
             }, 5000);
         }
     </script>
+
+    <style>
+        .payment-method-option {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .payment-method-option:hover {
+            border-color: #0d6efd;
+            background-color: rgba(13, 110, 253, 0.05);
+            transform: translateY(-2px);
+        }
+        
+        .payment-method-option.selected {
+            border-color: #0d6efd;
+            background-color: rgba(13, 110, 253, 0.1);
+            box-shadow: 0 4px 10px rgba(13, 110, 253, 0.1);
+        }
+        
+        .payment-method-option img {
+            height: 28px;
+            width: auto;
+            margin-right: 12px;
+        }
+        
+        .payment-method-option span {
+            font-weight: 500;
+        }
+        
+        .payment-method-option .bi-chevron-right {
+            transition: transform 0.2s ease;
+        }
+        
+        .payment-method-option:hover .bi-chevron-right {
+            transform: translateX(3px);
+        }
+        
+        .payment-method-option.selected .bi-chevron-right {
+            transform: translateX(3px);
+        }
+        
+        .transaction-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.25rem;
+        }
+        
+        .token-icon {
+            background-color: rgba(13, 110, 253, 0.1);
+            color: #0d6efd;
+        }
+    </style>
 </body>
 </html>

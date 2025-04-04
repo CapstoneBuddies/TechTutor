@@ -248,20 +248,27 @@ $title = htmlspecialchars($classDetails['class_name']);
                     } else {
                         if (data.already_enrolled) {
                             location.href = `${BASE}dashboard/s/class/details?id=${<?php echo $class_id; ?>}`;
+                        } else if (data.redirect_to_payment && data.insufficient_tokens) {
+                            // User doesn't have enough tokens, ask if they want to go to the payment page
+                            showLoading(false);
+                            if (confirm(`You don't have enough tokens for this class. You have ${data.token_balance} tokens, but this class costs ${data.price} tokens. Would you like to go to the payment page to add tokens?`)) {
+                                // Redirect to payment page with class info
+                                location.href = `${BASE}payment?class_id=${data.class_id}&amount=${data.price}`;
+                            }
                         } else {
-                            showToast('error', data.message || 'Failed to enroll in the class.');
+                            showLoading(false);
+                            showToast('error', data.message || "Failed to enroll in the class.");
                         }
                     }
                 } catch (error) {
-                    console.error('Error:', error);
-                    showToast('error', 'An unexpected error occurred.');
-                } finally {
                     showLoading(false);
+                    console.error('Error:', error);
+                    showToast('error', "An error occurred. Please try again.");
                 }
             }
             
             async function updateEnrollment(classId, action) {
-                if (!confirm(`Are you sure you want to ${action} this class invitation?`)) {
+                if (!confirm(`Are you sure you want to ${action} this invitation?`)) {
                     return;
                 }
                 
@@ -286,17 +293,51 @@ $title = htmlspecialchars($classDetails['class_name']);
                         if (action === 'accept') {
                             setTimeout(() => location.href = `${BASE}dashboard/s/class/details?id=${classId}`, 1500);
                         } else {
-                            setTimeout(() => location.href = `${BASE}dashboard/s/class`, 1500);
+                            setTimeout(() => location.href = `${BASE}dashboard/s`, 1500);
                         }
                     } else {
-                        showToast('error', data.message || 'An error occurred');
+                        showLoading(false);
+                        showToast('error', data.message || `Failed to ${action} the invitation.`);
                     }
                 } catch (error) {
-                    console.error('Error:', error);
-                    showToast('error', 'Failed to update enrollment status');
-                } finally {
                     showLoading(false);
+                    console.error('Error:', error);
+                    showToast('error', "An error occurred. Please try again.");
                 }
+            }
+            
+            // Function to show/hide loading indicator
+            function showLoading(show) {
+                // You can implement a loading indicator here
+                // For example, show/hide a spinner or disable buttons
+                document.querySelectorAll('button').forEach(button => {
+                    button.disabled = show;
+                });
+            }
+            
+            // Function to display toast messages
+            function showToast(type, message) {
+                const toastContainer = document.createElement('div');
+                toastContainer.className = `toast-container position-fixed bottom-0 end-0 p-3`;
+                toastContainer.innerHTML = `
+                    <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'}" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                ${message}
+                            </div>
+                            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(toastContainer);
+                
+                const toastElement = toastContainer.querySelector('.toast');
+                const toast = new bootstrap.Toast(toastElement, { delay: 5000 });
+                toast.show();
+                
+                toastElement.addEventListener('hidden.bs.toast', () => {
+                    toastContainer.remove();
+                });
             }
         </script>
         

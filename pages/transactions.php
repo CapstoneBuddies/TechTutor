@@ -33,14 +33,14 @@
                             </button>
                             <?php endif; ?>
                             <div class="btn-group">
-                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="bi bi-funnel"></i> Filter
                                 </button>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="#" onclick="filterTransactions('all')">All</a></li>
-                                    <li><a class="dropdown-item" href="#" onclick="filterTransactions('completed')">Completed</a></li>
-                                    <li><a class="dropdown-item" href="#" onclick="filterTransactions('pending')">Pending</a></li>
-                                    <li><a class="dropdown-item" href="#" onclick="filterTransactions('failed')">Failed</a></li>
+                                <ul class="dropdown-menu" aria-labelledby="filterDropdown">
+                                    <li><a class="dropdown-item" href="javascript:void(0)" data-filter="all">All</a></li>
+                                    <li><a class="dropdown-item" href="javascript:void(0)" data-filter="completed">Completed</a></li>
+                                    <li><a class="dropdown-item" href="javascript:void(0)" data-filter="pending">Pending</a></li>
+                                    <li><a class="dropdown-item" href="javascript:void(0)" data-filter="failed">Failed</a></li>
                                 </ul>
                             </div>
                         </div>
@@ -110,6 +110,7 @@
     </div>
 
     <!-- JavaScript Section -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="<?php echo BASE; ?>assets/vendor/aos/aos.js"></script>
@@ -117,51 +118,73 @@
         let currentPage = 1;
         let currentFilter = 'all';
 
-        $(document).ready(function() {
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM fully loaded');
+            
+            // Initialize Bootstrap components
+            const dropdownElementList = document.querySelectorAll('.dropdown-toggle');
+            const dropdownList = [...dropdownElementList].map(dropdownToggleEl => {
+                return new bootstrap.Dropdown(dropdownToggleEl);
+            });
+            
+            console.log('Dropdowns initialized', dropdownList);
+            
+            // Load transactions
             loadTransactions(currentPage, currentFilter);
+            
+            // Add direct click event listeners to filter items
+            document.querySelectorAll('.dropdown-item').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const filter = this.getAttribute('data-filter');
+                    console.log('Filter clicked:', filter);
+                    filterTransactions(filter);
+                });
+            });
+            
+            // Direct toggle for dropdown as a fallback
+            document.getElementById('filterDropdown').addEventListener('click', function(e) {
+                console.log('Filter dropdown clicked');
+                const dropdown = bootstrap.Dropdown.getInstance(this) || new bootstrap.Dropdown(this);
+                dropdown.toggle();
+            });
         });
 
         function loadTransactions(page, filter = 'all') {
-            const loadingSpinner = $('#loadingSpinner');
-            const noTransactions = $('#noTransactions');
-            const tableBody = $('#transactionsTableBody');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const noTransactions = document.getElementById('noTransactions');
+            const tableBody = document.getElementById('transactionsTableBody');
 
-            loadingSpinner.removeClass('d-none');
-            tableBody.html('');
-            noTransactions.addClass('d-none');
+            loadingSpinner.classList.remove('d-none');
+            tableBody.innerHTML = '';
+            noTransactions.classList.add('d-none');
 
-            $.ajax({
-                url: '<?php echo BASE; ?>get-transactions',
-                type: 'GET',
-                data: { 
-                    page: page,
-                    filter: filter,
-                    role: '<?php echo $_SESSION['role']; ?>',
-                    userId: <?php echo $_SESSION['user']; ?>
-                },
-                success: function(response) {
-                    loadingSpinner.addClass('d-none');
+            fetch(`<?php echo BASE; ?>get-transactions?page=${page}&filter=${filter}&role=<?php echo $_SESSION['role']; ?>&userId=<?php echo $_SESSION['user']; ?>`)
+                .then(response => response.json())
+                .then(data => {
+                    loadingSpinner.classList.add('d-none');
                     
-                    if (response.transactions && response.transactions.length > 0) {
-                        response.transactions.forEach(transaction => {
+                    if (data.transactions && data.transactions.length > 0) {
+                        data.transactions.forEach(transaction => {
                             const row = createTransactionRow(transaction);
-                            tableBody.append(row);
+                            tableBody.innerHTML += row;
                         });
-                        updatePagination(response.totalPages, page);
+                        updatePagination(data.totalPages, page);
                     } else {
-                        noTransactions.removeClass('d-none');
+                        noTransactions.classList.remove('d-none');
                     }
-                },
-                error: function() {
-                    loadingSpinner.addClass('d-none');
+                })
+                .catch(error => {
+                    loadingSpinner.classList.add('d-none');
                     showAlert('error', 'Failed to load transactions');
-                }
+                    console.error('Error:', error);
             });
         }
 
         function createTransactionRow(transaction) {
             let row = `<tr>
-                <td>${transaction.id}</td>`;
+                <td>#${transaction.id}</td>`;
             
             <?php if ($_SESSION['role'] === 'ADMIN'): ?>
                 row += `<td>${transaction.userName}</td>
@@ -169,13 +192,18 @@
             <?php endif; ?>
 
             row += `<td>${formatDate(transaction.date)}</td>
-                   <td>${transaction.type}</td>
+                   <td>${formatTransactionType(transaction.type, transaction.description)}</td>
                    <td>${formatAmount(transaction.amount)}</td>
-                   <td><span class="badge bg-${getStatusBadgeColor(transaction.status)}">${transaction.status}</span></td>
+                   <td><span class="badge bg-${getStatusBadgeColor(transaction.status)}">${formatStatus(transaction.status)}</span></td>
                    <td>
                        <button class="btn btn-sm btn-outline-primary" onclick="viewTransactionDetails('${transaction.id}')">
                            <i class="bi bi-eye"></i>
                        </button>
+                       ${transaction.hasDispute ? 
+                           `<span class="badge bg-warning ms-2" title="This transaction has an open dispute">
+                               <i class="bi bi-exclamation-triangle"></i>
+                            </span>` : ''
+                       }
                    </td>
                 </tr>`;
             return row;
@@ -217,9 +245,40 @@
             }).format(amount);
         }
 
+        function formatTransactionType(type, description) {
+            let typeString = type.charAt(0).toUpperCase() + type.slice(1);
+            
+            // Check if it's a token purchase
+            if (description && description.toLowerCase().includes('token')) {
+                return `<span class="text-primary">
+                    <i class="bi bi-coin me-1"></i> Token Purchase
+                </span>`;
+            }
+            
+            // Check if it's a class enrollment payment
+            if (description && description.toLowerCase().includes('class') && description.toLowerCase().includes('enrollment')) {
+                return `<span class="text-success">
+                    <i class="bi bi-mortarboard me-1"></i> Class Payment
+                </span>`;
+            }
+            
+            return typeString;
+        }
+
+        function formatStatus(status) {
+            switch(status.toLowerCase()) {
+                case 'succeeded':
+                    return 'Completed';
+                case 'processing':
+                    return 'Processing';
+                default:
+                    return status.charAt(0).toUpperCase() + status.slice(1);
+            }
+        }
+
         function updatePagination(totalPages, currentPage) {
-            const pagination = $('#pagination');
-            pagination.empty();
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
 
             if (totalPages <= 1) return;
 
@@ -240,86 +299,324 @@
                     <a class="page-link" href="#" onclick="loadTransactions(${currentPage + 1}, '${currentFilter}')">&raquo;</a>
                 </li>`;
 
-            pagination.html(paginationHtml);
+            pagination.innerHTML = paginationHtml;
         }
 
         function filterTransactions(filter) {
+            console.log('filterTransactions called with:', filter);
             currentFilter = filter;
             currentPage = 1;
             loadTransactions(currentPage, filter);
+            
+            // Update filter button text
+            const filterBtn = document.querySelector('.dropdown-toggle');
+            let filterText = 'All';
+            switch(filter) {
+                case 'completed': filterText = 'Completed'; break;
+                case 'pending': filterText = 'Pending'; break;
+                case 'failed': filterText = 'Failed'; break;
+            }
+            console.log('Updating button text to:', filterText);
+            filterBtn.innerHTML = `<i class="bi bi-funnel"></i> ${filterText}`;
         }
 
         function viewTransactionDetails(transactionId) {
-            const modal = $('#transactionDetailsModal');
-            const detailsContainer = modal.find('.transaction-details');
+            // Show loading spinner
+            const modalBody = document.querySelector('.transaction-details');
+            modalBody.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"></div></div>';
             
-            detailsContainer.html('<div class="text-center"><div class="spinner-border text-primary" role="status"></div></div>');
-            modal.modal('show');
-
-            $.ajax({
-                url: '<?php echo BASE; ?>get-transaction-details',
-                type: 'GET',
-                data: { id: transactionId },
-                success: function(response) {
-                    if (response.success) {
-                        const details = response.transaction;
-                        let detailsHtml = `
-                            <div class="mb-3">
-                                <strong>Transaction ID:</strong> ${details.id}
+            // Open modal
+            const modal = new bootstrap.Modal(document.getElementById('transactionDetailsModal'));
+            modal.show();
+            
+            // Fix URL construction - use template literal
+            fetch(`<?php echo BASE; ?>get-transaction-details?id=${transactionId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const transaction = data.transaction;
+                        let html = `
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h6 class="mb-1">Transaction ID</h6>
+                                        <p class="mb-0">#${transaction.id}</p>
+                                    </div>
+                                    <div class="text-end">
+                                        <h6 class="mb-1">Status</h6>
+                                        <span class="badge bg-${getStatusBadgeColor(transaction.status)}">${formatStatus(transaction.status)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6 class="mb-1">Date</h6>
+                                        <p class="mb-3">${formatDate(transaction.date)}</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="mb-1">Amount</h6>
+                                        <p class="mb-3">${formatAmount(transaction.amount)}</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="mb-1">Payment Method</h6>
+                                        <p class="mb-3">${formatTransactionType(transaction.type, transaction.description)}</p>
+                            </div>
+                                    <div class="col-md-6">
+                                        <h6 class="mb-1">Reference Number</h6>
+                                        <p class="mb-3">${transaction.reference || 'N/A'}</p>
+                            </div>
+                            </div>
                             </div>
                             <div class="mb-3">
-                                <strong>Date:</strong> ${formatDate(details.date)}
-                            </div>
-                            <div class="mb-3">
-                                <strong>Type:</strong> ${details.type}
-                            </div>
-                            <div class="mb-3">
-                                <strong>Amount:</strong> ${formatAmount(details.amount)}
-                            </div>
-                            <div class="mb-3">
-                                <strong>Status:</strong> 
-                                <span class="badge bg-${getStatusBadgeColor(details.status)}">${details.status}</span>
-                            </div>
-                            <div class="mb-3">
-                                <strong>Description:</strong><br>
-                                ${details.description || 'No description available'}
+                                <h6 class="mb-1">Description</h6>
+                                <p class="mb-0">${transaction.description}</p>
                             </div>`;
 
-                        if (details.reference) {
-                            detailsHtml += `
-                                <div class="mb-3">
-                                    <strong>Reference Number:</strong> ${details.reference}
+                        // Add dispute section if applicable
+                        if (transaction.hasDispute && transaction.dispute) {
+                            html += `
+                                <div class="alert alert-warning mt-3">
+                                    <h6 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>Dispute Information</h6>
+                                    <p class="mb-1"><strong>Status:</strong> ${transaction.dispute.status.charAt(0).toUpperCase() + transaction.dispute.status.slice(1).replace('_', ' ')}</p>
+                                    <p class="mb-1"><strong>Reason:</strong> ${transaction.dispute.reason}</p>
+                                    <p class="mb-0"><strong>Date Filed:</strong> ${formatDate(transaction.dispute.createdAt)}</p>
+                                    ${transaction.dispute.status === 'resolved' || transaction.dispute.status === 'rejected' ? 
+                                        `<p class="mb-0"><strong>Admin Notes:</strong> ${transaction.dispute.adminNotes || 'None'}</p>` : ''}
+                                </div>`;
+                        } else if (!transaction.hasDispute && transaction.status.toLowerCase() === 'succeeded' && 
+                                  <?php echo $_SESSION['role'] !== 'ADMIN' ? 'true' : 'false'; ?>) {
+                            html += `
+                                <div class="mt-3">
+                                    <button class="btn btn-sm btn-outline-danger" onclick="openDisputeForm('${transaction.id}')">
+                                        <i class="bi bi-exclamation-triangle me-1"></i> Report an Issue
+                                    </button>
                                 </div>`;
                         }
 
-                        detailsContainer.html(detailsHtml);
+                        modalBody.innerHTML = html;
                     } else {
-                        detailsContainer.html('<div class="alert alert-danger">Failed to load transaction details</div>');
+                        modalBody.innerHTML = `<div class="alert alert-danger">${data.message || 'Failed to load transaction details'}</div>`;
                     }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    modalBody.innerHTML = '<div class="alert alert-danger">Failed to load transaction details</div>';
+                });
+        }
+        
+        function getDisputeStatusBadgeColor(status) {
+            switch(status) {
+                case 'pending': return 'warning';
+                case 'under_review': return 'info';
+                case 'resolved': return 'success';
+                case 'rejected': return 'danger';
+                case 'cancelled': return 'secondary';
+                default: return 'secondary';
+            }
+        }
+        
+        function getDisputeStatusText(status) {
+            switch(status) {
+                case 'pending': return 'Pending';
+                case 'under_review': return 'Under Review';
+                case 'resolved': return 'Resolved';
+                case 'rejected': return 'Rejected';
+                case 'cancelled': return 'Cancelled';
+                default: return status;
+            }
+        }
+        
+        function createDispute(transactionId) {
+            const reason = document.getElementById('disputeReason').value.trim();
+            
+            if (!reason) {
+                showAlert('error', 'Please provide a reason for your dispute');
+                return;
+            }
+            
+            fetch('<?php echo BASE; ?>create-dispute', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                error: function() {
-                    detailsContainer.html('<div class="alert alert-danger">An error occurred while loading transaction details</div>');
+                body: new URLSearchParams({
+                    'transaction_id': transactionId,
+                    'reason': reason
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', data.message);
+                    // Properly close the modal
+                    const modalElement = document.getElementById('transactionDetailsModal');
+                    const modal = bootstrap.Modal.getInstance(modalElement);
+                    modal.hide();
+                    // Reload the transactions list
+                    loadTransactions(currentPage, currentFilter);
+                } else {
+                    showAlert('error', data.message);
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('error', 'Failed to create dispute');
             });
+        }
+        
+        function cancelDispute(disputeId) {
+            if (!confirm('Are you sure you want to cancel this dispute?')) {
+                return;
+            }
+            
+            fetch('<?php echo BASE; ?>cancel-dispute', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    'dispute_id': disputeId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', data.message);
+                    const modalElement = document.getElementById('transactionDetailsModal');
+                    const modal = bootstrap.Modal.getInstance(modalElement);
+                    modal.hide();
+                    // Reload the transactions list
+                    loadTransactions(currentPage, currentFilter);
+                } else {
+                    showAlert('error', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('error', 'Failed to cancel dispute');
+            });
+        }
+        
+        function updateDisputeStatus(disputeId, status) {
+            const adminNotes = document.getElementById('adminNotes').value.trim();
+            
+            fetch('<?php echo BASE; ?>update-dispute', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    'dispute_id': disputeId,
+                    'status': status,
+                    'admin_notes': adminNotes
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', data.message);
+                    const modalElement = document.getElementById('transactionDetailsModal');
+                    const modal = bootstrap.Modal.getInstance(modalElement);
+                    modal.hide();
+                    // Reload the transactions list
+                    loadTransactions(currentPage, currentFilter);
+                } else {
+                    showAlert('error', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('error', 'Failed to update dispute status');
+            });
+        }
+        
+        function processRefund(transactionId, disputeId) {
+            const amount = document.getElementById('refundAmount').value;
+            
+            if (!amount || amount <= 0) {
+                showAlert('error', 'Please enter a valid refund amount');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to process a refund of ₱${amount}?`)) {
+                return;
+            }
+            
+            fetch('<?php echo BASE; ?>process-refund', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    'transaction_id': transactionId,
+                    'dispute_id': disputeId,
+                    'amount': amount,
+                    'notes': document.getElementById('adminNotes').value.trim()
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', data.message);
+                    const modalElement = document.getElementById('transactionDetailsModal');
+                    const modal = bootstrap.Modal.getInstance(modalElement);
+                    modal.hide();
+                    // Reload the transactions list
+                    loadTransactions(currentPage, currentFilter);
+                } else {
+                    showAlert('error', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('error', 'Failed to process refund');
+            });
+        }
+
+        function showAlert(type, message) {
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            const alertHtml = `
+                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            
+            // Add alert to the page
+            const container = document.querySelector('.container-fluid');
+            container.insertAdjacentHTML('afterbegin', alertHtml);
+            
+            // Auto dismiss after 5 seconds
+            setTimeout(function() {
+                const alert = document.querySelector('.alert');
+                if (alert) {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }
+            }, 5000);
         }
 
         function exportTransactions() {
             window.location.href = `<?php echo BASE; ?>export-transactions?filter=${currentFilter}`;
         }
 
-        function showAlert(type, message) {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
-            alertDiv.style.zIndex = '9999';
-            alertDiv.innerHTML = `
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        function openDisputeForm(transactionId) {
+            // Show dispute form in modal
+            const modalBody = document.querySelector('.transaction-details');
+            modalBody.innerHTML = `
+                <div class="border-bottom pb-3 mb-3">
+                    <h6 class="mb-3">Report an Issue with Transaction #${transactionId}</h6>
+                    <div class="mb-3">
+                        <label for="disputeReason" class="form-label">Please describe the issue</label>
+                        <textarea class="form-control" id="disputeReason" rows="4" placeholder="Describe your issue in detail..."></textarea>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                        <button class="btn btn-primary" onclick="createDispute('${transactionId}')">Submit Report</button>
+                    </div>
+                </div>
             `;
-            document.body.appendChild(alertDiv);
-            
-            setTimeout(function() {
-                alertDiv.remove();
-            }, 3000);
         }
     </script>
 </body>
