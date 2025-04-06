@@ -96,8 +96,8 @@ function createCertificate($donor_id, $recipient_id, $award, $class_id = null) {
     $issue_date = date('Y-m-d');
     
     try {
-        $stmt = $conn->prepare("INSERT INTO certificate (cert_uuid, recipient, award, donor, issue_date) VALUES ( ?, ?, ?, ?, ?)");
-        $stmt->bind_param("sisss", $cert_uuid, $recipient_id, $award, $donor_id, $issue_date);
+        $stmt = $conn->prepare("INSERT INTO certificate (cert_uuid, recipient, award, donor, issue_date, class_id) VALUES ( ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("sisssi", $cert_uuid, $recipient_id, $award, $donor_id, $issue_date, $class_id);
         
         if ($stmt->execute()) {
             // Create notification for recipient
@@ -219,7 +219,7 @@ function getCertificateByUUID($cert_uuid) {
              FROM certificate c 
              JOIN users recipient_user ON c.recipient = recipient_user.uid 
              JOIN users donor_user ON c.donor = donor_user.uid
-             LEFT JOIN class cl ON donor_user.uid = cl.tutor_id
+             LEFT JOIN class cl ON c.class_id = cl.class_id
              LEFT JOIN subject s ON cl.subject_id = s.subject_id
              WHERE c.cert_uuid = ?";
              
@@ -245,3 +245,35 @@ function getCertificateByUUID($cert_uuid) {
 function getCertificateDetails($cert_uuid) {
     return getCertificateByUUID($cert_uuid);
 } 
+
+/**
+ * Get certificate description by UUID
+ * 
+ * @param string $cert_uuid The UUID of the certificate
+ * @return array|null The certificate details or null if not found
+ */
+function getCertDescription($cert_uuid) {
+    global $conn;
+
+    // $recipientName, $source
+
+    $stmt = $conn->prepare("SELECT 
+                c.*,
+                CONCAT(recipient_user.first_name, ' ', recipient_user.last_name) as recipient_name,
+                recipient_user.email as recipient_email,
+                CONCAT(donor_user.first_name, ' ', donor_user.last_name) as donor_name,
+                donor_user.email as donor_email,
+                cl.class_name,
+                s.subject_name
+             FROM certificate c 
+             JOIN users recipient_user ON c.recipient = recipient_user.uid 
+             JOIN users donor_user ON c.donor = donor_user.uid
+             LEFT JOIN class cl ON c.class_id = cl.class_id
+             LEFT JOIN subject s ON cl.subject_id = s.subject_id
+             WHERE c.cert_uuid = ?");
+    
+
+
+    // "This is to certify that <strong>" .$recipientName. "</strong> has successfully completed all <strong>".$source. "</strong> lessons and fulfilled all requirements on TechTutor, an authorized one-on-one online tutoring platform.";
+    // "We hereby certify that <strong>" .$recipientName. "</strong> has successfully completed the <strong>" .$source"</strong> game on TechTutor. This achievement demonstrates both your engagement and your ability to learn through interactive play. Well done!";
+}

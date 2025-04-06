@@ -175,15 +175,9 @@ switch ($action) {
     default:
         $result = ['success' => false, 'message' => 'Invalid action'];
 }
-
-// Output the result
-if (php_sapi_name() === 'cli') {
-    echo "$action Result:\n";
-    print_r($result);
-} else {
-    header('Content-Type: application/json');
-    echo json_encode($result, JSON_PRETTY_PRINT);
-}
-
+    
 // Log the operation
 log_error("Webhook $action operation: " . json_encode($result), "webhooks"); 
+
+header('Content-Type: application/json');
+echo json_encode($result, JSON_PRETTY_PRINT);

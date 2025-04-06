@@ -636,7 +636,7 @@ function getClassDetails($class_id, $tutor_id = null) {
  * @param string $new_status New status (active, restricted, completed, pending)
  * @return bool True if update was successful
  */
-function updateClassStatus($class_id, $tutor_id = null, $new_status) {
+function updateClassStatus($class_id, $tutor_id = null, $new_status = null) {
     global $conn;
     
     try {

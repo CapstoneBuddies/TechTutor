@@ -98,7 +98,6 @@ try {
             $subjectName = $_POST['subject_name'] ?? '';
             $subjectDesc = $_POST['subject_desc'] ?? '';
             $subjectImage = $_FILES['subjectImage'] ?? '';
-            log_error(print_r($_POST,true));
             $result = addSubject($courseId, $subjectName, $subjectDesc, $subjectImage);
             break;
 

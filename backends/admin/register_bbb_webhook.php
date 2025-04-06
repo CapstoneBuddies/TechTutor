@@ -122,14 +122,9 @@ function registerWebhook($bbbApiUrl, $bbbSecret, $webhookUrl, $webhookSecret) {
 // Using values from meeting management class
 $result = registerWebhook(BBB_API_URI, BBB_SECRET, $webhookUrl, $webhookSecret);
 
-// Output the result
-if (php_sapi_name() === 'cli') {
-    echo "Registration Result:\n";
-    print_r($result);
-} else {
-    header('Content-Type: application/json');
-    echo json_encode($result, JSON_PRETTY_PRINT);
-}
-
 // Log the result
 log_error("Webhook registration attempt: " . json_encode($result), "webhooks"); 
+
+
+header('Content-Type: application/json');
+echo json_encode($result, JSON_PRETTY_PRINT);

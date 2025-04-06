@@ -30,7 +30,7 @@ switch ($action) {
             break;
         }
         
-        $cert_uuid = createCertificate($donor_id, $recipient_id, $award);
+        $cert_uuid = createCertificate($donor_id, $recipient_id, $award, $class_id); 
 
         if ($cert_uuid) {
             $response = [
@@ -90,7 +90,7 @@ switch ($action) {
                      FROM certificate c 
                      JOIN users r ON c.recipient = r.uid 
                      JOIN users d ON c.donor = d.uid
-                     LEFT JOIN class cl ON d.uid = cl.tutor_id
+                     LEFT JOIN class cl ON c.class_id = cl.class_id
                      LEFT JOIN subject s ON cl.subject_id = s.subject_id
                      ORDER BY c.issue_date DESC";
                      
@@ -193,7 +193,7 @@ switch ($action) {
         }
         break;
         
-    case 'get_tutors':
+    case 'get_donors':
         try {
             global $conn;
             $query = "SELECT 
@@ -201,7 +201,7 @@ switch ($action) {
                         CONCAT(u.first_name, ' ', u.last_name) as tutor_name,
                         u.email
                      FROM users u 
-                     WHERE u.role = 'TECHGURU' AND u.status = 1
+                     WHERE u.role != 'TECHKID' AND u.status = 1
                      ORDER BY u.first_name, u.last_name";
                      
             $result = $conn->query($query);
@@ -244,20 +244,49 @@ switch ($action) {
     case 'get_classes':
         try {
             global $conn;
-            $query = "SELECT 
-                        c.class_id,
-                        c.class_name,
-                        s.subject_name,
-                        c.tutor_id,
-                        CONCAT(u.first_name, ' ', u.last_name) as tutor_name
-                     FROM class c
-                     JOIN subject s ON c.subject_id = s.subject_id
-                     JOIN users u ON c.tutor_id = u.uid
-                     WHERE c.status IN ('active', 'completed')
-                     ORDER BY c.class_name";
-                     
-            $result = $conn->query($query);
-            $classes = $result->fetch_all(MYSQLI_ASSOC);
+            
+            // Get donor ID and check their role
+            $donor_id = isset($_POST['donor_id']) ? intval($_POST['donor_id']) : 0;
+            
+            if ($donor_id > 0) {
+                $roleQuery = "SELECT role FROM users WHERE uid = ?";
+                $stmt = $conn->prepare($roleQuery);
+                $stmt->bind_param("i", $donor_id);
+                $stmt->execute();
+                $roleResult = $stmt->get_result();
+                $role = $roleResult->fetch_assoc()['role'];
+                
+                // Base query
+                $query = "SELECT 
+                            c.class_id,
+                            c.class_name,
+                            s.subject_name,
+                            c.tutor_id,
+                            CONCAT(u.first_name, ' ', u.last_name) as tutor_name
+                         FROM class c
+                         JOIN subject s ON c.subject_id = s.subject_id
+                         JOIN users u ON c.tutor_id = u.uid
+                         WHERE c.status IN ('active', 'completed')";
+                
+                // If donor is not admin, only show their classes
+                if ($role !== 'ADMIN') {
+                    $query .= " AND c.tutor_id = ?";
+                }
+                
+                $query .= " ORDER BY c.class_name";
+                
+                $stmt = $conn->prepare($query);
+                if ($role !== 'ADMIN') {
+                    $stmt->bind_param("i", $donor_id);
+                }
+                $stmt->execute();
+                $result = $stmt->get_result();
+            } else {
+                // If no donor_id provided, return empty array
+                $result = false;
+            }
+            
+            $classes = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
             
             $response = [
                 'success' => true,

@@ -1146,7 +1146,7 @@ class UnifiedFileManagement {
      * @param int $grantedBy User ID of the person granting access
      * @return bool True if successful, false otherwise
      */
-    public function addPermission($fileId, $folderId, $userId, $accessType = 'view', $grantedBy) {
+    public function addPermission($fileId, $folderId, $userId, $accessType = 'view', $grantedBy = null) {
         try {
             // Validate input
             if (!$fileId && !$folderId) {

@@ -27,7 +27,7 @@ if (isset($_SESSION['role']) && isset($rolePaths[$_SESSION['role']]) && !isset($
 }
 
 http_response_code(404);
-log_error("User accessed 404 page", 3); // Ensure log file exists
+log_error("User accessed 404 page", 'analytics'); // Ensure log file exists
 ?>
 <!DOCTYPE html>
 <html lang="en">

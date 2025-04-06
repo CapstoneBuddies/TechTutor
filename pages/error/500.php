@@ -1,7 +1,7 @@
 <?php
 http_response_code(500);
 require_once "../../backends/config.php";
-log_error("User accessed 500 page", 3); // Ensure log file exists
+log_error("User accessed 500 page", 'analytics'); // Ensure log file exists
 
 ?>
 <!DOCTYPE html>

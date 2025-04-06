@@ -1,7 +1,7 @@
 <?php
 http_response_code(403);
 require_once "../../backends/config.php";
-log_error("User accessed 403 page", 3); // Ensure log file exists
+log_error("User accessed 403 page", 'analytics'); // Ensure log file exists
 
 ?>
 <!DOCTYPE html>

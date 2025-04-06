@@ -61,8 +61,9 @@
                                 <tr>
                                     <th>Recipient</th>
                                     <th>Certificate</th>
+                                    <th>Type</th>
                                     <th>Issued By</th>
-                                    <th>Class</th>
+                                    <th>Class/Game</th>
                                     <th>Issue Date</th>
                                     <th>Actions</th>
                                 </tr>
@@ -92,30 +93,39 @@
                         <input type="hidden" name="action" value="create_certificate">
                         
                         <div class="mb-3">
-                            <label for="recipientSelect" class="form-label">Student (Recipient)</label>
-                            <select class="form-select" id="recipientSelect" name="recipient_id" required>
-                                <option value="">-- Select Student --</option>
+                            <label for="certificateType" class="form-label">Certificate Type</label>
+                            <select class="form-select" id="certificateType" name="type" required>
+                                <option value="">Select Type</option>
+                                <option value="class">Class Completion</option>
+                                <option value="game">Game Achievement</option>
                             </select>
                         </div>
                         
                         <div class="mb-3">
-                            <label for="donorSelect" class="form-label">Teacher (Issuer)</label>
+                            <label for="donorSelect" class="form-label">Issuer</label>
                             <select class="form-select" id="donorSelect" name="donor_id" required>
-                                <option value="">-- Select Teacher --</option>
+                                <option value="">Select Issuer</option>
                             </select>
                         </div>
                         
                         <div class="mb-3">
-                            <label for="classSelect" class="form-label">Related Class (Optional)</label>
+                            <label for="recipientSelect" class="form-label">Recipient</label>
+                            <select class="form-select" id="recipientSelect" name="recipient_id" required>
+                                <option value="">Select Recipient</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="classSelect" class="form-label">Class/Game (Optional)</label>
                             <select class="form-select" id="classSelect" name="class_id">
-                                <option value="">-- Not Associated with a Class --</option>
+                                <option value="">Select Class/Game</option>
                             </select>
                         </div>
                         
                         <div class="mb-3">
-                            <label for="awardInput" class="form-label">Certificate Title/Award</label>
-                            <input type="text" class="form-control" id="awardInput" name="award" placeholder="e.g. Certificate of Completion for Python Programming" required>
-                            <div class="form-text">Enter the title that will appear on the certificate</div>
+                            <label for="awardInput" class="form-label">Award Title</label>
+                            <input type="text" class="form-control" id="awardInput" name="award" required>
+                            <div class="form-text" id="awardDescription"></div>
                         </div>
                         
                         <div class="d-flex justify-content-end">
@@ -225,9 +235,20 @@
             
             // Load students, tutors, classes and eligible students for dropdowns
             loadStudents();
-            loadTutors();
-            loadClasses();
+            loadDonors();
             loadEligibleStudents();
+            
+            // Handle donor selection change
+            document.getElementById('donorSelect').addEventListener('change', function() {
+                const donorId = this.value;
+                if (donorId) {
+                    loadClassesForDonor(donorId);
+                } else {
+                    // Clear class select if no donor selected
+                    const classSelect = document.getElementById('classSelect');
+                    classSelect.innerHTML = '<option value="">Select Class</option>';
+                }
+            });
             
             // Handle create certificate form submission
             document.getElementById('createCertificateForm').addEventListener('submit', function(e) {
@@ -262,10 +283,35 @@
                     document.getElementById('eligibleAwardInput').value = '';
                 }
             });
+            
+            // Handle certificate type change
+            document.getElementById('certificateType').addEventListener('change', function() {
+                const type = this.value;
+                const classSelect = document.getElementById('classSelect');
+                const awardInput = document.getElementById('awardInput');
+                const awardDescription = document.getElementById('awardDescription');
+                const classLabel = document.querySelector('label[for="classSelect"]');
+                
+                if (type === 'class') {
+                    classLabel.textContent = 'Class (Optional)';
+                    awardDescription.textContent = 'The certificate will include: "This is to certify that [Student Name] has successfully completed all [Class Name] lessons and fulfilled all requirements on TechTutor, an authorized one-on-one online tutoring platform."';
+                } else if (type === 'game') {
+                    classLabel.textContent = 'Game (Optional)';
+                    awardDescription.textContent = 'The certificate will include: "We hereby certify that [Student Name] has successfully completed the [Game Name] game on TechTutor. This achievement demonstrates both your engagement and your ability to learn through interactive play. Well done!"';
+                } else {
+                    classLabel.textContent = 'Class/Game (Optional)';
+                    awardDescription.textContent = '';
+                }
+                
+                // Update class/game options if needed
+                if (donorSelect.value) {
+                    loadClassesForDonor(donorSelect.value, type);
+                }
+            });
         });
         
         // Function to load all certificates
-        function loadCertificates() {
+        function loadCertificates() { 
             fetch('<?php echo BASE; ?>certificate-handling', {
                 method: 'POST',
                 headers: {
@@ -330,12 +376,17 @@
                         </div>
                     </td>
                     <td>
+                        <span class="badge ${cert.type === 'class' ? 'bg-primary' : 'bg-success'}">
+                            ${cert.type === 'class' ? 'Class Completion' : 'Game Achievement'}
+                        </span>
+                    </td>
+                    <td>
                         <div>${cert.donor_name}</div>
                         <div class="text-muted small">${cert.donor_email}</div>
                     </td>
                     <td>
                         ${cert.class_name ? 
-                            `<a href="<?php echo BASE; ?>dashboard/a/view-class.php?id=${cert.class_id}" class="text-decoration-none">
+                            `<a href="<?php echo BASE; ?>dashboard/a/classes/details?id=${cert.class_id}" class="text-decoration-none">
                                 ${cert.class_name}
                             </a>
                             <div class="text-muted small">${cert.subject_name}</div>` : 
@@ -393,13 +444,13 @@
         }
         
         // Function to load tutors for the dropdown
-        function loadTutors() {
+        function loadDonors() {
             fetch('<?php echo BASE; ?>certificate-handling', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: 'action=get_tutors'
+                body: 'action=get_donors'
             })
             .then(response => response.json())
             .then(data => {
@@ -420,40 +471,36 @@
             });
         }
         
-        // Function to load classes for the dropdown
-        function loadClasses() {
+        // Function to load classes for a specific donor
+        function loadClassesForDonor(donorId, type = null) {
+            const currentType = type || document.getElementById('certificateType').value;
+            
             fetch('<?php echo BASE; ?>certificate-handling', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: 'action=get_classes'
+                body: `action=get_classes&donor_id=${donorId}&type=${currentType}`
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    const select = document.getElementById('classSelect');
-                    select.innerHTML = '<option value="">-- Not Associated with a Class --</option>';
+                    const classSelect = document.getElementById('classSelect');
+                    classSelect.innerHTML = '<option value="">Select ' + (currentType === 'class' ? 'Class' : currentType === 'game' ? 'Game' : 'Class/Game') + '</option>';
                     
                     data.classes.forEach(classItem => {
                         const option = document.createElement('option');
                         option.value = classItem.class_id;
-                        option.textContent = `${classItem.class_name} (${classItem.subject_name}) - by ${classItem.tutor_name}`;
-                        option.dataset.tutorId = classItem.tutor_id;
-                        select.appendChild(option);
+                        option.textContent = `${classItem.class_name} (${classItem.subject_name})`;
+                        classSelect.appendChild(option);
                     });
-                    
-                    // Add change event to automatically select the tutor based on class
-                    select.addEventListener('change', function() {
-                        const selectedOption = this.options[this.selectedIndex];
-                        if (selectedOption.dataset.tutorId) {
-                            document.getElementById('donorSelect').value = selectedOption.dataset.tutorId;
-                        }
-                    });
+                } else {
+                    showAlert('error', 'Failed to load classes: ' + data.message);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
+                showAlert('error', 'An error occurred while loading classes');
             });
         }
         

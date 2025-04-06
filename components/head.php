@@ -21,7 +21,7 @@ if ($current_page === 'index' || $current_page === 'default') {
 // Log page visit if function exists
 if (function_exists('log_error')) {
     if(isset($_SESSION['user']) && isset($_SESSION['role'])) {
-        $msg = "USER: ".$_SESSION['user']." Page visited: {$current_page} Level: ".($_SESSION['role'] != '' ? $_SESSION['role'] : 'INVALID');    
+        $msg = "USER: ".$_SESSION['user']." Page visited: {$current_page} Level: ".($_SESSION['role'] != '' ? $_SESSION['role'] : 'INVALID');
     }
     else {
         $msg = "Page visited: {$current_page} ACCESSED LEVEL: INVALID/UNAUTHORIZED";
@@ -38,7 +38,7 @@ if (function_exists('log_error')) {
 
     <!-- Favicons -->
     <link href="<?php echo IMG; ?>stand_alone_logo.png" rel="icon">
-    <link href="<?php echo IMG; ?>apple-touch-icon.png" rel="apple-touch-icon">
+    <link href="<?php echo IMG; ?>stand_alone_logo.png" sizes="180x180" rel="apple-touch-icon">
 
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com" rel="preconnect">
@@ -341,6 +341,36 @@ if (function_exists('log_error')) {
                 document.body.removeChild(toastContainer);
             });
         }
+        function logError(errorMessage, component, action) {
+            const logData = {
+                error: errorMessage,
+                component: component,
+                action: action
+            };
+
+            fetch(BASE + 'logs', {
+                method: 'POST', 
+                headers: {
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify(logData) 
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Error logged:', data); 
+            })
+            .catch(error => {
+                console.error('Error sending log:', error); 
+            });
+        }
+        window.onerror = function(message, source, lineno, colno, error) {
+            // Send the error to the server
+            logError(error.message || message, source, `Line: ${lineno}, Col: ${colno}`);
+
+            // Return true to prevent the default browser behavior (console logging the error)
+            return true;
+        };
+
     </script>
     <?php
     // Role-specific JavaScript

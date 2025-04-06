@@ -5,13 +5,6 @@
  * 
  * Usage: php update_pending_transactions.php
  */
-
-// This script should be run from the command line
-if (php_sapi_name() !== 'cli') {
-    echo "This script can only be run from the command line.";
-    exit(1);
-}
-
 // Set the base path relative to the script's location
 define('ROOT_PATH', realpath(dirname(__FILE__) . '/../..'));
 require_once ROOT_PATH . '/backends/main.php';

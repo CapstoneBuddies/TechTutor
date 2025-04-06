@@ -258,3 +258,6 @@ WHERE
     AND created_at < DATE_SUB(NOW(), INTERVAL 15 MINUTE)
 ORDER BY
     created_at ASC;
+-- 04-06-2025
+ALTER TABLE certificate
+ADD COLUMN `type` ENUM('class', 'game') NOT NULL DEFAULT 'class' AFTER `class_id`

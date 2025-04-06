@@ -320,7 +320,6 @@ function addSubject($courseId, $subjectName, $subjectDesc, $subjectImage) {
             $fileName = $file['name'];
             $fileSize = $file['size'];
             $fileTmp = $file['tmp_name'];
-            log_error(print_r($_FILES['subjectImage'],true).' fileTemp:'.$fileTmp);
             // Get file extension
             $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
             

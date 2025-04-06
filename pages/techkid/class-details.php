@@ -584,7 +584,7 @@
                                                             Duration: <?php echo $recording['duration']; ?> minutes
                                                         </p>
                                                     </div>
-                                                    <a href="#" onclick="window.open('recordings?id=<?php echo $class_id; ?>&recording=<?php echo $recording['recording_id']; ?>', '_blank')"
+                                                    <a href="#" onclick="window.open('recordings?id=<?php echo $class_id; ?>&recording=<?php echo $recording['recordID']; ?>', '_blank')"
                                                        class="btn btn-sm btn-outline-primary">
                                                         <i class="bi bi-play-fill"></i> Watch
                                                     </a>

@@ -69,7 +69,8 @@ CREATE TABLE `subject` (
 CREATE TABLE `certificate` (
   `cert_id` int(11) NOT NULL AUTO_INCREMENT,
   `cert_uuid` varchar(255) NOT NULL,
-  `class_id` int(11) NOT NULL,
+  `class_id` int(11) NULL,
+  `type` ENUM('class', 'game') NOT NULL DEFAULT 'class',
   `recipient` int(11) NOT NULL,
   `award` varchar(255) NOT NULL,
   `donor` int(11) NOT NULL,

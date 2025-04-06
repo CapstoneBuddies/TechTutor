@@ -48,176 +48,325 @@ if (isset($_GET['download']) && $certificate) {
         }
         
         public function Footer() {
-            // Position at 15 mm from bottom
-            $this->SetY(-15);
-            // Set font
-            $this->SetFont('helvetica', 'I', 8);
-            // Page number
-            $this->Cell(0, 10, 'Page '.$this->getAliasNumPage().'/'.$this->getAliasNbPages(), 0, false, 'C', 0, '', 0, false, 'T', 'M');
+            // Empty footer
         }
     }
     
-    // Create new PDF document
+    // Create a new PDF document
     $pdf = new MYPDF('L', 'mm', 'A4', true, 'UTF-8', false);
-    
+
+
     // Set document information
-    $pdf->SetCreator(SITE_NAME);
-    $pdf->SetAuthor(SITE_NAME);
-    $pdf->SetTitle('Certificate: ' . $certificate['award']);
-    $pdf->SetSubject('Certificate of Achievement');
-    $pdf->SetKeywords('Certificate, Achievement, ' . SITE_NAME);
-    
-    // Set default header data
-    $pdf->SetHeaderData(PDF_HEADER_LOGO, PDF_HEADER_LOGO_WIDTH, PDF_HEADER_TITLE, PDF_HEADER_STRING);
-    
+    $pdf->SetCreator('TechTutor');
+    $pdf->SetAuthor('TechTutor');
+    $pdf->SetTitle('Certificate of ' . (isset($certificate['award_type']) ? $certificate['award_type'] : 'Completion'));
+    $pdf->SetSubject('Certificate');
+    $pdf->SetKeywords('certificate, techtutor, online tutoring');
+
+    // Remove default header/footer
+    $pdf->setPrintHeader(false);
+    $pdf->setPrintFooter(false);
+
     // Set default monospaced font
     $pdf->SetDefaultMonospacedFont(PDF_FONT_MONOSPACED);
-    
+
     // Set margins
-    $pdf->SetMargins(10, 10, 10);
-    $pdf->SetHeaderMargin(0);
-    $pdf->SetFooterMargin(0);
-    
-    // Set auto page breaks
-    $pdf->SetAutoPageBreak(TRUE, 10);
-    
+    $pdf->SetMargins(0, 0, 0);
+    $pdf->SetAutoPageBreak(false);
+
     // Set image scale factor
     $pdf->setImageScale(PDF_IMAGE_SCALE_RATIO);
-    
+
     // Add a page
-    $pdf->AddPage('L');
-    
-    // Set background image or color
-    $pdf->setFillColor(255, 255, 255);
-    $pdf->Rect(0, 0, $pdf->getPageWidth(), $pdf->getPageHeight(), 'F');
-    
-    // Add watermark (with very low opacity, before other elements)
-    $pdf->SetAlpha(0.07); // Set transparency level (0.07 = 7% opacity)
-    $pdf->SetFont('helvetica', 'B', 80);
-    $pdf->SetTextColor(100, 100, 100); // Light gray color
-    $pdf->StartTransform();
-    $pdf->Rotate(45, $pdf->getPageWidth() / 2, $pdf->getPageHeight() / 2);
-    $pdf->Text($pdf->getPageWidth() / 2 - 120, $pdf->getPageHeight() / 2, SITE_NAME);
-    $pdf->StopTransform();
-    $pdf->SetAlpha(1.0); // Reset transparency for subsequent elements
-    
-    // Border decoration
-    $border_color = array(41, 128, 185); // #2980b9
-    $pdf->SetLineStyle(array('width' => 1, 'color' => $border_color));
-    $pdf->Rect(5, 5, $pdf->getPageWidth() - 10, $pdf->getPageHeight() - 10);
-    $pdf->SetLineStyle(array('width' => 2, 'color' => $border_color));
-    $pdf->Rect(10, 10, $pdf->getPageWidth() - 20, $pdf->getPageHeight() - 20);
-    
-    // Draw corner decorations
-    $pdf->SetLineStyle(array('width' => 3, 'color' => $border_color));
-    // Top left
-    $pdf->Line(10, 10, 30, 10);
-    $pdf->Line(10, 10, 10, 30);
-    // Top right
-    $pdf->Line($pdf->getPageWidth() - 10, 10, $pdf->getPageWidth() - 30, 10);
-    $pdf->Line($pdf->getPageWidth() - 10, 10, $pdf->getPageWidth() - 10, 30);
-    // Bottom left
-    $pdf->Line(10, $pdf->getPageHeight() - 10, 30, $pdf->getPageHeight() - 10);
-    $pdf->Line(10, $pdf->getPageHeight() - 10, 10, $pdf->getPageHeight() - 30);
-    // Bottom right
-    $pdf->Line($pdf->getPageWidth() - 10, $pdf->getPageHeight() - 10, $pdf->getPageWidth() - 30, $pdf->getPageHeight() - 10);
-    $pdf->Line($pdf->getPageWidth() - 10, $pdf->getPageHeight() - 10, $pdf->getPageWidth() - 10, $pdf->getPageHeight() - 30);
-    
-    // Add logo
-    $logo_path = ROOT_PATH . '/assets/img/stand_alone_logo.png';
-    if (file_exists($logo_path)) {
-        $pdf->Image($logo_path, ($pdf->getPageWidth() / 2) - 25, 20, 50, 0, 'PNG');
+    $pdf->AddPage('L', 'A4');
+
+    // Get page dimensions
+    $pageWidth = $pdf->getPageWidth();
+    $pageHeight = $pdf->getPageHeight();
+
+    // Add background image
+    $pdf->Image(ROOT_PATH .'/docs/template/certificate_template.png', 0, 0, $pageWidth, $pageHeight, '', '', '', false, 300);
+
+    // Certificate Title
+    $pdf->SetFont('helvetica', 'B', 36);
+    $pdf->SetTextColor(0, 0, 0);
+    $pdf->SetXY(0, $pageHeight * 0.15);
+    $pdf->Cell($pageWidth, 10, 'CERTIFICATE OF', 0, 1, 'C');
+
+    $pdf->SetFont('helvetica', 'B', 48);
+    $pdf->SetTextColor(243, 156, 18); // Orange color (#f39c12)
+    $pdf->SetXY(0, $pageHeight * 0.22);
+    $pdf->Cell($pageWidth, 15, strtoupper(htmlspecialchars((isset($certificate['award_type']) ? $certificate['award_type'] : 'Completion'))), 0, 1, 'C');
+
+        // Recipient Name
+    $pdf->SetFont('brushsci', '', 72);
+    $pdf->SetTextColor(51, 51, 51); // #333333
+    $pdf->SetXY(0, $pageHeight * 0.35);
+    $pdf->Cell($pageWidth, 20, htmlspecialchars($certificate['recipient_name']), 0, 1, 'C');
+
+    // Certificate Description
+    $pdf->SetFont('helvetica', '', 16);
+
+    if($certificate['type'] == 'class') {
+        $description = 'This is to certify that <b>' . htmlspecialchars($certificate['recipient_name']) . 
+                  '</b> has successfully completed all <b>' . htmlspecialchars($certificate['award']) . 
+                  '</b> lessons and fulfilled all requirements on TechTutor, an authorized one-on-one online tutoring platform.';
     }
-    
-    // Set font for title
-    $pdf->SetFont('times', 'B', 28);
-    $pdf->SetTextColor(44, 62, 80); // #2c3e50
-    $pdf->SetY(60);
-    $pdf->Cell(0, 0, 'CERTIFICATE OF ACHIEVEMENT', 0, 1, 'C');
-    
-    // Certificate text
-    $pdf->SetFont('helvetica', '', 14);
-    $pdf->SetTextColor(85, 85, 85); // #555
-    $pdf->SetY(80);
-    $pdf->Cell(0, 0, 'This certifies that', 0, 1, 'C');
-    
-    // Recipient name
-    $pdf->SetFont('times', 'B', 24);
-    $pdf->SetTextColor(44, 62, 80); // #2c3e50
-    $pdf->SetY(90);
-    $pdf->Cell(0, 0, $certificate['recipient_name'], 0, 1, 'C');
-    
-    // More certificate text
-    $pdf->SetFont('helvetica', '', 14);
-    $pdf->SetTextColor(85, 85, 85); // #555
-    $pdf->SetY(105);
-    $pdf->Cell(0, 0, 'has successfully completed', 0, 1, 'C');
-    
-    // Award name
-    $pdf->SetFont('times', 'B', 20);
-    $pdf->SetTextColor(44, 62, 80); // #2c3e50
-    $pdf->SetY(115);
-    $pdf->Cell(0, 0, $certificate['award'], 0, 1, 'C');
-    
-    // Class name if available
-    if (!empty($certificate['class_name'])) {
-        $pdf->SetFont('helvetica', '', 14);
-        $pdf->SetTextColor(85, 85, 85); // #555
-        $pdf->SetY(130);
-        $class_text = 'for the class "' . $certificate['class_name'] . '"';
-        if (!empty($certificate['subject_name'])) {
-            $class_text .= ' in ' . $certificate['subject_name'];
-        }
-        $pdf->Cell(0, 0, $class_text, 0, 1, 'C');
+    else {
+        $description = 'We hereby certify that <b>'. htmlspecialchars($certificate['recipient_name']) . ' has successfully completed the <b>' . htmlspecialchars($certificate['award']) . '</b> game on TechTutor. This achievement demonstrates both your engagement and your ability to learn through interactive play. ';
     }
-    
-    // Issue date
+    $pdf->writeHTMLCell($pageWidth * 0.6, 10, $pageWidth * 0.2, $pageHeight * 0.5, $description, 0, 1, false, true, 'C', true);
+
+    // Date
     $pdf->SetFont('helvetica', '', 14);
-    $pdf->SetY(145);
-    $pdf->Cell(0, 0, 'Issued on ' . date('F d, Y', strtotime($certificate['issue_date'])), 0, 1, 'C');
-    
+    $issue_date = strtotime($certificate['issue_date']);
+    $formatted_date = date('jS', $issue_date) . ' day of ' . date('F, Y', $issue_date);
+    $pdf->SetXY(0, $pageHeight * 0.63);
+    $pdf->Cell($pageWidth, 10, 'Given this ' . $formatted_date, 0, 1, 'C');
+
     // Signatures
-    $pdf->SetLineStyle(array('width' => 0.5, 'color' => array(0, 0, 0)));
+    $pdf->SetFont('quattrocento', 'B', 20);
+    $pdf->SetXY($pageWidth * 0.258, $pageHeight * 0.76);
+    $pdf->Cell(0, 10, htmlspecialchars($certificate['donor_name']), 0, 0, 'L');
+
+    // Award Ribbon
+    $pdf->SetFont('helvetica', 'B', 11);
     
-    // Instructor signature
-    $pdf->Line(60, 180, 120, 180); // Signature line
-    $pdf->SetFont('helvetica', 'B', 12);
-    $pdf->SetXY(60, 182);
-    $pdf->Cell(60, 0, $certificate['donor_name'], 0, 1, 'C');
-    $pdf->SetFont('helvetica', '', 10);
-    $pdf->SetXY(60, 188);
-    $pdf->Cell(60, 0, 'Instructor', 0, 1, 'C');
+    // Set colors
+    $pdf->setFillColor(225, 114, 2);
+    $pdf->SetDrawColor(225, 114, 2);
+    $pdf->SetTextColor(255, 255, 255);
     
-    // Organization signature
-    $pdf->Line($pdf->getPageWidth() - 60, 180, $pdf->getPageWidth() - 120, 180); // Signature line
-    $pdf->SetFont('helvetica', 'B', 12);
-    $pdf->SetXY($pdf->getPageWidth() - 120, 182);
-    $pdf->Cell(60, 0, SITE_NAME, 0, 1, 'C');
-    $pdf->SetFont('helvetica', '', 10);
-    $pdf->SetXY($pdf->getPageWidth() - 120, 188);
-    $pdf->Cell(60, 0, 'Official Certificate', 0, 1, 'C');
+    // Save current position
+    $ribbonWidth = 50;
+    $ribbonHeight = 8;
+    $x = $pageWidth * 0.95 - $ribbonWidth;
+    $y = $pageHeight * 0.865;
     
-    // Certificate ID
-    $pdf->SetFont('helvetica', '', 8);
-    $pdf->SetTextColor(100, 100, 100);
-    $pdf->SetY($pdf->getPageHeight() - 15);
-    $pdf->Cell(0, 0, 'Certificate ID: ' . $certificate['cert_uuid'], 0, 1, 'C');
+    // Draw filled rectangle first
+    $pdf->Rect($x, $y, $ribbonWidth, $ribbonHeight, 'F');
     
-    // Close and output PDF document
-    $pdf->Output('certificate_' . substr($cert_uuid, 0, 8) . '.pdf', 'D');
+    // Get text dimensions
+    $text = strtoupper(htmlspecialchars($certificate['subject_name']));
+    $fontSize = 11;
+    $textWidth = $pdf->GetStringWidth($text);
+    
+    // Calculate text position to center it
+    $textX = $x + ($ribbonWidth - $textWidth) / 2;
+    $textY = $y + ($ribbonHeight - $fontSize * 0.3) / 2; // 0.3 is a factor to adjust vertical centering
+    
+    // Position for text and write it
+    $pdf->SetXY($textX, $textY);
+    $pdf->Write(0, $text);
+
+    // Verification Text
+    $pdf->SetFont('helvetica', '', 9);
+    $pdf->SetTextColor(85, 85, 85); // #555555
+    $verification_link = "https://".$_SERVER['SERVER_NAME'] . '/certificate/' . $certificate['cert_uuid'];
+    $verification_text = "Verify at:\n" .  $verification_link . "\nTechTutor has authenticated the individual's identity and officially confirmed their participation in the course.";
+    $pdf->SetXY($pageWidth * 0.452, $pageHeight * 0.84);
+    $pdf->MultiCell($pageWidth * 0.36, 5, $verification_text, 0, 'L');
+
+    // Output PDF
+    $pdf->Output('techtutor_' . substr($cert_uuid, 0, 8) . '.pdf', 'D');
     exit;
 }
 
 $title = $certificate ? "Certificate: " . $certificate['award'] : "Certificate Not Found";
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
-<?php include ROOT_PATH . '/components/head.php'; ?>
-<body data-base="<?php echo BASE; ?>">
-    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo $title; ?></title>
+    <link rel="stylesheet" href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.css">
+    <link href="<?php echo IMG; ?>stand_alone_logo.png" rel="icon">
+    <style>
+        body {
+            background-color: #f5f5f5;
+            padding: 20px;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        .container {
+            max-width: 1000px;
+        }
+        
+        .certificate-container {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            margin: 20px 0;
+            position: relative;
+        }
+        
+        .certificate-content {
+            position: relative;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 0;
+            padding-bottom: 70%; /* Aspect ratio for A4 landscape */
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        
+        /* Certificate title */
+        .certificate-title {
+            position: absolute;
+            top: 15%;
+            left: 5%;
+            width: 100%;
+            text-align: center;
+            z-index: 2;
+        }
+        
+        .certificate-title-main {
+            font-size: 3vw;
+            font-weight: bold;
+            margin: 0;
+            text-transform: uppercase;
+        }
+        
+        .certificate-title-sub {
+            font-size: 2.5vw;
+            color: #f39c12; /* Orange */
+            font-weight: bold;
+            margin: 0;
+            text-transform: uppercase;
+        }
+        
+        /* Recipient name */
+        .recipient-name {
+            position: absolute;
+            top: 38%;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-family: 'Brush Script MT', cursive;
+            font-size: 3vw;
+            font-weight: 500;
+            color: #333;
+            z-index: 2;
+        }
+        
+        /* Certificate description */
+        .certificate-description {
+            position: absolute;
+            top: 50%;
+            left: 20%;
+            width: 60%;
+            text-align: center;
+            font-size: 1vw;
+            color: #333;
+            z-index: 2;
+        }
+        
+        /* Date text */
+        .certificate-date {
+            position: absolute;
+            top: 63%;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 1vw;
+            color: #333;
+            z-index: 2;
+        }
+        
+        /* Signatures */
+        .tutor-signature {
+            position: absolute;
+            bottom: 20%;
+            left: 32%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 2;
+        }
+        
+        .ceo-signature {
+            position: absolute;
+            bottom: 25%;
+            left: 75%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 2;
+        }
+        
+        .signature-name {
+            font-weight: bold;
+            font-size: 1.2vw;
+            margin-bottom: 0;
+        }
+        
+        .signature-title {
+            font-size: 1vw;
+            color: #666;
+        }
+        
+        /* Award ribbon */
+        .award-ribbon {
+            position: absolute;
+            bottom: 9%;
+            right: 6%;
+            font-weight: bold;
+            font-size: 1w;
+            color: white;
+            z-index: 2;
+            text-wrap: wrap;
+            max-width: 9.2em;
+            text-align: center;
+            background-color: #ff9d0f;
+            border-radius: 0.5em;
+        }
+        
+        /* Verification text */
+        .verification-text {
+            position: absolute;
+            bottom: 9%;
+            right: 20%;
+            width: 35%;
+            text-align: left;
+            font-size: 8pt;
+            color: #555;
+            z-index: 10;
+        }
+        
+        /* Print styles */
+        @media print {
+            body {
+                background-color: #fff;
+                padding: 0;
+                margin: 0;
+            }
+            
+            .container {
+                max-width: 100%;
+                padding: 0;
+                margin: 0;
+            }
+            
+            .certificate-container {
+                box-shadow: none;
+                margin: 0;
+                page-break-inside: avoid;
+            }
+            
+            .btn {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
     <main class="container py-4">
         <div class="row justify-content-center">
-            <div class="col-md-10">
+            <div class="col-12">
                 <?php if ($error): ?>
                     <div class="alert alert-danger text-center">
                         <i class="bi bi-exclamation-triangle-fill me-2"></i>
@@ -228,306 +377,77 @@ $title = $certificate ? "Certificate: " . $certificate['award'] : "Certificate N
                     </div>
                 <?php elseif ($certificate): ?>
                     <div class="certificate-container">
-                        <div class="certificate-inner">
-                            <div class="certificate-content text-center">
-                                <div class="certificate-corner certificate-corner-tl"></div>
-                                <div class="certificate-corner certificate-corner-tr"></div>
-                                <div class="certificate-corner certificate-corner-bl"></div>
-                                <div class="certificate-corner certificate-corner-br"></div>
+                        <div class="certificate-content" id="certificate-bg">
+                            <!-- Certificate Title -->
+                            <div class="certificate-title">
+                                <p class="certificate-title-main">Certificate of</p>
+                                <p class="certificate-title-sub"><?php 
+                                    echo htmlspecialchars(isset($certificate['award_type']) ? $certificate['award_type'] : 'Completion'); 
+                                ?></p>
+                            </div>
+                            
+                            <!-- Recipient Name -->
+                            <div class="recipient-name"><?php echo htmlspecialchars($certificate['recipient_name']); ?></div>
+                            
+                            <!-- Certificate Description -->
+                            <div class="certificate-description">
                                 
-                                <div class="certificate-header mb-4">
-                                    <img src="<?php echo IMG; ?>stand_alone_logo.png" alt="TechTutor" class="certificate-logo">
-                                    <h1 class="certificate-title mt-3">Certificate of Achievement</h1>
-                                </div>
-                                
-                                <div class="certificate-body">
-                                    <p class="certificate-text">This certifies that</p>
-                                    <h2 class="recipient-name"><?php echo htmlspecialchars($certificate['recipient_name']); ?></h2>
-                                    <p class="certificate-text mt-4">has successfully completed</p>
-                                    <h3 class="award-name"><?php echo htmlspecialchars($certificate['award']); ?></h3>
-                                    
-                                    <?php if (!empty($certificate['class_name'])): ?>
-                                    <p class="certificate-text mt-3">
-                                        for the class "<?php echo htmlspecialchars($certificate['class_name']); ?>"
-                                        <?php if (!empty($certificate['subject_name'])): ?>
-                                            in <?php echo htmlspecialchars($certificate['subject_name']); ?>
-                                        <?php endif; ?>
-                                    </p>
-                                    <?php endif; ?>
-                                    
-                                    <p class="certificate-date mt-4">
-                                        Issued on <?php echo date('F d, Y', strtotime($certificate['issue_date'])); ?>
-                                    </p>
-                                </div>
-                                
-                                <div class="certificate-footer mt-5">
-                                    <div class="row align-items-end">
-                                        <div class="col-md-6">
-                                            <div class="signature-line"></div>
-                                            <p class="signature-name"><?php echo htmlspecialchars($certificate['donor_name']); ?></p>
-                                            <p class="signature-title">Instructor</p>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="certificate-seal">
-                                                <i class="bi bi-patch-check-fill"></i>
-                                            </div>
-                                            <div class="signature-line"></div>
-                                            <p class="signature-name"><?php echo SITE_NAME; ?></p>
-                                            <p class="signature-title">Official Certificate</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="certificate-id mt-4">
-                                        Certificate ID: <?php echo $certificate['cert_uuid']; ?>
-                                    </div>
-                                </div>
+                                <?php if($certificate['type'] == 'class'): ?>
+                                This is to certify that <strong><?php echo htmlspecialchars($certificate['recipient_name']); ?></strong> 
+                                has successfully completed all <strong><?php echo htmlspecialchars($certificate['award']); ?></strong> lessons
+                                and fulfilled all requirements on <strong>TechTutor</strong>, an authorized one-on-one online tutoring
+                                platform.
+
+                                <?php else: ?>
+                                We hereby certify that <strong><?php echo htmlspecialchars($certificate['recipient_name']); ?></strong>  has successfully completed the <strong><?php echo htmlspecialchars($certificate['award']); ?></strong> game on TechTutor. This achievement demonstrates both your engagement and your ability to learn through interactive play. 
+                                <?php endif; ?>
+                            </div>
+                            
+                            <!-- Date -->
+                            <div class="certificate-date">
+                                Given this <?php echo date('jS', strtotime($certificate['issue_date'])); ?> day of 
+                                <?php echo date('F, Y', strtotime($certificate['issue_date'])); ?>
+                            </div>
+                            
+                            <!-- Signatures -->
+                            <div class="tutor-signature">
+                                <p class="signature-name"><?php echo htmlspecialchars($certificate['donor_name']); ?></p>
+                            </div>
+                            
+                            <!-- Award Ribbon Text -->
+                            <div class="award-ribbon">
+                                <?php echo htmlspecialchars($certificate['subject_name']); ?>
+                            </div>
+                            
+                            <!-- Verification Text -->
+                            <div class="verification-text">
+                                Verify at: <br/><a href="<?php echo "https://".$_SERVER['SERVER_NAME'] . '/certificate/' . $certificate['cert_uuid']; ?>"><?php echo "https://".$_SERVER['SERVER_NAME'] . '/certificate/' . $certificate['cert_uuid']; ?></a><br>
+                                TechTutor has authenticated the individual's identity and officially confirmed their participation in the course.
                             </div>
                         </div>
                     </div>
+                    
                     <?php if(!isset($_GET['view'])): ?>
                     <div class="text-center mt-4">
-
                         <a href="<?php echo BASE; ?>certificate/<?php echo $certificate['cert_uuid']; ?>?download=1" 
                            class="btn btn-primary">
                             <i class="bi bi-download me-2"></i> Download Certificate
                         </a>
                     </div>
-                <?php endif; ?>
+                    <?php endif; ?>
                 <?php endif; ?>
             </div>
         </div>
     </main>
     
-    <style>
-        .certificate-container {
-            background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            margin: 20px 0;
-        }
-        
-        .certificate-inner {
-            border: 20px solid #f8f9fa;
-            background-color: #fff;
-            position: relative;
-            background-image: 
-                repeating-linear-gradient(45deg, #f8f9fa 0, #f8f9fa 5px, transparent 5px, transparent 10px),
-                repeating-linear-gradient(135deg, #f8f9fa 0, #f8f9fa 5px, transparent 5px, transparent 10px);
-            background-size: 20px 20px;
-            background-position: 0 0, 10px 10px;
-            padding: 20px;
-        }
-        
-        .certificate-inner::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            border: 2px solid #ddd;
-            pointer-events: none;
-        }
-        
-        .certificate-content {
-            padding: 40px;
-            background-color: #fff;
-            background-image: 
-                radial-gradient(circle at 10px 10px, #f8f9fa 2px, transparent 2px),
-                radial-gradient(circle at 30px 30px, #f8f9fa 2px, transparent 2px);
-            background-size: 40px 40px;
-            min-height: 600px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            border: 1px solid #e0e0e0;
-            border-radius: 5px;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .certificate-content::before {
-            content: '<?php echo SITE_NAME; ?>';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-45deg);
-            font-size: 100px;
-            color: rgba(200, 200, 200, 0.07); /* Lower opacity for watermark */
-            white-space: nowrap;
-            pointer-events: none;
-            z-index: 0; /* Ensure it stays in the background */
-        }
-        
-        /* Add another subtle design element */
-        .certificate-corner {
-            position: absolute;
-            width: 100px;
-            height: 100px;
-            opacity: 0.5;
-        }
-        .certificate-corner-tl {
-            top: 0;
-            left: 0;
-            border-top: 5px solid #2980b9;
-            border-left: 5px solid #2980b9;
-            border-top-left-radius: 15px;
-        }
-        .certificate-corner-tr {
-            top: 0;
-            right: 0;
-            border-top: 5px solid #2980b9;
-            border-right: 5px solid #2980b9;
-            border-top-right-radius: 15px;
-        }
-        .certificate-corner-bl {
-            bottom: 0;
-            left: 0;
-            border-bottom: 5px solid #2980b9;
-            border-left: 5px solid #2980b9;
-            border-bottom-left-radius: 15px;
-        }
-        .certificate-corner-br {
-            bottom: 0;
-            right: 0;
-            border-bottom: 5px solid #2980b9;
-            border-right: 5px solid #2980b9;
-            border-bottom-right-radius: 15px;
-        }
-        
-        .certificate-logo {
-            max-height: 80px;
-            margin-bottom: 15px;
-        }
-        
-        .certificate-title {
-            font-size: 36px;
-            color: #2c3e50;
-            font-weight: 700;
-            text-transform: uppercase;
-            margin-bottom: 20px;
-            font-family: 'Times New Roman', Times, serif;
-        }
-        
-        .certificate-text {
-            font-size: 18px;
-            color: #555;
-            margin-bottom: 5px;
-        }
-        
-        .recipient-name {
-            font-size: 32px;
-            color: #2980b9;
-            font-weight: 700;
-            margin: 15px 0;
-            font-family: 'Brush Script MT', cursive;
-        }
-        
-        .award-name {
-            font-size: 24px;
-            color: #333;
-            font-weight: 600;
-            margin: 15px 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        .certificate-date {
-            font-size: 16px;
-            color: #555;
-            font-style: italic;
-        }
-        
-        .signature-line {
-            width: 200px;
-            height: 1px;
-            background-color: #000;
-            margin: 15px auto;
-        }
-        
-        .signature-name {
-            font-size: 20px;
-            margin-bottom: 0;
-            font-weight: 600;
-        }
-        
-        .signature-title {
-            font-size: 14px;
-            color: #666;
-        }
-        
-        .certificate-seal {
-            font-size: 50px;
-            color: #e67e22;
-            margin-bottom: 10px;
-        }
-        
-        .certificate-id {
-            font-size: 12px;
-            color: #999;
-        }
-        
-        /* Print styles */
-        @media print {
-            body {
-                background-color: #fff;
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const certificateBg = document.getElementById('certificate-bg');
+            if (certificateBg) {
+                // Set the template image as background
+                certificateBg.style.backgroundImage = "url('<?php echo BASE; ?>docs/template/certificate_template.png')";
             }
-            
-            .certificate-container {
-                box-shadow: none;
-                margin: 0;
-                page-break-inside: avoid;
-            }
-            
-            header, footer, .btn {
-                display: none;
-            }
-            
-            main {
-                padding: 0 !important;
-            }
-        }
-        
-        /* Additional print styles */
-        @media print {
-            @page {
-                size: A4 portrait;
-                margin: 0;
-            }
-            
-            body.printing {
-                width: 210mm;
-                height: 297mm;
-                margin: 0;
-                padding: 0;
-                background-color: white;
-            }
-            
-            .container {
-                width: 100% !important;
-                max-width: 100% !important;
-                padding: 0 !important;
-                margin: 0 !important;
-            }
-            
-            .certificate-container {
-                width: 190mm;
-                height: 277mm;
-                margin: 10mm auto !important;
-                box-shadow: none !important;
-                border: none !important;
-            }
-            
-            .certificate-inner {
-                padding: 10mm !important;
-            }
-            
-            .certificate-content {
-                min-height: 257mm !important;
-            }
-        }
-    </style>
-    
-    
+        });
+    </script>
 </body>
 </html> 

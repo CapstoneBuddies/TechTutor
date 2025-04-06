@@ -38,9 +38,6 @@ if ($signature !== $calculatedSignature) {
 // Process the data
 $data = json_decode($rawData, true);
 
-// Log the complete data structure to understand format
-log_error("Full webhook data structure: " . print_r($data, true), "webhooks-debug");
-
 // Extract event name with fallbacks for different formats
 $eventName = $data['event']['name'] ?? $data['event'] ?? $data['name'] ?? 'unknown';
 log_error("Processed Event Type: " . $eventName, "webhooks");

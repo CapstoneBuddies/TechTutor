@@ -546,7 +546,6 @@ switch ($action) {
         }
 
         try {
-            log_error(print_r($input,true));
             $result = $meeting->updateRecordingPublishStatus(
                 $input['record_id'],
                 $input['publish']
@@ -716,35 +715,36 @@ switch ($action) {
             }
             
             // Check if recording visibility entry exists
-            $stmt = $conn->prepare("SELECT id FROM recording_visibility WHERE recording_id = ?");
-            $stmt->bind_param("s", $record_id);
-            $stmt->execute();
-            $result = $stmt->get_result();
+            $visibility_stmt = $conn->prepare("SELECT id FROM recording_visibility WHERE recording_id = ?");
+            $visibility_stmt->bind_param("s", $record_id);
+            $visibility_stmt->execute();
+            $result = $visibility_stmt->get_result();
             
             if ($result->num_rows > 0) {
                 // Update existing entry
-                $stmt = $conn->prepare("UPDATE recording_visibility SET is_visible = ?, updated_at = NOW() WHERE recording_id = ?");
+                $update_visibility_stmt = $conn->prepare("UPDATE recording_visibility SET is_visible = ?, updated_at = NOW() WHERE recording_id = ?");
                 $visibleValue = $visible ? 1 : 0;
-                $stmt->bind_param("is", $visibleValue, $record_id);
+                $update_visibility_stmt->bind_param("is", $visibleValue, $record_id);
+                $update_visibility_stmt->execute();
             } else {
                 // Select the connected schedule id
                 $stmt_schedule = $conn->prepare("SELECT schedule_id FROM meetings WHERE meeting_uid = ?");
                 $stmt_schedule->bind_param('s', $meeting_id);
                 $stmt_schedule->execute();
-                $results = $stmt->get_result()->fetch_assoc();
+                $results = $stmt_schedule->get_result()->fetch_assoc();
 
                 // Create new entry
-                $stmt = $conn->prepare("INSERT INTO recording_visibility (recording_id, class_id, is_visible, is_archived, created_by, schedule_id) VALUES (?, ?, ?, 0, ?, ?)");
+                $update_stmt = $conn->prepare("INSERT INTO recording_visibility (recording_id, class_id, is_visible, is_archived, created_by, schedule_id) VALUES (?, ?, ?, 0, ?, ?)");
                 $visibleValue = $visible ? 1 : 0;
-                $stmt->bind_param("siisi", $record_id, $class_id, $visibleValue, $_SESSION['user'], $results['schedule_id']);
+                $update_stmt->bind_param("siisi", $record_id, $class_id, $visibleValue, $_SESSION['user'], $results['schedule_id']);
             }
             
-            if ($stmt->execute()) {
+            if ($update_stmt->execute()) {
                 $response['success'] = true;
                 $response['message'] = 'Recording visibility updated successfully';
                 log_error("Recording visibility updated: {$record_id}, visible: " . ($visible ? 'true' : 'false'), "meeting");
             } else {
-                throw new Exception("Database error: " . $stmt->error);
+                throw new Exception("Database error: " . $update_stmt->error);
             }
         } catch (Exception $e) {
             log_error("Recording visibility update error: " . $e->getMessage(), 'meeting');

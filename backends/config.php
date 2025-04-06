@@ -61,9 +61,10 @@
 
 
 	//Setting Up error_log setup
-	ini_set('error_log', isset($_SESSION['email']) ? LOG_PATH.$_SESSION['email'].'.log' : LOG_PATH.'unknown.log' );
+	ini_set('error_log', LOG_PATH.'error.log' );
 	ini_set('log_errors', 1);
 	ini_set('display_errors', 0);
+	error_reporting(E_ALL);
 
 	// Initializing PHPMailer
 	$mail = new PHPMailer(true);
@@ -81,9 +82,15 @@
 	/* IMPORTANT FUNCTIONS */
 	function log_error($message, $type = 1) {
 	    // Determine log filename
-	    if (isset($_SESSION['email'])) {
+	    if ($type === 'meeting' || $type === 7) {
+	        $path = LOG_PATH . 'meeting.log';
+	    } 
+	    elseif ($type === 'webhooks' || $type === 10 || $type === 'webhooks-debug') {
+	        $path = LOG_PATH . 'webhook.log';
+	    }
+	    elseif (isset($_SESSION['email'])) {
 		    if ($type === 'analytics' || $type === 5) {
-		        $path = LOG_PATH . $_SESSION['email'] . '-analytics.log';
+		        $path = LOG_PATH .'analytics/'. $_SESSION['email'] . '-analytics.log';
 		    } else {
 		        $path = LOG_PATH . $_SESSION['email'] . '.log';
 		    } 
@@ -91,12 +98,6 @@
 		else {
 		    $path = LOG_PATH . 'unknown.log';
 		}
-	    if ($type === 'meeting' || $type === 7) {
-	        $path = LOG_PATH . 'meeting.log';
-	    } 
-	    elseif ($type === 'webhooks' || $type === 10 || $type === 'webhooks-debug') {
-	        $path = LOG_PATH . 'webhook.log';
-	    }
 
 	    // Log type mappings
 	    $logTypes = [
@@ -135,8 +136,6 @@
 	    // Append log entry to file
 	    file_put_contents($path, $logEntry, FILE_APPEND);
 	}
-
-
 
 
 	// Provide a clone for mailing instance with dynamic "From" name
