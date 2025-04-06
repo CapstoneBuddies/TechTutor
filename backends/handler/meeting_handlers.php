@@ -725,7 +725,11 @@ switch ($action) {
                 $update_visibility_stmt = $conn->prepare("UPDATE recording_visibility SET is_visible = ?, updated_at = NOW() WHERE recording_id = ?");
                 $visibleValue = $visible ? 1 : 0;
                 $update_visibility_stmt->bind_param("is", $visibleValue, $record_id);
-                $update_visibility_stmt->execute();
+                if ($update_visibility_stmt->execute()) {
+                    $response['success'] = true;
+                    $response['message'] = 'Recording visibility updated successfully';
+                    log_error("Recording visibility updated: {$record_id}, visible: " . ($visible ? 'true' : 'false'), "meeting");
+                }
             } else {
                 // Select the connected schedule id
                 $stmt_schedule = $conn->prepare("SELECT schedule_id FROM meetings WHERE meeting_uid = ?");
@@ -737,14 +741,13 @@ switch ($action) {
                 $update_stmt = $conn->prepare("INSERT INTO recording_visibility (recording_id, class_id, is_visible, is_archived, created_by, schedule_id) VALUES (?, ?, ?, 0, ?, ?)");
                 $visibleValue = $visible ? 1 : 0;
                 $update_stmt->bind_param("siisi", $record_id, $class_id, $visibleValue, $_SESSION['user'], $results['schedule_id']);
-            }
-            
-            if ($update_stmt->execute()) {
-                $response['success'] = true;
-                $response['message'] = 'Recording visibility updated successfully';
-                log_error("Recording visibility updated: {$record_id}, visible: " . ($visible ? 'true' : 'false'), "meeting");
-            } else {
-                throw new Exception("Database error: " . $update_stmt->error);
+                if ($update_stmt->execute()) {
+                    $response['success'] = true;
+                    $response['message'] = 'Recording visibility updated successfully';
+                    log_error("Recording visibility updated: {$record_id}, visible: " . ($visible ? 'true' : 'false'), "meeting");
+                } else {
+                    throw new Exception("Database error: " . $update_stmt->error);
+                }
             }
         } catch (Exception $e) {
             log_error("Recording visibility update error: " . $e->getMessage(), 'meeting');

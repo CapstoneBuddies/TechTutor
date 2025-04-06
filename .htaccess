@@ -174,7 +174,7 @@ RewriteRule ^dashboard/a/classes/details/enroll$ pages/admin/class-enroll.php [L
 # ----------------------------------
 # 🛠 AJAX Actions
 # ----------------------------------
-RewriteRule ^logs$ backends/logs.php [L]
+RewriteRule ^log$ backends/logs.php [L]
 RewriteRule ^admin/logs$ backends/handler/log_handler.php [QSA,L]
 RewriteRule ^get-users$ backends/admin/get_users.php [L]
 RewriteRule ^toggle-user-status$ backends/admin/toggle_user_status.php [L]

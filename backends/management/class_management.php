@@ -2117,7 +2117,7 @@ function completeClass($class_id, $tutor_id) {
         $conn->begin_transaction();
         
         // Verify the class belongs to this tutor and is active
-        $verify = $conn->prepare("SELECT c.class_id, c.class_name, c.tutor_id, c.status, c.start_date 
+        $verify = $conn->prepare("SELECT c.class_id, c.class_name, c.tutor_id, c.status, c.start_date, c.end_date
                                   FROM class c 
                                   WHERE c.class_id = ? AND c.tutor_id = ? AND c.status != 'completed'");
         $verify->bind_param("ii", $class_id, $tutor_id);
@@ -2139,7 +2139,7 @@ function completeClass($class_id, $tutor_id) {
         // Check if class has been active for at least 10 days since start date
         $tenDaysAfterStart = date('Y-m-d', strtotime($result['start_date'] . ' + 10 days'));
         $today = date('Y-m-d');
-        $hasPassedMinDuration = ($today >= $tenDaysAfterStart) || ($today >= $result['end_date']);
+        $hasPassedMinDuration = ($today >= $tenDaysAfterStart) || ($today >= $result['end_date']); 
         
         if (!$hasPassedMinDuration) {
             throw new Exception("Class must be active for at least 10 days before it can be manually completed");

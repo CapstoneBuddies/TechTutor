@@ -348,7 +348,7 @@ if (function_exists('log_error')) {
                 action: action
             };
 
-            fetch(BASE + 'logs', {
+            fetch(BASE + 'log', {
                 method: 'POST', 
                 headers: {
                     'Content-Type': 'application/json' 

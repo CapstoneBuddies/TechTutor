@@ -1,5 +1,5 @@
 <?php
-	require_once 'config.php'; //Connect to config file
+	require_once 'main.php'; //Connect to config file
 
 	header('Content-Type: application/json');
 

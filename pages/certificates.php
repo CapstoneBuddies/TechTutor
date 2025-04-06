@@ -25,7 +25,7 @@ if (empty($cert_uuid)) {
     }
 }
 
-// Get certificate details
+// Get certificate details 
 $certificate = null;
 $error = null;
 
@@ -109,7 +109,7 @@ if (isset($_GET['download']) && $certificate) {
 
     if($certificate['type'] == 'class') {
         $description = 'This is to certify that <b>' . htmlspecialchars($certificate['recipient_name']) . 
-                  '</b> has successfully completed all <b>' . htmlspecialchars($certificate['award']) . 
+                  '</b> has successfully completed all <b>' . htmlspecialchars($certificate['class_name']) . 
                   '</b> lessons and fulfilled all requirements on TechTutor, an authorized one-on-one online tutoring platform.';
     }
     else {
@@ -394,7 +394,7 @@ $title = $certificate ? "Certificate: " . $certificate['award'] : "Certificate N
                                 
                                 <?php if($certificate['type'] == 'class'): ?>
                                 This is to certify that <strong><?php echo htmlspecialchars($certificate['recipient_name']); ?></strong> 
-                                has successfully completed all <strong><?php echo htmlspecialchars($certificate['award']); ?></strong> lessons
+                                has successfully completed all <strong>`<?php echo htmlspecialchars($certificate['class_name']); ?>`</strong> lessons
                                 and fulfilled all requirements on <strong>TechTutor</strong>, an authorized one-on-one online tutoring
                                 platform.
 

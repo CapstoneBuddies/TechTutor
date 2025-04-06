@@ -367,12 +367,13 @@ $archivedCount = 0;
                 })
                 .then(response => response.json())
                 .then(data => {
-                    showLoading(false);
                     if (data.success) {
-                        location.reload();
+                        showLoading(false);
+                        showToast('success', data.message || 'Recording visibility was successfully updated');
+                        setTimeout(() => { location.reload(); }, 1500);
                     } else {
+                        showLoading(false);
                         showToast('error', 'Failed to update recording visibility');
-                        logError(data.error, 'toggle_visibility', 'recordings');
                     }
                 })
                 .catch(error => {
