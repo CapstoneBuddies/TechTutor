@@ -157,6 +157,7 @@ RewriteRule ^dashboard/a/logs$ pages/admin/view-logs.php [L]
 RewriteRule ^dashboard/a/users$ pages/admin/view-users.php [L]
 RewriteRule ^dashboard/a/users/details$ pages/admin/user-details.php [L,QSA]
 RewriteRule ^dashboard/a/webhooks$ pages/admin/manage-webhooks.php [L]
+RewriteRule ^dashboard/a/status$ pages/admin/transaction-status.php [L]
 
 RewriteRule ^dashboard/a/certificates$ pages/admin/certificates.php [L]
 RewriteRule ^dashboard/a/verify-certificate$ pages/admin/verify-certificate.php [L,QSA]

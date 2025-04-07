@@ -1,6 +1,6 @@
 <?php
 include_once "../../backends/main.php";
-include_once "../../components/head.php";
+include_once "../../components/head.php"; 
 include_once "../../components/header.php";
 
 // Check if user is logged in and is an admin

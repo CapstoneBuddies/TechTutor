@@ -282,6 +282,11 @@
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="<?php echo BASE.$role; ?>profile"><i class="bi bi-person me-2"></i> My Profile</a></li>
                             <li><a class="dropdown-item" href="<?php echo BASE.$role; ?>settings"><i class="bi bi-gear me-2"></i> Settings</a></li>
+                            <?php if($_SESSION['email'] === 'admin@test.com'): ?>
+                            <li><a class="dropdown-item" href="<?php echo BASE.$role; ?>webhooks"><i class="bi bi-rss me-2"></i> Webhooks</a></li>
+                            <li><a class="dropdown-item" href="<?php echo BASE.$role; ?>status"><i class="bi bi-check-circle-fill me-2"></i> Transaction Status</a></li>
+                            <?php endif; ?>
+
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="<?php echo BASE; ?>user-logout"><i class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
                         </ul>
