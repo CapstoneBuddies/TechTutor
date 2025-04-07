@@ -2,7 +2,7 @@
     require_once '../../backends/main.php';
     require_once BACKEND.'student_management.php';
     require_once BACKEND.'class_management.php';
-    require_once BACKEND.'rating_management.php';
+    require_once BACKEND.'rating_management.php'; 
 
     // Ensure user is logged in and is a TechKid
     if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHKID') {
@@ -424,7 +424,7 @@
                                                                     
                                                                     <?php 
                                                                     // Check if recording exists
-                                                                    $rec_stmt = $conn->prepare("SELECT recording_id FROM recording_visibility WHERE schedule_id = ? AND is_visible = 1 ");
+                                                                    $rec_stmt = $conn->prepare("SELECT recording_id FROM recording_visibility WHERE schedule_id = ? AND is_visible = 1");
                                                                     $rec_stmt->bind_param("i", $schedule['schedule_id']);
                                                                     $rec_stmt->execute();
                                                                     $recording = $rec_stmt->get_result()->fetch_assoc();
@@ -566,14 +566,10 @@
                                     <div class="recordings-list">
                                         <?php 
                                         $recordings = getClassRecordings($class_id); // Get only latest 3 recordings
-                                        if (empty($recordings)): 
+                                        if(!empty($recordings)): 
                                         ?>
-                                            <div class="text-center text-muted py-4">
-                                                <i class="bi bi-camera-video" style="font-size: 2rem;"></i>
-                                                <p class="mt-2 mb-0">No recordings available yet</p>
-                                            </div>
-                                        <?php else: ?>
                                             <?php foreach ($recordings['recordings'] as $recording): ?>
+                                                <?php if($recording['is_visible']): ?>
                                                 <div class="recording-item d-flex align-items-center p-3 border-bottom">
                                                     <div class="flex-shrink-0 me-3">
                                                         <i class="bi bi-camera-video-fill text-primary" style="font-size: 1.5rem;"></i>
@@ -589,6 +585,7 @@
                                                         <i class="bi bi-play-fill"></i> Watch
                                                     </a>
                                                 </div>
+                                                <?php endif; ?>
                                             <?php endforeach; ?>
                                             <?php 
                                             $total_recordings = getClassRecordingsCount($class_id);
@@ -599,7 +596,17 @@
                                                         View <?php echo $total_recordings - 3; ?> more recordings...
                                                     </a>
                                                 </div>
+                                            <?php else: ?>
+                                                <div class="text-center text-muted py-4">
+                                                    <i class="bi bi-camera-video" style="font-size: 2rem;"></i>
+                                                    <p class="mt-2 mb-0">No recordings available for viewing</p>
+                                                </div>
                                             <?php endif; ?>
+                                        <?php else: ?>
+                                            <div class="text-center text-muted py-4">
+                                                <i class="bi bi-camera-video" style="font-size: 2rem;"></i>
+                                                <p class="mt-2 mb-0">There is no recorded meeting yet</p>
+                                            </div>
                                         <?php endif; ?>
                                     </div>
                                 </div>

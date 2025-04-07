@@ -418,7 +418,7 @@ class MeetingManagement {
                 if ($result->num_rows > 0) {
                     // Update existing record
                     $row = $result->fetch_assoc();
-                    $stmt = $conn->prepare("UPDATE recording_visibility SET is_archived = ?, updated_at = NOW() WHERE id = ?");
+                    $stmt = $conn->prepare("UPDATE recording_visibility SET is_archived = ?, is_visible = 0, updated_at = NOW() WHERE id = ?");
                     $archivedValue = $archive ? 1 : 0;
                     $stmt->bind_param("ii", $archivedValue, $row['id']);
                     $stmt->execute();

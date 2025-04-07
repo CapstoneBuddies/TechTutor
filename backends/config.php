@@ -88,6 +88,9 @@
 	    elseif ($type === 'webhooks' || $type === 10 || $type === 'webhooks-debug') {
 	        $path = LOG_PATH . 'webhook.log';
 	    }
+	    elseif ($type === 'cron' || $type === 11) {
+	        $path = LOG_PATH . 'cron.log';
+	    }
 	    elseif (isset($_SESSION['email'])) {
 		    if ($type === 'analytics' || $type === 5) {
 		        $path = LOG_PATH .'analytics/'. $_SESSION['email'] . '-analytics.log';
@@ -111,6 +114,7 @@
 	        8 => 'info',
 	        9 => 'class',
 	        10 => 'webhooks',
+	        11 => 'cron'
 	    ];
 
 	    // Alias mapping for string log types

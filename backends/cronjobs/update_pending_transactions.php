@@ -17,7 +17,7 @@ if (!class_exists('PayMongoHelper')) {
 }
 
 // Log start of process
-log_error("Starting pending transaction cleanup process", "info");
+log_error("Starting pending transaction cleanup process", "cron");
 
 /**
  * Updates stale pending/processing transactions
@@ -60,7 +60,7 @@ function updateStalePendingTransactions($conn) {
             $paymentIntentId = $tx['payment_intent_id'];
             $userId = $tx['user_id'];
             
-            log_error("Checking transaction #$transactionId (Payment Intent: $paymentIntentId, Age: {$tx['age_minutes']} minutes)", "info");
+            log_error("Checking transaction #$transactionId (Payment Intent: $paymentIntentId, Age: {$tx['age_minutes']} minutes)", "cron");
             
             // Check the actual status with PayMongo if we have a payment intent ID
             if (!empty($paymentIntentId)) {
@@ -84,24 +84,24 @@ function updateStalePendingTransactions($conn) {
                         
                         if ($stmt->execute()) {
                             $stats['updated']++;
-                            log_error("Updated transaction #$transactionId to status: $newStatus (from PayMongo)", "info");
+                            log_error("Updated transaction #$transactionId to status: $newStatus (from PayMongo)", "cron");
                             
                             // If transaction succeeded, update user's token balance
                             if ($newStatus === 'succeeded') {
                                 try {
                                     updateUserTokenBalance($conn, $userId, $tx['amount'], $transactionId);
                                 } catch (Exception $e) {
-                                    log_error("Error updating token balance for transaction #$transactionId: " . $e->getMessage(), "error");
+                                    log_error("Error updating token balance for transaction #$transactionId: " . $e->getMessage(), "cron");
                                     $stats['errors'][] = "Token balance update failed for TX #$transactionId: " . $e->getMessage();
                                 }
                             }
                         } else {
                             $stats['failed']++;
-                            log_error("Failed to update transaction #$transactionId: " . $stmt->error, "error");
+                            log_error("Failed to update transaction #$transactionId: " . $stmt->error, "cron");
                             $stats['errors'][] = "Failed to update TX #$transactionId: " . $stmt->error;
                         }
                     } else {
-                        log_error("Transaction #$transactionId has non-terminal status from PayMongo: {$paymentStatus['status']}", "info");
+                        log_error("Transaction #$transactionId has non-terminal status from PayMongo: {$paymentStatus['status']}", "cron");
                     }
                 } else {
                     // If payment intent doesn't exist, mark as failed
@@ -119,7 +119,7 @@ function updateStalePendingTransactions($conn) {
                         log_error("Marked transaction #$transactionId as failed: Payment intent not found on PayMongo", "info");
                     } else {
                         $stats['failed']++;
-                        log_error("Failed to update transaction #$transactionId: " . $stmt->error, "error");
+                        log_error("Failed to update transaction #$transactionId: " . $stmt->error, "cron");
                         $stats['errors'][] = "Failed to update TX #$transactionId: " . $stmt->error;
                     }
                 }
@@ -136,17 +136,17 @@ function updateStalePendingTransactions($conn) {
                 
                 if ($stmt->execute()) {
                     $stats['updated']++;
-                    log_error("Marked transaction #$transactionId as failed: No payment intent ID to verify", "info");
+                    log_error("Marked transaction #$transactionId as failed: No payment intent ID to verify", "cron");
                 } else {
                     $stats['failed']++;
-                    log_error("Failed to update transaction #$transactionId: " . $stmt->error, "error");
+                    log_error("Failed to update transaction #$transactionId: " . $stmt->error, "cron");
                     $stats['errors'][] = "Failed to update TX #$transactionId: " . $stmt->error;
                 }
             }
         }
         
     } catch (Exception $e) {
-        log_error("Error updating stale transactions: " . $e->getMessage(), "error");
+        log_error("Error updating stale transactions: " . $e->getMessage(), "cron");
         $stats['errors'][] = "Global error: " . $e->getMessage();
     }
     
@@ -174,7 +174,7 @@ function updateUserTokenBalance($conn, $userId, $amount, $transactionId) {
         $stmt->execute();
         
         // Log the token balance update
-        log_error("Token balance updated via cron for user {$userId}: Added {$tokenAmount} tokens (Transaction #{$transactionId})", 'tokens');
+        log_error("Token balance updated via cron for user {$userId}: Added {$tokenAmount} tokens (Transaction #{$transactionId})", 'cron');
         
         // Create a notification for the user if notification system is available
         if (function_exists('sendNotification')) {
@@ -193,7 +193,7 @@ function updateUserTokenBalance($conn, $userId, $amount, $transactionId) {
         return true;
     } catch (Exception $e) {
         $conn->rollback();
-        log_error("Token update error (from cron): " . $e->getMessage(), 'error');
+        log_error("Token update error (from cron): " . $e->getMessage(), 'cron');
         return false;
     }
 }
@@ -216,7 +216,7 @@ if (!empty($stats['errors'])) {
 }
 
 // Log completion
-log_error("Completed pending transaction cleanup process. Checked: {$stats['checked']}, Updated: {$stats['updated']}, Failed: {$stats['failed']}", "info");
+log_error("Completed pending transaction cleanup process. Checked: {$stats['checked']}, Updated: {$stats['updated']}, Failed: {$stats['failed']}", "cron");
 
 // Close database connection
 if (isset($conn)) {
