@@ -236,8 +236,8 @@ function handleCreatePayment($conn) {
                 'amount' => $amount * 100,
                 'currency' => 'PHP',
                 'redirect' => [
-                    'success' => BASE . 'payment-success',
-                    'failed' => BASE . 'payment-failed'
+                    'success' => 'https://' . $_SERVER['SERVER_NAME'] . BASE . 'payment-success',
+                    'failed' => 'https://' . $_SERVER['SERVER_NAME'] . BASE . 'payment-failed'
                 ]
             ]);
 

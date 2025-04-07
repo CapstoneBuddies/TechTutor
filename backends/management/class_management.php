@@ -961,6 +961,14 @@ function getClassRecordingsCount($classId) {
 
     return count($recording['recordings']);
 }
+function getAvailableClassRecordings($classId) {
+    require_once BACKEND.'meeting_management.php';
+    $meetingManager = new MeetingManagement();
+    $recording = $recordings->getClassRecordings($classId);
+
+    // Check if the students has access to the recordings
+    
+}
 function getScheduleStatus($schedule_id) {
     global $conn;
     

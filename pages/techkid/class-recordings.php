@@ -31,9 +31,9 @@
     $per_page = 10;
     $offset = ($page - 1) * $per_page;
     
-    $recordings = getClassRecordings($class_id)['recordings'];
+    $recordings = getClassRecordings($class_id)['recordings']; 
 
-    $total_recordings = getClassRecordingsCount($class_id); 
+    $total_recordings = 0; 
     $total_pages = ceil($total_recordings / $per_page);
 
     // GET the recording id from the url
@@ -82,11 +82,13 @@
                         <?php if (empty($recordings)): ?>
                             <div class="text-center text-muted py-5">
                                 <i class="bi bi-camera-video" style="font-size: 3rem;"></i>
-                                <p class="mt-3 mb-0">No recordings available yet</p>
+                                <p class="mt-3 mb-0">There is no recorded meeting yet</p>
                             </div>
                         <?php else: ?>
                             <div class="recordings-grid">
                                 <?php foreach ($recordings as $recording): ?>
+                                    <?php if($recording['is_visible']): ?>
+                                        <?php $total_recordings += 1; ?>
                                     <div class="recording-card">
                                         <div class="recording-thumbnail">
                                             <img src="<?php echo $recording['thumbnail_url'] ?? BASE . 'assets/img/video-placeholder.png'; ?>" 
@@ -117,8 +119,15 @@
                                             </div>
                                         </div>
                                     </div>
+                                    <?php endif; ?>
                                 <?php endforeach; ?>
                             </div>
+                            <?php if($total_recordings == 0): ?>
+                                <div class="text-center text-muted py-5">
+                                    <i class="bi bi-camera-video" style="font-size: 3rem;"></i>
+                                    <p class="mt-3 mb-0">No recordings available for viewing</p>
+                                </div>
+                            <?php endif; ?>
 
                             <!-- Pagination -->
                             <?php if ($total_pages > 1): ?>

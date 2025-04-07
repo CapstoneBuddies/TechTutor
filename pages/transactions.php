@@ -246,6 +246,11 @@
             // Specifically initialize both dropdowns to ensure they work
             const filterDropdown = new bootstrap.Dropdown(document.getElementById('filterDropdown'));
             
+            // Add event listener to reset modal title when closed
+            document.getElementById('transactionDetailsModal').addEventListener('hidden.bs.modal', function() {
+                document.querySelector('#transactionDetailsModal .modal-title').textContent = 'Transaction Details';
+            });
+            
             // Check URL parameters to see which tab should be active
             const urlParams = new URLSearchParams(window.location.search);
             const activeTab = urlParams.get('tab');
@@ -535,6 +540,9 @@
         }
 
         function viewTransactionDetails(transactionId) {
+            // Reset modal title
+            document.querySelector('#transactionDetailsModal .modal-title').textContent = 'Transaction Details';
+            
             // Show loading spinner
             const modalBody = document.querySelector('.transaction-details');
             modalBody.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"></div></div>';
@@ -747,17 +755,89 @@
         }
         
         function processRefund(transactionId, disputeId) {
+            // Close the dispute details modal first
+            const disputeModal = bootstrap.Modal.getInstance(document.getElementById('disputeDetailsModal'));
+            if (disputeModal) {
+                disputeModal.hide();
+            }
+            
+            // Show the transaction details modal with refund form
+            const txModal = new bootstrap.Modal(document.getElementById('transactionDetailsModal'));
+            txModal.show();
+            
+            // Get the modal body and show loading indicator
+            const modalBody = document.querySelector('.transaction-details');
+            modalBody.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"></div></div>';
+            
+            // Change the modal title
+            document.querySelector('#transactionDetailsModal .modal-title').textContent = 'Process Refund';
+            
+            // Get transaction details to show in the modal
+            fetch(`<?php echo BASE; ?>get-transaction-details?id=${transactionId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const transaction = data.transaction;
+                        const totalAmount = parseFloat(transaction.amount);
+                        
+                        let html = `
+                            <div class="mb-3">
+                                <h5 class="border-bottom pb-2">Process Refund</h5>
+                                <div class="alert alert-info">
+                                    <strong>Transaction #${transaction.id}</strong><br>
+                                    Original Amount: ${formatAmount(transaction.amount)}<br>
+                                    Date: ${formatDate(transaction.date)}<br>
+                                    Status: <span class="badge bg-${getStatusBadgeColor(transaction.status)}">${formatStatus(transaction.status)}</span><br>
+                                    Customer: ${transaction.userName}
+                                </div>
+                            </div>
+                            <form id="refundForm">
+                                <div class="mb-3">
+                                    <label for="refundAmount" class="form-label">Refund Amount</label>
+                                    <input type="number" class="form-control" id="refundAmount" min="0.01" max="${totalAmount}" step="0.01" value="${totalAmount}" required>
+                                    <div class="form-text">Maximum refund amount: ${formatAmount(totalAmount)}</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="adminNotes" class="form-label">Admin Notes <span class="text-danger">*</span></label>
+                                    <textarea class="form-control" id="adminNotes" rows="3" placeholder="Enter reason for the refund" required></textarea>
+                                </div>
+                                <div class="d-flex justify-content-end">
+                                    <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-primary" onclick="submitRefund('${transactionId}', '${disputeId}')">Process Refund</button>
+                                </div>
+                            </form>
+                        `;
+                        
+                        modalBody.innerHTML = html;
+                    } else {
+                        modalBody.innerHTML = `<div class="alert alert-danger">${data.message || 'Failed to load transaction details'}</div>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    modalBody.innerHTML = '<div class="alert alert-danger">Failed to load transaction details</div>';
+                });
+        }
+
+        function submitRefund(transactionId, disputeId) {
             const amount = document.getElementById('refundAmount').value;
+            const adminNotes = document.getElementById('adminNotes').value.trim();
             
             if (!amount || amount <= 0) {
                 showToast('error', 'Please enter a valid refund amount');
                 return;
             }
             
-            if (!confirm(`Are you sure you want to process a refund of ₱${amount}?`)) {
+            if (!adminNotes) {
+                showToast('error', 'Admin notes are required');
                 return;
             }
             
+            if (!confirm(`Are you sure you want to process a refund of ${formatAmount(amount)}?`)) {
+                return;
+            }
+            
+            showLoading(true);
             fetch('<?php echo BASE; ?>process-refund', {
                 method: 'POST',
                 headers: {
@@ -767,26 +847,53 @@
                     'transaction_id': transactionId,
                     'dispute_id': disputeId,
                     'amount': amount,
-                    'notes': document.getElementById('adminNotes').value.trim()
+                    'notes': adminNotes
                 })
             })
             .then(response => response.json())
             .then(data => {
+                showLoading(false);
                 if (data.success) {
                     showToast('success', data.message);
+                    
+                    // Close the transaction details modal
                     const modalElement = document.getElementById('transactionDetailsModal');
-                    const modal = bootstrap.Modal.getInstance(modalElement);
-                    modal.hide();
-                    // Reload the transactions list
-                    loadTransactions(currentPage, currentFilter);
+                    const txModal = bootstrap.Modal.getInstance(modalElement);
+                    if (txModal) {
+                        txModal.hide();
+                    }
+                    
+                    // If we're in the disputes tab, reload disputes; otherwise reload transactions
+                    if (document.getElementById('disputes-tab').classList.contains('active')) {
+                        loadDisputes(disputesCurrentPage, disputesCurrentFilter);
+                    } else {
+                        loadTransactions(currentPage, currentFilter);
+                    }
                 } else {
                     showToast('error', data.message);
                 }
             })
             .catch(error => {
+                showLoading(false);
                 console.error('Error:', error);
                 showToast('error', 'Failed to process refund');
             });
+        }
+
+        function showLoading(show) {
+            if (show) {
+                const loadingHtml = `
+                    <div id="loadingOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; justify-content: center; align-items: center;">
+                        <div class="spinner-border text-light" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                `;
+                document.body.insertAdjacentHTML('beforeend', loadingHtml);
+            } else {
+                const overlay = document.getElementById('loadingOverlay');
+                if (overlay) overlay.remove();
+            }
         }
 
         function showToast(type, message) {
@@ -817,6 +924,9 @@
         }
 
         function openDisputeForm(transactionId) {
+            // Reset modal title
+            document.querySelector('#transactionDetailsModal .modal-title').textContent = 'Report an Issue';
+            
             // Show dispute form in modal
             const modalBody = document.querySelector('.transaction-details');
             modalBody.innerHTML = `
@@ -990,9 +1100,23 @@
                             ${dispute.adminNotes ? `
                             <div class="mb-3">
                                 <strong>Admin Notes:</strong><br>
-                                <p class="text-muted">${dispute.adminNotes}</p>
+                                <p class="text-muted admin-notes">${formatAdminNotes(dispute.adminNotes)}</p>
                             </div>` : ''}
                         `;
+                        
+                        // Add refund information if available
+                        if (dispute.refund) {
+                            html += `
+                                <div class="mb-3">
+                                    <strong>Refund Information:</strong><br>
+                                    <div class="text-muted">
+                                        Amount: ${formatAmount(dispute.refund.amount)}<br>
+                                        Status: <span class="badge bg-${getRefundStatusBadgeColor(dispute.refund.status)}">${dispute.refund.status}</span><br>
+                                        Date: ${formatDate(dispute.refund.createdAt)}
+                                    </div>
+                                </div>
+                            `;
+                        }
                         
                         modalBody.innerHTML = html;
                         
@@ -1015,7 +1139,7 @@
                                         <h6>Admin Actions</h6>
                                         <div class="mb-3">
                                             <label for="adminNotes" class="form-label">Admin Notes</label>
-                                            <textarea class="form-control" id="adminNotes" rows="3">${dispute.adminNotes || ''}</textarea>
+                                            <textarea class="form-control" id="adminNotes" rows="3" placeholder="Add notes about this dispute"></textarea>
                                         </div>
                                         <div class="d-flex justify-content-between">
                                             <div class="btn-group">
@@ -1047,6 +1171,24 @@
                     console.error('Error:', error);
                     modalBody.innerHTML = '<div class="alert alert-danger">Failed to load dispute details</div>';
                 });
+        }
+
+        // Helper function to format admin notes with line breaks preserved
+        function formatAdminNotes(notes) {
+            if (!notes) return '';
+            // Replace newlines with <br> tags for proper display
+            return notes.replace(/\n/g, '<br>');
+        }
+
+        // Helper function to get refund status badge color
+        function getRefundStatusBadgeColor(status) {
+            switch(status) {
+                case 'pending': return 'warning';
+                case 'processing': return 'info';
+                case 'completed': return 'success';
+                case 'failed': return 'danger';
+                default: return 'secondary';
+            }
         }
     </script>
 </body>

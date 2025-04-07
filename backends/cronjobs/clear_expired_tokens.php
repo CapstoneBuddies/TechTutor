@@ -8,7 +8,7 @@ $sql = "DELETE FROM login_tokens WHERE expiration_date < NOW()";
 if ($conn->query($sql) === TRUE) {
     echo "Expired tokens removed successfully.";
 } else {
-    log_error("Error deleting records: " . $conn->error,'database');
+    log_error("Error deleting records: " . $conn->error,'cron');
 }
 
 // SQL query to delete expired remember_me tokens
@@ -17,7 +17,7 @@ $sql = "DELETE FROM login_tokens WHERE expiration_date < NOW()";
 if ($conn->query($sql) === TRUE) {
     echo "Expired tokens removed successfully.";
 } else {
-    log_error("Error deleting records: " . $conn->error,'tokens.log');
+    log_error("Error deleting records: " . $conn->error,'cron');
 }
 
 // Remove email_verification tokens

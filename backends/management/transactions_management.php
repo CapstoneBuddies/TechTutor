@@ -439,14 +439,45 @@ function updateDisputeStatus($disputeId, $status, $adminNotes = null, $adminId =
     global $conn;
     
     try {
-        $query = "UPDATE transaction_disputes SET status = ?, admin_notes = ? WHERE dispute_id = ?";
+        // Get existing dispute data to check for changes
+        $query = "SELECT d.*, u.email FROM transaction_disputes d 
+                 LEFT JOIN users u ON u.uid = ? 
+                 WHERE d.dispute_id = ?";
         $stmt = $conn->prepare($query);
-        $stmt->bind_param('ssi', $status, $adminNotes, $disputeId);
+        $stmt->bind_param('ii', $adminId, $disputeId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $dispute = $result->fetch_assoc();
+        
+        if (!$dispute) {
+            return ['success' => false, 'message' => 'Dispute not found'];
+        }
+        
+        // Format new admin note with timestamp and user info
+        $formattedNote = "";
+        if ($adminNotes) {
+            $currentDateTime = date('Y-m-d H:i:s');
+            $userEmail = $dispute['email'] ?? 'unknown';
+            $formattedNote = "[{$currentDateTime}] [User:{$userEmail}] {$adminNotes}";
+            
+            // If there are existing notes, append the new note on a new line
+            if (!empty($dispute['admin_notes'])) {
+                $formattedNote = $dispute['admin_notes'] . "\n" . $formattedNote;
+            }
+        } else {
+            // If no new notes provided, keep existing notes
+            $formattedNote = $dispute['admin_notes'];
+        }
+        
+        // Update dispute status and notes
+        $updateQuery = "UPDATE transaction_disputes SET status = ?, admin_notes = ? WHERE dispute_id = ?";
+        $stmt = $conn->prepare($updateQuery);
+        $stmt->bind_param('ssi', $status, $formattedNote, $disputeId);
         $stmt->execute();
         
         if ($stmt->affected_rows > 0) {
-            // Log the status update
-            log_error("Dispute $disputeId updated to $status by admin $adminId", 'info');
+            // Log the update
+            log_error("Dispute {$disputeId} status updated to {$status} by admin {$adminId}", 'info');
             
             return [
                 'success' => true,
@@ -454,12 +485,12 @@ function updateDisputeStatus($disputeId, $status, $adminNotes = null, $adminId =
             ];
         } else {
             return [
-                'success' => false,
-                'message' => 'Failed to update dispute status or no changes made'
+                'success' => true,
+                'message' => 'No changes made to the dispute'
             ];
         }
     } catch (Exception $e) {
-        log_error("Error updating dispute status: " . $e->getMessage(), 'database');
+        log_error("Error updating dispute: " . $e->getMessage(), 'database');
         return [
             'success' => false,
             'message' => 'An error occurred while updating the dispute'
@@ -496,24 +527,53 @@ function processRefund($transactionId, $disputeId, $amount, $adminId, $notes = n
             ];
         }
         
+        // Get admin email for logging
+        $adminQuery = "SELECT email FROM users WHERE uid = ?";
+        $stmt = $conn->prepare($adminQuery);
+        $stmt->bind_param('i', $adminId);
+        $stmt->execute();
+        $admin = $stmt->get_result()->fetch_assoc();
+        $adminEmail = $admin ? $admin['email'] : 'unknown';
+        
+        // Format admin note
+        $formattedNote = "";
+        if ($notes) {
+            $currentDateTime = date('Y-m-d H:i:s');
+            $formattedNote = "[{$currentDateTime}] [User:{$adminEmail}] {$notes}";
+        }
+        
+        // If there's a dispute, update its notes and status
+        if ($disputeId) {
+            $disputeQuery = "SELECT admin_notes FROM transaction_disputes WHERE dispute_id = ?";
+            $stmt = $conn->prepare($disputeQuery);
+            $stmt->bind_param('i', $disputeId);
+            $stmt->execute();
+            $dispute = $stmt->get_result()->fetch_assoc();
+            
+            if ($dispute) {
+                // Append to existing notes if any
+                if (!empty($dispute['admin_notes'])) {
+                    $formattedNote = $dispute['admin_notes'] . "\n" . $formattedNote;
+                }
+                
+                // Update dispute
+                $updateQuery = "UPDATE transaction_disputes SET status = 'resolved', admin_notes = ? WHERE dispute_id = ?";
+                $stmt = $conn->prepare($updateQuery);
+                $stmt->bind_param('si', $formattedNote, $disputeId);
+                $stmt->execute();
+            }
+        }
+        
         // Create refund record
         $query = "INSERT INTO transaction_refunds 
                  (transaction_id, dispute_id, amount, admin_id, notes) 
                  VALUES (?, ?, ?, ?, ?)";
         $stmt = $conn->prepare($query);
-        $stmt->bind_param('iidis', $transactionId, $disputeId, $amount, $adminId, $notes);
+        $stmt->bind_param('iidis', $transactionId, $disputeId, $amount, $adminId, $formattedNote);
         $stmt->execute();
         
         if ($stmt->affected_rows > 0) {
             $refundId = $conn->insert_id;
-            
-            // Update dispute status if it exists
-            if ($disputeId) {
-                $updateQuery = "UPDATE transaction_disputes SET status = 'resolved' WHERE dispute_id = ?";
-                $stmt = $conn->prepare($updateQuery);
-                $stmt->bind_param('i', $disputeId);
-                $stmt->execute();
-            }
             
             // Log the refund
             log_error("Refund $refundId created for transaction $transactionId by admin $adminId", 'info');
