@@ -207,8 +207,7 @@ $archivedCount = 0;
                                                     <i class="bi bi-play-fill me-1"></i> Play
                                                 </button>
                                                 
-                                                <a href="<?php echo htmlspecialchars($recording['url']); ?>" 
-                                                   download="<?php echo htmlspecialchars($recording['name']); ?>.mp4"
+                                                <a href="<?php echo BASE; ?>download-video?id=<?php echo $recording['recordID']; ?>&name=<?php echo urlencode($recording['name']); ?>.mp4"
                                                    class="btn btn-sm btn-info" data-bs-toggle="tooltip" title="Download Recording">
                                                     <i class="bi bi-download"></i>
                                                 </a>
@@ -312,9 +311,8 @@ $archivedCount = 0;
                                                     <i class="bi bi-play-fill me-1"></i> Play
                                                 </button>
                                                 
-                                                <a href="<?php echo htmlspecialchars($recording['url']); ?>" 
-                                                   download="<?php echo htmlspecialchars($recording['name']); ?>.mp4"
-                                                   class="btn btn-sm btn-info">
+                                                <a href="<?php echo BASE; ?>backends/handler/download_recording.php?id=<?php echo $recording['recordID']; ?>&name=<?php echo urlencode($recording['name']); ?>.mp4"
+                                                   class="btn btn-sm btn-info" data-bs-toggle="tooltip" title="Download Recording">
                                                     <i class="bi bi-download"></i>
                                                 </a>
                                             </div>

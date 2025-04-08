@@ -119,9 +119,6 @@ $title = "My Files";
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <h5 class="card-title mb-0">Storage Usage</h5>
                                     <div class="btn-group">
-                                        <button class="btn btn-warning" onclick="fixPermissions()">
-                                            <i class="fas fa-lock-open me-1"></i> Fix File Access
-                                        </button>
                                         <button class="btn btn-primary" onclick="showUploadModal()">
                                             <i class="fas fa-upload me-1"></i> Upload File
                                         </button>
@@ -558,7 +555,7 @@ $title = "My Files";
             // Show loading
             showLoading(true);
 
-            fetch(BASE + 'upload-file', {
+            fetch(BASE + 'api/materials?action=upload', {
                 method: 'POST',
                 body: formData
             })

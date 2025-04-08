@@ -14,8 +14,8 @@ $class_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 // Get class details or redirect if invalid
 $classDetails = getClassDetails($class_id);
-if (!$classDetails) {
-    header('Location: ./');
+if (!$classDetails || $classDetails['status'] === 'completed') {
+    header('Location: ./?id='.$class_id);
     exit();
 }
 

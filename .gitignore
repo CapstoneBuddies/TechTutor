@@ -4,6 +4,9 @@
 # Logs
 /logs/deleted_accounts/*
 !/logs/deleted_accounts/.gitkeep
+/logs/analytics/*
+!/logs/analytics/.gitkeep
+
 /logs/*
 !/logs/.gitkeep
 #

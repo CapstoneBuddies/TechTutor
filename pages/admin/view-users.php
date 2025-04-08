@@ -332,6 +332,9 @@
                             <a href="users/details?id=${user.uid}" class="btn btn-info view-user" data-bs-toggle="tooltip" title='View'>
                                 <i class="bi bi-eye"></i> 
                             </a>
+                            <button class="btn btn-danger delete-user" data-user-id="${user.uid}" data-bs-toggle="tooltip" title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
                         `;
                     } else {
                         actionsCell.innerHTML = `<span class="text-muted">Current User</span>`;
@@ -416,7 +419,7 @@
                 fetch(userStatus, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/x-www-form-urlencoded',
                     },
                     body: `user_id=${userId}`
                 })

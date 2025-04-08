@@ -226,7 +226,7 @@ function searchUsers($search) {
                            u.status, u.last_login 
                            FROM users u 
                            WHERE (u.first_name LIKE ? OR u.last_name LIKE ? OR u.email LIKE ? OR CONCAT(u.first_name, ' ', u.last_name) LIKE ?) 
-                           AND u.status IN (0,1) 
+                           AND u.status = 1 
                            ORDER BY u.last_name, u.first_name");
     
     $stmt->bind_param("ssss", $search, $search, $search, $search);
@@ -309,7 +309,7 @@ function forgotPassword() {
         }
 
         // Check if email exists
-        $stmt = $conn->prepare("SELECT uid, first_name FROM users WHERE email = ?");
+        $stmt = $conn->prepare("SELECT uid, first_name FROM users WHERE email = ? AND status = 1");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $result = $stmt->get_result();

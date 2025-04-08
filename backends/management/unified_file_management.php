@@ -538,7 +538,8 @@ class UnifiedFileManagement {
             // Get folder info
             $sql = "SELECT f.*, u.role FROM file_folders f 
                     JOIN users u ON f.user_id = u.uid
-                    WHERE f.folder_id = ?";
+                    WHERE f.folder_id = ?
+                    AND u.status = 1";
             $stmt = $this->db->prepare($sql);
             $stmt->bind_param("i", $folderId);
             $stmt->execute();
@@ -604,7 +605,8 @@ class UnifiedFileManagement {
             // Get folder info
             $sql = "SELECT f.*, u.role FROM file_folders f 
                     JOIN users u ON f.user_id = u.uid
-                    WHERE f.folder_id = ?";
+                    WHERE f.folder_id = ?
+                    AND u.status = 1";
             $stmt = $this->db->prepare($sql);
             $stmt->bind_param("i", $folderId);
             $stmt->execute();
@@ -1016,7 +1018,8 @@ class UnifiedFileManagement {
                     LEFT JOIN file_categories c ON f.category_id = c.category_id
                     LEFT JOIN file_folders ff ON f.folder_id = ff.folder_id
                     JOIN users u ON f.user_id = u.uid
-                    WHERE f.folder_id = ?";
+                    WHERE f.folder_id = ?
+                    AND u.status = 1";
             
             $params = [$folderId];
             $types = "i";

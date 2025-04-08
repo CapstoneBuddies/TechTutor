@@ -34,7 +34,7 @@ log_error($action);
 try {
     // Handle different actions
     switch ($action) {
-        case 'upload':
+        case 'upload': 
             handleFileUpload($fileManager);
             break;
             

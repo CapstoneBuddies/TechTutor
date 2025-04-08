@@ -18,7 +18,7 @@ if (!in_array($currentPage, $noFooterPages)): ?>
                     <img src="<?php echo IMG; ?>stand_alone_logo.png" alt="TechTutor" width="30" class="me-2">
                     TechTutor
                 </h5>
-                <p class="text-muted"><?php echo $_SERVER['HTTP_HOST'];?> Empowering students through personalized online tutoring</p>
+                <p class="text-muted"><a href="techtutor.cfd">TechTutor</a>, Empowering students through personalized online tutoring</p>
             </div>
 
             <!-- Quick Links -->

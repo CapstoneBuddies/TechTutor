@@ -1,4 +1,4 @@
-<?php
+<?php 
 class MeetingManagement {
     private $bbbBaseUrl;
     private $bbbSecret;
@@ -176,15 +176,21 @@ class MeetingManagement {
     /**
      * Get recordings for a meeting
      * @param string $meetingId Meeting identifier
-     * @return array List of recordings
+     * @return array Meeting recordings
      */
     public function getRecordings($meetingId) {
         try {
             $params = ['meetingID' => $meetingId];
             $response = $this->makeRequest('getRecordings', $params);
+            // Check if the request failed at the connection level
+            if (isset($response['returncode']) && $response['returncode'] === 'FAILED') {
+                log_error("Failed to connect to BBB server: " . ($response['message'] ?? 'Unknown error'), "meeting_error");
+                return [];
+            }
 
-            if ($response['returncode'] !== 'SUCCESS') {
-                throw new Exception("Failed to get recordings: " . ($response['message'] ?? 'Unknown error'));
+            if (!isset($response['returncode']) || $response['returncode'] !== 'SUCCESS') {
+                log_error("BBB API returned an error: " . ($response['message'] ?? 'Unknown error'), "meeting_error");
+                return [];
             }
 
             if (!isset($response['recordings']) || empty($response['recordings'])) {
@@ -203,7 +209,8 @@ class MeetingManagement {
                     'endTime' => $recording['endTime'],
                     'size' => $recording['size'] ?? 0,
                     'duration' => $recording['duration'] ?? 0,
-                    'url' => $recording['playback']['format']['url'] ?? null,
+                    'url' => $recording['playback']['format'][1]['url'] ?? null,
+                    'video_url' => $recording['playback']['format'][0]['url'] ?? null,
                     'created_at' => strtotime($recording['startTime']),
                     'participants' => $recording['participants'] ?? 0,
                 ];
@@ -211,8 +218,8 @@ class MeetingManagement {
 
             return $recordings;
         } catch (Exception $e) {
-            log_error("Recording retrieval error: " . $e->getMessage(), "meeting");
-            throw new Exception("Failed to get recordings");
+            log_error("Recording retrieval error: " . $e->getMessage(), "meeting_error");
+            return [];
         }
     }
 
@@ -360,20 +367,48 @@ class MeetingManagement {
      */
     public function getRecordingDownloadUrl($recording) {
         try {
-            if (!isset($recording['playback']['format']['url'])) {
+            if (!isset($recording['video_url'])) {
                 return null;
             }
 
-            // Replace the playback URL with the download URL
-            // BigBlueButton stores recordings in the format: https://server/playback/presentation/2.0/playback.html?meetingId=...
-            // Download URL format: https://server/presentation/[meetingId]/video.mp4
-            $playbackUrl = $recording['playback']['format']['url'];
-            $pattern = '/playback\.html\?meetingId=([^&]+)/';
-            if (preg_match($pattern, $playbackUrl, $matches)) {
-                $baseUrl = substr($playbackUrl, 0, strpos($playbackUrl, '/playback/'));
-                return $baseUrl . '/presentation/' . $matches[1] . '/video.mp4';
+            // For BigBlueButton 2.7.x, the direct download URL format is:
+            // https://bbb.techtutor.cfd/recording/<recordingID>.mp4
+            
+            // Get base domain from the video URL
+            $videoUrl = $recording['video_url'];
+            $parsedUrl = parse_url($videoUrl);
+            $baseUrl = $parsedUrl['scheme'] . '://' . $parsedUrl['host'];
+            
+            // Try to get record ID from the URL or use the one from the recording data
+            $recordId = $recording['recordID'] ?? null;
+            
+            if ($recordId) {
+                // Direct download URL for BBB 2.7.x
+                return $baseUrl . '/recording/' . $recordId . '.mp4';
             }
-            return null;
+            
+            // Fallback to previous patterns if record ID is not available
+            // Pattern 1: BBB 2.6.x style with video format
+            $pattern1 = '/playback\/video\/([a-z0-9\-]+)\/?$/';
+            // Pattern 2: BBB 2.7.x style URL with presentation format
+            $pattern2 = '/playback\/presentation\/2\.3\/([a-z0-9\-]+)(?:\.html|\/?$)/';
+            // Pattern 3: BBB 2.7.x style URL with video format
+            $pattern3 = '/video\/recording\/([a-z0-9\-]+)(?:\.mp4|\/?$)/';
+            
+            if (preg_match($pattern1, $videoUrl, $matches)) {
+                $recordId = $matches[1];
+                return $baseUrl . '/recording/' . $recordId . '.mp4';
+            } elseif (preg_match($pattern2, $videoUrl, $matches)) {
+                $recordId = $matches[1];
+                return $baseUrl . '/recording/' . $recordId . '.mp4';
+            } elseif (preg_match($pattern3, $videoUrl, $matches)) {
+                $recordId = $matches[1];
+                return $baseUrl . '/recording/' . $recordId . '.mp4';
+            } else {
+                // If no pattern matches, add ?download=true to the URL
+                log_error("Unable to parse BBB recording URL format: $videoUrl", "meeting");
+                return $videoUrl . '?download=true';
+            }
         } catch (Exception $e) {
             log_error("Error generating download URL: " . $e->getMessage(), "meeting");
             return null;
@@ -497,34 +532,37 @@ class MeetingManagement {
             // Get all visibility settings for this class
             $visibilitySettings = $this->getRecordingVisibilitySettings($class_id);
 
-            // Get recordings for each meetingparticipants
+            // Get recordings for each meeting
             $recordings = [];
             foreach ($meetings as $meeting_data) {
                 $meetingRecordings = $this->getRecordings($meeting_data['meeting_uid']);
+                // Skip if there was an error or no recordings
+                if (empty($meetingRecordings)) {
+                    log_error("No recordings found for meeting {$meeting_data['meeting_uid']}", "meeting_info");
+                    continue;
+                }
 
-                if (!empty($meetingRecordings)) {
-                    foreach ($meetingRecordings as $recording) {
-                        $recording['session_date'] = $meeting_data['session_date'];
-                        $recording['start_time'] = $meeting_data['start_time'];
-                        $recording['end_time'] = $meeting_data['end_time'];
-                        $recording['download_url'] = $this->getRecordingDownloadUrl($recording);
-                        
-                        // Check if this recording is in our visibility table
-                        $recordingId = $recording['recordID'];
-                        if (isset($visibilitySettings[$recordingId])) {
-                            $settings = $visibilitySettings[$recordingId];
-                            $recording['is_visible'] = (bool)$settings['is_visible'];
-                            $recording['is_archived'] = (bool)$settings['is_archived'];
-                            $recording['archived'] = (bool)$settings['is_archived']; // For backward compatibility
-                        } else {
-                            // Fall back to meta data if not in our database
-                            $recording['is_visible'] = true; // Default to visible
-                            $recording['is_archived'] = isset($recording['meta']['archived']) && $recording['meta']['archived'] === 'true';
-                            $recording['archived'] = $recording['is_archived']; // For backward compatibility
-                        }
-                        
-                        $recordings[] = $recording;
+                foreach ($meetingRecordings as $recording) {
+                    $recording['session_date'] = $meeting_data['session_date'];
+                    $recording['start_time'] = $meeting_data['start_time']; 
+                    $recording['end_time'] = $meeting_data['end_time'];
+                    $recording['download_url'] = $this->getRecordingDownloadUrl($recording);
+                    
+                    // Check if this recording is in our visibility table
+                    $recordingId = $recording['recordID'];
+                    if (isset($visibilitySettings[$recordingId])) {
+                        $settings = $visibilitySettings[$recordingId];
+                        $recording['is_visible'] = (bool)$settings['is_visible'];
+                        $recording['is_archived'] = (bool)$settings['is_archived'];
+                        $recording['archived'] = (bool)$settings['is_archived']; // For backward compatibility
+                    } else {
+                        // Fall back to meta data if not in our database
+                        $recording['is_visible'] = true; // Default to visible
+                        $recording['is_archived'] = isset($recording['meta']['archived']) && $recording['meta']['archived'] === 'true';
+                        $recording['archived'] = $recording['is_archived']; // For backward compatibility
                     }
+                    
+                    $recordings[] = $recording;
                 }
             }
 
@@ -955,14 +993,36 @@ class MeetingManagement {
      * @return array API response
      */
     private function makeRequest($action, $params) {
-        $url = $this->buildUrl($action, $params);
-        $response = file_get_contents($url);
-        
-        if ($response === false) {
-            throw new Exception("Failed to make API request");
+        try {
+            $url = $this->buildUrl($action, $params);
+            
+            // Set error handling context
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 5 // 5 second timeout
+                ]
+            ]);
+            
+            $response = @file_get_contents($url, false, $context);
+            
+            if ($response === false) {
+                $error = error_get_last();
+                $errorMsg = isset($error['message']) ? $error['message'] : "Unknown error";
+                log_error("BBB API request failed: " . $errorMsg, "meeting_error");
+                return ['returncode' => 'FAILED', 'message' => 'Connection to BBB server failed', 'error' => $errorMsg];
+            }
+            
+            $xml = simplexml_load_string($response);
+            if ($xml === false) {
+                log_error("Failed to parse XML response from BBB", "meeting_error");
+                return ['returncode' => 'FAILED', 'message' => 'Invalid response from BBB server'];
+            }
+            
+            return json_decode(json_encode($xml), true);
+        } catch (Exception $e) {
+            log_error("BBB API request exception: " . $e->getMessage(), "meeting_error");
+            return ['returncode' => 'FAILED', 'message' => $e->getMessage()];
         }
-        $xml = simplexml_load_string($response);
-        return json_decode(json_encode($xml), true);
     }
 
     /**

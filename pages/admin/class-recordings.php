@@ -55,7 +55,7 @@ $title = "Class Recordings - " . htmlspecialchars($classDetails['class_name']);
                                         <ol class="breadcrumb mb-1">
                                             <li class="breadcrumb-item"><a href="<?php echo BASE; ?>dashboard">Dashboard</a></li>
                                             <li class="breadcrumb-item"><a href="../">Classes</a></li>
-                                            <li class="breadcrumb-item d-none d-md-inline"><a href="../.?id=<?php echo $class_id; ?>"><?php echo htmlspecialchars($classDetails['class_name']); ?></a></li>
+                                            <li class="breadcrumb-item d-none d-md-inline"><a href="../?id=<?php echo $class_id; ?>"><?php echo htmlspecialchars($classDetails['class_name']); ?></a></li>
                                             <li class="breadcrumb-item active">Recordings</li>
                                         </ol>
                                     </nav>
@@ -122,7 +122,7 @@ $title = "Class Recordings - " . htmlspecialchars($classDetails['class_name']);
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <?php foreach ($activeRecordings as $recording): ?>
+                                            <?php foreach ($activeRecordings as $recording): ?> 
                                                 <tr data-recording-id="<?php echo $recording['recordID']; ?>">
                                                     <td>
                                                         <?php echo date('F d, Y', strtotime($recording['session_date'])); ?>
@@ -142,7 +142,7 @@ $title = "Class Recordings - " . htmlspecialchars($classDetails['class_name']);
                                                                 <i class="bi bi-play-circle"></i>
                                                                 <span class="d-none d-md-inline"> Watch</span>
                                                             </a>
-                                                            <a href="<?php echo $recording['download_url']; ?>" 
+                                                            <a href="<?php echo BASE; ?>download-video?id=<?php echo $recording['recordID']; ?>&name=<?php echo urlencode($recording['name'] ?? 'recording'); ?>.mp4"
                                                                class="btn btn-sm btn-outline-success">
                                                                 <i class="bi bi-download"></i>
                                                                 <span class="d-none d-md-inline"> Download</span>
@@ -221,7 +221,7 @@ $title = "Class Recordings - " . htmlspecialchars($classDetails['class_name']);
                                                                 <i class="bi bi-play-circle"></i>
                                                                 <span class="d-none d-md-inline"> Watch</span>
                                                             </a>
-                                                            <a href="<?php echo $recording['download_url']; ?>" 
+                                                            <a href="<?php echo BASE; ?>backends/handler/download_recording.php?id=<?php echo $recording['recordID']; ?>&name=<?php echo urlencode($recording['name'] ?? 'recording'); ?>.mp4"
                                                                class="btn btn-sm btn-outline-success">
                                                                 <i class="bi bi-download"></i>
                                                                 <span class="d-none d-md-inline"> Download</span>

@@ -8,7 +8,7 @@ require_once BACKEND.'student_management.php';
 // Ensure user is logged in and is an ADMIN
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'ADMIN') {
     header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'error' => 'Unauthorized access']);
+    echo json_encode(['success' => false, 'message' => 'Unauthorized access']);
     exit();
 }
 
@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($classDetails) {
                 $response = ['success' => true, 'data' => $classDetails];
             } else {
-                $response = ['success' => false, 'error' => 'Class not found'];
+                $response = ['success' => false, 'message' => 'Class not found'];
             }
             break;
             
@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($result['success']) {
                 $response = ['success' => true, 'message' => 'Class updated successfully'];
             } else {
-                $response = ['success' => false, 'error' => $result['error']];
+                $response = ['success' => false, 'message' => $result['message']];
             }
             break;
             
@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($result['success']) {
                 $response = ['success' => true, 'message' => 'Student enrolled successfully'];
             } else {
-                $response = ['success' => false, 'error' => $result['error']];
+                $response = ['success' => false, 'message' => $result['message']];
             }
             break;
             
@@ -80,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($result['success']) {
                 $response = ['success' => true, 'message' => 'Student removed from class'];
             } else {
-                $response = ['success' => false, 'error' => $result['error']];
+                $response = ['success' => false, 'message' => $result['message'] ?? 'Failed to remove student from class'];
             }
             break;
             
@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($result['success']) {
                 $response = ['success' => true, 'message' => 'Recording ' . ($archive ? 'archived' : 'unarchived') . ' successfully'];
             } else {
-                $response = ['success' => false, 'error' => $result['error']];
+                $response = ['success' => false, 'message' => $result['message']];
             }
             break;
             
@@ -105,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($result['success']) {
                 $response = ['success' => true, 'message' => 'Recording deleted successfully'];
             } else {
-                $response = ['success' => false, 'error' => $result['error']];
+                $response = ['success' => false, 'message' => $result['message']];
             }
             break;
             
@@ -117,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($result) {
                 $response = ['success' => true, 'message' => 'Feedback archived successfully'];
             } else {
-                $response = ['success' => false, 'error' => 'Failed to archive feedback'];
+                $response = ['success' => false, 'message' => 'Failed to archive feedback'];
             }
             break;
             
@@ -128,7 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($result) {
                 $response = ['success' => true, 'message' => 'Feedback unarchived successfully'];
             } else {
-                $response = ['success' => false, 'error' => 'Failed to unarchive feedback'];
+                $response = ['success' => false, 'message' => 'Failed to unarchive feedback'];
             }
             break;
             
@@ -139,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($result) {
                 $response = ['success' => true, 'message' => 'Feedback deleted successfully'];
             } else {
-                $response = ['success' => false, 'error' => 'Failed to delete feedback'];
+                $response = ['success' => false, 'message' => 'Failed to delete feedback'];
             }
             break;
             
@@ -149,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $status = $_POST['status'] ?? '';
             
             if (!in_array($status, ['pending', 'confirmed', 'completed', 'cancelled'])) {
-                $response = ['success' => false, 'error' => 'Invalid status'];
+                $response = ['success' => false, 'message' => 'Invalid status'];
                 break;
             }
             
@@ -158,7 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($result['success']) {
                 $response = ['success' => true, 'message' => 'Session status updated'];
             } else {
-                $response = ['success' => false, 'error' => $result['error']];
+                $response = ['success' => false, 'message' => $result['message']];
             }
             break;
             
@@ -173,12 +173,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($result['success']) {
                 $response = ['success' => true, 'message' => 'Session rescheduled successfully'];
             } else {
-                $response = ['success' => false, 'error' => $result['error']];
+                $response = ['success' => false, 'message' => $result['message']];
             }
             break;
             
         default:
-            $response = ['success' => false, 'error' => 'Invalid action'];
+            $response = ['success' => false, 'message' => 'Invalid action'];
     }
     
     // Return JSON response
@@ -198,7 +198,7 @@ function updateScheduleStatus($schedule_id, $status) {
         $check->execute();
         
         if ($check->get_result()->num_rows === 0) {
-            return ['success' => false, 'error' => 'Session not found'];
+            return ['success' => false, 'message' => 'Session not found'];
         }
         
         // Update the status
@@ -215,11 +215,11 @@ function updateScheduleStatus($schedule_id, $status) {
             
             return ['success' => true];
         } else {
-            return ['success' => false, 'error' => 'Database error'];
+            return ['success' => false, 'message' => 'Database message'];
         }
     } catch (Exception $e) {
-        error_log("Error updating schedule status: " . $e->getMessage());
-        return ['success' => false, 'error' => 'System error'];
+        message_log("message updating schedule status: " . $e->getMessage());
+        return ['success' => false, 'message' => 'System message'];
     }
 }
 
@@ -230,7 +230,7 @@ function rescheduleClassSession($schedule_id, $session_date, $start_time, $end_t
     try {
         // Validate date and time inputs
         if (!strtotime($session_date) || !strtotime($start_time) || !strtotime($end_time)) {
-            return ['success' => false, 'error' => 'Invalid date or time format'];
+            return ['success' => false, 'message' => 'Invalid date or time format'];
         }
         
         // Format times for MySQL
@@ -248,7 +248,7 @@ function rescheduleClassSession($schedule_id, $session_date, $start_time, $end_t
         $result = $check->get_result();
         
         if ($result->num_rows === 0) {
-            return ['success' => false, 'error' => 'Session not found'];
+            return ['success' => false, 'message' => 'Session not found'];
         }
         
         $sessionData = $result->fetch_assoc();
@@ -278,10 +278,10 @@ function rescheduleClassSession($schedule_id, $session_date, $start_time, $end_t
             
             return ['success' => true];
         } else {
-            return ['success' => false, 'error' => 'Database error'];
+            return ['success' => false, 'message' => 'Database message'];
         }
     } catch (Exception $e) {
-        error_log("Error rescheduling session: " . $e->getMessage());
-        return ['success' => false, 'error' => 'System error'];
+        message_log("message rescheduling session: " . $e->getMessage());
+        return ['success' => false, 'message' => 'System message'];
     }
 }

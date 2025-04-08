@@ -184,9 +184,11 @@ $title = 'My Classes';
                                             <td>
                                                 <?php 
                                                     try {
-                                                        $completion = isset($class['completed_sessions']) && isset($class['total_sessions']) 
-                                                        ? ($class['completed_sessions'] / $class['total_sessions']) * 100 
-                                                        : 0;
+                                                        $completed_sessions = isset($class['completed_sessions']) ? (int)$class['completed_sessions'] : 0;
+                                                        $total_sessions = isset($class['total_sessions']) ? (int)$class['total_sessions'] : 1; // Prevent division by zero
+                                                        
+                                                        // Ensure we don't divide by zero
+                                                        $completion = $total_sessions > 0 ? ($completed_sessions / $total_sessions) * 100 : 0;
                                                     }
                                                     catch(Exception $e) {
                                                         $completion = 0;

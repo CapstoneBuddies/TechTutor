@@ -30,7 +30,7 @@ class PayMongoHelper {
                         'card',
                         'gcash',
                         'grab_pay',
-                        'paymaya'
+                        'maya'
                     ],
                     'payment_method_options' => [
                         'card' => ['request_three_d_secure' => 'any']

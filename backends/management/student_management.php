@@ -85,6 +85,7 @@ function getStudentByTutor($tutor_id) {
         JOIN class c ON e.class_id = c.class_id 
         WHERE c.tutor_id = ? 
         AND e.status = 'active'
+        AND u.status = 1
         GROUP BY u.uid, c.class_id
         ORDER BY u.last_name, u.first_name, c.class_name");
         
@@ -146,7 +147,8 @@ function getStudentByClass($class_id) {
                                   e.enrollment_date, e.status as enrollment_status
                            FROM users u 
                            JOIN enrollments e ON u.uid = e.student_id
-                           WHERE e.class_id = ?");
+                           WHERE e.class_id = ?
+                           AND u.status = 1");
     
     $stmt->bind_param("i", $class_id);
     $stmt->execute();
@@ -226,6 +228,7 @@ function getTutorRatings($tutor_id) {
                            FROM session_feedback sf
                            JOIN users u ON sf.student_id = u.uid
                            WHERE sf.tutor_id = ?
+                           AND u.status = 1
                            ORDER BY sf.created_at DESC");
     $stmt->bind_param("i", $tutor_id);
     $stmt->execute();
@@ -571,6 +574,7 @@ function getEnrolledSubjectsForStudent($studentId) {
             JOIN subject s ON cl.subject_id = s.subject_id
             JOIN course c ON s.course_id = c.course_id
             WHERE e.student_id = ?
+            AND u.status = 1
             ORDER BY e.enrollment_date DESC
         ");
         $stmt->execute([$studentId]);
@@ -805,8 +809,8 @@ function isWithin24Hours($scheduleId) {
     $stmt->execute();
 
     $result = $stmt->get_result();
-    if($row = $result->fetch_assoc()) {
-        $completionDateTime  = new DateTime($row['status_changed_at']);
+    if($row = $result->fetch_assoc() && !empty($row['status_changed_at'])) {
+        $completionDateTime = new DateTime($row['status_changed_at']);
         $completionDateTime->add(new DateInterval('PT24H'));
         $currentDateTime = new DateTime();
     
@@ -899,7 +903,7 @@ function dropClass($student_id, $class_id, $reason = '') {
         // Try to send an email notification to the tutor
         try {
             // Get tutor email
-            $stmt = $conn->prepare("SELECT email FROM users WHERE uid = ?");
+            $stmt = $conn->prepare("SELECT email FROM users WHERE uid = ? AND status = 1");
             $stmt->bind_param("i", $enrollment['tutor_id']);
             $stmt->execute();
             $tutor_email = $stmt->get_result()->fetch_assoc()['email'];
@@ -994,7 +998,7 @@ function getEnrolledClass($studentId) {
 */
 function getAvailableStudentsForClass($classId) {
     global $conn;
-    $stmt = $conn->prepare("SELECT CONCAT(u.first_name,' ',u.last_name) AS name, u.uid AS student_id, u.email FROM users u WHERE role = 'TECHKID' AND u.uid NOT IN ( SELECT student_id FROM enrollments WHERE class_id = ? AND status != 'dropped')");
+    $stmt = $conn->prepare("SELECT CONCAT(u.first_name,' ',u.last_name) AS name, u.uid AS student_id, u.email FROM users u WHERE role = 'TECHKID' AND u.uid NOT IN ( SELECT student_id FROM enrollments WHERE class_id = ? AND status != 'dropped') AND u.status = 1");
     $stmt->bind_param('i',$classId);
     $stmt->execute();
 

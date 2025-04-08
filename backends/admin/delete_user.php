@@ -22,7 +22,7 @@ if ($user_id == $_SESSION['user']) {
     exit();
 }
 
-$filePath = BASE.'logs/deletedeleted_accounts/';
+$filePath = BASE.'logs/deleted_accounts/';
 
 try {
     global $conn;
@@ -44,7 +44,40 @@ try {
     
     $user = $result->fetch_assoc();
     
-    // Delete user's notifications
+    // Get count for deleted user/s
+    $count = $conn->prepare("SELECT email FROM users WHERE email LIKE 'deleted%' ");
+    $count->execute();
+    $result = $count->get_result();
+    $counter = 0;
+    if ($result->num_rows > 0) { 
+        $counter = $result->num_rows;
+    }
+    $deleted_status = ($counter > 0) ? 'deleted'.$counter : 'deleted';
+
+    // Update User status to 2 and set Email to unknown
+    $delete = $conn->prepare("UPDATE users SET status=2, email=? WHERE uid = ?");
+    $delete->bind_param("si", $deleted_status, $user_id);
+    $delete->execute();
+
+    // Log the action
+    $admin_name = $_SESSION['first_name'] . ' ' . $_SESSION['last_name'];
+    $user_name = $user['first_name'] . ' ' . $user['last_name'].' email:'.$user['email'];
+    $log_message = "Admin {$admin_name} deleted user {$user_name} (ID: {$user_id})";
+    error_log($log_message,3,$filePath);
+    
+    // Commit transaction
+    $conn->commit();
+    
+    echo json_encode(['success' => true, 'message' => 'User has been deleted successfully']);
+} catch (Exception $e) {
+    if (isset($conn) && $conn->connect_errno === 0) {
+        $conn->rollback();
+    }
+    log_error("Error in delete_user.php: " . $e->getMessage());
+    echo json_encode(['success' => false, 'message' => 'An error occurred while deleting user']);
+}
+/**
+ * // Delete user's notifications
     $stmt = $conn->prepare("DELETE FROM notifications WHERE recipient_id = ?");
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
@@ -57,14 +90,14 @@ try {
     // Handle role-specific deletions
     if ($user['role'] === 'TECHGURU') {
         // Get classes taught by this tutor
-        $stmt = $conn->prepare("SELECT id FROM class WHERE tutor_id = ?");
+        $stmt = $conn->prepare("SELECT class_id FROM class WHERE tutor_id = ?");
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
         $result = $stmt->get_result();
         
         $class_ids = [];
         while ($row = $result->fetch_assoc()) {
-            $class_ids[] = $row['id'];
+            $class_ids[] = $row['class_id'];
         }
         
         // Delete class schedules for these classes
@@ -81,28 +114,28 @@ try {
             $stmt->execute();
             
             // Delete classes
-            $stmt = $conn->prepare("DELETE FROM class WHERE id IN ($placeholders)");
+            $stmt = $conn->prepare("DELETE FROM class WHERE class_id IN ($placeholders)");
             $stmt->bind_param($types, ...$class_ids);
             $stmt->execute();
         }
         
         // Delete ratings for this tutor
-        $stmt = $conn->prepare("DELETE FROM ratings WHERE tutor_id = ?");
+        $stmt = $conn->prepare("DELETE FROM session_feedback WHERE tutor_id = ?");
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
     } elseif ($user['role'] === 'TECHKID') {
         // Delete student enrollments
-        $stmt = $conn->prepare("DELETE FROM class_schedule WHERE user_id = ? AND role = 'STUDENT'");
+        $stmt = $conn->prepare("DELETE FROM enrollments WHERE student_id = ?");
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
         
         // Delete ratings given by this student
-        $stmt = $conn->prepare("DELETE FROM ratings WHERE student_id = ?");
+        $stmt = $conn->prepare("DELETE FROM session_feedback WHERE student_id = ?");
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
         
         // Delete certificates
-        $stmt = $conn->prepare("DELETE FROM certificate WHERE student_id = ?");
+        $stmt = $conn->prepare("DELETE FROM certificate WHERE recipient = ?");
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
     }
@@ -127,21 +160,5 @@ try {
         echo json_encode(['success' => false, 'message' => 'Failed to delete user']);
         exit();
     }
-    
-    // Log the action
-    $admin_name = $_SESSION['first_name'] . ' ' . $_SESSION['last_name'];
-    $user_name = $user['first_name'] . ' ' . $user['last_name'];
-    $log_message = "Admin {$admin_name} deleted user {$user_name} (ID: {$user_id})";
-    log_error($log_message,'security');
-    
-    // Commit transaction
-    $conn->commit();
-    
-    echo json_encode(['success' => true, 'message' => 'User has been deleted successfully']);
-} catch (Exception $e) {
-    if (isset($conn) && $conn->connect_errno === 0) {
-        $conn->rollback();
-    }
-    log_error("Error in delete_user.php: " . $e->getMessage());
-    echo json_encode(['success' => false, 'message' => 'An error occurred while deleting user']);
-}
+    */
+?>

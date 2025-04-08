@@ -19,11 +19,18 @@
     if ($class_id) {
         $class = getClassDetails($class_id);
         $students = getEnrolledStudents($class_id);
+        log_error("TEsT: ".(!$class['status'] === 'completed') );
     }
 ?>
 <!DOCTYPE html>
 <html lang="en">
     <?php include ROOT_PATH . '/components/head.php'; ?>
+    <script> 
+        showLoading(true);
+        document.addEventListener('DOMContentLoaded', function() {
+            showLoading(false);
+        });
+    </script>
     <body data-base="<?php echo BASE; ?>">
         <?php include ROOT_PATH . '/components/header.php'; ?>
 
@@ -82,9 +89,11 @@
 
                     <!-- Action Buttons -->
                     <div class="d-flex flex-wrap gap-2 mb-4">
+                        <?php if(!($class['status'] === 'completed') ): ?>
                         <a href="details/edit?id=<?php echo $class_id; ?>" class="btn btn-primary">
                             <i class="bi bi-pencil"></i> Edit Class
                         </a>
+                        <?php endif; ?>
                         <a href="details/sessions?id=<?php echo $class_id; ?>" class="btn btn-success">
                             <i class="bi bi-calendar-event"></i> Sessions
                         </a>
@@ -94,8 +103,13 @@
                         <a href="details/feedback?id=<?php echo $class_id; ?>" class="btn btn-warning text-dark">
                             <i class="bi bi-chat-dots"></i> Feedback
                         </a>
+                        <?php if(!($class['status'] === 'completed') ): ?>
                         <a href="details/enroll?id=<?php echo $class_id; ?>" class="btn btn-secondary">
                             <i class="bi bi-people"></i> Enrollments
+                        </a>
+                        <?php endif; ?>
+                        <a href="details/files?id=<?php echo $class_id; ?>" class="btn btn-outline-secondary">
+                            <i class="bi bi-folder"></i> Files
                         </a>
                     </div>
 
@@ -170,9 +184,11 @@
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h3 class="card-title mb-0"><i class="bi bi-people-fill"></i> Enrolled Students</h3>
+                            <?php if(!$class['status'] === 'completed'): ?>
                             <a href="details/enroll?id=<?php echo $class_id; ?>" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-person-plus"></i> Manage
                             </a>
+                            <?php endif; ?>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
