@@ -7,7 +7,7 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'ADMIN') {
     echo json_encode(['success' => false, 'message' => 'Unauthorized access']);
     exit();
 }
-
+log_error("TEST:".print_r($_POST ,true));
 // Get user ID from request
 $user_id = isset($_POST['user_id']) ? intval($_POST['user_id']) : 0;
 

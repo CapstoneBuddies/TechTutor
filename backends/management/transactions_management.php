@@ -43,9 +43,10 @@ function getTransactions($page = 1, $filter = 'all', $role = '', $userId = null)
                         u.role as user_role,
                         (SELECT COUNT(*) FROM transaction_disputes td WHERE td.transaction_id = t.transaction_id) as has_dispute
                  FROM transactions t
-                 LEFT JOIN users u ON t.user_id = u.uid" . 
-                 $whereClause . 
-                 " ORDER BY t.created_at DESC
+                 LEFT JOIN users u ON t.user_id = u.uid
+                 WHERE t.transaction_id = ?
+                 AND (u.status = 1 OR u.status IS NULL)
+                 ORDER BY t.created_at DESC
                  LIMIT ? OFFSET ?";
 
         $stmt = $conn->prepare($query);
@@ -104,7 +105,8 @@ function getTransactionDetails($transactionId) {
                         (SELECT COUNT(*) FROM transaction_disputes td WHERE td.transaction_id = t.transaction_id) as has_dispute
                  FROM transactions t
                  LEFT JOIN users u ON t.user_id = u.uid
-                 WHERE t.transaction_id = ?";
+                 WHERE t.transaction_id = ?
+                 AND (u.status = 1 OR u.status IS NULL)";
 
         $stmt = $conn->prepare($query);
         $stmt->bind_param('s', $transactionId);
@@ -200,9 +202,10 @@ function exportTransactions($filter = 'all', $role = '', $userId = null) {
                         u.role as user_role,
                         (SELECT COUNT(*) FROM transaction_disputes td WHERE td.transaction_id = t.transaction_id) as has_dispute
                  FROM transactions t
-                 LEFT JOIN users u ON t.user_id = u.uid" . 
-                 $whereClause . 
-                 " ORDER BY t.created_at DESC";
+                 LEFT JOIN users u ON t.user_id = u.uid
+                 WHERE 1=1
+                 AND (u.status = 1 OR u.status IS NULL)
+                 ORDER BY t.created_at DESC";
 
         $stmt = $conn->prepare($query);
         if (!empty($params)) {
@@ -249,11 +252,13 @@ function getRecentTransactions($user_id) {
                     (SELECT COUNT(*) FROM transaction_disputes td WHERE td.transaction_id = t.transaction_id) as has_dispute
                 FROM transactions t
                 WHERE t.user_id = ?
+                AND (t.user_id = ? OR ? = 1)
+                AND (u.status = 1 OR u.status IS NULL)
                 ORDER BY t.created_at DESC
                 LIMIT 5";
 
         $stmt = $conn->prepare($query);
-        $stmt->bind_param('i', $user_id);
+        $stmt->bind_param('iii', $user_id, $user_id, $user_id);
         $stmt->execute();
         $result = $stmt->get_result();
         
@@ -383,9 +388,10 @@ function getDisputes($page = 1, $status = 'all', $role = '', $userId = null) {
                         u.role as user_role
                  FROM transaction_disputes td
                  LEFT JOIN transactions t ON td.transaction_id = t.transaction_id
-                 LEFT JOIN users u ON td.user_id = u.uid" . 
-                 $whereClause . 
-                 " ORDER BY td.created_at DESC
+                 LEFT JOIN users u ON td.user_id = u.uid
+                 WHERE td.subscription_id = ?
+                 AND (u.status = 1 OR u.status IS NULL)
+                 ORDER BY td.created_at DESC
                  LIMIT ? OFFSET ?";
 
         $stmt = $conn->prepare($query);
@@ -630,7 +636,8 @@ function getDisputeDetails($disputeId) {
                 LEFT JOIN 
                     users u ON d.user_id = u.uid
                 WHERE 
-                    d.dispute_id = ?";
+                    d.dispute_id = ?
+                AND (u.status = 1 OR u.status IS NULL)";
         
         $stmt = $conn->prepare($query);
         $stmt->bind_param('i', $disputeId);

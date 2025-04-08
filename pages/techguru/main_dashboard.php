@@ -265,10 +265,10 @@
                                                             <?php endif; ?>
                                                         </td>
                                                         <td>
-                                                            <a href="student-details?id=<?php echo $student['student_id']; ?>" 
+                                                            <a href="dashboard/t/class/details?id=<?php echo $student['class_id']; ?>" 
                                                                class="btn btn-sm btn-outline-primary d-flex align-items-center gap-2">
                                                                 <i class="bi bi-eye"></i>
-                                                                <span>View</span>
+                                                                <span>View Class</span>
                                                             </a>
                                                         </td>
                                                     </tr>

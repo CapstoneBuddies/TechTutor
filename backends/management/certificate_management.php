@@ -29,6 +29,7 @@ function getTechGuruCertificates($donor_id) {
              LEFT JOIN class cl ON c.class_id = cl.class_id
              LEFT JOIN subject s ON cl.subject_id = s.subject_id
              WHERE c.donor = ? 
+             AND u.status = 1
              ORDER BY c.issue_date DESC";
              
     try {
@@ -65,6 +66,7 @@ function getStudentCertificatesDetails($recipient_id) {
              LEFT JOIN class cl ON c.donor = cl.tutor_id
              LEFT JOIN subject s ON cl.subject_id = s.subject_id
              WHERE c.recipient = ? 
+             AND u.status = 1
              ORDER BY c.issue_date DESC";
              
     try {
@@ -180,6 +182,7 @@ function getEligibleStudentsForCertificates($tutor_id) {
              JOIN subject s ON c.subject_id = s.subject_id
              WHERE c.tutor_id = ? 
              AND e.status = 'completed'
+             AND u.status = 1
              AND NOT EXISTS (
                 SELECT 1 FROM certificate cert 
                 WHERE cert.recipient = e.student_id 
@@ -219,9 +222,11 @@ function getCertificateByUUID($cert_uuid) {
              FROM certificate c 
              JOIN users recipient_user ON c.recipient = recipient_user.uid 
              JOIN users donor_user ON c.donor = donor_user.uid
-             LEFT JOIN class cl ON c.class_id = cl.class_id
-             LEFT JOIN subject s ON cl.subject_id = s.subject_id
-             WHERE c.cert_uuid = ?";
+             JOIN class cl ON c.class_id = cl.class_id
+             JOIN subject s ON cl.subject_id = s.subject_id
+             WHERE c.cert_uuid = ?
+             AND recipient_user.status = 1 
+             AND donor_user.status = 1";
              
     try {
         $stmt = $conn->prepare($query);

@@ -1,4 +1,4 @@
-<?php
+<?php 
 require_once '../main.php';
 require_once BACKEND.'meeting_management.php';
 require_once BACKEND.'class_management.php';
@@ -132,7 +132,6 @@ switch ($action) {
                     sendClassSessionLink($scheduleId);
                 } else {
                     // Include the notifications management file and then call the function
-                    require_once BACKEND . 'notifications_management.php';
                     sendClassSessionLink($scheduleId);
                 }
 
@@ -191,6 +190,13 @@ switch ($action) {
             $meeting_data = $stmt->get_result()->fetch_assoc();
 
             if (!$meeting_data) {
+                // Update schedule status
+                $stmt = $conn->prepare("
+                    UPDATE class_schedule 
+                    SET status = 'completed' 
+                    WHERE schedule_id = ?
+                ");
+                $stmt->execute([$scheduleId]);
                 throw new Exception('Meeting not found or already ended');
             }
 
@@ -756,6 +762,9 @@ switch ($action) {
         }
         break;
 
+    case 'download':
+        log_error("got called!");
+        break;
     default:
         $response['error'] = 'Invalid action';
         break;

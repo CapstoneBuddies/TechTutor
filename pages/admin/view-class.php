@@ -1,6 +1,6 @@
 <?php 
     require_once '../../backends/main.php';
-    require_once BACKEND.'class_management.php';
+    require_once BACKEND.'class_management.php'; 
     
     // Check if user is admin
     if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'ADMIN') {

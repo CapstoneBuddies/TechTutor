@@ -3,6 +3,7 @@
     require_once BACKEND.'student_management.php';
     require_once BACKEND.'class_management.php';
     require_once BACKEND.'rating_management.php'; 
+    require_once BACKEND.'meeting_management.php';
 
     // Ensure user is logged in and is a TechKid
     if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'TECHKID') {
@@ -19,6 +20,9 @@
         header("location: ".BASE."dashboard/s/enrollments/class?id=".$class_id);
         exit();
     }
+
+    // Initialize MeetingManagement class
+    $meetingManager = new MeetingManagement();
 
     // Get class details
     $classDetails = getClassDetails($class_id);
@@ -375,15 +379,45 @@
                                                             </span>
                                                             
                                                             <?php if ($is_ongoing): ?>
-                                                                <button onclick="joinMeeting(<?php echo $schedule['schedule_id']; ?>)" 
-                                                                    class="btn btn-success btn-sm">
-                                                                    <i class="bi bi-camera-video-fill me-1"></i> 
-                                                                    <?php if(isset($_GET['ended']) && $_GET['ended'] == $schedule['schedule_id']): ?>
-                                                                    Rejoin Now
-                                                                    <?php else: ?>
-                                                                    Join Now
-                                                                    <?php endif; ?>
-                                                                </button>
+                                                                <?php
+                                                                    // Check if the meeting exists in the database
+                                                                    $meeting_stmt = $conn->prepare("
+                                                                        SELECT meeting_uid 
+                                                                        FROM meetings 
+                                                                        WHERE schedule_id = ? 
+                                                                        ORDER BY meeting_id DESC 
+                                                                        LIMIT 1
+                                                                    ");
+                                                                    $meeting_stmt->bind_param("i", $schedule['schedule_id']);
+                                                                    $meeting_stmt->execute();
+                                                                    $meeting_result = $meeting_stmt->get_result();
+                                                                    
+                                                                    if ($meeting_result->num_rows > 0) {
+                                                                        $meeting_data = $meeting_result->fetch_assoc();
+                                                                        $meeting_uid = $meeting_data['meeting_uid'];
+                                                                        
+                                                                        // Check if the meeting is actually running
+                                                                        $is_meeting_running = $meetingManager->isMeetingRunning($meeting_uid);
+                                                                    } else {
+                                                                        $is_meeting_running = false;
+                                                                    }
+                                                                ?>
+                                                                
+                                                                <?php if ($is_meeting_running): ?>
+                                                                    <button onclick="joinMeeting(<?php echo $schedule['schedule_id']; ?>)" 
+                                                                        class="btn btn-success btn-sm">
+                                                                        <i class="bi bi-camera-video-fill me-1"></i> 
+                                                                        <?php if(isset($_GET['ended']) && $_GET['ended'] == $schedule['schedule_id']): ?>
+                                                                        Rejoin Now
+                                                                        <?php else: ?>
+                                                                        Join Now
+                                                                        <?php endif; ?>
+                                                                    </button>
+                                                                <?php else: ?>
+                                                                    <button class="btn btn-outline-secondary btn-sm" disabled>
+                                                                        <i class="bi bi-hourglass-split me-1"></i> Waiting for meeting to start
+                                                                    </button>
+                                                                <?php endif; ?>
                                                             <?php elseif ($is_upcoming): ?>
                                                                 <button class="btn btn-outline-primary btn-sm" disabled>
                                                                     <i class="bi bi-clock me-1"></i>

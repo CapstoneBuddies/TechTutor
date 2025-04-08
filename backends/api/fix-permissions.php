@@ -12,7 +12,7 @@ if (!isset($_SESSION['user'])) {
 }
 
 try {
-    $fileManagement = new FileManagement();
+    $fileManagement = new UnifiedFileManagement();
     $fixed = $fileManagement->fixFilePermissions($_SESSION['user']);
     
     echo json_encode([

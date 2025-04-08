@@ -61,6 +61,32 @@ if (isset($_POST['update_status'])) {
                     );
                 }
             }
+            elseif ($new_status === 'succeeded') {
+
+                $get_token = $conn->prepare("SELECT user_id, amount FROM transactions WHERE transaction_id = ?");
+                $get_token->bind_param('i', $transaction_id);
+                $get_token->execute();
+                $result = $get_token->get_result();
+                
+                if ($row = $result->fetch_assoc()) { 
+                    // Update tokens
+                    $amount = $row['amount'];
+                    $user_id = $row['user_id'];
+                    $VAT_RATE = 0.1;  // 10%
+                    $SERVICE_RATE = 0.002;  // 0.2%
+                    $baseAmount = $amount / (1 + $VAT_RATE + $SERVICE_RATE);
+                    $tokenAmount = round($baseAmount);  // Round to nearest whole token
+
+                    // Update user's token balance
+                    $query = "UPDATE users SET token_balance = token_balance + ? WHERE uid = ?";
+                    $update_stmt = $conn->prepare($query);
+                    $update_stmt->bind_param('di', $tokenAmount, $user_id);
+                    $update_stmt->execute();
+
+                    header("location: status");
+                    exit();
+                }
+            }
         } else {
             $message = "No changes made to transaction #$transaction_id";
             $alert_type = 'info';
@@ -473,12 +499,12 @@ $transactions = getTransactions($page, $filter, $_SESSION['role'], $_SESSION['us
                                                                                     <span><?php 
                                                                                         if ($createdAt) {
                                                                                             $created = new DateTime($createdAt);
-                                                                                            $now = new DateTime();
-                                                                                            $diff = $created->diff($now);
-                                                                                            if ($diff->d > 0) {
-                                                                                                echo $diff->d . ' days, ' . $diff->h . ' hours';
-                                                                                            } else {
-                                                                                                echo $diff->h . ' hours, ' . $diff->i . ' minutes';
+                                                                                        $now = new DateTime();
+                                                                                        $diff = $created->diff($now);
+                                                                                        if ($diff->d > 0) {
+                                                                                            echo $diff->d . ' days, ' . $diff->h . ' hours';
+                                                                                        } else {
+                                                                                            echo $diff->h . ' hours, ' . $diff->i . ' minutes';
                                                                                             }
                                                                                         } else {
                                                                                             echo '--';

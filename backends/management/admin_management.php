@@ -55,6 +55,8 @@ function getAdminClassDetails($class_id) {
         JOIN users u ON c.tutor_id = u.uid
         LEFT JOIN enrollments e ON c.class_id = e.class_id AND e.status = 'active'
         WHERE c.class_id = ?
+        AND c.status != 'pending'
+        AND u.status = 1
         GROUP BY c.class_id";
         
         $stmt = $conn->prepare($query);
@@ -155,7 +157,8 @@ function updateSubjectStatus($subject_id, $is_active) {
             SELECT DISTINCT u.uid, u.email 
             FROM class cl 
             JOIN users u ON cl.tutor_id = u.uid 
-            WHERE cl.subject_id = ?");
+            WHERE cl.subject_id = ? 
+            AND u.status = 1");
         $stmt->bind_param("i", $subject_id);
         $stmt->execute();
         $tutors = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -526,4 +529,23 @@ function updateCover($subjectId, $file) {
     }
 }
 
+/**
+ * Admin function to get class files
+ * 
+ * This retrieves files for a specific class using the UnifiedFileManagement
+ * 
+ * @param int $class_id The class ID to get files for
+ * @return array An array of file information
+ */
+function getAdminClassFiles($class_id) {
+    require_once BACKEND.'unified_file_management.php';
+    $fileManager = new UnifiedFileManagement();
+    
+    try {
+        return $fileManager->getClassFiles($class_id);
+    } catch (Exception $e) {
+        log_error("Admin error getting class files: " . $e->getMessage(), "admin");
+        return [];
+    }
+} 
 ?>

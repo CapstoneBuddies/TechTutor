@@ -156,22 +156,22 @@
                                                             <div class="preview-content text-center p-3">
                                                                 <h2 class="fs-5 mb-2">Certificate of Achievement</h2>
                                                                 <div class="fs-6 mb-1">
-                                                                    <strong><?php echo htmlspecialchars($cert['award']); ?></strong>
+                                                                    <strong><?php echo htmlspecialchars($cert['award'] ?? ''); ?></strong>
                                                                 </div>
                                                                 <div class="small text-muted mb-2">
-                                                                    <?php echo htmlspecialchars($cert['class_name']); ?>
+                                                                    <?php echo htmlspecialchars($cert['class_name'] ?? ''); ?>
                                                                 </div>
                                                                 <div class="small text-end text-muted mt-2">
-                                                                    <?php echo date('M d, Y', strtotime($cert['issue_date'])); ?>
+                                                                    <?php echo date('M d, Y', strtotime($cert['issue_date'] ?? date('Y-m-d'))); ?>
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
                                                 <div class="card-body pt-0">
-                                                    <h5 class="card-title"><?php echo htmlspecialchars($cert['award']); ?></h5>
+                                                    <h5 class="card-title"><?php echo htmlspecialchars($cert['award'] ?? ''); ?></h5>
                                                     <p class="card-text text-muted">
-                                                        <small>Issued by <?php echo htmlspecialchars($cert['donor_name']); ?> on <?php echo date('M d, Y', strtotime($cert['issue_date'])); ?></small>
+                                                        <small>Issued by <?php echo htmlspecialchars($cert['donor_name'] ?? ''); ?> on <?php echo date('M d, Y', strtotime($cert['issue_date'] ?? date('Y-m-d'))); ?></small>
                                                     </p>
                                                 </div>
                                                 <div class="card-footer bg-transparent d-flex justify-content-between">
@@ -179,10 +179,10 @@
                                                         <i class="bi bi-eye"></i> View
                                                     </a>
                                                     <div class="btn-group">
-                                                        <button class="btn btn-outline-secondary btn-sm" onclick="shareCertificate('<?php echo $cert['cert_uuid']; ?>', '<?php echo htmlspecialchars(addslashes($cert['award'])); ?>')">
+                                                        <button class="btn btn-outline-secondary btn-sm" onclick="shareCertificate('<?php echo $cert['cert_uuid']; ?>', '<?php echo htmlspecialchars(addslashes($cert['award'] ?? '')); ?>')">
                                                             <i class="bi bi-share"></i> Share
                                                         </button>
-                                                        <button class="btn btn-outline-success btn-sm" onclick="downloadCertificate('<?php echo $cert['cert_uuid']; ?>', '<?php echo htmlspecialchars(addslashes($cert['award'])); ?>')">
+                                                        <button class="btn btn-outline-success btn-sm" onclick="downloadCertificate('<?php echo $cert['cert_uuid']; ?>', '<?php echo htmlspecialchars(addslashes($cert['award'] ?? '')); ?>')">
                                                             <i class="bi bi-download"></i>
                                                         </button>
                                                     </div>

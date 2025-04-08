@@ -101,9 +101,6 @@ $title = "Class Sessions - " . htmlspecialchars($classDetails['class_name']);
                                     <h2 class="page-header mb-0">Class Sessions</h2>
                                     <p class="text-muted">Manage sessions for <?php echo htmlspecialchars($classDetails['class_name']); ?></p>
                                 </div>
-                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSessionModal">
-                                    <i class="bi bi-plus-circle"></i> Add Session
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -223,15 +220,6 @@ $title = "Class Sessions - " . htmlspecialchars($classDetails['class_name']);
                                                                     data-end-time="<?php echo $endTime->format('g:i A'); ?>">
                                                                 <i class="bi bi-eye"></i>
                                                                 <span class="d-none d-md-inline"> View</span>
-                                                            </button>
-                                                            <button type="button" class="btn btn-sm btn-outline-secondary edit-session"
-                                                                    data-session-id="<?php echo $session['schedule_id']; ?>"
-                                                                    data-session-title="<?php echo htmlspecialchars($session['class_name']); ?>"
-                                                                    data-session-date="<?php echo $session['session_date']; ?>"
-                                                                    data-start-time="<?php echo $session['start_time']; ?>"
-                                                                    data-end-time="<?php echo $session['end_time']; ?>">
-                                                                <i class="bi bi-pencil"></i>
-                                                                <span class="d-none d-md-inline"> Edit</span>
                                                             </button>
                                                             <form method="POST" class="d-inline" 
                                                                   onsubmit="return confirm('Are you sure you want to delete this session?');">

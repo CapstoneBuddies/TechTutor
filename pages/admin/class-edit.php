@@ -13,8 +13,8 @@ $class_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 // Get class details or redirect if invalid
 $classDetails = getClassDetails($class_id);
-if (!$classDetails) {
-    header('Location: ./');
+if (!$classDetails || $classDetails['status'] === 'completed') {
+    header('Location: ./?id='.$class_id);
     exit();
 }
 
@@ -372,14 +372,14 @@ $title = "Edit " . htmlspecialchars($classDetails['class_name']);
                     // Prepare form data
                     const formData = {
                         class_id: classId,
-                        class_name: document.getElementById('className').value,
-                        class_desc: document.getElementById('description').value,
-                        class_size: document.getElementById('maxStudents').value,
-                        start_date: document.getElementById('startDate').value,
-                        end_date: document.getElementById('endDate').value,
-                        is_free: document.querySelector('input[name="is_free"]:checked').value,
-                        price: document.getElementById('price').value,
-                        status: document.querySelector('input[name="status"]:checked').value,
+                        class_name: document.getElementById('className')?.value || '',
+                        class_desc: document.getElementById('description')?.value || '',
+                        class_size: document.getElementById('maxStudents')?.value || '',
+                        start_date: document.getElementById('startDate')?.value || '',
+                        end_date: document.getElementById('endDate')?.value || '',
+                        is_free: document.querySelector('input[name="is_free"]:checked')?.value || '1',
+                        price: document.getElementById('price')?.value || '0',
+                        status: document.querySelector('input[name="status"]:checked')?.value || 'active',
                         tutor_id: '<?php echo $classDetails['tutor_id']; ?>',
                         subject_id: '<?php echo $classDetails['subject_id']; ?>'
                     };

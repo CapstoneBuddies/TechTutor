@@ -9,7 +9,7 @@
 	if(isset($_SESSION['redirect'])) {
 		unset($_SESSION['redirect']);
 	}
-	$request_uri =  trim($_SERVER['REQUEST_URI'], "/");
+	$request_uri =  isset($_SERVER['REQUEST_URI']) ? trim($_SERVER['REQUEST_URI'], "/") : '';
 
 	$link = basename($request_uri);
 	$page = basename($_SERVER['PHP_SELF']);

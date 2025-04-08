@@ -221,9 +221,16 @@ function createClass($data) {
         // Handle thumbnail upload if exists
         if (isset($_FILES['classCover']) && $_FILES['classCover']['error'] === 0) {
             $new_filename = $class_id . "." . $file_ext;
-            $upload_path = CLASS_IMG . $new_filename;
+            $upload_path = ROOT_PATH . '/' . CLASS_IMG . $new_filename;
+            
+            // Make sure the directory exists
+            $dir = dirname($upload_path);
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
             
             if (!move_uploaded_file($_FILES['classCover']['tmp_name'], $upload_path)) {
+                log_error("Failed to upload thumbnail: " . $_FILES['classCover']['name'] . " to " . $upload_path, "upload_error");
                 throw new Exception("Failed to upload thumbnail");
             }
             
@@ -490,7 +497,7 @@ function getClassStudents($class_id) {
                 ) as all_sessions
             FROM users u
             JOIN enrollments e ON u.uid = e.student_id
-            WHERE e.class_id = ? AND e.status != 'dropped'
+            WHERE e.class_id = ? AND e.status != 'dropped' AND u.status = 1
             ORDER BY u.first_name, u.last_name";
             
     try {
@@ -579,9 +586,9 @@ function getClassDetails($class_id, $tutor_id = null) {
                            WHERE class_id = c.class_id), 0
                         ) * 100, 2) AS completion_rate,
                     CASE 
-                        WHEN c.end_date < NOW() THEN 'completed'
                         WHEN c.start_date > NOW() THEN 'upcoming'
                         WHEN c.status = 'inactive' THEN 'inactive'
+                        WHEN c.status = 'completed' THEN 'completed'
                         ELSE 'ongoing'
                     END AS status,
                     (SELECT COUNT(*)
@@ -597,6 +604,7 @@ function getClassDetails($class_id, $tutor_id = null) {
                   LEFT JOIN enrollments e ON c.class_id = e.class_id
                   WHERE c.class_id = ? " . 
                   ($tutor_id !== null ? "AND c.tutor_id = ? " : "") . 
+                  "AND u.status = 1 " .
                   "GROUP BY c.class_id";
 
         $stmt = $conn->prepare($query);
@@ -664,7 +672,8 @@ function updateClassStatus($class_id, $tutor_id = null, $new_status = null) {
         $query = "SELECT c.class_name, c.tutor_id, u.email as tutor_email 
                  FROM class c 
                  JOIN users u ON c.tutor_id = u.uid 
-                 WHERE c.class_id = ?";
+                 WHERE c.class_id = ?
+                 AND u.status = 1";
         $stmt = $conn->prepare($query);
         $stmt->bind_param("i", $class_id);
         $stmt->execute();
@@ -686,7 +695,8 @@ function updateClassStatus($class_id, $tutor_id = null, $new_status = null) {
         $query = "SELECT e.student_id, u.email 
                  FROM enrollments e 
                  JOIN users u ON e.student_id = u.uid 
-                 WHERE e.class_id = ? AND e.status = 'active'";
+                 WHERE e.class_id = ? AND e.status = 'active'
+                 AND u.status = 1";
         $stmt = $conn->prepare($query);
         $stmt->bind_param("i", $class_id);
         $stmt->execute();
@@ -810,7 +820,8 @@ function getClassesWithPagination($page = 1, $items_per_page = 10) {
                 FROM class c
                 LEFT JOIN subject s ON c.subject_id = s.subject_id
                 LEFT JOIN users u ON c.tutor_id = u.uid
-                LEFT JOIN enrollments e ON c.class_id = e.class_id AND e.status = 'active'
+                LEFT JOIN enrollments e ON c.class_id = e.class_id
+                WHERE u.status = 1
                 GROUP BY c.class_id
                 ORDER BY c.class_id DESC
                 LIMIT ? OFFSET ?";
@@ -853,18 +864,6 @@ function getEnrolledStudents($class_id) {
     global $conn;
 
     try {
-        // Ensure the enrollments table exists
-        $create_enrollments_table = "
-            CREATE TABLE IF NOT EXISTS `enrollments` (
-                `enrollment_id` INT PRIMARY KEY AUTO_INCREMENT,
-                `class_id` INT NOT NULL,
-                `student_id` INT NOT NULL,
-                `enrollment_date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                `status` ENUM('active', 'completed', 'dropped') NOT NULL DEFAULT 'active',
-                FOREIGN KEY (class_id) REFERENCES class(class_id) ON DELETE CASCADE,
-                FOREIGN KEY (student_id) REFERENCES users(uid) ON DELETE CASCADE,
-                UNIQUE KEY `unique_enrollment` (`class_id`, `student_id`)
-            )";
         $conn->query($create_enrollments_table);
         
         // Fetch enrolled students
@@ -874,7 +873,7 @@ function getEnrolledStudents($class_id) {
                             e.status as enrollment_status
                         FROM enrollments e
                         JOIN users u ON e.student_id = u.uid
-                        WHERE e.class_id = ?
+                        WHERE e.class_id = ? AND u.status = 1
                         ORDER BY e.enrollment_date DESC";
 
         $stmt = $conn->prepare($students_query);
@@ -958,7 +957,12 @@ function getClassRecordingsCount($classId) {
     require_once BACKEND.'meeting_management.php';
     $recordings = new MeetingManagement();
     $recording = $recordings->getClassRecordings($classId);
-
+    
+    // Handle empty response or response without recordings key
+    if (empty($recording) || !isset($recording['recordings'])) {
+        return 0;
+    }
+    
     return count($recording['recordings']);
 }
 function getAvailableClassRecordings($classId) {
@@ -1035,7 +1039,7 @@ function getFolderFiles($folder_id) {
             FROM unified_files f 
             LEFT JOIN file_categories c ON f.category_id = c.category_id
             LEFT JOIN users u ON f.user_id = u.uid 
-            WHERE f.folder_id = ? 
+            WHERE f.folder_id = ? AND u.status = 1
             ORDER BY f.upload_time DESC";
             
     $stmt = $conn->prepare($sql);
@@ -1123,7 +1127,7 @@ function getClassFeedbacks($class_id) {
              FROM session_feedback sf
              JOIN class_schedule cs ON sf.session_id = cs.schedule_id
              JOIN users u ON sf.student_id = u.uid
-             WHERE cs.class_id = ? AND sf.is_archived = 0
+             WHERE cs.class_id = ? AND sf.is_archived = 0 AND u.status = 1
              ORDER BY sf.created_at DESC";
              
     try {
@@ -1164,7 +1168,7 @@ function getAllTutorFeedbacks($tutor_id) {
              JOIN class_schedule cs ON sf.session_id = cs.schedule_id
              JOIN class c ON cs.class_id = c.class_id
              JOIN users u ON sf.student_id = u.uid
-             WHERE sf.tutor_id = ?
+             WHERE sf.tutor_id = ? AND u.status = 1
              ORDER BY sf.created_at DESC";
              
     try {
@@ -1448,7 +1452,7 @@ function getRecordingVisibilitySettings($class_id) {
                     CONCAT(u.first_name, ' ', u.last_name) AS updated_by_name
                 FROM recording_visibility rv
                 JOIN users u ON rv.created_by = u.uid
-                WHERE rv.class_id = ?";
+                WHERE rv.class_id = ? AND u.status = 1";
         
         $stmt = $conn->prepare($query);
         $stmt->bind_param("i", $class_id);
@@ -2331,7 +2335,7 @@ function enrollStudent($studentId, $classId) {
                                  FROM class c 
                                  JOIN users u ON c.tutor_id = u.uid 
                                  LEFT JOIN class_schedule cs ON c.class_id = cs.class_id
-                                 WHERE c.class_id = ? AND c.status = 'active'");
+                                 WHERE c.class_id = ? AND c.status = 'active' AND u.status = 1");
         $stmt->bind_param("i", $class_id);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -2418,7 +2422,7 @@ function enrollStudent($studentId, $classId) {
             );
 
             // Get Student and Tutor information
-            $class_stmt = $conn->prepare("SELECT CONCAT(first_name,' ',last_name) AS name,  email FROM users WHERE uid = ?");
+            $class_stmt = $conn->prepare("SELECT CONCAT(first_name,' ',last_name) AS name,  email FROM users WHERE uid = ? AND status = 1");
             $class_stmt->bind_param('i', $student_id);
             $class_stmt->execute();
             $student = $class_stmt->get_result()->fetch_assoc();

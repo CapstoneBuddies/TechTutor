@@ -8,7 +8,7 @@
     }
 
     // Fetch notifications using the new function
-    $notifications = fetchUserNotifications($_SESSION['user'], $_SESSION['role']);
+    $notifications = fetchUserNotifications($_SESSION['user'], $_SESSION['role']); 
     $notif_id = [];
 ?>
 <!DOCTYPE html>
@@ -57,9 +57,11 @@
                                             <?php if ($_SESSION['role'] == 'ADMIN'): ?>
                                                 <small class="text-muted">
                                                     <?php 
-                                                        echo $notification['recipient_id'] 
-                                                            ? 'To: ' . htmlspecialchars($notification['recipient_name'])
-                                                            : 'To: ' . $notification['recipient_role']; 
+                                                        if (!empty($notification['recipient_id'])) {
+                                                            echo 'To: ' . htmlspecialchars($notification['recipient_name'] ?? 'User');
+                                                        } else {
+                                                            echo 'To: ' . ($notification['recipient_role'] ?? 'All Users');
+                                                        }
                                                     ?>
                                                 </small>
                                             <?php endif; ?>

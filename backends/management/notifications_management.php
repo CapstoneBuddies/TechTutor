@@ -61,6 +61,7 @@ function fetchUserNotifications($user_id, $role) {
                      FROM notifications n 
                      LEFT JOIN users u ON n.recipient_id = u.uid 
                      LEFT JOIN class c ON n.class_id = c.class_id 
+                     WHERE u.status = 1
                      ORDER BY n.created_at DESC";
             $stmt = $conn->prepare($query);
         } elseif ($role == 'TECHGURU') {
@@ -72,6 +73,7 @@ function fetchUserNotifications($user_id, $role) {
                      WHERE n.recipient_id = ? 
                      OR n.class_id IN (SELECT class_id FROM class WHERE tutor_id = ?) 
                      OR n.recipient_role = 'ALL' 
+                     AND u.status = 1
                      ORDER BY n.created_at DESC";
             $stmt = $conn->prepare($query);
             $stmt->bind_param("ii", $user_id, $user_id);
@@ -84,6 +86,7 @@ function fetchUserNotifications($user_id, $role) {
                      WHERE n.recipient_id = ? 
                      OR n.class_id IN (SELECT class_id FROM enrollments WHERE student_id = ? AND status = 'active') 
                      OR n.recipient_role = 'ALL' 
+                     AND u.status = 1
                      ORDER BY n.created_at DESC";
             $stmt = $conn->prepare($query);
             $stmt->bind_param("ii", $user_id, $user_id);
@@ -122,7 +125,7 @@ function markNotificationsAsRead($notification_id = null) {
             $stmt->bind_param("i", $notification_id);
         } else {
             // Mark all relevant notifications as read
-            $query = "UPDATE notifications SET is_read = 1 WHERE (recipient_id = ? OR recipient_role = ? OR recipient_role = 'ALL')";
+            $query = "UPDATE notifications SET is_read = 1 WHERE (recipient_id = ? OR recipient_role = ? OR recipient_role = 'ALL') AND is_read = 0";
             $stmt = $conn->prepare($query);
             $stmt->bind_param("is", $_SESSION['user'], $_SESSION['role']);
         }
@@ -149,7 +152,7 @@ function getUserNotifications($user_id, $role) {
     global $conn;
     
     try {
-        $stmt = $conn->prepare("SELECT n.*, c.class_name FROM notifications n LEFT JOIN class c ON n.class_id = c.class_id WHERE (? = 'ADMIN') OR n.recipient_id = ? OR n.recipient_role = ? OR n.recipient_role = 'ALL' ORDER BY n.created_at DESC LIMIT 50");
+        $stmt = $conn->prepare("SELECT n.*, c.class_name FROM notifications n LEFT JOIN class c ON n.class_id = c.class_id WHERE (? = 'ADMIN') OR n.recipient_id = ? OR n.recipient_role = ? OR n.recipient_role = 'ALL' AND n.is_read = 0 ORDER BY n.created_at DESC LIMIT 50");
         $stmt->bind_param("sii", $role, $user_id, $user_id);
         $stmt->execute();
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -252,7 +255,7 @@ function sendClassSessionLink($scheduleId) {
             FROM enrollments e
             JOIN class_schedule cs ON e.class_id = cs.class_id
             JOIN users u ON e.student_id = u.uid
-            WHERE cs.schedule_id = ?;
+            WHERE cs.schedule_id = ? AND e.status = 'active' AND u.status = 1;
         ");
         $stmt->bind_param("i", $scheduleId);
         $stmt->execute();
@@ -347,7 +350,7 @@ function checkNewNotifications($user_id, $last_id = 0) {
         // Get new notifications
         $query = "SELECT id, message, created_at 
                  FROM notifications 
-                 WHERE user_id = ? AND id > ? AND is_read = 0
+                 WHERE user_id = ? AND id > ? AND is_read = 0 AND is_read = 0
                  ORDER BY created_at DESC";
         
         $stmt = $conn->prepare($query);
@@ -367,7 +370,7 @@ function checkNewNotifications($user_id, $last_id = 0) {
         // Get total unread count
         $count_query = "SELECT COUNT(*) as unread_count 
                        FROM notifications 
-                       WHERE user_id = ? AND is_read = 0";
+                       WHERE user_id = ? AND is_read = 0 AND is_read = 0";
         
         $count_stmt = $conn->prepare($count_query);
         $count_stmt->bind_param("i", $user_id);
@@ -405,7 +408,7 @@ function sendTechGuruMessage($sender_id, $recipient_id, $class_id, $subject, $me
     
     try {
         // Verify the sender is a TechGuru
-        $stmt = $conn->prepare("SELECT role FROM users WHERE uid = ? AND role = 'TECHGURU'");
+        $stmt = $conn->prepare("SELECT role FROM users WHERE uid = ? AND role = 'TECHGURU' AND status = 1");
         $stmt->bind_param("i", $sender_id);
         $stmt->execute();
         if ($stmt->get_result()->num_rows === 0) {
@@ -417,7 +420,7 @@ function sendTechGuruMessage($sender_id, $recipient_id, $class_id, $subject, $me
             SELECT u.first_name, u.last_name, u.email 
             FROM users u 
             JOIN enrollments e ON u.uid = e.student_id 
-            WHERE u.uid = ? AND e.class_id = ? AND u.role = 'TECHKID'
+            WHERE u.uid = ? AND e.class_id = ? AND u.role = 'TECHKID' AND u.status = 1
         ");
         $stmt->bind_param("ii", $recipient_id, $class_id);
         $stmt->execute();
@@ -434,7 +437,7 @@ function sendTechGuruMessage($sender_id, $recipient_id, $class_id, $subject, $me
             SELECT c.class_name, u.first_name, u.last_name, u.email
             FROM class c 
             JOIN users u ON c.tutor_id = u.uid
-            WHERE c.class_id = ? AND c.tutor_id = ?
+            WHERE c.class_id = ? AND c.tutor_id = ? AND u.status = 1
         ");
         $stmt->bind_param("ii", $class_id, $sender_id);
         $stmt->execute();
@@ -529,7 +532,7 @@ function sendTechKidMessage($sender_id, $class_id, $subject, $message) {
         $stmt = $conn->prepare("
             SELECT u.role, u.first_name, u.last_name, u.email 
             FROM users u 
-            WHERE u.uid = ? AND u.role = 'TECHKID'
+            WHERE u.uid = ? AND u.role = 'TECHKID' AND u.status = 1
         ");
         $stmt->bind_param("i", $sender_id);
         $stmt->execute();
@@ -549,7 +552,7 @@ function sendTechKidMessage($sender_id, $class_id, $subject, $message) {
             FROM class c 
             JOIN users u ON c.tutor_id = u.uid
             JOIN enrollments e ON c.class_id = e.class_id
-            WHERE c.class_id = ? AND e.student_id = ?
+            WHERE c.class_id = ? AND e.student_id = ? AND e.status = 'active' AND u.status = 1
         ");
         $stmt->bind_param("ii", $class_id, $sender_id);
         $stmt->execute();

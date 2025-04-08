@@ -280,7 +280,11 @@ const ClassManager = {
      */
     showAlert: function(message, type = 'success', duration = 5000) {
         // Create alert element if it doesn't exist
-        let alertContainer = document.getElementById('alert-container');
+        let alertContainer = document.getElementById('alerts-container');
+        if (!alertContainer) {
+            alertContainer = document.getElementById('alert-container');
+        }
+        
         if (!alertContainer) {
             alertContainer = document.createElement('div');
             alertContainer.id = 'alert-container';
@@ -307,8 +311,21 @@ const ClassManager = {
         // Auto-dismiss after duration
         if (duration > 0) {
             setTimeout(() => {
-                const bsAlert = new bootstrap.Alert(alertEl);
-                bsAlert.close();
+                try {
+                    // Check if Bootstrap is available
+                    if (typeof bootstrap !== 'undefined' && bootstrap.Alert) {
+                        const bsAlert = new bootstrap.Alert(alertEl);
+                        bsAlert.close();
+                    } else {
+                        // Fallback if bootstrap is not available
+                        alertEl.classList.remove('show');
+                        setTimeout(() => alertEl.remove(), 300);
+                    }
+                } catch (e) {
+                    // Fallback if there's an error
+                    alertEl.remove();
+                    console.warn('Error closing alert:', e);
+                }
             }, duration);
         }
         

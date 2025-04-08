@@ -111,11 +111,17 @@
                                                 <span class="badge bg-primary">
                                                     <?php echo $recording['participants']; ?> Participants
                                                 </span>
-                                                <a href="#"
-                                                    onclick="window.open('<?php echo htmlspecialchars($recording['url']); ?>', '_blank')"
-                                                   class="btn btn-primary btn-sm">
-                                                    <i class="bi bi-play-fill"></i> Watch Now
-                                                </a>
+                                                <div>
+                                                    <a href="#"
+                                                        onclick="window.open('<?php echo htmlspecialchars($recording['url']); ?>', '_blank')"
+                                                       class="btn btn-primary btn-sm">
+                                                        <i class="bi bi-play-fill"></i> Watch Now
+                                                    </a>
+                                                    <a href="<?php echo BASE; ?>download-video?id=<?php echo $recording['recordID']; ?>&name=<?php echo urlencode('Class_Recording_' . date('Y-m-d', strtotime($recording['session_date']))); ?>.mp4"
+                                                       class="btn btn-success btn-sm ms-1">
+                                                        <i class="bi bi-download"></i> Download
+                                                    </a>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

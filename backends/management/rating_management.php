@@ -109,6 +109,8 @@ class RatingManagement {
                     FROM session_feedback sf
                     JOIN users s ON sf.student_id = s.uid
                     WHERE sf.session_id = ?
+                    AND sf.rating IS NOT NULL
+                    AND s.status = 1
                     ORDER BY sf.created_at DESC";
             
             $stmt = $this->db->prepare($sql);
@@ -133,6 +135,8 @@ class RatingManagement {
                     FROM class_ratings cr
                     JOIN users s ON cr.student_id = s.uid
                     WHERE cr.class_id = ?
+                    AND cr.status = 'completed'
+                    AND s.status = 1
                     ORDER BY cr.created_at DESC";
             
             $stmt = $this->db->prepare($sql);
@@ -163,6 +167,8 @@ class RatingManagement {
                     JOIN class_schedule cs ON sf.session_id = cs.schedule_id
                     JOIN class c ON cs.class_id = c.class_id
                     WHERE sf.tutor_id = ?
+                    AND sf.rating IS NOT NULL
+                    AND s.status = 1
                     ORDER BY sf.created_at DESC
                     LIMIT ? OFFSET ?";
             
@@ -233,6 +239,7 @@ class RatingManagement {
                     FROM users u
                     LEFT JOIN session_feedback sf ON u.uid = sf.tutor_id
                     WHERE u.uid = ? AND u.role = 'TECHGURU'
+                    AND u.status = 1
                     GROUP BY u.uid";
             
             $stmt = $this->db->prepare($sql);
@@ -289,6 +296,7 @@ class RatingManagement {
                 FROM session_feedback sf
                 JOIN class_schedule cs ON sf.session_id = cs.schedule_id
                 WHERE cs.class_id = ? AND sf.student_id = ?
+                AND sf.rating IS NOT NULL
                 ORDER BY sf.created_at DESC
             ");
             
@@ -322,6 +330,7 @@ class RatingManagement {
                 FROM session_feedback sf
                 JOIN class_schedule cs ON sf.session_id = cs.schedule_id
                 WHERE sf.rating_id = ? AND sf.student_id = ?
+                AND sf.rating IS NOT NULL
             ");
             
             $stmt->bind_param("ii", $rating_id, $student_id);
@@ -521,6 +530,8 @@ class RatingManagement {
                 JOIN class_schedule cs ON sf.session_id = cs.schedule_id
                 JOIN users u ON sf.student_id = u.uid
                 WHERE cs.class_id = ? AND sf.tutor_id = ? AND sf.is_archived = 0
+                AND sf.rating IS NOT NULL
+                AND u.status = 1
                 ORDER BY sf.created_at DESC
             ");
             
@@ -585,6 +596,8 @@ class RatingManagement {
                 JOIN class_schedule cs ON sf.session_id = cs.schedule_id
                 JOIN users u ON sf.student_id = u.uid
                 WHERE cs.class_id = ? AND sf.tutor_id = ? AND sf.is_archived = 1
+                AND sf.rating IS NULL
+                AND u.status = 1
                 ORDER BY sf.created_at DESC
             ");
             

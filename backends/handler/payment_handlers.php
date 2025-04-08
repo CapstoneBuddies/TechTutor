@@ -113,7 +113,7 @@ function checkRecentPendingTransactions($conn, $userId) {
 
 /**
  * Handle payment creation request
- * @param mysqli $conn Database connection
+ * @param mysqli $conn Database connection 
  */
 function handleCreatePayment($conn) {
     $amount = isset($_POST['amount']) ? (float)$_POST['amount'] : 0;
@@ -122,6 +122,8 @@ function handleCreatePayment($conn) {
     $transactionType = isset($_POST['transaction_type']) ? $_POST['transaction_type'] : '';
     $classId = isset($_POST['class_id']) ? (int)$_POST['class_id'] : 0;
     $ignoreRecentSuccess = isset($_POST['ignore_recent_success']) && $_POST['ignore_recent_success'] === 'true';
+    $token = isset($_POST['token_amount']) ? (int)$_POST['token_amount'] : 0;
+
 
     if ($amount < 25) {
         echo json_encode(['success' => false, 'message' => 'Minimum amount is ₱25']);
@@ -201,7 +203,7 @@ function handleCreatePayment($conn) {
         $query = "INSERT INTO transactions (user_id, payment_intent_id, amount, currency, status, payment_method_type, description, metadata, transaction_type) 
                  VALUES (?, ?, ?, 'PHP', 'pending', ?, ?, ?, ?)";
         $stmt = $conn->prepare($query);
-        $metadata = json_encode(['class' => $classId]);
+        $metadata = json_encode(['class' => $classId, 'token'=>$token]);
         $stmt->bind_param('isdssss', 
             $_SESSION['user'],
             $paymentIntent['data']['id'],

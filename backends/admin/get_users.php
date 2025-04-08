@@ -8,7 +8,6 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'ADMIN') {
     exit();
 }
 
-
 // Get parameters from request
 $role = isset($_POST['role']) ? $_POST['role'] : 'all';
 $search = isset($_POST['search']) ? $_POST['search'] : '';
@@ -22,7 +21,7 @@ try {
         if (!empty($search)) {
             $users = searchUsers($search);
         } else {
-            // Get users from all roles
+            // Get users from all roles 
             $adminUsers = getUserByRole('ADMIN');
             $techguruUsers = getUserByRole('TECHGURU');
             $techkidUsers = getUserByRole('TECHKID');

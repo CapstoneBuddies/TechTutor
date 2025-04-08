@@ -1,5 +1,5 @@
-ErrorDocument 404 /pages/error/404.php
-ErrorDocument 403 /pages/error/403.php 
+ErrorDocument 404 /pages/error/404.php 
+ErrorDocument 403 /pages/error/403.php  
 ErrorDocument 500 /pages/error/500.php
 
 <IfModule mod_headers.c>
@@ -171,6 +171,7 @@ RewriteRule ^dashboard/a/classes/details/sessions$ pages/admin/class-sessions.ph
 RewriteRule ^dashboard/a/classes/details/recordings$ pages/admin/class-recordings.php [L,QSA]
 RewriteRule ^dashboard/a/classes/details/feedback$ pages/admin/class-feedback.php [L,QSA]
 RewriteRule ^dashboard/a/classes/details/enroll$ pages/admin/class-enroll.php [L,QSA]
+RewriteRule ^dashboard/a/classes/details/files$ pages/admin/class-files.php [L,QSA]
 
 # ----------------------------------
 # 🛠 AJAX Actions
@@ -182,6 +183,8 @@ RewriteRule ^toggle-user-status$ backends/admin/toggle_user_status.php [L]
 RewriteRule ^delete-user$ backends/admin/delete_user.php [L]
 RewriteRule ^send-password-reset$ backends/admin/send_password_reset.php [L]
 RewriteRule ^get-user-emails$ backends/admin/get_user_emails.php [L]
+RewriteRule ^api/files$ backends/admin/file_handlers.php [L]
+RewriteRule ^download-video$ backends/handler/download_recording.php [L,QSA]
 #Admin 
 RewriteRule ^add-course$ backends/admin/course_handler.php [L]
 RewriteRule ^edit-course$ backends/admin/course_handler.php [L]
