@@ -675,4 +675,191 @@ function createEmailTemplate($title, $class_name, $recipient_first_name, $sender
     
     return $email_template;
 }
+
+/**
+ * Send transaction notification both as in-app notification and email
+ * 
+ * @param int $user_id User ID of the transaction owner
+ * @param string $user_email User's email address
+ * @param string $user_name User's full name
+ * @param string $transaction_id Transaction ID
+ * @param string $status New transaction status
+ * @param float $amount Transaction amount
+ * @param string $currency Currency code (default: PHP)
+ * @param string $description Transaction description
+ * @param string|null $error_message Error message if status is 'failed'
+ * @return bool True if notifications were sent successfully
+ */
+function sendTransactionNotification($user_id, $user_email, $user_name, $transaction_id, $status, $amount, $currency = 'PHP', $description = '', $error_message = null) {
+    global $conn;
+    
+    try {
+        // Get user role
+        $stmt = $conn->prepare("SELECT role FROM users WHERE uid = ?");
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $user_role = $result->fetch_assoc()['role'];
+        
+        // Set status-specific variables
+        $icon = 'bi-credit-card';
+        $icon_color = 'text-primary';
+        $status_text = ucfirst($status);
+        $status_description = '';
+        
+        switch ($status) {
+            case 'succeeded':
+                $icon = 'bi-check-circle-fill';
+                $icon_color = 'text-success';
+                $status_description = 'Your payment was successful!';
+                break;
+            case 'processing':
+                $icon = 'bi-hourglass-split';
+                $icon_color = 'text-warning';
+                $status_description = 'Your payment is being processed.';
+                break;
+            case 'pending':
+                $icon = 'bi-clock';
+                $icon_color = 'text-info';
+                $status_description = 'Your payment is pending.';
+                break;
+            case 'failed':
+                $icon = 'bi-exclamation-circle-fill';
+                $icon_color = 'text-danger';
+                $status_description = 'Your payment has failed.';
+                break;
+            case 'refunded':
+                $icon = 'bi-arrow-counterclockwise';
+                $icon_color = 'text-info';
+                $status_description = 'Your payment has been refunded.';
+                break;
+            default:
+                $status_description = "Your transaction status is: $status_text";
+                break;
+        }
+        
+        // Format amount with currency
+        $formatted_amount = number_format($amount, 2) . ' ' . $currency;
+        
+        // Prepare notification message
+        $message = "Transaction #{$transaction_id}: {$status_text} - {$formatted_amount}";
+        
+        if (!empty($description)) {
+            $message .= " ({$description})";
+        }
+        
+        // Set notification link
+        $link = "dashboard/transactions";
+        
+        // 1. Send in-app notification
+        $notification_result = sendNotification(
+            $user_id,
+            $user_role,
+            $message,
+            $link,
+            null, // No class ID for transaction notifications
+            $icon,
+            $icon_color
+        );
+        
+        // 2. Send email notification
+        $mail = getMailerInstance("TechTutor Payment Services");
+        try {
+            $mail->addAddress($user_email, $user_name);
+            $mail->Subject = "Transaction Update: " . $status_text;
+            
+            // Build email body
+            $email_body = '
+            <div style="max-width: 600px; margin: auto; font-family: Arial, sans-serif; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                <div style="background: #0dcaf0; padding: 20px; text-align: center; color: white;">
+                    <h2 style="margin: 0; font-size: 22px;">Transaction Update</h2>
+                </div>
+                <div style="padding: 20px; background: #f9f9f9;">
+                    <p style="font-size: 16px; color: #333;">Hello <strong>' . htmlspecialchars($user_name) . '</strong>,</p>
+                    <p style="font-size: 16px; color: #555;">
+                        We\'re writing to inform you about an update to your transaction.
+                    </p>
+                    <div style="background-color: #f0f0f0; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr>
+                                <td style="padding: 8px 0; color: #666;">Transaction ID:</td>
+                                <td style="padding: 8px 0; text-align: right; font-weight: bold;">' . htmlspecialchars($transaction_id) . '</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 0; color: #666;">Status:</td>
+                                <td style="padding: 8px 0; text-align: right; font-weight: bold; color: ' . ($status == 'succeeded' ? 'green' : ($status == 'failed' ? 'red' : 'orange')) . ';">' . htmlspecialchars($status_text) . '</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 0; color: #666;">Amount:</td>
+                                <td style="padding: 8px 0; text-align: right; font-weight: bold;">' . htmlspecialchars($formatted_amount) . '</td>
+                            </tr>';
+                            
+            if (!empty($description)) {
+                $email_body .= '
+                            <tr>
+                                <td style="padding: 8px 0; color: #666;">Description:</td>
+                                <td style="padding: 8px 0; text-align: right;">' . htmlspecialchars($description) . '</td>
+                            </tr>';
+            }
+            
+            if (!empty($error_message) && $status == 'failed') {
+                $email_body .= '
+                            <tr>
+                                <td style="padding: 8px 0; color: #666;">Error:</td>
+                                <td style="padding: 8px 0; text-align: right; color: red;">' . htmlspecialchars($error_message) . '</td>
+                            </tr>';
+            }
+            
+            $email_body .= '
+                        </table>
+                    </div>
+                    <p style="font-size: 16px; color: #555;">
+                        ' . $status_description . '
+                    </p>';
+            
+            // Add different instructions based on status
+            if ($status == 'failed') {
+                $email_body .= '
+                    <p style="font-size: 16px; color: #555;">
+                        If you\'d like to try again or have any questions about this transaction, please contact our support team.
+                    </p>';
+            } elseif ($status == 'succeeded') {
+                $email_body .= '
+                    <p style="font-size: 16px; color: #555;">
+                        Thank you for your payment! You can view your transaction details in your dashboard.
+                    </p>';
+            }
+            
+            $email_body .= '
+                    <div style="text-align: center; margin: 25px 0 15px;">
+                        <a href="' . BASE . 'dashboard/transactions" 
+                           style="background: #0dcaf0; color: white; padding: 10px 20px; text-decoration: none; font-size: 16px; border-radius: 5px;">
+                            View Transaction
+                        </a>
+                    </div>
+                </div>
+                <div style="background: #ddd; padding: 10px; text-align: center; font-size: 14px; color: #666;">
+                    <p style="margin: 5px 0;">This is an automated message. If you have any questions, please contact our support team.</p>
+                    <p style="margin: 5px 0;">Best regards,<br><strong>The TechTutor Team</strong></p>
+                </div>
+            </div>';
+            
+            $mail->Body = $email_body;
+            $mail->send();
+            
+            // Log successful notification
+            log_error("Transaction notification sent to user {$user_id} for transaction {$transaction_id} with status {$status}", "info");
+            
+            return true;
+        } catch (Exception $e) {
+            // Log email error but continue
+            log_error("Failed to send transaction email: " . $e->getMessage(), "mail");
+            // Return true if at least the in-app notification was successful
+            return $notification_result;
+        }
+    } catch (Exception $e) {
+        log_error("Error sending transaction notification: " . $e->getMessage(), "error");
+        return false;
+    }
+}
 ?>
