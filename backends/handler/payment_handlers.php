@@ -574,8 +574,10 @@ function handlePaymentPaid($conn, $event) {
     }
     
     // Find transaction by payment intent ID
-    $query = "SELECT t.transaction_id, t.user_id, t.amount, t.description, t.class_id 
+    $query = "SELECT t.transaction_id, t.user_id, t.amount, t.description, t.class_id, 
+                     u.email, CONCAT(u.first_name, ' ', u.last_name) as user_name 
               FROM transactions t 
+              JOIN users u ON t.user_id = u.uid
               WHERE t.payment_intent_id = ?";
     $stmt = $conn->prepare($query);
     $stmt->bind_param('s', $paymentIntentId);
@@ -587,6 +589,9 @@ function handlePaymentPaid($conn, $event) {
         $userId = $row['user_id'];
         $amount = $row['amount'];
         $description = $row['description'];
+        $classId = $row['class_id'];
+        $userEmail = $row['email'];
+        $userName = $row['user_name'];
         
         // Begin transaction
         $conn->begin_transaction();
@@ -598,8 +603,23 @@ function handlePaymentPaid($conn, $event) {
             $stmt->bind_param('i', $transactionId);
             $stmt->execute();
             
+            // Send notification to user
+            require_once BACKEND . 'management/notifications_management.php';
+            
+            // Send transaction notification
+            sendTransactionNotification(
+                $userId,
+                $userEmail,
+                $userName,
+                $transactionId,
+                'succeeded',
+                $amount,
+                'PHP',
+                $description
+            );
+            
             // Check if this is a token purchase
-            if ($transactionType === 'token') {
+            if (strpos(strtolower($description), 'token') !== false) {
                 // Calculate the actual token amount (remove VAT and service charge)
                 $VAT_RATE = 0.1;  // 10%
                 $SERVICE_RATE = 0.002;  // 0.2%
@@ -615,9 +635,8 @@ function handlePaymentPaid($conn, $event) {
                 // Log token purchase
                 log_error("Added {$tokenAmount} tokens to user ID {$userId} from transaction #{$transactionId} (payment amount: {$amount})", 'tokens');
                 
-                // Create a notification for the user
-                require_once BACKEND . 'management/notifications_management.php';
-                $notificationMessage = "Your payment of ₱" . number_format($amount, 2) . " was successful! {$tokenAmount} tokens have been added to your account.";
+                // Additional token-specific notification
+                $notificationMessage = "{$tokenAmount} tokens have been added to your account.";
                 sendNotification(
                     $userId,
                     '', // Send to any role
@@ -627,27 +646,14 @@ function handlePaymentPaid($conn, $event) {
                     'bi-coin', 
                     'text-success'
                 );
-            } else {
-                // Create a notification for the user
-                require_once BACKEND . 'management/notifications_management.php';
-                $notificationMessage = "Your payment of ₱" . number_format($amount, 2) . " was successful!";
-                sendNotification(
-                    $userId,
-                    '', // Send to any role
-                    $notificationMessage,
-                    BASE . "transactions", 
-                    $transactionId, 
-                    'bi-check-circle', 
-                    'text-success'
-                );
             }
             
             // Check if this is for class enrollment
-            if ($transactionType === 'class' && $classId > 0) {
+            if ($classId > 0) {
                 // Log payment for class enrollment
                 log_error("Payment for class #{$classId} enrollment completed for user ID {$userId}", 'class_enrollment');
                 
-                // Create a notification for the user
+                // Additional class-specific notification
                 sendNotification(
                     $userId,
                     '', // Send to any role
@@ -683,7 +689,11 @@ function handlePaymentFailed($conn, $event) {
     }
     
     // Find transaction by payment intent ID
-    $query = "SELECT transaction_id FROM transactions WHERE payment_intent_id = ?";
+    $query = "SELECT t.transaction_id, t.user_id, t.amount, t.description, 
+                     u.email, CONCAT(u.first_name, ' ', u.last_name) as user_name 
+              FROM transactions t 
+              JOIN users u ON t.user_id = u.uid
+              WHERE t.payment_intent_id = ?";
     $stmt = $conn->prepare($query);
     $stmt->bind_param('s', $paymentIntentId);
     $stmt->execute();
@@ -691,6 +701,11 @@ function handlePaymentFailed($conn, $event) {
     
     if ($row = $result->fetch_assoc()) {
         $transactionId = $row['transaction_id'];
+        $userId = $row['user_id'];
+        $amount = $row['amount'];
+        $description = $row['description'];
+        $userEmail = $row['email'];
+        $userName = $row['user_name'];
         
         // Get error message if available
         $errorMessage = $event['data']['attributes']['data']['attributes']['last_payment_error'] ?? 'Unknown error';
@@ -701,6 +716,22 @@ function handlePaymentFailed($conn, $event) {
         $errorJson = json_encode($errorMessage);
         $stmt->bind_param('si', $errorJson, $transactionId);
         $stmt->execute();
+        
+        // Send notification to user
+        require_once BACKEND . 'management/notifications_management.php';
+        
+        // Send transaction notification
+        sendTransactionNotification(
+            $userId,
+            $userEmail,
+            $userName,
+            $transactionId,
+            'failed',
+            $amount,
+            'PHP',
+            $description,
+            $errorMessage
+        );
         
         log_error("Payment failed for transaction #" . $transactionId . ": " . $errorJson, 'webhooks');
     } else {

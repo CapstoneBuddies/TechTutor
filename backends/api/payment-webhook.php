@@ -121,6 +121,8 @@ function handleSourceChargeable($conn, $event) {
  * This is triggered when a payment is successfully processed
  */
 function handlePaymentPaid($conn, $event) {
+    require_once BACKEND . 'management/notifications_management.php';
+    
     $paymentIntentId = $event['data']['attributes']['data']['attributes']['payment_intent_id'] ?? null;
     
     if (!$paymentIntentId) {
@@ -129,7 +131,11 @@ function handlePaymentPaid($conn, $event) {
     }
     
     // Find transaction by payment intent ID
-    $query = "SELECT transaction_id, user_id, amount, description FROM transactions WHERE payment_intent_id = ?";
+    $query = "SELECT t.transaction_id, t.user_id, t.amount, t.description, 
+                     u.email, CONCAT(u.first_name, ' ', u.last_name) as user_name 
+              FROM transactions t 
+              JOIN users u ON t.user_id = u.uid
+              WHERE t.payment_intent_id = ?";
     $stmt = $conn->prepare($query);
     $stmt->bind_param('s', $paymentIntentId);
     $stmt->execute();
@@ -140,6 +146,8 @@ function handlePaymentPaid($conn, $event) {
         $userId = $row['user_id'];
         $amount = $row['amount'];
         $description = $row['description'];
+        $userEmail = $row['email'];
+        $userName = $row['user_name'];
         
         // Begin transaction
         $conn->begin_transaction();
@@ -150,6 +158,18 @@ function handlePaymentPaid($conn, $event) {
             $stmt = $conn->prepare($query);
             $stmt->bind_param('i', $transactionId);
             $stmt->execute();
+            
+            // Send transaction notification
+            sendTransactionNotification(
+                $userId,
+                $userEmail,
+                $userName,
+                $transactionId,
+                'succeeded',
+                $amount,
+                'PHP',
+                $description
+            );
             
             // Check if this is a token purchase and update user's token balance
             if (strpos(strtolower($description), 'token') !== false) {
@@ -164,6 +184,17 @@ function handlePaymentPaid($conn, $event) {
                 
                 // Log token purchase
                 log_error("Added {$tokenAmount} tokens to user ID {$userId} from transaction #{$transactionId}", 'tokens');
+                
+                // Additional token notification
+                sendNotification(
+                    $userId,
+                    '', // Send to any role
+                    "{$tokenAmount} tokens have been added to your account.", 
+                    BASE . "dashboard", 
+                    null, 
+                    'bi-coin', 
+                    'text-success'
+                );
             }
             
             // Check if this is for class enrollment and process it
@@ -177,20 +208,18 @@ function handlePaymentPaid($conn, $event) {
                     // This would call your class enrollment function
                     log_error("Payment for class #{$classId} enrollment completed for user ID {$userId}", 'class_enrollment');
                     
-                    // You would add additional logic here to complete the enrollment
+                    // Class-specific notification
+                    sendNotification(
+                        $userId,
+                        '', // Send to any role
+                        "Your payment for Class #{$classId} enrollment was successful. You can now complete your enrollment.", 
+                        BASE . "techkid/enroll-class?id={$classId}", 
+                        null, 
+                        'bi-mortarboard', 
+                        'text-success'
+                    );
                 }
             }
-            
-            // Create a notification for the user
-            sendNotification(
-                $userId,
-                '', // Send to any role
-                "Your payment of ₱" . number_format($amount, 2) . " was successful", 
-                BASE . "transactions", 
-                $transactionId, 
-                'bi-check-circle', 
-                'text-success'
-            );
             
             $conn->commit();
             log_error("Payment succeeded for transaction #" . $transactionId, 'webhooks');
@@ -206,9 +235,10 @@ function handlePaymentPaid($conn, $event) {
 
 /**
  * Handle payment.failed webhook event
- * This is triggered when a payment fails to process
  */
 function handlePaymentFailed($conn, $event) {
+    require_once BACKEND . 'management/notifications_management.php';
+    
     $paymentIntentId = $event['data']['attributes']['data']['attributes']['payment_intent_id'] ?? null;
     
     if (!$paymentIntentId) {
@@ -217,7 +247,11 @@ function handlePaymentFailed($conn, $event) {
     }
     
     // Find transaction by payment intent ID
-    $query = "SELECT transaction_id, user_id, amount FROM transactions WHERE payment_intent_id = ?";
+    $query = "SELECT t.transaction_id, t.user_id, t.amount, t.description, 
+                     u.email, CONCAT(u.first_name, ' ', u.last_name) as user_name 
+              FROM transactions t 
+              JOIN users u ON t.user_id = u.uid
+              WHERE t.payment_intent_id = ?";
     $stmt = $conn->prepare($query);
     $stmt->bind_param('s', $paymentIntentId);
     $stmt->execute();
@@ -227,6 +261,9 @@ function handlePaymentFailed($conn, $event) {
         $transactionId = $row['transaction_id'];
         $userId = $row['user_id'];
         $amount = $row['amount'];
+        $description = $row['description'];
+        $userEmail = $row['email'];
+        $userName = $row['user_name'];
         
         // Get error message if available
         $errorMessage = $event['data']['attributes']['data']['attributes']['last_payment_error'] ?? 'Unknown error';
@@ -238,15 +275,17 @@ function handlePaymentFailed($conn, $event) {
         $stmt->bind_param('si', $errorJson, $transactionId);
         $stmt->execute();
         
-        // Create a notification for the user
-        sendNotification(
+        // Send transaction notification
+        sendTransactionNotification(
             $userId,
-            '', // Send to any role
-            "Your payment of ₱" . number_format($amount, 2) . " failed. Please try again.", 
-            BASE . "payment", 
-            null, 
-            'bi-exclamation-circle', 
-            'text-danger'
+            $userEmail,
+            $userName,
+            $transactionId,
+            'failed',
+            $amount,
+            'PHP',
+            $description,
+            $errorMessage
         );
         
         log_error("Payment failed for transaction #" . $transactionId . ": " . $errorJson, 'webhooks');
@@ -260,6 +299,8 @@ function handlePaymentFailed($conn, $event) {
  * This is triggered when a payment is refunded
  */
 function handlePaymentRefunded($conn, $event) {
+    require_once BACKEND . 'management/notifications_management.php';
+    
     $paymentIntentId = $event['data']['attributes']['data']['attributes']['payment_intent_id'] ?? null;
     
     if (!$paymentIntentId) {
@@ -268,7 +309,11 @@ function handlePaymentRefunded($conn, $event) {
     }
     
     // Find transaction by payment intent ID
-    $query = "SELECT transaction_id, user_id, amount FROM transactions WHERE payment_intent_id = ?";
+    $query = "SELECT t.transaction_id, t.user_id, t.amount, t.description, 
+                     u.email, CONCAT(u.first_name, ' ', u.last_name) as user_name 
+              FROM transactions t 
+              JOIN users u ON t.user_id = u.uid
+              WHERE t.payment_intent_id = ?";
     $stmt = $conn->prepare($query);
     $stmt->bind_param('s', $paymentIntentId);
     $stmt->execute();
@@ -278,6 +323,9 @@ function handlePaymentRefunded($conn, $event) {
         $transactionId = $row['transaction_id'];
         $userId = $row['user_id'];
         $amount = $row['amount'];
+        $description = $row['description'];
+        $userEmail = $row['email'];
+        $userName = $row['user_name'];
         
         // Update transaction status to refunded
         $query = "UPDATE transactions SET status = 'refunded', updated_at = CURRENT_TIMESTAMP WHERE transaction_id = ?";
@@ -285,15 +333,16 @@ function handlePaymentRefunded($conn, $event) {
         $stmt->bind_param('i', $transactionId);
         $stmt->execute();
         
-        // Create a notification for the user
-        sendNotification(
+        // Send transaction notification
+        sendTransactionNotification(
             $userId,
-            '', // Send to any role
-            "Your payment of ₱" . number_format($amount, 2) . " has been refunded", 
-            BASE . "transactions", 
-            $transactionId, 
-            'bi-arrow-return-left', 
-            'text-warning'
+            $userEmail,
+            $userName,
+            $transactionId,
+            'refunded',
+            $amount,
+            'PHP',
+            $description
         );
         
         log_error("Payment refunded for transaction #" . $transactionId, 'webhooks');
