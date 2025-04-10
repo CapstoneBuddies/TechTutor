@@ -1,0 +1,276 @@
+<?php
+require_once '../backends/main.php';
+require_once BACKEND.'user_management.php';
+
+$token = isset($_GET['token']) ? trim($_GET['token']) : '';
+$error = '';
+$success = '';
+
+// Check if token is provided
+if (empty($token)) {
+    $error = 'Invalid or missing reset token. Please request a new password reset link.';
+} else {
+
+    $result = verifyEmailToken($token, 'reset');
+
+    if (!$result['result']) {
+        $error = 'Invalid reset token. Please request a new password reset link.';
+    }
+}
+
+// Process password reset form
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password']) && empty($error)) {
+    $password = isset($_POST['password']) ? trim($_POST['password']) : '';
+    $confirm_password = isset($_POST['confirm_password']) ? trim($_POST['confirm_password']) : '';
+    
+    // Validate passwords
+    if (empty($password)) {
+        $error = 'Please enter a new password.';
+    } elseif (strlen($password) < 8) {
+        $error = 'Password must be at least 8 characters long.';
+    } elseif ($password !== $confirm_password) {
+        $error = 'Passwords do not match.';
+    } else {
+        // Hash the new password
+        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+        if (!$hashed_password) {
+            log_error('Password hashing failed', 'security');
+            $error = 'An error occurred while securing your password. Please try again.';
+        } else {
+            try {
+                $conn->begin_transaction();
+
+                $user_id = $result['user_id'];
+                
+                if (isset($result['user_id'])) {
+
+                    // Update user's password
+                    $stmt = $conn->prepare("UPDATE users SET password = ? WHERE uid = ?");
+                    $stmt->bind_param("si", $hashed_password, $user_id);
+                    $stmt->execute();
+
+                    // Delete reset token
+                    $stmt = $conn->prepare("DELETE FROM login_tokens WHERE user_id = ? AND type = 'reset'");
+                    $stmt->bind_param("s", $user_id);
+                    $stmt->execute();
+
+                    $conn->commit();
+                    $success = 'Your password has been reset successfully. You can now log in with your new password.';
+
+                    // Fetch user details for notification
+                    $stmt = $conn->prepare("SELECT first_name, email, role FROM users WHERE uid = ?");
+                    $stmt->bind_param("i", $user_id);
+                    $stmt->execute();
+                    $user = $stmt->get_result()->fetch_assoc();
+
+                    // Send notification
+                    $message = "Your password has been reset successfully.";
+                    sendNotification($user_id, $user['role'], $message, null, null, 'bi-check-circle', 'text-success');
+
+                    // Send email confirmation
+                    if ($user['role'] !== 'ADMIN') {
+                        $subject = "TechTutor Password Reset Confirmation";
+                        $email_message = "
+                            <div style='font-family: Arial, sans-serif; color: #333; background-color: #f8f9fa; padding: 20px; border-radius: 8px;'>
+                                <h2 style='color: #0dcaf0; text-align: center;'>Password Reset Confirmation</h2>
+                                <p>Dear <strong>{$user['first_name']}</strong>,</p>
+                                
+                                <p>Your <strong>TechTutor</strong> account password has been successfully reset.</p>
+                                
+                                <p>If you did not perform this action, please contact us immediately at  
+                                    <a href='mailto:support@techtutor.cfd' style='color: #0dcaf0; text-decoration: none; font-weight: bold;'>support@techtutor.cfd</a>.
+                                </p>
+
+                                <p style='margin-top: 20px; font-size: 14px;'>Best regards,</p>
+                                <p style='font-weight: bold; font-size: 16px;'>The TechTutor Team</p>
+                            </div>
+                        ";
+                        $mailer = getMailerInstance();
+                        $mailer->addAddress($user['email']);
+                        $mailer->Subject = $subject;
+                        $mailer->Body = nl2br($email_message);
+
+                        try {
+                            $mailer->send();
+                        } catch (Exception $e) {
+                            log_error("Failed to send password reset confirmation email: " . $e->getMessage(), 'mail');
+                        }
+                    }
+                } else {
+                    $error = 'Invalid or expired reset token.';
+                    $conn->rollback();
+                }
+            } catch (Exception $e) {
+                $conn->rollback();
+                log_error($e->getMessage(), 'database');
+                $error = 'An error occurred while resetting your password. Please try again later.';
+            }
+        }
+    }
+}
+
+?>
+<!DOCTYPE html>
+<html lang="en">
+    <?php include ROOT_PATH . '/components/head.php'; ?>
+    <body data-base="<?php echo BASE; ?>">
+    <div class="container">
+        <div class="reset-password-container">
+            <div class="text-center mb-4">
+                <img src="<?php echo IMG; ?>stand_alone_logo.png" alt="TechTutor Logo" style="max-width: 200px;">
+                <h2 class="mt-3">Reset Your Password</h2>
+            </div>
+            
+            <?php if (!empty($error)): ?>
+                <div class="alert alert-danger" role="alert">
+                    <?php echo $error; ?>
+                </div>
+            <?php endif; ?>
+            
+            <?php if (!empty($success)): ?>
+                <div class="alert alert-success" role="alert">
+                    <?php echo $success; ?>
+                    <div class="mt-3 text-center">
+                        <a href="<?php echo BASE; ?>login" class="btn btn-primary">Go to Login</a>
+                    </div>
+                </div>
+            <?php elseif (empty($error)): ?>
+                <form method="POST" id="resetPasswordForm">
+                    <div class="mb-3">
+                        <label for="password" class="form-label">New Password</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="password" name="password" required>
+                            <button class="btn btn-outline-secondary toggle-password" type="button">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                        <div class="password-strength bg-light"></div>
+                        <div class="password-feedback text-muted"></div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="confirm_password" class="form-label">Confirm New Password</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                            <button class="btn btn-outline-secondary toggle-password" type="button">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary" name="reset_password">Reset Password</button>
+                    </div>
+                </form>
+            <?php endif; ?>
+            
+            <div class="text-center mt-4">
+                <a href="<?php echo BASE; ?>login" class="text-decoration-none">Back to Login</a>
+            </div>
+        </div>
+    </div>
+    
+    <?php include ROOT_PATH . '/components/footer.php'; ?>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Toggle password visibility
+            const toggleButtons = document.querySelectorAll('.toggle-password');
+            toggleButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const input = this.previousElementSibling;
+                    const icon = this.querySelector('i');
+                    
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        icon.classList.remove('bi-eye');
+                        icon.classList.add('bi-eye-slash');
+                    } else {
+                        input.type = 'password';
+                        icon.classList.remove('bi-eye-slash');
+                        icon.classList.add('bi-eye');
+                    }
+                });
+            });
+            
+            // Password strength meter
+            const passwordInput = document.getElementById('password');
+            const strengthBar = document.querySelector('.password-strength');
+            const feedback = document.querySelector('.password-feedback');
+            
+            if (passwordInput) {
+                passwordInput.addEventListener('input', function() {
+                    const password = this.value;
+                    let strength = 0;
+                    let message = '';
+                    
+                    if (password.length >= 8) {
+                        strength += 25;
+                    }
+                    
+                    if (password.match(/[A-Z]/)) {
+                        strength += 10;
+                    }
+                    
+                    if (password.match(/[0-9]/)) {
+                        strength += 10;
+                    }
+                    
+                    if (password.match(/[^A-Za-z0-9]/)) {
+                        strength += 30;
+                    }
+
+                    if (password.match(/[^_*!]/)) {
+                        strength += 25;
+                    }
+                    
+                    // Update strength bar
+                    strengthBar.style.width = strength + '%';
+                    
+                    // Set color based on strength
+                    if (strength <= 25) {
+                        strengthBar.style.backgroundColor = '#dc3545'; // red
+                        message = 'Weak password';
+                    } else if (strength <= 50) {
+                        strengthBar.style.backgroundColor = '#ffc107'; // yellow
+                        message = 'Moderate password';
+                    } else if (strength <= 75) {
+                        strengthBar.style.backgroundColor = '#0dcaf0'; // cyan
+                        message = 'Good password';
+                    } else {
+                        strengthBar.style.backgroundColor = '#198754'; // green
+                        message = 'Strong password';
+                    }
+                    
+                    // Update feedback message
+                    feedback.textContent = message;
+                });
+            }
+            
+            // Form validation
+            const resetForm = document.getElementById('resetPasswordForm');
+            const confirmPasswordInput = document.getElementById('confirm_password');
+            
+            if (resetForm) {
+                resetForm.addEventListener('submit', function(e) {
+                    if (passwordInput.value !== confirmPasswordInput.value) {
+                        e.preventDefault();
+                        alert('Passwords do not match!');
+                    }
+                    
+                    if (passwordInput.value.length < 8) {
+                        e.preventDefault();
+                        alert('Password must be at least 8 characters long!');
+                    }
+                });
+            }
+            if (document.querySelector('.alert-success')) {
+                setTimeout(() => {
+                    window.location.href = "<?php echo BASE; ?>login";
+                }, 5000); // Redirect to login after 5 seconds
+            }
+
+        });
+    </script>
+</body>
+</html>

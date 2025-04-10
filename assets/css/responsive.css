@@ -1,0 +1,108 @@
+/* 
+ * Global Responsive Design
+ * This file contains global responsive design rules
+ */
+
+/* Base responsive rules */
+:root {
+    --mobile-breakpoint: 576px;
+    --tablet-breakpoint: 768px;
+    --laptop-breakpoint: 992px;
+    --desktop-breakpoint: 1200px;
+}
+
+/* Global responsive adjustments */
+html, body {
+    overflow-x: hidden;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Global table responsiveness */
+@media (max-width: 768px) {
+    .table-responsive {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* Global form responsiveness */
+@media (max-width: 768px) {
+    .form-row {
+        display: block;
+    }
+    
+    .form-row > .col,
+    .form-row > [class*="col-"] {
+        padding-right: 0;
+        padding-left: 0;
+    }
+}
+
+/* Global button responsiveness */
+@media (max-width: 576px) {
+    .btn-group .btn {
+        display: inline-block;
+        width: auto;
+        margin-bottom: 0;
+    }
+}
+
+/* Global modal responsiveness */
+@media (max-width: 576px) {
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+}
+
+/* Global navigation responsiveness */
+@media (max-width: 768px) {
+    .navbar-nav {
+        padding: 1rem 0;
+    }
+    
+    .navbar-collapse {
+        background: #fff;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+}
+
+/* Global grid system responsiveness */
+@media (max-width: 576px) {
+    .container {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+}
+
+/* Global utility classes */
+@media (max-width: 768px) {
+    .text-md-center {
+        text-align: center !important;
+    }
+    
+    .mt-md-3 {
+        margin-top: 1rem !important;
+    }
+    
+    .mb-md-3 {
+        margin-bottom: 1rem !important;
+    }
+}
+
+/* Global accessibility */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

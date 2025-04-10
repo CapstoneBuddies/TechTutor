@@ -1,0 +1,21 @@
+.class-card {
+    transition: transform 0.2s;
+}
+.class-card:hover {
+    transform: translateY(-5px);
+}
+.tutor-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.notification-dot {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 10px;
+    height: 10px;
+    background-color: var(--bs-danger);
+    border-radius: 50%;
+}

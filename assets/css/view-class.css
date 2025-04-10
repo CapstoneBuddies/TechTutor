@@ -1,0 +1,36 @@
+.class-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.status-active {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+.status-restricted {
+    background-color: #ffebee;
+    color: #c62828;
+}
+
+.action-buttons .btn {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+    margin-right: 0.5rem;
+}
+
+.search-container {
+    margin-bottom: 1.5rem;
+}
+
+.pagination {
+    margin-top: 1.5rem;
+    justify-content: center;
+}

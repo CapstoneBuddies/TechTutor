@@ -1,0 +1,49 @@
+body {
+    background-color: #f8f9fa;
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    padding: 0;
+}
+.dashboard-container {
+    display: flex;
+    min-height: 100vh;
+}
+.main-content-wrapper {
+    flex: 1;
+    padding: 20px;
+    background-color: #f8f9fa;
+    position: relative;
+}
+.stat-card {
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+.stat-icon {
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+.stat-info h3 {
+    font-size: 16px;
+    margin-bottom: 5px;
+}
+.stat-number {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 0;
+}
+.course-filters {
+    display: flex;
+    gap: 10px;
+}
+.course-icon {
+    font-size: 24px;
+    color: var(--primary-color);
+}
+.course-filter {
+    width: 200px;
+}
+.action-btn {
+    margin-right: 10px;
+    border-radius: 50%;
+}
