@@ -1,0 +1,18 @@
+ErrorDocument 404 /pages/error/404.php 
+ErrorDocument 403 /pages/error/403.php  
+ErrorDocument 500 /pages/error/500.php
+
+# Set base path for this directory
+RewriteEngine On
+RewriteBase /game/
+
+# 🔹 Remove trailing slashes except for root "/"
+RewriteCond %{REQUEST_URI} ^(.+)/$ [NC]
+RewriteRule ^(.+)/$ %1 [R=301,L]
+
+# Game sub-pages routing
+
+# Assets and static files pass-through
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
