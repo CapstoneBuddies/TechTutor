@@ -37,10 +37,13 @@ if (isset($_POST['start_game'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Code Quest - <?php echo htmlspecialchars($selectedChallenge['name'] ?? 'Challenge'); ?> | Gaming Academy</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.1/min/vs/loader.min.js"></script>
+    <!-- Favicons -->
+    <link href="<?php echo BASE; ?>assets/img/stand_alone_logo.png" rel="icon">
+    <link href="<?php echo BASE; ?>assets/img/apple-touch-icon.png" rel="apple-touch-icon">
     <!-- Add Bootstrap CSS for carousel -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css">
     <!-- Add Font Awesome for the back arrow -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="<?php echo BASE; ?>assets/vendor/fontawesome/css/all.min.css">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -233,7 +236,7 @@ if (isset($_POST['start_game'])) {
                             <div class="d-flex justify-content-center">
                                 <?php for ($j = $i * $badgesPerSlide; $j < min(($i + 1) * $badgesPerSlide, $totalBadges); $j++): ?>
                                     <div class="badge-card mx-2">
-                                        <img src="<?php echo $badges[$j]['image']; ?>" alt="<?php echo htmlspecialchars($badges[$j]['name']); ?>" class="img-fluid" style="width: 80px; height: 80px; border-radius: 10px;">
+                                        <img src="<?php echo GAME_IMG.'badges/'.$badges[$j]['image']; ?>" alt="<?php echo htmlspecialchars($badges[$j]['name']); ?>" class="img-fluid" style="width: 80px; height: 80px; border-radius: 10px;">
                                         <p class="mt-2 mb-0"><?php echo htmlspecialchars($badges[$j]['name']); ?></p>
                                         <small class="text-muted"><?php echo htmlspecialchars($badges[$j]['date']); ?></small>
                                     </div>
@@ -272,8 +275,8 @@ if (isset($_POST['start_game'])) {
     </div>
 
     <!-- Add Bootstrap and jQuery for carousel -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="<?php echo BASE; ?>assets/vendor/jQuery/jquery-3.6.4.min.js"></script>
+    <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
 
     <script>
         // Current challenge data
@@ -317,7 +320,7 @@ if (isset($_POST['start_game'])) {
             
             outputElement.textContent = "Running code...";
 
-            fetch('execute.php', {
+            fetch('execute', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: `code=${encodeURIComponent(code)}&challenge_id=${currentChallenge.id}`
@@ -345,7 +348,7 @@ if (isset($_POST['start_game'])) {
                     
                     // Set badge details in the modal
                     document.getElementById('badge-name').textContent = currentChallenge.badge_name || "Achievement Badge";
-                    document.getElementById('badge-image').src = currentChallenge.badge_image || "assets/badges/goodjob.png";
+                    document.getElementById('badge-image').src = currentChallenge.badge_image || "<?php echo GAME_IMG; ?>/badges/goodjob.png";
                     
                     // Show the badge modal
                     document.getElementById('badge-modal').style.display = 'flex';

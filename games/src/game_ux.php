@@ -9,7 +9,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Design Dynamo - Gaming Academy</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Favicons -->
+    <link href="<?php echo BASE; ?>assets/img/stand_alone_logo.png" rel="icon">
+    <link href="<?php echo BASE; ?>assets/img/apple-touch-icon.png" rel="apple-touch-icon">
+    <link rel="stylesheet" href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css">
     <style>
         /* General Styles */
         body {
@@ -394,31 +397,31 @@
         <!-- Toolbar -->
         <div class="toolbar">
             <button class="tool-btn active" id="brush-tool">
-                <img src="<?php echo IMG; ?>icons/brush.svg" alt="Brush">
+                <img src="<?php echo GAME_IMG; ?>icons/brush.svg" alt="Brush">
                 <span class="tooltip-text">Brush Tool (B)</span>
             </button>
             <button class="tool-btn" id="eraser-tool">
-                <img src="<?php echo IMG; ?>icons/eraser.svg" alt="Eraser">
+                <img src="<?php echo GAME_IMG; ?>icons/eraser.svg" alt="Eraser">
                 <span class="tooltip-text">Eraser (E)</span>
             </button>
             <button class="tool-btn" id="rect-tool">
-                <img src="<?php echo IMG; ?>icons/rectangle.svg" alt="Rectangle">
+                <img src="<?php echo GAME_IMG; ?>icons/rectangle.svg" alt="Rectangle">
                 <span class="tooltip-text">Rectangle (R)</span>
             </button>
             <button class="tool-btn" id="circle-tool">
-                <img src="<?php echo IMG; ?>icons/circle.svg" alt="Circle">
+                <img src="<?php echo GAME_IMG; ?>icons/circle.svg" alt="Circle">
                 <span class="tooltip-text">Circle (C)</span>
             </button>
             <button class="tool-btn" id="text-tool">
-                <img src="<?php echo IMG; ?>icons/text.svg" alt="Text">
+                <img src="<?php echo GAME_IMG; ?>icons/text.svg" alt="Text">
                 <span class="tooltip-text">Text Tool (T)</span>
             </button>
             <button class="tool-btn" id="eyedropper-tool">
-                <img src="<?php echo IMG; ?>icons/eyedropper.svg" alt="Color Picker">
+                <img src="<?php echo GAME_IMG; ?>icons/eyedropper.svg" alt="Color Picker">
                 <span class="tooltip-text">Color Picker (I)</span>
             </button>
             <button class="tool-btn" id="layers-tool">
-                <img src="<?php echo IMG; ?>icons/layers.svg" alt="Layers">
+                <img src="<?php echo GAME_IMG; ?>icons/layers.svg" alt="Layers">
                 <span class="tooltip-text">Layers (L)</span>
             </button>
         </div>
@@ -529,7 +532,7 @@
 
     <div class="notification" id="notification"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script>
         const canvas = document.getElementById('design-canvas');
         const ctx = canvas.getContext('2d');

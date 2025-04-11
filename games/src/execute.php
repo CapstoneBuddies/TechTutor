@@ -1,6 +1,10 @@
 <?php
     include 'config.php';
     include 'challenges.php';
+    // Include XP manager if file exists
+    if (file_exists(__DIR__.'/xp_manager.php')) {
+        include 'xp_manager.php';
+    }
     global $pdo;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -10,13 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $challengeId = isset($_POST['challenge_id']) ? (int)$_POST['challenge_id'] : 1;
         
         // Find the selected challenge
-        $selectedChallenge = null;
-        foreach ($challenges as $challenge) {
-            if ($challenge['id'] == $challengeId) {
-                $selectedChallenge = $challenge;
-                break;
-            }
-        }
+        $selectedChallenge = getChallengeById($challengeId);
         
         // If no challenge found, use a default
         if (!$selectedChallenge && !empty($challenges)) {
@@ -46,20 +44,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $userId = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 1;
         $challengeName = $selectedChallenge['name'] ?? 'Challenge';
         
+        // Get XP value for the challenge
+        $xpEarned = $solved ? ($selectedChallenge['xp_value'] ?? 10) : 0;
+        
         // Save the result in the database with error handling
         try {
-            $stmt = $pdo->prepare("INSERT INTO game_history (user_id, challenge_name, result) VALUES (:user_id, :challenge_name, :result)");
-            $stmt->execute([
-                ':user_id' => $userId,
-                ':challenge_name' => $challengeName,
-                ':result' => $result
-            ]);
+            // Check if xp_earned column exists in game_history table
+            $columnExists = false;
+            try {
+                $checkStmt = $pdo->prepare("SHOW COLUMNS FROM game_history LIKE 'xp_earned'");
+                $checkStmt->execute();
+                $columnExists = ($checkStmt->rowCount() > 0);
+            } catch (PDOException $e) {
+                // Column doesn't exist, continue without XP
+                $columnExists = false;
+            }
+            
+            if ($columnExists) {
+                $stmt = $pdo->prepare("INSERT INTO game_history (user_id, challenge_name, result, xp_earned) VALUES (:user_id, :challenge_name, :result, :xp_earned)");
+                $stmt->execute([
+                    ':user_id' => $userId,
+                    ':challenge_name' => $challengeName,
+                    ':result' => $result,
+                    ':xp_earned' => $xpEarned
+                ]);
+            } else {
+                $stmt = $pdo->prepare("INSERT INTO game_history (user_id, challenge_name, result) VALUES (:user_id, :challenge_name, :result)");
+                $stmt->execute([
+                    ':user_id' => $userId,
+                    ':challenge_name' => $challengeName,
+                    ':result' => $result
+                ]);
+            }
             
             // Save attempt in session history
             if (!isset($_SESSION['game_history'])) {
                 $_SESSION['game_history'] = [];
             }
             $_SESSION['game_history'][] = date('Y-m-d H:i:s');
+            
+            // Handle XP and level up if challenge was solved
+            $xpResult = null;
+            if ($solved && function_exists('addUserXP')) {
+                // Add XP to the user
+                $xpResult = addUserXP($userId, $xpEarned);
+                
+                // Get user's updated XP and level info
+                $userXPInfo = getUserXPInfo($userId);
+            }
             
             // Handle badge awarding if solved
             if ($solved) {
@@ -71,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Only add the badge if the user doesn't already have it
                 if (!isset($_SESSION['badges'][$badgeName])) {
-                    $badgeImage = $selectedChallenge['badge_image'] ?? 'assets/badges/goodjob.png';
+                    $badgeImage = $selectedChallenge['badge_image'] ?? 'assets/img/badges/goodjob.png';
                     $currentDate = date('Y-m-d H:i:s');
                     
                     $_SESSION['badges'][$badgeName] = [
@@ -80,14 +112,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'date' => $currentDate
                     ];
                     
-                    // Save badge to database
-                    $stmt = $pdo->prepare("INSERT INTO badges (user_id, badge_name, badge_image_path, date_earned) 
-                                          VALUES (:user_id, :badge_name, :badge_image, :date_earned)");
+                    // Check if earned_at column exists in badges table
+                    $badgeColumnName = 'earned_at';
+                    try {
+                        $checkStmt = $pdo->prepare("SHOW COLUMNS FROM badges LIKE 'earned_at'");
+                        $checkStmt->execute();
+                        if ($checkStmt->rowCount() == 0) {
+                            $badgeColumnName = 'date_earned';
+                        }
+                    } catch (PDOException $e) {
+                        // Default to date_earned if there's an error
+                        $badgeColumnName = 'date_earned';
+                    }
+                    
+                    // Save badge to database with appropriate column name
+                    $stmt = $pdo->prepare("INSERT INTO badges (user_id, badge_name, badge_image, $badgeColumnName) 
+                                          VALUES (:user_id, :badge_name, :badge_image, :earned_at)");
                     $stmt->execute([
                         ':user_id' => $userId,
                         ':badge_name' => $badgeName,
                         ':badge_image' => $badgeImage, // Store path instead of binary
-                        ':date_earned' => $currentDate
+                        ':earned_at' => $currentDate
                     ]);
                 }
             }
@@ -101,7 +146,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'output' => $output,
             'solved' => $solved,
             'expected' => $expectedOutput,
-            'challenge_id' => $challengeId
+            'challenge_id' => $challengeId,
+            'xp_earned' => $solved ? $xpEarned : 0,
+            'level_info' => $solved ? $xpResult : null
         ]);
         
     } catch (Exception $e) {

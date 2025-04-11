@@ -1,1 +1,0 @@
-[11-Apr-2025 14:38:50 Europe/Berlin] Friend activity error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'game_db.user_friends' doesn't exist

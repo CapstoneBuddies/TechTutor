@@ -8,135 +8,6 @@
         session_start();
     }
 
-    /**
-     * Define the network levels and solutions
-     */
-    function getNetworkLevel($level) {
-        $levels = [
-            1 => [
-                'title' => 'Basic Network Setup',
-                'description' => 'Connect the client computers to the router to establish a basic home network.',
-                'devices' => [
-                    'router1' => ['type' => 'router', 'x' => 400, 'y' => 200, 'ip' => '192.168.1.1'],
-                    'pc1' => ['type' => 'computer', 'x' => 200, 'y' => 100, 'ip' => '192.168.1.2'],
-                    'pc2' => ['type' => 'computer', 'x' => 200, 'y' => 300, 'ip' => '192.168.1.3'],
-                    'laptop1' => ['type' => 'laptop', 'x' => 600, 'y' => 100, 'ip' => '192.168.1.4'],
-                    'laptop2' => ['type' => 'laptop', 'x' => 600, 'y' => 300, 'ip' => '192.168.1.5']
-                ],
-                'solution' => [
-                    ['source' => 'pc1', 'target' => 'router1'],
-                    ['source' => 'pc2', 'target' => 'router1'],
-                    ['source' => 'laptop1', 'target' => 'router1'],
-                    ['source' => 'laptop2', 'target' => 'router1']
-                ],
-                'points' => 100
-            ],
-            2 => [
-                'title' => 'Internet Connection',
-                'description' => 'Connect the router to the modem to establish an internet connection for your network.',
-                'devices' => [
-                    'modem' => ['type' => 'modem', 'x' => 400, 'y' => 100, 'ip' => '203.0.113.1'],
-                    'router1' => ['type' => 'router', 'x' => 400, 'y' => 250, 'ip' => '192.168.1.1'],
-                    'pc1' => ['type' => 'computer', 'x' => 200, 'y' => 300, 'ip' => '192.168.1.2'],
-                    'pc2' => ['type' => 'computer', 'x' => 600, 'y' => 300, 'ip' => '192.168.1.3'],
-                    'server' => ['type' => 'server', 'x' => 400, 'y' => 400, 'ip' => '192.168.1.4']
-                ],
-                'solution' => [
-                    ['source' => 'router1', 'target' => 'modem'],
-                    ['source' => 'pc1', 'target' => 'router1'],
-                    ['source' => 'pc2', 'target' => 'router1'],
-                    ['source' => 'server', 'target' => 'router1']
-                ],
-                'points' => 150
-            ],
-            3 => [
-                'title' => 'Office Network with Switch',
-                'description' => 'Create a small office network using a switch to connect multiple computers to a router.',
-                'devices' => [
-                    'router1' => ['type' => 'router', 'x' => 400, 'y' => 100, 'ip' => '192.168.1.1'],
-                    'switch1' => ['type' => 'switch', 'x' => 400, 'y' => 250, 'ip' => ''],
-                    'pc1' => ['type' => 'computer', 'x' => 200, 'y' => 350, 'ip' => '192.168.1.2'],
-                    'pc2' => ['type' => 'computer', 'x' => 350, 'y' => 350, 'ip' => '192.168.1.3'],
-                    'pc3' => ['type' => 'computer', 'x' => 450, 'y' => 350, 'ip' => '192.168.1.4'],
-                    'pc4' => ['type' => 'computer', 'x' => 600, 'y' => 350, 'ip' => '192.168.1.5'],
-                    'printer' => ['type' => 'printer', 'x' => 600, 'y' => 200, 'ip' => '192.168.1.6']
-                ],
-                'solution' => [
-                    ['source' => 'switch1', 'target' => 'router1'],
-                    ['source' => 'pc1', 'target' => 'switch1'],
-                    ['source' => 'pc2', 'target' => 'switch1'],
-                    ['source' => 'pc3', 'target' => 'switch1'],
-                    ['source' => 'pc4', 'target' => 'switch1'],
-                    ['source' => 'printer', 'target' => 'switch1']
-                ],
-                'points' => 200
-            ]
-        ];
-        
-        return $levels[$level] ?? $levels[1];
-    }
-
-    /**
-     * Check if the network solution is correct
-     */
-    function checkNetworkSolution($level, $connections) {
-        $levelData = getNetworkLevel($level);
-        $solution = $levelData['solution'];
-        
-        // Check if all required connections are present
-        foreach ($solution as $requiredConnection) {
-            $found = false;
-            foreach ($connections as $userConnection) {
-                if (
-                    ($userConnection['source'] === $requiredConnection['source'] && 
-                     $userConnection['target'] === $requiredConnection['target']) || 
-                    ($userConnection['source'] === $requiredConnection['target'] && 
-                     $userConnection['target'] === $requiredConnection['source'])
-                ) {
-                    $found = true;
-                    break;
-                }
-            }
-            
-            if (!$found) {
-                return [
-                    'success' => false,
-                    'message' => "Missing connection between {$requiredConnection['source']} and {$requiredConnection['target']}"
-                ];
-            }
-        }
-        
-        // Check if there are any extra connections that shouldn't be there
-        foreach ($connections as $userConnection) {
-            $valid = false;
-            foreach ($solution as $requiredConnection) {
-                if (
-                    ($userConnection['source'] === $requiredConnection['source'] && 
-                     $userConnection['target'] === $requiredConnection['target']) || 
-                    ($userConnection['source'] === $requiredConnection['target'] && 
-                     $userConnection['target'] === $requiredConnection['source'])
-                ) {
-                    $valid = true;
-                    break;
-                }
-            }
-            
-            if (!$valid) {
-                return [
-                    'success' => false,
-                    'message' => "Invalid connection between {$userConnection['source']} and {$userConnection['target']}"
-                ];
-            }
-        }
-        
-        // All connections are correct
-        return [
-            'success' => true,
-            'points' => $levelData['points'],
-            'message' => 'Network configured correctly!'
-        ];
-    }
-
     // Handle game actions
     $message = '';
     $gameCompleted = false;
@@ -567,8 +438,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Network Nexus - Gaming Academy</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Favicons -->
+    <link href="<?php echo BASE; ?>assets/img/stand_alone_logo.png" rel="icon">
+    <link href="<?php echo BASE; ?>assets/img/apple-touch-icon.png" rel="apple-touch-icon">
+    <link rel="stylesheet" href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="<?php echo BASE; ?>assets/vendor/fontawesome/css/all.min.css">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -675,25 +549,25 @@
             margin: 0;
         }
         .device.router {
-            background-image: url('<?php echo IMG; ?>network/router.png'); 
+            background-image: url('<?php echo GAME_IMG; ?>network/router.png'); 
         }
         .device.computer {
-            background-image: url('<?php echo IMG; ?>network/computer.png');
+            background-image: url('<?php echo GAME_IMG; ?>network/computer.png');
         }
         .device.laptop {
-            background-image: url('<?php echo IMG; ?>network/laptop.png');
+            background-image: url('<?php echo GAME_IMG; ?>network/laptop.png');
         }
         .device.switch {
-            background-image: url('<?php echo IMG; ?>network/switch.png');
+            background-image: url('<?php echo GAME_IMG; ?>network/switch.png');
         }
         .device.server {
-            background-image: url('<?php echo IMG; ?>network/server.png');
+            background-image: url('<?php echo GAME_IMG; ?>network/server.png');
         }
         .device.modem {
-            background-image: url('<?php echo IMG; ?>network/modem.png');
+            background-image: url('<?php echo GAME_IMG; ?>network/modem.png');
         }
         .device.printer {
-            background-image: url('<?php echo IMG; ?>network/printer.png');
+            background-image: url('<?php echo GAME_IMG; ?>network/printer.png');
         }
         .connection-form {
             display: flex;
@@ -841,7 +715,7 @@
     </div>
     
     <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     
     <script>
         // Draw connections between devices

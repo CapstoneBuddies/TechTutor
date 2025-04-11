@@ -33,6 +33,7 @@
 	define('CLASS_IMG', BASE.'assets/img/class/');
 	define('SUBJECT_IMG', BASE.'assets/img/subjects/');
 	define('USER_IMG', BASE.'assets/img/users/');
+	define('GAME_IMG', BASE.'games/assets/img/');
 	define('BACKEND', ROOT_PATH.'/backends/management/');
 	define('SITE_NAME', 'Tech Tutor'); 
 
@@ -44,6 +45,7 @@
 	define('DB_USER',$_ENV['DB_USER']);
 	define('DB_PASSWORD',$_ENV['DB_PASS']);
 	define('DB_NAME',$_ENV['DB_NAME']);
+	define('DB_GAME',$_ENV['DB_GAME']);
 	define('DB_PORT',$_ENV['DB_PORT']);
 
 	define('BBB_API_URI',$_ENV['BBB_URI']);

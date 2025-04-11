@@ -1,6 +1,7 @@
 <?php    
     include 'config.php';
     include 'challenges.php';
+    include 'xp_manager.php';
     global $pdo;
 
     // Start or resume session
@@ -22,36 +23,45 @@
                 case 'codequest':
                     // Code Quest leaderboard - based on coding challenges solved
                     $query = "SELECT u.username, COUNT(CASE WHEN gh.result = 'Solved' AND gh.challenge_name LIKE 'Coding%' THEN 1 END) as solved_count, 
-                              MAX(gh.date) as last_active
+                              MAX(gh.date) as last_active,
+                              COALESCE(ux.level, 1) as user_level,
+                              COALESCE(ux.xp, 0) as total_xp
                               FROM users u
                               LEFT JOIN game_history gh ON u.id = gh.user_id
+                              LEFT JOIN user_xp ux ON u.id = ux.user_id
                               GROUP BY u.id
                               HAVING solved_count > 0
-                              ORDER BY solved_count DESC, last_active DESC
+                              ORDER BY solved_count DESC, user_level DESC, total_xp DESC, last_active DESC
                               LIMIT :limit";
                     break;
                     
                 case 'networking':
                     // Network Nexus leaderboard - based on network levels completed
                     $query = "SELECT u.username, COUNT(CASE WHEN gh.result = 'Solved' AND gh.challenge_name LIKE 'Network%' THEN 1 END) as solved_count, 
-                              MAX(gh.date) as last_active
+                              MAX(gh.date) as last_active,
+                              COALESCE(ux.level, 1) as user_level,
+                              COALESCE(ux.xp, 0) as total_xp
                               FROM users u
                               LEFT JOIN game_history gh ON u.id = gh.user_id
+                              LEFT JOIN user_xp ux ON u.id = ux.user_id
                               GROUP BY u.id
                               HAVING solved_count > 0
-                              ORDER BY solved_count DESC, last_active DESC
+                              ORDER BY solved_count DESC, user_level DESC, total_xp DESC, last_active DESC
                               LIMIT :limit";
                     break;
                     
                 case 'design':
                     // Design Dynamo leaderboard - based on UX challenges completed
                     $query = "SELECT u.username, COUNT(CASE WHEN gh.result = 'Solved' AND gh.challenge_name LIKE 'Design%' THEN 1 END) as solved_count, 
-                              MAX(gh.date) as last_active
+                              MAX(gh.date) as last_active,
+                              COALESCE(ux.level, 1) as user_level,
+                              COALESCE(ux.xp, 0) as total_xp
                               FROM users u
                               LEFT JOIN game_history gh ON u.id = gh.user_id
+                              LEFT JOIN user_xp ux ON u.id = ux.user_id
                               GROUP BY u.id
                               HAVING solved_count > 0
-                              ORDER BY solved_count DESC, last_active DESC
+                              ORDER BY solved_count DESC, user_level DESC, total_xp DESC, last_active DESC
                               LIMIT :limit";
                     break;
                     
@@ -61,12 +71,15 @@
                     $query = "SELECT u.username, COUNT(CASE WHEN gh.result = 'Solved' THEN 1 END) as solved_count, 
                               COUNT(DISTINCT gh.challenge_name) as unique_challenges,
                               (SELECT COUNT(*) FROM badges b WHERE b.user_id = u.id) as badge_count,
-                              MAX(gh.date) as last_active
+                              MAX(gh.date) as last_active,
+                              COALESCE(ux.level, 1) as user_level,
+                              COALESCE(ux.xp, 0) as total_xp
                               FROM users u
                               LEFT JOIN game_history gh ON u.id = gh.user_id
+                              LEFT JOIN user_xp ux ON u.id = ux.user_id
                               GROUP BY u.id
                               HAVING solved_count > 0
-                              ORDER BY solved_count DESC, badge_count DESC, last_active DESC
+                              ORDER BY user_level DESC, total_xp DESC, solved_count DESC, badge_count DESC
                               LIMIT :limit";
             }
             
@@ -109,6 +122,7 @@
             $query = "SELECT challenge_name, 
                       COUNT(*) as attempt_count,
                       SUM(CASE WHEN result = 'Solved' THEN 1 ELSE 0 END) as solved_count,
+                      SUM(CASE WHEN result = 'Solved' THEN xp_earned ELSE 0 END) as total_xp_earned,
                       (SUM(CASE WHEN result = 'Solved' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) as success_rate
                       FROM game_history
                       $filter
@@ -127,6 +141,9 @@
         }
     }
 
+    // Get top users by level
+    $topLevelUsers = getTopUsersByLevel(10);
+
     // Get data for each leaderboard
     $overallLeaderboard = getLeaderboard('overall');
     $codeQuestLeaderboard = getLeaderboard('codequest');
@@ -143,8 +160,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gaming Academy - Leaderboards</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- Favicons -->
+    <link href="<?php echo BASE; ?>assets/img/stand_alone_logo.png" rel="icon">
+    <link href="<?php echo BASE; ?>assets/img/apple-touch-icon.png" rel="apple-touch-icon">
+    <link rel="stylesheet" href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="<?php echo BASE; ?>assets/vendor/boostrap-icons/bootstrap-icons.css">
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -357,33 +377,51 @@
         .back-button:hover {
             color: #0d6efd;
         }
+        /* Level badge styles */
+        .level-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #0d6efd, #6610f2);
+            color: white;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-left: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .level-title {
+            display: block;
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-top: 2px;
+        }
     </style>
 </head>
 <body>
     <!-- Sidebar -->
     <div class="sidebar">
         <h2>Gaming Academy</h2>
-        <a href="../index.php">
+        <a href="<?php echo BASE; ?>">
             <i class="bi bi-house-door-fill"></i>
-            Dashboard
+            Back To Main Dashboard
         </a>
         
         <div class="game-category">Coding Games</div>
-        <a href="ide.php">
+        <a href="game/codequest">
             <i class="bi bi-code-square"></i>
             Code Quest
         </a>
-        <a href="game_networking.php">
+        <a href="game/network-nexus">
             <i class="bi bi-diagram-3-fill"></i>
             Network Nexus
         </a>
-        <a href="game_ux.php">
+        <a href="game/design-dynamo">
             <i class="bi bi-palette-fill"></i>
             Design Dynamo
         </a>
         
         <div class="game-category">Community</div>
-        <a href="leaderboards.php" class="active">
+        <a href="game/leaderboards" class="active">
             <i class="bi bi-trophy-fill"></i>
             Leaderboards
         </a>
@@ -403,10 +441,10 @@
         </a>
         
         <div class="user-info">
-            <img src="https://via.placeholder.com/40" alt="User Avatar">
+            <img src="<?php echo $_SESSION['profile'] ?>" alt="User Avatar">
             <div class="user-details">
-                <div class="user-name">Player</div>
-                <div class="user-role">Level 1 Coder</div>
+                <div class="user-name"><?php echo $_SESSION['name']; ?></div>
+                <div class="user-role">Level <?php echo $userXPInfo['current_level']; ?> - <?php echo getLevelTitle($userXPInfo['current_level']); ?></div>
             </div>
         </div>
     </div>
@@ -415,7 +453,7 @@
     <div class="main-content">
         <div class="page-header">
             <div>
-                <a href="../index.php" class="back-button mb-2">
+                <a href="<?php echo BASE.'game'; ?>" class="back-button mb-2">
                     <i class="bi bi-arrow-left"></i> Back to Dashboard
                 </a>
                 <h1>Leaderboards</h1>
@@ -459,6 +497,7 @@
                             <tr>
                                 <th>Rank</th>
                                 <th>Player</th>
+                                <th>Level</th>
                                 <th>Challenges Solved</th>
                                 <th>Badges</th>
                                 <th>Last Active</th>
@@ -481,8 +520,15 @@
                                             <div class="user-cell">
                                                 <img src="https://via.placeholder.com/40/<?php echo dechex(crc32($player['username'])); ?>?text=<?php echo substr($player['username'], 0, 1); ?>" 
                                                      alt="User" class="user-avatar">
-                                                <span><?php echo htmlspecialchars($player['username']); ?></span>
+                                                <div>
+                                                    <span><?php echo htmlspecialchars($player['username']); ?></span>
+                                                    <span class="level-title"><?php echo getLevelTitle($player['user_level']); ?></span>
+                                                </div>
                                             </div>
+                                        </td>
+                                        <td>
+                                            <span class="level-badge">Lvl <?php echo $player['user_level']; ?></span>
+                                            <span class="text-muted small">(<?php echo number_format($player['total_xp']); ?> XP)</span>
                                         </td>
                                         <td><?php echo $player['solved_count']; ?></td>
                                         <td><?php echo $player['badge_count'] ?? 0; ?></td>
@@ -511,6 +557,7 @@
                             <tr>
                                 <th>Rank</th>
                                 <th>Coder</th>
+                                <th>Level</th>
                                 <th>Challenges Solved</th>
                                 <th>Last Active</th>
                             </tr>
@@ -532,8 +579,15 @@
                                             <div class="user-cell">
                                                 <img src="https://via.placeholder.com/40/<?php echo dechex(crc32($player['username'])); ?>?text=<?php echo substr($player['username'], 0, 1); ?>" 
                                                      alt="User" class="user-avatar">
-                                                <span><?php echo htmlspecialchars($player['username']); ?></span>
+                                                <div>
+                                                    <span><?php echo htmlspecialchars($player['username']); ?></span>
+                                                    <span class="level-title"><?php echo getLevelTitle($player['user_level']); ?></span>
+                                                </div>
                                             </div>
+                                        </td>
+                                        <td>
+                                            <span class="level-badge">Lvl <?php echo $player['user_level']; ?></span>
+                                            <span class="text-muted small">(<?php echo number_format($player['total_xp']); ?> XP)</span>
                                         </td>
                                         <td><?php echo $player['solved_count']; ?></td>
                                         <td><?php echo date('M d, Y', strtotime($player['last_active'])); ?></td>
@@ -561,6 +615,7 @@
                             <tr>
                                 <th>Rank</th>
                                 <th>Engineer</th>
+                                <th>Level</th>
                                 <th>Networks Built</th>
                                 <th>Last Active</th>
                             </tr>
@@ -582,8 +637,15 @@
                                             <div class="user-cell">
                                                 <img src="https://via.placeholder.com/40/<?php echo dechex(crc32($player['username'])); ?>?text=<?php echo substr($player['username'], 0, 1); ?>" 
                                                      alt="User" class="user-avatar">
-                                                <span><?php echo htmlspecialchars($player['username']); ?></span>
+                                                <div>
+                                                    <span><?php echo htmlspecialchars($player['username']); ?></span>
+                                                    <span class="level-title"><?php echo getLevelTitle($player['user_level']); ?></span>
+                                                </div>
                                             </div>
+                                        </td>
+                                        <td>
+                                            <span class="level-badge">Lvl <?php echo $player['user_level']; ?></span>
+                                            <span class="text-muted small">(<?php echo number_format($player['total_xp']); ?> XP)</span>
                                         </td>
                                         <td><?php echo $player['solved_count']; ?></td>
                                         <td><?php echo date('M d, Y', strtotime($player['last_active'])); ?></td>
@@ -611,6 +673,7 @@
                             <tr>
                                 <th>Rank</th>
                                 <th>Designer</th>
+                                <th>Level</th>
                                 <th>Designs Completed</th>
                                 <th>Last Active</th>
                             </tr>
@@ -632,8 +695,15 @@
                                             <div class="user-cell">
                                                 <img src="https://via.placeholder.com/40/<?php echo dechex(crc32($player['username'])); ?>?text=<?php echo substr($player['username'], 0, 1); ?>" 
                                                      alt="User" class="user-avatar">
-                                                <span><?php echo htmlspecialchars($player['username']); ?></span>
+                                                <div>
+                                                    <span><?php echo htmlspecialchars($player['username']); ?></span>
+                                                    <span class="level-title"><?php echo getLevelTitle($player['user_level']); ?></span>
+                                                </div>
                                             </div>
+                                        </td>
+                                        <td>
+                                            <span class="level-badge">Lvl <?php echo $player['user_level']; ?></span>
+                                            <span class="text-muted small">(<?php echo number_format($player['total_xp']); ?> XP)</span>
                                         </td>
                                         <td><?php echo $player['solved_count']; ?></td>
                                         <td><?php echo date('M d, Y', strtotime($player['last_active'])); ?></td>
@@ -694,8 +764,58 @@
                 </table>
             </div>
         </div>
+
+        <!-- Top Level Users -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">Top Players by Level</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Player</th>
+                                <th>Level</th>
+                                <th>Title</th>
+                                <th>Total XP</th>
+                                <th>Progress to Next Level</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (!empty($topLevelUsers)): ?>
+                                <?php foreach ($topLevelUsers as $index => $user): ?>
+                                    <tr>
+                                        <td><?php echo $index + 1; ?></td>
+                                        <td><?php echo htmlspecialchars($user['username']); ?></td>
+                                        <td>
+                                            <span class="level-badge">Lvl <?php echo $user['level']; ?></span>
+                                        </td>
+                                        <td><?php echo getLevelTitle($user['level']); ?></td>
+                                        <td><?php echo number_format($user['xp']); ?> XP</td>
+                                        <td>
+                                            <div class="progress" style="height: 15px;">
+                                                <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $user['level_progress_percent']; ?>%;" 
+                                                    aria-valuenow="<?php echo $user['level_progress_percent']; ?>" aria-valuemin="0" aria-valuemax="100">
+                                                    <?php echo $user['level_progress_percent']; ?>%
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="6" class="text-center">No players found</td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="<?php echo BASE; ?>assets/vendor/jQuery/jquery-3.6.4.min.js"></script>
 </body>
 </html>

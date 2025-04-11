@@ -1,20 +1,46 @@
 <?php    
     include 'src/config.php';
     include 'src/challenges.php';
+    include 'src/xp_manager.php';
     global $pdo;
 
+// Check if the user is online
+if(!isset($_SESSION['user'])) {
+    $_SESSION['Invalid Action'];
+    header("Location: ../login");
+}
+
+// Check if user record exist for gamification
+$query = "SELECT 1 FROM users WHERE email = :email";
+$check_stmt = $pdo->prepare($query);
+$check_stmt->execute([':email' => $_SESSION['email']]);
+$result = $check_stmt->fetch(PDO::FETCH_ASSOC);
+if(!$result) {
+    $add_user = $pdo->prepare("INSERT INTO users(username, email) VALUES(:username, :email)");
+    $username = $_SESSION['first_name'].' '.$_SESSION['last_name'];
+    $add_user->execute([':username'=>$username, ':email'=>$_SESSION['email'] ]);
+}
+
 // Fetch game history from the database
-$userId = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 1; // Use session user ID if available
+$userId = isset($_SESSION['user']) ? $_SESSION['user'] : 1; // Use session user ID if available
 $stmt = $pdo->prepare("SELECT date, result, challenge_name FROM game_history WHERE user_id = :user_id ORDER BY date DESC LIMIT 10");
 $stmt->execute([':user_id' => $userId]);
 $gameHistory = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Fetch badges from the session
-$badges = isset($_SESSION['badges']) ? $_SESSION['badges'] : [];
+// Get user XP and level information
+$userXPInfo = getUserXPInfo($userId);
+
+// Fetch badges from the db
+$q = "SELECT * FROM badges WHERE user_id = :userId";
+$getBadges = $pdo->prepare($q);
+$getBadges->execute([':userId' => $_SESSION['user']]);
+$result = $getBadges->fetchAll(PDO::FETCH_ASSOC);
+$badges = isset($result) ? $result : [];
 $gameMessage = isset($_SESSION['game_message']) ? $_SESSION['game_message'] : null;
 
 // Clear the game message after displaying it
 unset($_SESSION['game_message']);
+
 ?>
 
 <!DOCTYPE html>
@@ -23,10 +49,12 @@ unset($_SESSION['game_message']);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TechTutor | Gaming Academy</title>
+    <!-- Favicons -->
+    <link href="<?php echo BASE; ?>assets/img/stand_alone_logo.png" rel="icon">
+    <link href="<?php echo BASE; ?>assets/img/apple-touch-icon.png" rel="apple-touch-icon">
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.css">
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -183,50 +211,52 @@ unset($_SESSION['game_message']);
             box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
         }
         .game-card .card-img-top {
-            height: 180px;
+            height: 160px;
             object-fit: cover;
         }
-        .game-card .card-body {
-            padding: 20px;
-        }
-        .game-card .card-title {
-            font-weight: 600;
-            margin-bottom: 10px;
-        }
-        .game-card .card-text {
-            color: #6c757d;
-            margin-bottom: 20px;
-        }
-        .game-card .btn {
-            width: 100%;
-            padding: 10px;
-        }
-        .stats-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .stat-card {
+        
+        /* XP Bar Styles */
+        .xp-progress-container {
             background-color: #fff;
             border-radius: 12px;
             padding: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
         }
-        .stat-card .stat-icon {
-            font-size: 2rem;
+        .xp-level {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             margin-bottom: 10px;
+        }
+        .xp-level-number {
+            font-size: 2rem;
+            font-weight: 700;
             color: #0d6efd;
         }
-        .stat-card .stat-value {
-            font-size: 1.8rem;
-            font-weight: 700;
-            margin-bottom: 5px;
+        .xp-level-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #2c3e50;
         }
-        .stat-card .stat-label {
-            color: #6c757d;
+        .xp-progress {
+            height: 25px;
+            background-color: #e9ecef;
+            border-radius: 50px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+        .xp-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #0d6efd, #6610f2);
+            border-radius: 50px;
+            transition: width 0.5s ease;
+        }
+        .xp-text {
+            display: flex;
+            justify-content: space-between;
             font-size: 0.9rem;
+            color: #6c757d;
         }
     </style>
 </head>
@@ -235,27 +265,27 @@ unset($_SESSION['game_message']);
     <!-- Sidebar -->
     <div class="sidebar">
         <h2>Gaming Academy</h2>
-        <a href="index.php" class="active">
+        <a href="home" class="active">
             <i class="bi bi-house-door-fill"></i>
-            Dashboard
+            Back To Main Dashboard
         </a>
         
         <div class="game-category">Coding Games</div>
-        <a href="codequest">
+        <a href="game/codequest">
             <i class="bi bi-code-square"></i>
             Code Quest
         </a>
-        <a href="network-nexus">
+        <a href="game/network-nexus">
             <i class="bi bi-diagram-3-fill"></i>
             Network Nexus
         </a>
-        <a href="design-dynamo">
+        <a href="game/design-dynamo">
             <i class="bi bi-palette-fill"></i>
             Design Dynamo
         </a>
         
         <div class="game-category">Community</div>
-        <a href="leaderboards">
+        <a href="game/leaderboards">
             <i class="bi bi-trophy-fill"></i>
             Leaderboards
         </a>
@@ -275,89 +305,88 @@ unset($_SESSION['game_message']);
         </a>
         
         <div class="user-info">
-            <img src="https://via.placeholder.com/40" alt="User Avatar">
+            <img src="<?php echo $_SESSION['profile'] ?>" alt="User Avatar">
             <div class="user-details">
-                <div class="user-name">Player</div>
-                <div class="user-role">Level 1 Coder</div>
+                <div class="user-name"><?php echo $_SESSION['name']; ?></div>
+                <div class="user-role">Level <?php echo $userXPInfo['current_level']; ?> - <?php echo getLevelTitle($userXPInfo['current_level']); ?></div>
             </div>
         </div>
     </div>
 
     <!-- Main Content -->
     <div class="main-content">
+        <h1>Welcome to the Gaming Academy</h1>
+        
         <div class="welcome-message">
-            <h1>Welcome to Gaming Academy!</h1>
-            <p class="lead">Challenge yourself with our educational games designed to improve your coding, networking, and design skills.</p>
+            <h4>Ready to learn while playing?</h4>
+            <p>Test your skills, earn badges, and track your progress through interactive coding games.</p>
         </div>
         
-        <!-- Stats Overview -->
-        <div class="stats-container">
-            <div class="stat-card">
-                <div class="stat-icon"><i class="bi bi-controller"></i></div>
-                <div class="stat-value"><?php echo count($gameHistory); ?></div>
-                <div class="stat-label">Games Played</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="bi bi-award"></i></div>
-                <div class="stat-value"><?php echo count($badges); ?></div>
-                <div class="stat-label">Badges Earned</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="bi bi-check-circle"></i></div>
-                <div class="stat-value">
-                    <?php 
-                        $solvedCount = 0;
-                        foreach ($gameHistory as $history) {
-                            if ($history['result'] === 'Solved') $solvedCount++;
-                        }
-                        echo $solvedCount;
-                    ?>
+        <!-- XP and Level Progress -->
+        <div class="xp-progress-container">
+            <div class="xp-level">
+                <div>
+                    <span class="xp-level-number">Level <?php echo $userXPInfo['current_level']; ?></span>
+                    <span class="ms-2 xp-level-title"><?php 
+                        // Get level title from database instead of hardcoded array
+                        echo getLevelTitle($userXPInfo['current_level']);
+                    ?></span>
                 </div>
-                <div class="stat-label">Challenges Solved</div>
+                <div>
+                    <span class="badge bg-primary">Total XP: <?php echo $userXPInfo['total_xp']; ?></span>
+                </div>
+            </div>
+            <div class="xp-progress">
+                <div class="xp-bar" style="width: <?php echo $userXPInfo['level_progress_percent']; ?>%"></div>
+            </div>
+            <div class="xp-text">
+                <span><?php echo $userXPInfo['current_level_xp']; ?> XP</span>
+                <span>Next Level: <?php echo $userXPInfo['next_level_xp']; ?> XP</span>
             </div>
         </div>
-
-        <!-- Display Game Message -->
-        <?php if ($gameMessage): ?>
-            <div class="alert alert-info mb-4">
-                <?php echo htmlspecialchars($gameMessage); ?>
-            </div>
-        <?php endif; ?>
-
-        <!-- Featured Games -->
-        <h2 class="mb-4">Featured Games</h2>
-        <div class="game-cards">
-            <div class="game-card">
-                <img src="https://via.placeholder.com/300x180?text=Code+Quest" class="card-img-top" alt="Code Quest">
-                <div class="card-body">
-                    <h5 class="card-title">Code Quest</h5>
-                    <p class="card-text">Solve coding challenges to improve your programming skills. From beginner to advanced levels!</p>
-                    <a href="src/ide.php" class="btn btn-primary">Start Coding</a>
+        
+        <div class="row">
+            <div class="col-md-8">
+                <!-- Game Cards -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Available Games</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="game-cards">
+                            <div class="game-card">
+                                <img src="<?php echo GAME_IMG.'code-quest.png'; ?>" class="card-img-top" alt="Code Quest">
+                                <div class="card-body">
+                                    <h5 class="card-title">Code Quest</h5>
+                                    <p class="card-text">Solve coding challenges to improve your programming skills. From beginner to advanced levels!</p>
+                                    <a href="src/ide.php" class="btn btn-primary">Start Coding</a>
+                                </div>
+                            </div>
+                            
+                            <div class="game-card">
+                                <img src="<?php echo GAME_IMG.'network-nexus.png'; ?>" class="card-img-top" alt="Network Nexus">
+                                <div class="card-body">
+                                    <h5 class="card-title">Network Nexus</h5>
+                                    <p class="card-text">Build and configure networks to learn fundamental networking concepts in a fun way.</p>
+                                    <a href="src/game_networking.php" class="btn btn-primary">Start Networking</a>
+                                </div>
+                            </div>
+                            
+                            <div class="game-card">
+                                <img src="<?php echo GAME_IMG.'design-dynamo.png'; ?>" class="card-img-top" alt="Design Dynamo">
+                                <div class="card-body">
+                                    <h5 class="card-title">Design Dynamo</h5>
+                                    <p class="card-text">Create beautiful user interfaces and learn UX/UI principles through interactive challenges.</p>
+                                    <a href="src/game_ux.php" class="btn btn-primary">Start Designing</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            <div class="game-card">
-                <img src="https://via.placeholder.com/300x180?text=Network+Nexus" class="card-img-top" alt="Network Nexus">
-                <div class="card-body">
-                    <h5 class="card-title">Network Nexus</h5>
-                    <p class="card-text">Build and configure networks to learn fundamental networking concepts in a fun way.</p>
-                    <a href="src/game_networking.php" class="btn btn-primary">Start Networking</a>
-                </div>
-            </div>
-            
-            <div class="game-card">
-                <img src="https://via.placeholder.com/300x180?text=Design+Dynamo" class="card-img-top" alt="Design Dynamo">
-                <div class="card-body">
-                    <h5 class="card-title">Design Dynamo</h5>
-                    <p class="card-text">Create beautiful user interfaces and learn UX/UI principles through interactive challenges.</p>
-                    <a href="src/game_ux.php" class="btn btn-primary">Start Designing</a>
-                </div>
-            </div>
-        </div>
 
-        <div class="row mt-5">
             <!-- Game History -->
-            <div class="col-lg-6">
+            <div class="col-md-4">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>Recent Activity</span>
@@ -385,38 +414,9 @@ unset($_SESSION['game_message']);
                     </div>
                 </div>
             </div>
-
-            <!-- Badges -->
-            <div class="col-lg-6">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <span>Your Badges</span>
-                        <a href="#" class="btn btn-sm btn-outline-primary">View All</a>
-                    </div>
-                    <div class="card-body">
-                        <?php if (!empty($badges)): ?>
-                            <div class="row g-3">
-                                <?php foreach ($badges as $badge): ?>
-                                    <div class="col-4 text-center">
-                                        <img src="<?php echo htmlspecialchars($badge['image'] ?? 'https://via.placeholder.com/80?text=Badge'); ?>" 
-                                             alt="Badge" class="img-fluid rounded-circle mb-2" style="width: 80px; height: 80px;">
-                                        <div class="small"><?php echo htmlspecialchars($badge['name'] ?? 'Badge'); ?></div>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php else: ?>
-                            <div class="text-center text-muted py-4">
-                                <i class="bi bi-award" style="font-size: 3rem;"></i>
-                                <p class="mt-3">No badges earned yet. Complete challenges to earn rewards!</p>
-                                <a href="src/ide.php" class="btn btn-outline-primary">Start a Challenge</a>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
