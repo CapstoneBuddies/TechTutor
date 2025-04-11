@@ -169,7 +169,13 @@
                             log_error("Error fetching token balance: " . $e->getMessage(), 'database');
                         }
                     ?>
-                    <div class="me-4">
+                    <div class="me-4 d-flex align-items-center gap-3">
+                        <a href="<?php echo BASE; ?>game" class="game-btn">
+                            <span class="game-icon-wrapper">
+                                <i class="bi bi-controller"></i>
+                            </span>
+                            <span class="game-text">Play & Learn</span>
+                        </a>
                         <a href="<?php echo BASE; ?>payment" class="token-balance-link">
                             <span class="badge bg-primary-subtle text-primary px-3 py-2">
                                 <i class="bi bi-coin me-1"></i> <?php echo number_format($token_balance, 2); ?> Tokens

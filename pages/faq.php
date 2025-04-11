@@ -256,20 +256,6 @@
             <!-- FAQ Accordions -->
             <div class="accordion" id="faqAccordion">
               
-              <!-- TEST ACCORDION ITEM - For debugging -->
-              <div class="accordion-item" style="margin-bottom: 30px; border: 2px solid #4154f1;">
-                <h2 class="accordion-header">
-                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#test-item">
-                    TEST ITEM - Click me to test accordion functionality
-                  </button>
-                </h2>
-                <div id="test-item" class="accordion-collapse collapse">
-                  <div class="accordion-body">
-                    <p>If you can see this content and collapse it again by clicking the header, the accordion is working correctly!</p>
-                  </div>
-                </div>
-              </div>
-              
               <!-- Account Questions -->
               <div class="faq-category" data-category="account">
                 <h3 class="faq-category-title">Account Questions</h3>

@@ -50,7 +50,9 @@ RewriteRule ^(.+)/$ %1 [R=301,L]
 # ----------------------------------
 # 🌐 General Page Routing
 # ----------------------------------
+RewriteRule ^help$ pages/help_center.php [L]
 RewriteRule ^sent$ backends/contact_handler.php [L]
+RewriteRule ^game$ game/index.php [L]
 RewriteRule ^faqs$ pages/faq.php [L]
 RewriteRule ^(.*)/?home$ backends/route.php [L]
 RewriteRule ^login$ pages/login.php [L]
