@@ -1,0 +1,14 @@
+ErrorDocument 404 /pages/error/404.php 
+ErrorDocument 403 /pages/error/403.php  
+ErrorDocument 500 /pages/error/500.php
+
+RewriteEngine On
+
+# 🔹 Remove trailing slashes except for root "/"
+RewriteCond %{REQUEST_URI} ^(.+)/$ [NC]
+RewriteRule ^(.+)/$ %1 [R=301,L]
+
+RewriteRule ^codequest$ src/ide.php [QSA,L]
+RewriteRule ^network-nexus$ src/game_networking.php [QSA,L]
+RewriteRule ^design-dynamo$ src/game_ux.php [QSA,L]
+RewriteRule ^leaderboards$ src/leaderboards.php [QSA,L]
