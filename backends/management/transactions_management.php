@@ -41,7 +41,9 @@ function getTransactions($page = 1, $filter = 'all', $role = '', $userId = null)
                         u.first_name, 
                         u.last_name, 
                         u.role as user_role,
-                        (SELECT COUNT(*) FROM transaction_disputes td WHERE td.transaction_id = t.transaction_id) as has_dispute
+                        (SELECT COUNT(*) FROM transaction_disputes td WHERE td.transaction_id = t.transaction_id) as has_dispute,
+                        (SELECT COUNT(*) FROM transaction_disputes td WHERE td.transaction_id = t.transaction_id 
+                         AND (td.status = 'pending' OR td.status = 'under_review')) as has_open_dispute
                  FROM transactions t
                  LEFT JOIN users u ON t.user_id = u.uid" . 
                  $whereClause . 
@@ -70,7 +72,8 @@ function getTransactions($page = 1, $filter = 'all', $role = '', $userId = null)
                 'date' => $row['created_at'],
                 'description' => $row['description'],
                 'reference' => $row['payment_method_id'],
-                'hasDispute' => $row['has_dispute'] > 0
+                'hasDispute' => $row['has_dispute'] > 0,
+                'hasOpenDispute' => $row['has_open_dispute'] > 0
             ];
         }
 
@@ -101,7 +104,9 @@ function getTransactionDetails($transactionId) {
                         u.first_name, 
                         u.last_name, 
                         u.role as user_role,
-                        (SELECT COUNT(*) FROM transaction_disputes td WHERE td.transaction_id = t.transaction_id) as has_dispute
+                        (SELECT COUNT(*) FROM transaction_disputes td WHERE td.transaction_id = t.transaction_id) as has_dispute,
+                        (SELECT COUNT(*) FROM transaction_disputes td WHERE td.transaction_id = t.transaction_id 
+                         AND (td.status = 'pending' OR td.status = 'under_review')) as has_open_dispute
                  FROM transactions t
                  LEFT JOIN users u ON t.user_id = u.uid
                  WHERE t.transaction_id = ?
@@ -147,6 +152,7 @@ function getTransactionDetails($transactionId) {
                     'description' => $row['description'],
                     'reference' => $row['payment_method_id'],
                     'hasDispute' => $row['has_dispute'] > 0,
+                    'hasOpenDispute' => $row['has_open_dispute'] > 0,
                     'dispute' => $dispute
                 ]
             ];
@@ -199,7 +205,9 @@ function exportTransactions($filter = 'all', $role = '', $userId = null) {
                         t.created_at,
                         CONCAT(u.first_name, ' ', u.last_name) as user_name,
                         u.role as user_role,
-                        (SELECT COUNT(*) FROM transaction_disputes td WHERE td.transaction_id = t.transaction_id) as has_dispute
+                        (SELECT COUNT(*) FROM transaction_disputes td WHERE td.transaction_id = t.transaction_id) as has_dispute,
+                        (SELECT COUNT(*) FROM transaction_disputes td WHERE td.transaction_id = t.transaction_id 
+                         AND (td.status = 'pending' OR td.status = 'under_review')) as has_open_dispute
                  FROM transactions t
                  LEFT JOIN users u ON t.user_id = u.uid
                  WHERE 1=1
@@ -248,7 +256,9 @@ function getRecentTransactions($user_id) {
                     DATE_FORMAT(t.created_at, '%b %d, %Y') as date,
                     t.description as message,
                     t.payment_method_id as reference,
-                    (SELECT COUNT(*) FROM transaction_disputes td WHERE td.transaction_id = t.transaction_id) as has_dispute
+                    (SELECT COUNT(*) FROM transaction_disputes td WHERE td.transaction_id = t.transaction_id) as has_dispute,
+                    (SELECT COUNT(*) FROM transaction_disputes td WHERE td.transaction_id = t.transaction_id 
+                     AND (td.status = 'pending' OR td.status = 'under_review')) as has_open_dispute
                 FROM transactions t
                 WHERE t.user_id = ?
                 ORDER BY t.created_at DESC

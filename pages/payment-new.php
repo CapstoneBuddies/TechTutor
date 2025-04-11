@@ -217,73 +217,27 @@ if ($class_id > 0) {
 
             <!-- Payment Methods -->
             <div class="mb-4">
-                <label class="form-label">Select Payment Method</label>
+                <label class="form-label">Payment Method</label>
                 
-                <div class="payment-method-option" data-method="gcash">
+                <div class="payment-method-option selected" data-method="qrph">
                     <div class="d-flex align-items-center justify-content-between">
                         <div class="d-flex align-items-center">
-                            <img src="<?php echo IMG; ?>payment/gcash.png" alt="GCash">
-                            <span>GCash</span>
+                            <img src="<?php echo IMG; ?>payment/qrph.png" alt="QRPH" style="height: 28px; margin-right: 12px;">
+                            <span>QR Ph Payment</span>
                         </div>
-                        <i class="bi bi-chevron-right"></i>
-                    </div>
-                </div>
-                
-                            <div class="payment-method-option" data-method="paymaya">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center">
-                            <img src="<?php echo IMG; ?>payment/maya.png" alt="Maya">
-                            <span>Maya</span>
-                        </div>
-                        <i class="bi bi-chevron-right"></i>
+                        <span class="badge bg-success">Available</span>
                     </div>
                 </div>
                 
-                            <div class="payment-method-option" data-method="grab_pay">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center">
-                            <img src="<?php echo IMG; ?>payment/grabpay.png" alt="GrabPay">
-                            <span>GrabPay</span>
+                <div class="mt-3 alert alert-info">
+                    <div class="d-flex">
+                        <div class="flex-shrink-0 me-3">
+                            <i class="bi bi-info-circle-fill fs-4"></i>
                         </div>
-                        <i class="bi bi-chevron-right"></i>
-                    </div>
-                </div>
-
-                <div class="payment-method-option" data-method="qrph">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center">
-                            <img src="<?php echo IMG; ?>payment/qrph.png" alt="QR PH">
-                            <span>QR PH</span>
+                        <div>
+                            <h6 class="mb-1">QR Ph Payment Instructions</h6>
+                            <p class="mb-0">After clicking "Purchase Tokens", you'll be redirected to a secure payment page where you can scan a QR code with your banking app that supports QR Ph to complete the payment.</p>
                         </div>
-                        <i class="bi bi-chevron-right"></i>
-                    </div>
-                </div>
-
-                <div class="payment-method-option" data-method="card">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center">
-                            <img src="<?php echo IMG; ?>payment/card.png" alt="Credit/Debit Card">
-                            <span>Credit/Debit Card</span>
-                        </div>
-                        <i class="bi bi-chevron-right"></i>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Card Details (initially hidden) -->
-            <div id="cardDetails" class="mb-4 d-none">
-                <div class="mb-3">
-                    <label for="cardNumber" class="form-label">Card Number</label>
-                    <input type="text" class="form-control" id="cardNumber" placeholder="4123 4567 8901 2345">
-                </div>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="expiryDate" class="form-label">Expiry Date</label>
-                        <input type="text" class="form-control" id="expiryDate" placeholder="MM/YY">
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="cvv" class="form-label">CVV</label>
-                        <input type="text" class="form-control" id="cvv" placeholder="123">
                     </div>
                 </div>
             </div>
@@ -301,64 +255,63 @@ if ($class_id > 0) {
                         <h5 class="card-title mb-0">Payment Information</h5>
                     </div>
                     <div class="card-body p-4">
-                        <div class="alert alert-info mb-4">
-                            <h6 class="alert-heading"><i class="bi bi-info-circle me-2"></i>Test Mode</h6>
-                            <p class="mb-0">You are currently in test mode. No actual payments will be processed.</p>
+                        <div class="alert alert-success mb-4">
+                            <h6 class="alert-heading"><i class="bi bi-shield-check me-2"></i>Secure Payment</h6>
+                            <p class="mb-0">All payments are securely processed through PayMongo's payment gateway using QR Ph standard, which is accepted by all major banks and e-wallets in the Philippines.</p>
                         </div>
                         
-                        <div class="test-cards-section">
-                            <h6 class="mb-3">Test Cards</h6>
-                            <div class="table-responsive">
-                                <table class="table table-bordered">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Card Number</th>
-                                            <th>Expiry</th>
-                                            <th>CVV</th>
-                                            <th>Result</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>4343434343434345</td>
-                                            <td>Any future date</td>
-                                            <td>Any 3 digits</td>
-                                            <td><span class="badge bg-success">Success</span></td>
-                                        </tr>
-                                        <tr>
-                                            <td>4571736000000075</td>
-                                            <td>Any future date</td>
-                                            <td>Any 3 digits</td>
-                                            <td><span class="badge bg-success">Success (Visa debit)</span></td>
-                                        </tr>
-                                        <tr>
-                                            <td>5555444444444457</td>
-                                            <td>Any future date</td>
-                                            <td>Any 3 digits</td>
-                                            <td><span class="badge bg-success">Success (Mastercard)</span></td>
-                                        </tr>
-                                        <tr>
-                                            <td>4120000000000007</td>
-                                            <td>Any future date</td>
-                                            <td>Any 3 digits</td>
-                                            <td><span class="badge bg-primary">3DS Authentication</span></td>
-                                        </tr>
-                                        <tr>
-                                            <td>4200000000000018</td>
-                                            <td>Any future date</td>
-                                            <td>Any 3 digits</td>
-                                            <td><span class="badge bg-danger">Expired Card</span></td>
-                                        </tr>
-                                        <tr>
-                                            <td>5100000000000198</td>
-                                            <td>Any future date</td>
-                                            <td>Any 3 digits</td>
-                                            <td><span class="badge bg-warning text-dark">Insufficient Funds</span></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                        <div class="qr-payment-guide">
+                            <h6 class="mb-3">How QR Ph Payment Works</h6>
+                            <div class="row mb-4">
+                                <div class="col-md-4 text-center mb-3 mb-md-0">
+                                    <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px;">
+                                        <i class="bi bi-calculator-fill text-primary fs-4"></i>
+                                    </div>
+                                    <p class="mb-0 small">1. Enter amount and click "Purchase Tokens"</p>
+                                </div>
+                                <div class="col-md-4 text-center mb-3 mb-md-0">
+                                    <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px;">
+                                        <i class="bi bi-qr-code-scan text-primary fs-4"></i>
+                                    </div>
+                                    <p class="mb-0 small">2. Scan the QR Ph code with your banking app</p>
+                                </div>
+                                <div class="col-md-4 text-center">
+                                    <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px;">
+                                        <i class="bi bi-check-circle-fill text-primary fs-4"></i>
+                                    </div>
+                                    <p class="mb-0 small">3. Complete the payment in your banking app</p>
+                                </div>
                             </div>
-                            <p class="small text-muted mt-2">These are official PayMongo test cards. Use them to simulate different payment scenarios.</p>
+                            
+                            <div class="alert alert-light border">
+                                <h6 class="mb-2"><i class="bi bi-lightbulb me-2"></i>Supported Apps for QR Ph:</h6>
+                                <div class="row mt-3 text-center">
+                                    <div class="col-4 col-md-2 mb-3">
+                                        <img src="<?php echo IMG; ?>payment/gcash.png" alt="GCash" class="img-fluid mb-2" style="height: 24px;">
+                                        <p class="small mb-0">GCash</p>
+                                    </div>
+                                    <div class="col-4 col-md-2 mb-3">
+                                        <img src="<?php echo IMG; ?>payment/maya.png" alt="Maya" class="img-fluid mb-2" style="height: 24px;">
+                                        <p class="small mb-0">Maya</p>
+                                    </div>
+                                    <div class="col-4 col-md-2 mb-3">
+                                        <img src="<?php echo IMG; ?>payment/bpi.png" alt="BPI" class="img-fluid mb-2" style="height: 24px;">
+                                        <p class="small mb-0">BPI</p>
+                                    </div>
+                                    <div class="col-4 col-md-2 mb-3">
+                                        <img src="<?php echo IMG; ?>payment/bdo.png" alt="BDO" class="img-fluid mb-2" style="height: 24px;">
+                                        <p class="small mb-0">BDO</p>
+                                    </div>
+                                    <div class="col-4 col-md-2 mb-3">
+                                        <img src="<?php echo IMG; ?>payment/unionbank.png" alt="UnionBank" class="img-fluid mb-2" style="height: 24px;">
+                                        <p class="small mb-0">UnionBank</p>
+                                    </div>
+                                    <div class="col-4 col-md-2 mb-3">
+                                        <span class="d-block text-muted mb-2" style="font-size: 24px;"><i class="bi bi-bank"></i></span>
+                                        <p class="small mb-0">Others</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -386,21 +339,19 @@ if ($class_id > 0) {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <script>
-        let selectedMethod = null;
+        let selectedMethod = 'qrph'; // Default to qrph
         const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
         
         // Check if there's a pending transaction and disable payment form
         <?php if (isset($pendingCheck) && $pendingCheck['hasPending']): ?>
         document.addEventListener('DOMContentLoaded', function() {
             // Disable payment method selection
-            const paymentOptions = document.querySelectorAll('.payment-method-option');
-            paymentOptions.forEach(option => {
-                option.classList.add('disabled');
-                option.style.opacity = '0.6';
-                option.style.cursor = 'not-allowed';
+            const paymentOption = document.querySelector('.payment-method-option');
+            paymentOption.classList.add('disabled');
+            paymentOption.style.opacity = '0.6';
+            paymentOption.style.cursor = 'not-allowed';
                 // Remove click events
-                option.style.pointerEvents = 'none';
-            });
+            paymentOption.style.pointerEvents = 'none';
             
             // Disable Pay button
             const payButton = document.getElementById('payButton');
@@ -450,6 +401,14 @@ if ($class_id > 0) {
                     sessionStorage.setItem('ignore_recent_success', 'true');
                 });
             }
+            
+            // Initialize payment summary calculation
+            calculatePaymentSummary();
+        });
+        <?php else: ?>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize payment summary calculation
+            calculatePaymentSummary();
         });
         <?php endif; ?>
         
@@ -518,34 +477,9 @@ if ($class_id > 0) {
         function hideLoading() {
             loadingModal.hide();
         }
-        
-        // Payment Method Selection
-        document.querySelectorAll('.payment-method-option').forEach(option => {
-            option.addEventListener('click', function() {
-                // Remove selected class from all options
-                document.querySelectorAll('.payment-method-option').forEach(opt => {
-                    opt.classList.remove('selected');
-                });
-                
-                // Add selected class to clicked option
-                this.classList.add('selected');
-                selectedMethod = this.dataset.method;
-                
-                // Show/hide card details
-                const cardDetails = document.getElementById('cardDetails');
-                if (selectedMethod === 'card') {
-                    cardDetails.classList.remove('d-none');
-                } else {
-                    cardDetails.classList.add('d-none');
-                }
-            });
-        });
 
         // Calculate payment summary on amount change
         document.getElementById('amount').addEventListener('input', calculatePaymentSummary);
-        
-        // Initial calculation
-        calculatePaymentSummary();
         
         // Function to calculate payment summary
         function calculatePaymentSummary() {
@@ -567,54 +501,14 @@ if ($class_id > 0) {
             document.getElementById('totalAmount').textContent = totalAmount.toFixed(2);
             document.getElementById('tokensToReceive').textContent = amount.toFixed(0);
         }
-
-        // Format card number with spaces
-        document.getElementById('cardNumber')?.addEventListener('input', function(e) {
-            const target = e.target;
-            let value = target.value.replace(/\s+/g, '');
-            if (value.length > 0) {
-                value = value.match(new RegExp('.{1,4}', 'g')).join(' ');
-            }
-            target.value = value;
-        });
-
-        // Format expiry date with slash
-        document.getElementById('expiryDate')?.addEventListener('input', function(e) {
-            const target = e.target;
-            let value = target.value.replace(/\D/g, '');
-            if (value.length > 2) {
-                value = value.substring(0, 2) + '/' + value.substring(2, 4);
-            }
-            target.value = value;
-        });
-
-        // Limit CVV to 3 digits
-        document.getElementById('cvv')?.addEventListener('input', function(e) {
-            const target = e.target;
-            let value = target.value.replace(/\D/g, '');
-            if (value.length > 3) {
-                value = value.substring(0, 3);
-            }
-            target.value = value;
-        });
         
         // Function to handle payment processing
         function processPayment(ignoreRecentSuccess = false) {
             const amount = document.getElementById('amount').value;
             const baseAmount = parseFloat(amount);
-            const vatAmount = baseAmount * 0.1;
-            const serviceAmount = baseAmount * 0.002;
-            const totalAmount = baseAmount + vatAmount + serviceAmount;
-            <?php if(!empty($class_id) && !empty($required_tokens) ): ?>
-            let transactionType = 'class';
-            <?php else: ?>
-            let transactionType = 'token';
-            <?php endif; ?>
-
-            const selectedMethod = document.querySelector('.payment-method-option.selected');
             
-            if (!selectedMethod) {
-                showToast('Please select a payment method', 'warning');
+            if (!baseAmount || isNaN(baseAmount)) {
+                showToast('Please enter a valid token amount', 'warning');
                 return;
             }
             
@@ -623,86 +517,22 @@ if ($class_id > 0) {
                 return;
             }
             
-            const paymentMethod = selectedMethod.dataset.method;
+            const vatAmount = baseAmount * 0.1;
+            const serviceAmount = baseAmount * 0.002;
+            const totalAmount = baseAmount + vatAmount + serviceAmount;
+            
+            <?php if(!empty($class_id) && !empty($required_tokens) ): ?>
+            let transactionType = 'class';
+            <?php else: ?>
+            let transactionType = 'token';
+            <?php endif; ?>
             
             // Get redirect parameters if they exist
             const redirectUrl = document.getElementById('redirectUrl')?.value || '';
             const classId = document.getElementById('classId')?.value || '';
-            
-            if (paymentMethod === 'card') {
-                // For card payments, validate card inputs
-                const cardNumber = document.getElementById('cardNumber').value;
-                const expiryDate = document.getElementById('expiryDate').value;
-                const cvv = document.getElementById('cvv').value;
-                
-                if (!cardNumber || !expiryDate || !cvv) {
-                    showToast('Please fill in all card details', 'warning');
-                    return;
-                }
                 
                 // Show loading state
-                showLoading('Creating payment...');
-                
-                // Create payment intent
-                fetch('<?php echo BASE; ?>create-payment', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: new URLSearchParams({
-                        action: 'create_payment',
-                        amount: totalAmount.toFixed(2),
-                        token_amount: baseAmount,
-                        description: 'Token purchase',
-                        payment_method: 'card',
-                        transaction_type: transactionType,
-                        class_id: classId,
-                        ignore_recent_success: ignoreRecentSuccess ? 'true' : 'false'
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    hideLoading();
-                    
-                    // Handle case where there's a recent successful transaction
-                    if (!data.success && data.shouldIgnore) {
-                        // Use confirm dialog to ask if they want to proceed
-                        const confirmMsg = data.message + "\n\nDo you want to proceed with a new purchase anyway?";
-                        if (confirm(confirmMsg)) {
-                            // Call processPayment again but with ignoreRecentSuccess=true
-                            processPayment(true);
-                            return;
-                        } else {
-                            return; // User cancelled
-                        }
-                    }
-                    
-                    if (data.success) {
-                        if (data.already_paid) {
-                            showToast(data.message, 'success');
-                            setTimeout(() => {
-                                <?php if(!empty($class_id) && !empty($required_tokens)): ?>
-                                window.location.href = '<?php echo BASE.'payment-success?class_id='.urlencode($class_id).'&amount='.urlencode($required_tokens); ?>';
-                                <?php else: ?>
-                                window.location.href = '<?php echo BASE; ?>payment-success';
-                                <?php endif; ?>
-                            }, 2000);
-                            return;
-                        }
-                        // Process card payment with token
-                        processCardPayment(data.clientKey, cardNumber, expiryDate, cvv, data.transactionId);
-                    } else {
-                        showToast(data.message || 'Failed to create payment. Please try again.', 'error');
-                    }
-                })
-                .catch(error => {
-                    hideLoading();
-                    console.error('Error:', error);
-                    showToast('An error occurred. Please try again.', 'error');
-                });
-            } else {
-                // For e-wallets, create source and redirect
-                showLoading('Creating payment...');
+            showLoading('Creating QR Ph payment...');
                 
                 fetch('<?php echo BASE; ?>create-payment', {
                     method: 'POST',
@@ -714,7 +544,7 @@ if ($class_id > 0) {
                         amount: totalAmount.toFixed(2),
                         token_amount: baseAmount,
                         description: 'Token purchase',
-                        payment_method: paymentMethod,
+                    payment_method: 'qrph',
                         transaction_type: transactionType,
                         class_id: classId,
                         ignore_recent_success: ignoreRecentSuccess ? 'true' : 'false'
@@ -762,78 +592,6 @@ if ($class_id > 0) {
                 .catch(error => {
                     hideLoading();
                     console.error('Error:', error);
-                    showToast('An error occurred. Please try again.', 'error');
-                });
-            }
-        }
-
-        function processCardPayment(clientKey, cardNumber, expiryDate, cvv, transactionId) {
-            if (!cardNumber || !expiryDate || !cvv) {
-                showToast('Please fill in all card details', 'warning');
-                return;
-            }
-
-            console.log('Processing card payment with client key:', clientKey);
-            
-            // Show loading modal
-            loadingModal.show();
-
-            // Process card payment using fetch
-            fetch('<?php echo BASE; ?>process-card-payment', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    'action': 'process_card_payment',
-                    'payment_intent_id': clientKey,
-                    'card_number': cardNumber,
-                    'expiry_date': expiryDate,
-                    'cvv': cvv,
-                    'transaction_id': transactionId
-                })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Card payment response:', data);
-                loadingModal.hide();
-                
-                if (data.success) {
-                    showToast('Payment successful!', 'success');
-                    
-                    setTimeout(() => {
-
-                        <?php if(!empty($class_id) && !empty($required_tokens)): ?>
-                        window.location.href = '<?php echo BASE.'payment-success?class_id='.urlencode($class_id).'&amount='.urlencode($required_tokens); ?>';
-                        <?php else: ?>
-                        window.location.href = '<?php echo BASE; ?>payment-success';
-                        <?php endif; ?>
-                        
-                    }, 2000);
-                } else {
-                    // If payment is already processed, handle as success
-                    if (data.message && data.message.includes('already been processed')) {
-                        showToast(data.message, 'success');
-                        setTimeout(() => {
-                            <?php if(!empty($class_id) && !empty($required_tokens)): ?>
-                            window.location.href = '<?php echo BASE.'payment-success?class_id='.urlencode($class_id).'&amount='.urlencode($required_tokens); ?>';
-                            <?php else: ?>
-                            window.location.href = '<?php echo BASE; ?>payment-success';
-                            <?php endif; ?>
-                        }, 2000);
-                    } else {
-                        showToast(data.message || 'Payment failed. Please try again.', 'error');
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Card payment error:', error);
-                loadingModal.hide();
                 showToast('An error occurred. Please try again.', 'error');
             });
         }

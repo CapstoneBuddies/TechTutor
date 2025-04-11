@@ -6,7 +6,6 @@
 
 	// File system root path (optional, useful for includes or file uploads)
 	define('ROOT_PATH', realpath(__DIR__ . '/..'));
-
 	require_once ROOT_PATH.'/assets/vendor/autoload.php';
 
 	use Dotenv\Dotenv;
@@ -18,11 +17,15 @@
 	$dotenv->load();
 
 	// Base URL configuration
-	if(strpos($_SERVER['HTTP_HOST'], 'localhost') !== false || strpos($_SERVER['HTTP_HOST'], '192.168.') !== false || strpos($_SERVER['HTTP_HOST'], '127.0.0.1') !== false) {
-		define('BASE', '/capstone-1/');
+	if (isset($_SERVER['HTTP_HOST']) && (
+	    strpos($_SERVER['HTTP_HOST'], 'localhost') !== false || 
+	    strpos($_SERVER['HTTP_HOST'], '192.168.') !== false || 
+	    strpos($_SERVER['HTTP_HOST'], '127.0.0.1') !== false)) {
+	    define('BASE', '/capstone-1/');
 	} else {
-		define('BASE', '/');
+	    define('BASE', '/');
 	}
+
 
 	define('CSS', BASE.'assets/css/');
 	define('JS', BASE.'assets/js/');

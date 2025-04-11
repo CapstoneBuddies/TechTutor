@@ -16,7 +16,7 @@
 	$excluded_page = ['index.php', 'login.php', 'signup.php', 'verify.php', 'route.php'];
 	$excluded_link = ['user-login','user-register','home'];
 	$logged_excluded_page = ['dashboard','profile','settings'];
-	$approved_link = ['user-logout','user-profile-update','user-change-password','user-deactivate','admin-restrict-user','admin-delete-user','admin-activate-user', 'get-transaction-details', 'get-transactions', 'export-transactions', 'create-payment', 'process-card-payment','add-course','add-subject','toggle-subject-status'];
+	$approved_link = ['user-logout','user-profile-update','user-change-password','user-deactivate','admin-restrict-user','admin-delete-user','admin-activate-user', 'get-transaction-details', 'get-transactions', 'export-transactions', 'create-payment', 'process-card-payment','add-course','add-subject','toggle-subject-status', 'terms', 'faqs'];
 
 	// Check if user is logged but trying to access unauthorized link
 	if(isset($_SESSION['user']) && in_array($link,$excluded_link)) {

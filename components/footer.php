@@ -35,7 +35,7 @@ if (!in_array($currentPage, $noFooterPages)): ?>
             <div class="col-md-3">
                 <h6>Support</h6>
                 <ul class="list-unstyled">
-                    <li><a href="<?php echo BASE; ?>faq">FAQ</a></li>
+                    <li><a href="<?php echo BASE; ?>faqs">FAQ</a></li>
                     <li><a href="<?php echo BASE; ?>help">Help Center</a></li>
                 </ul>
             </div>

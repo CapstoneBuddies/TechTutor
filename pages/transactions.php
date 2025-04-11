@@ -67,20 +67,72 @@
                                     </div>
                                 </div>
                             </div>
+                            <!-- New Advanced Filter Section -->
+                            <div class="card-body border-bottom pb-0">
+                                <form id="advancedFilterForm" class="row g-3 align-items-end">
+                                    <div class="col-md-3">
+                                        <label class="form-label small">Date From</label>
+                                        <input type="date" class="form-control form-control-sm" id="dateFrom">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small">Date To</label>
+                                        <input type="date" class="form-control form-control-sm" id="dateTo">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small">Status</label>
+                                        <select class="form-select form-select-sm" id="statusFilter">
+                                            <option value="">All</option>
+                                            <option value="succeeded">Completed</option>
+                                            <option value="pending">Pending</option>
+                                            <option value="failed">Failed</option>
+                                            <option value="processing">Processing</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small">Amount</label>
+                                        <select class="form-select form-select-sm" id="amountFilter">
+                                            <option value="">All</option>
+                                            <option value="25-50">₱25 - ₱50</option>
+                                            <option value="51-100">₱51 - ₱100</option>
+                                            <option value="101-250">₱101 - ₱250</option>
+                                            <option value="251+">₱251+</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="button" class="btn btn-sm btn-primary w-100" onclick="applyAdvancedFilter()">
+                                            Apply Filter
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
                             <div class="card-body">
                                 <div class="table-responsive">
                                     <table class="table table-hover">
                                         <thead>
                                             <tr>
-                                                <th>Transaction ID</th>
+                                                <th class="sortable" data-sort="id">
+                                                    Transaction ID <i class="bi bi-arrow-down-up sort-icon"></i>
+                                                </th>
                                                 <?php if ($_SESSION['role'] === 'ADMIN'): ?>
-                                                    <th>User</th>
-                                                    <th>Role</th>
+                                                    <th class="sortable" data-sort="user">
+                                                        User <i class="bi bi-arrow-down-up sort-icon"></i>
+                                                    </th>
+                                                    <th class="sortable" data-sort="role">
+                                                        Role <i class="bi bi-arrow-down-up sort-icon"></i>
+                                                    </th>
                                                 <?php endif; ?>
-                                                <th>Date</th>
-                                                <th>Type</th>
-                                                <th>Amount</th>
-                                                <th>Status</th>
+                                                <th class="sortable" data-sort="date">
+                                                    Date <i class="bi bi-arrow-down-up sort-icon"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="type">
+                                                    Type <i class="bi bi-arrow-down-up sort-icon"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="amount">
+                                                    Amount <i class="bi bi-arrow-down-up sort-icon"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="status">
+                                                    Status <i class="bi bi-arrow-down-up sort-icon"></i>
+                                                </th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
@@ -136,6 +188,35 @@
                                         </ul>
                                     </div>
                                 </div>
+                            </div>
+                            <!-- New Advanced Filter Section for Disputes -->
+                            <div class="card-body border-bottom pb-0">
+                                <form id="advancedDisputeFilterForm" class="row g-3 align-items-end">
+                                    <div class="col-md-3">
+                                        <label class="form-label small">Date From</label>
+                                        <input type="date" class="form-control form-control-sm" id="disputeDateFrom">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small">Date To</label>
+                                        <input type="date" class="form-control form-control-sm" id="disputeDateTo">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small">Status</label>
+                                        <select class="form-select form-select-sm" id="disputeStatusFilter">
+                                            <option value="">All</option>
+                                            <option value="pending">Pending</option>
+                                            <option value="under_review">Under Review</option>
+                                            <option value="resolved">Resolved</option>
+                                            <option value="rejected">Rejected</option>
+                                            <option value="cancelled">Cancelled</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <button type="button" class="btn btn-sm btn-primary w-100" onclick="applyAdvancedDisputeFilter()">
+                                            Apply Filter
+                                        </button>
+                                    </div>
+                                </form>
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
@@ -231,6 +312,9 @@
     <script>
         let currentPage = 1;
         let currentFilter = 'all';
+        let currentSortBy = '';
+        let currentSortOrder = 'asc';
+        let advancedFilters = {};
 
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM fully loaded');
@@ -352,6 +436,33 @@
                     });
                 });
             }
+            
+            // Add sorting functionality to table headers
+            document.querySelectorAll('.sortable').forEach(header => {
+                header.addEventListener('click', function() {
+                    const sortBy = this.getAttribute('data-sort');
+                    
+                    // Toggle sort order if clicking the same column
+                    if (currentSortBy === sortBy) {
+                        currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        currentSortBy = sortBy;
+                        currentSortOrder = 'asc';
+                    }
+                    
+                    // Update visual indicators
+                    document.querySelectorAll('.sortable').forEach(h => {
+                        h.querySelector('.sort-icon').className = 'bi bi-arrow-down-up sort-icon';
+                    });
+                    
+                    // Update clicked header icon
+                    const icon = this.querySelector('.sort-icon');
+                    icon.className = `bi bi-arrow-${currentSortOrder === 'asc' ? 'down' : 'up'} sort-icon`;
+                    
+                    // Reload data with sorting
+                    loadTransactions(currentPage, currentFilter);
+                });
+            });
         });
 
         function loadTransactions(page, filter = 'all') {
@@ -363,7 +474,24 @@
             tableBody.innerHTML = '';
             noTransactions.classList.add('d-none');
 
-            fetch(`<?php echo BASE; ?>get-transactions?page=${page}&filter=${filter}&role=<?php echo $_SESSION['role']; ?>&userId=<?php echo $_SESSION['user']; ?>`)
+            // Build fetch URL with all filters
+            let url = `<?php echo BASE; ?>get-transactions?page=${page}&filter=${filter}&role=<?php echo $_SESSION['role']; ?>&userId=<?php echo $_SESSION['user']; ?>`;
+            
+            // Add sorting parameters if set
+            if (currentSortBy) {
+                url += `&sortBy=${currentSortBy}&sortOrder=${currentSortOrder}`;
+            }
+            
+            // Add advanced filters if any
+            if (Object.keys(advancedFilters).length > 0) {
+                for (const [key, value] of Object.entries(advancedFilters)) {
+                    if (value) {
+                        url += `&${key}=${encodeURIComponent(value)}`;
+                    }
+                }
+            }
+
+            fetch(url)
                 .then(response => response.json())
                 .then(data => {
                     loadingSpinner.classList.add('d-none');
@@ -402,7 +530,7 @@
                        <button class="btn btn-sm btn-outline-primary" onclick="viewTransactionDetails('${transaction.id}')">
                            <i class="bi bi-eye"></i>
                        </button>
-                       ${transaction.hasDispute ? 
+                       ${transaction.hasOpenDispute ? 
                            `<span class="badge bg-warning ms-2" title="This transaction has an open dispute">
                                <i class="bi bi-exclamation-triangle"></i>
                             </span>` : ''
@@ -519,10 +647,18 @@
             console.log('filterTransactions called with:', filter);
             currentFilter = filter;
             currentPage = 1;
+            
+            // Reset advanced filters when using basic filter dropdown
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('amountFilter').value = '';
+            advancedFilters = {};
+            
             loadTransactions(currentPage, filter);
             
             // Update filter button text
-            const filterBtn = document.querySelector('.dropdown-toggle');
+            const filterBtn = document.querySelector('#filterDropdown');
             let filterText = 'All';
             switch(filter) {
                 case 'completed': filterText = 'Completed'; break;
@@ -535,6 +671,11 @@
             // Update URL to preserve filter state
             const url = new URL(window.location.href);
             url.searchParams.set('txfilter', filter);
+            // Remove advanced filter params from URL
+            url.searchParams.delete('dateFrom');
+            url.searchParams.delete('dateTo');
+            url.searchParams.delete('status');
+            url.searchParams.delete('amountRange');
             // Keep the tab parameter if it exists
             window.history.pushState({}, '', url);
         }
@@ -947,6 +1088,7 @@
         // Disputes Tab functionality
         let disputesCurrentPage = 1;
         let disputesCurrentFilter = 'all';
+        let disputeAdvancedFilters = {};
         
         function loadDisputes(page, status = 'all') {
             const loadingSpinner = document.getElementById('disputesLoadingSpinner');
@@ -959,7 +1101,19 @@
             tableBody.innerHTML = '';
             noDisputes.classList.add('d-none');
 
-            fetch(`<?php echo BASE; ?>get-disputes?page=${page}&status=${status}`)
+            // Build URL with all filters
+            let url = `<?php echo BASE; ?>get-disputes?page=${page}&status=${status}`;
+            
+            // Add advanced filters if any
+            if (Object.keys(disputeAdvancedFilters).length > 0) {
+                for (const [key, value] of Object.entries(disputeAdvancedFilters)) {
+                    if (value) {
+                        url += `&${key}=${encodeURIComponent(value)}`;
+                    }
+                }
+            }
+
+            fetch(url)
                 .then(response => response.json())
                 .then(data => {
                     loadingSpinner.classList.add('d-none');
@@ -1049,12 +1203,69 @@
         function filterDisputes(status) {
             disputesCurrentFilter = status;
             disputesCurrentPage = 1;
+            
+            // Reset advanced filters when using basic filter dropdown
+            document.getElementById('disputeDateFrom').value = '';
+            document.getElementById('disputeDateTo').value = '';
+            document.getElementById('disputeStatusFilter').value = '';
+            disputeAdvancedFilters = {};
+            
             loadDisputes(disputesCurrentPage, status);
+            
+            // Update filter button text to match selection
+            const filterBtn = document.querySelector('#disputeFilterDropdown');
+            let filterText = 'All';
+            switch(status) {
+                case 'pending': filterText = 'Pending'; break;
+                case 'under_review': filterText = 'Under Review'; break;
+                case 'resolved': filterText = 'Resolved'; break;
+                case 'rejected': filterText = 'Rejected'; break;
+                case 'cancelled': filterText = 'Cancelled'; break;
+            }
+            filterBtn.innerHTML = `<i class="bi bi-funnel"></i> ${filterText}`;
             
             // Update URL to preserve filter state
             const url = new URL(window.location.href);
             url.searchParams.set('tab', 'disputes');
             url.searchParams.set('dfilter', status);
+            // Remove advanced filter params from URL
+            url.searchParams.delete('disputeDateFrom');
+            url.searchParams.delete('disputeDateTo');
+            url.searchParams.delete('disputeStatus');
+            window.history.pushState({}, '', url);
+        }
+        
+        function applyAdvancedDisputeFilter() {
+            // Get all filter values
+            disputeAdvancedFilters = {
+                dateFrom: document.getElementById('disputeDateFrom').value,
+                dateTo: document.getElementById('disputeDateTo').value,
+                status: document.getElementById('disputeStatusFilter').value
+            };
+            
+            // Reset basic filter when using advanced filters
+            disputesCurrentFilter = 'all';
+            
+            // Update filter dropdown text
+            const filterBtn = document.querySelector('#disputeFilterDropdown');
+            filterBtn.innerHTML = `<i class="bi bi-funnel"></i> Custom`;
+            
+            // Reset to first page and reload with filters
+            disputesCurrentPage = 1;
+            loadDisputes(disputesCurrentPage, disputesCurrentFilter);
+            
+            // Update URL to preserve filter state
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', 'disputes');
+            for (const [key, value] of Object.entries(disputeAdvancedFilters)) {
+                if (value) {
+                    url.searchParams.set('dispute' + key.charAt(0).toUpperCase() + key.slice(1), value);
+                } else {
+                    url.searchParams.delete('dispute' + key.charAt(0).toUpperCase() + key.slice(1));
+                }
+            }
+            // Reset basic filter in URL
+            url.searchParams.set('dfilter', 'all');
             window.history.pushState({}, '', url);
         }
 
@@ -1189,6 +1400,31 @@
                 case 'failed': return 'danger';
                 default: return 'secondary';
             }
+        }
+
+        function applyAdvancedFilter() {
+            // Get all filter values
+            advancedFilters = {
+                dateFrom: document.getElementById('dateFrom').value,
+                dateTo: document.getElementById('dateTo').value,
+                status: document.getElementById('statusFilter').value,
+                amountRange: document.getElementById('amountFilter').value
+            };
+            
+            // Reset to first page and reload with filters
+            currentPage = 1;
+            loadTransactions(currentPage, currentFilter);
+            
+            // Update URL to preserve filter state
+            const url = new URL(window.location.href);
+            for (const [key, value] of Object.entries(advancedFilters)) {
+                if (value) {
+                    url.searchParams.set(key, value);
+                } else {
+                    url.searchParams.delete(key);
+                }
+            }
+            window.history.pushState({}, '', url);
         }
     </script>
 </body>

@@ -53,6 +53,7 @@
           <li><a href="#how-it-works">How It Works</a></li>
           <li><a href="#testimonials">Success Stories</a></li>
           <li><a href="#contact">Contact</a></li>
+          <li><a href="faqs">FAQS</a></li>
           <a id="login" class="btn-getstarted flex-md-shrink-0 signin" href="login">Sign In</a>
         </ul>
         <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>

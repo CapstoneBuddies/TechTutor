@@ -290,7 +290,7 @@ CREATE TABLE `attendance` (
   `attendance_id` int(11) NOT NULL AUTO_INCREMENT,
   `schedule_id` int(11) NOT NULL,
   `student_id` int(11) NOT NULL,
-  `status` enum('present','absent','late') NOT NULL DEFAULT 'present',
+  `status` enum('present','absent','late', 'pending') NOT NULL DEFAULT 'pending',
   `notes` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),

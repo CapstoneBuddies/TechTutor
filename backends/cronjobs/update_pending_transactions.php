@@ -6,8 +6,7 @@
  * Usage: php update_pending_transactions.php
  */
 // Set the base path relative to the script's location
-define('ROOT_PATH', realpath(dirname(__FILE__) . '/../..'));
-require_once ROOT_PATH . '/backends/main.php';
+require_once '../main.php';
 require_once ROOT_PATH . '/backends/handler/paymongo_config.php';
 
 // Check that the PayMongo classes are loaded
@@ -45,7 +44,6 @@ function updateStalePendingTransactions($conn) {
                  ORDER BY created_at ASC";
         
         $result = $conn->query($query);
-        
         if (!$result) {
             throw new Exception("Database query failed: " . $conn->error);
         }

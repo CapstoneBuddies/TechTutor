@@ -288,6 +288,12 @@ switch ($action) {
                     "meeting"
                 );
 
+                // Update attendance to absent for those who didnt join
+                $query = "UPDATE attendance SET status = 'absent' WHERE schedule_id = ? AND status = 'pending'";
+                $absent_stmt = $conn->prepare($query);
+                $absent_stmt->bind_param('i',$scheduleId);
+                $absent_stmt->execute();
+
                 $conn->commit();
 
                 $response = [
@@ -426,6 +432,22 @@ switch ($action) {
                 $_SESSION['user'],
                 $logoutUrl
             );
+
+            // Update the attendance to present for student
+            if($isStudent) {
+                $current_time = time();
+                $late_cutoff = $meeting_data['createtime']+(15*60);
+                $status = $current_time >= $late_cutoff ? 'late' : 'present';
+
+                $query = "UPDATE attendance SET status = ?, updated_at = NOW() WHERE schedule_id = ? AND student_id = ?";
+                $q_stmt = $conn->prepare($query);
+                $q_stmt->bind_param('sii',$status, $scheduleId, $_SESSION['user']);
+                if(!$q_stmt->execute()) {
+                    $qstring = "INSERT INTO attendance(schedule_id, student_id, status, updated_at) VALUES(?, ?, ?, NOW())";
+                    $attendance_insert = $conn->prepare($qstring);
+                    $attendance_insert->execute([$scheduleId, $_SESSION['user'], $status]);
+                }
+            }
 
             // Log meeting join attempt
             log_error(

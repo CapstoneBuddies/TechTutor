@@ -232,9 +232,17 @@ function handleCreatePayment($conn) {
                 'transactionId' => $transactionId
             ]);
         } else {
-            // For e-wallets, create source and return checkout URL
+            // For e-wallets and QRPH, create source and return checkout URL
+            $sourceType = $paymentMethod;
+            
+            // QRPH is the same as gcash in the API, but with a different UI
+            if ($paymentMethod === 'qrph') {
+                $sourceType = 'gcash';
+                log_error("Using QR Ph payment method via GCash source type", 'payment_info');
+            }
+            
             $source = $payMongo->createSource([
-                'type' => $paymentMethod,
+                'type' => $sourceType,
                 'amount' => $amount * 100,
                 'currency' => 'PHP',
                 'redirect' => [

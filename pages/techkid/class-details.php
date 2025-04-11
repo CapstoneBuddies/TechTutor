@@ -69,7 +69,7 @@
                 console.log('Class details page initialized');
             }
             
-            // Use showLoading for AJAX operations
+            // Use showLoading for AJAX operations 
             function joinMeeting(scheduleId) {
                 showLoading(true);
 
