@@ -53,6 +53,12 @@ RewriteRule ^(.+)/$ %1 [R=301,L]
 RewriteRule ^help$ pages/help_center.php [L]
 RewriteRule ^sent$ backends/contact_handler.php [L]
 RewriteRule ^game$ game/index.php [L]
+# Game sub-paths routing
+RewriteRule ^game/codequest$ game/src/ide.php [QSA,L]
+RewriteRule ^game/network-nexus$ game/src/game_networking.php [QSA,L]
+RewriteRule ^game/design-dynamo$ game/src/game_ux.php [QSA,L]
+RewriteRule ^game/leaderboards$ game/src/leaderboards.php [QSA,L]
+# End game sub-paths
 RewriteRule ^faqs$ pages/faq.php [L]
 RewriteRule ^(.*)/?home$ backends/route.php [L]
 RewriteRule ^login$ pages/login.php [L]
