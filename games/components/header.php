@@ -10,7 +10,7 @@ $userXP = function_exists('getUserXPInfo') ? getUserXPInfo($userId) : null;
 <div class="sidebar">
     <h2><i class="bi bi-controller me-2"></i> Gaming Academy</h2>
     
-    <a href="../index.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>">
+    <a href="<?php echo BASE.'game';?>" class="<?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>">
         <i class="bi bi-house-door"></i> Dashboard
     </a>
     
@@ -32,6 +32,9 @@ $userXP = function_exists('getUserXPInfo') ? getUserXPInfo($userId) : null;
     <div class="game-category">Community</div>
     <a href="leaderboards.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'leaderboards.php' ? 'active' : ''; ?>">
         <i class="bi bi-trophy"></i> Leaderboards
+    </a>
+    <a href="badges-achievements.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'badges-achievements.php' ? 'active' : ''; ?>">
+        <i class="bi bi-award"></i> Badges & Achievements
     </a>
     
     <?php if ($userXP): ?>

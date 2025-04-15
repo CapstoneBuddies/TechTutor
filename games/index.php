@@ -55,6 +55,7 @@ unset($_SESSION['game_message']);
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.css">
+    <!-- Custom CSS -->
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -211,52 +212,50 @@ unset($_SESSION['game_message']);
             box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
         }
         .game-card .card-img-top {
-            height: 160px;
+            height: 180px;
             object-fit: cover;
         }
-        
-        /* XP Bar Styles */
-        .xp-progress-container {
+        .game-card .card-body {
+            padding: 20px;
+        }
+        .game-card .card-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .game-card .card-text {
+            color: #6c757d;
+            margin-bottom: 20px;
+        }
+        .game-card .btn {
+            width: 100%;
+            padding: 10px;
+        }
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
             background-color: #fff;
             border-radius: 12px;
             padding: 20px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            text-align: center;
         }
-        .xp-level {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 10px;
-        }
-        .xp-level-number {
+        .stat-card .stat-icon {
             font-size: 2rem;
-            font-weight: 700;
+            margin-bottom: 10px;
             color: #0d6efd;
         }
-        .xp-level-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #2c3e50;
+        .stat-card .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 5px;
         }
-        .xp-progress {
-            height: 25px;
-            background-color: #e9ecef;
-            border-radius: 50px;
-            margin-bottom: 10px;
-            overflow: hidden;
-        }
-        .xp-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #0d6efd, #6610f2);
-            border-radius: 50px;
-            transition: width 0.5s ease;
-        }
-        .xp-text {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.9rem;
+        .stat-card .stat-label {
             color: #6c757d;
+            font-size: 0.9rem;
         }
     </style>
 </head>
@@ -289,13 +288,13 @@ unset($_SESSION['game_message']);
             <i class="bi bi-trophy-fill"></i>
             Leaderboards
         </a>
-        <a href="#">
+        <a href="game/friends">
             <i class="bi bi-people-fill"></i>
             Friends
         </a>
         
         <div class="game-category">Your Profile</div>
-        <a href="#">
+        <a href="game/badges">
             <i class="bi bi-award-fill"></i>
             Badges & Achievements
         </a>
@@ -359,7 +358,7 @@ unset($_SESSION['game_message']);
                                 <div class="card-body">
                                     <h5 class="card-title">Code Quest</h5>
                                     <p class="card-text">Solve coding challenges to improve your programming skills. From beginner to advanced levels!</p>
-                                    <a href="src/ide.php" class="btn btn-primary">Start Coding</a>
+                                    <a href="game/codequest" class="btn btn-primary">Start Coding</a>
                                 </div>
                             </div>
                             
@@ -368,7 +367,7 @@ unset($_SESSION['game_message']);
                                 <div class="card-body">
                                     <h5 class="card-title">Network Nexus</h5>
                                     <p class="card-text">Build and configure networks to learn fundamental networking concepts in a fun way.</p>
-                                    <a href="src/game_networking.php" class="btn btn-primary">Start Networking</a>
+                                    <a href="game/network-nexus" class="btn btn-primary">Start Networking</a>
                                 </div>
                             </div>
                             
@@ -377,7 +376,7 @@ unset($_SESSION['game_message']);
                                 <div class="card-body">
                                     <h5 class="card-title">Design Dynamo</h5>
                                     <p class="card-text">Create beautiful user interfaces and learn UX/UI principles through interactive challenges.</p>
-                                    <a href="src/game_ux.php" class="btn btn-primary">Start Designing</a>
+                                    <a href="game/design-dynamo" class="btn btn-primary">Start Designing</a>
                                 </div>
                             </div>
                         </div>

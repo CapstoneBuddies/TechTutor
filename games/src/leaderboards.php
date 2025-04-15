@@ -12,6 +12,15 @@
     // Define current tab (default to 'codequest')
     $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'codequest';
 
+    // Get user ID from session
+    $userId = isset($_SESSION['user']) ? $_SESSION['user'] : 1;
+    
+    // Get user's XP info
+    $userXPInfo = getUserXPInfo($userId);
+    
+    // Get all level titles from database
+    $levelTitles = getAllLevelTitles();
+
     // Get leaderboard data for each game
     function getLeaderboard($gameType, $limit = 10) {
         global $pdo;
@@ -163,8 +172,10 @@
     <!-- Favicons -->
     <link href="<?php echo BASE; ?>assets/img/stand_alone_logo.png" rel="icon">
     <link href="<?php echo BASE; ?>assets/img/apple-touch-icon.png" rel="apple-touch-icon">
+    <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" href="<?php echo BASE; ?>assets/vendor/boostrap-icons/bootstrap-icons.css">
+    <link rel="stylesheet" href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.css">
+    <!-- Custom CSS -->
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -254,129 +265,39 @@
             padding: 30px;
             overflow-y: auto;
         }
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-        }
-        .page-header h1 {
+        .main-content h1 {
             font-size: 2.2rem;
             font-weight: 700;
             color: #2c3e50;
-            margin: 0;
-        }
-        .nav-tabs {
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-            margin-bottom: 2rem;
-        }
-        .nav-tabs .nav-link {
-            color: #6c757d;
-            border: none;
-            border-bottom: 3px solid transparent;
-            border-radius: 0;
-            padding: 0.75rem 1.5rem;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-        .nav-tabs .nav-link:hover {
-            color: #495057;
-            border-bottom-color: rgba(13, 110, 253, 0.3);
-        }
-        .nav-tabs .nav-link.active {
-            color: #0d6efd;
-            border-bottom-color: #0d6efd;
-            background-color: transparent;
-        }
-        .nav-tabs .nav-link i {
-            margin-right: 5px;
+            margin-bottom: 1.5rem;
         }
         .card {
             border: none;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s, box-shadow 0.3s;
+            margin-bottom: 20px;
             overflow: hidden;
-            margin-bottom: 2rem;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
         }
         .card-header {
-            padding: 1.25rem 1.5rem;
             background-color: #f8f9fa;
             border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            padding: 15px 20px;
             font-weight: 600;
         }
-        .table {
-            margin-bottom: 0;
+        .card-body {
+            padding: 20px;
         }
-        .table th {
-            font-weight: 500;
-            background-color: rgba(0, 0, 0, 0.02);
-            color: #6c757d;
-            border-bottom-width: 1px;
-        }
-        .table td {
-            vertical-align: middle;
-            padding: 1rem 1.5rem;
-        }
-        .rank-number {
-            font-weight: 700;
-            text-align: center;
-            width: 50px;
-            display: inline-block;
-        }
-        .rank-1, .rank-2, .rank-3 {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            font-weight: 700;
-        }
-        .rank-1 {
-            background-color: gold;
-            color: #333;
-        }
-        .rank-2 {
-            background-color: silver;
-            color: #333;
-        }
-        .rank-3 {
-            background-color: #cd7f32; /* bronze */
-        }
-        .user-cell {
-            display: flex;
-            align-items: center;
-        }
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            margin-right: 15px;
-        }
-        .badge-pill {
-            padding: 0.35rem 0.75rem;
-            border-radius: 50rem;
+        .badge {
             font-size: 0.85rem;
-            font-weight: 500;
+            padding: 6px 10px;
+            border-radius: 6px;
         }
-        .progress {
-            height: 8px;
-            border-radius: 4px;
-            background-color: rgba(0, 0, 0, 0.05);
-        }
-        .back-button {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            color: #6c757d;
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-        .back-button:hover {
-            color: #0d6efd;
-        }
+
         /* Level badge styles */
         .level-badge {
             display: inline-block;
@@ -390,10 +311,10 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .level-title {
-            display: block;
-            font-size: 0.75rem;
+            display: inline-block;
+            font-size: 0.85rem;
             color: #6c757d;
-            margin-top: 2px;
+            margin-left: 5px;
         }
     </style>
 </head>
@@ -401,37 +322,41 @@
     <!-- Sidebar -->
     <div class="sidebar">
         <h2>Gaming Academy</h2>
-        <a href="<?php echo BASE; ?>">
+        <a href="../home">
             <i class="bi bi-house-door-fill"></i>
             Back To Main Dashboard
         </a>
+        <a href="<?php echo BASE.'game';?>">
+            <i class="bi bi-house-door-fill"></i>
+            Back To Game Dashboard
+        </a>
         
         <div class="game-category">Coding Games</div>
-        <a href="game/codequest">
+        <a href="../game/codequest">
             <i class="bi bi-code-square"></i>
             Code Quest
         </a>
-        <a href="game/network-nexus">
+        <a href="../game/network-nexus">
             <i class="bi bi-diagram-3-fill"></i>
             Network Nexus
         </a>
-        <a href="game/design-dynamo">
+        <a href="../game/design-dynamo">
             <i class="bi bi-palette-fill"></i>
             Design Dynamo
         </a>
         
         <div class="game-category">Community</div>
-        <a href="game/leaderboards" class="active">
+        <a href="../game/leaderboards" class="active">
             <i class="bi bi-trophy-fill"></i>
             Leaderboards
         </a>
-        <a href="#">
+        <a href="../game/friends">
             <i class="bi bi-people-fill"></i>
             Friends
         </a>
         
         <div class="game-category">Your Profile</div>
-        <a href="#">
+        <a href="../game/badges">
             <i class="bi bi-award-fill"></i>
             Badges & Achievements
         </a>
@@ -448,374 +373,251 @@
             </div>
         </div>
     </div>
-
+    
     <!-- Main Content -->
     <div class="main-content">
-        <div class="page-header">
-            <div>
-                <a href="<?php echo BASE.'game'; ?>" class="back-button mb-2">
-                    <i class="bi bi-arrow-left"></i> Back to Dashboard
-                </a>
-                <h1>Leaderboards</h1>
-            </div>
-        </div>
-        
-        <!-- Tabs for different leaderboards -->
-        <ul class="nav nav-tabs">
-            <li class="nav-item">
-                <a class="nav-link <?php echo $activeTab === 'overall' ? 'active' : ''; ?>" href="?tab=overall">
-                    <i class="bi bi-star-fill"></i> Overall
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link <?php echo $activeTab === 'codequest' ? 'active' : ''; ?>" href="?tab=codequest">
-                    <i class="bi bi-code-square"></i> Code Quest
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link <?php echo $activeTab === 'networking' ? 'active' : ''; ?>" href="?tab=networking">
-                    <i class="bi bi-diagram-3-fill"></i> Network Nexus
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link <?php echo $activeTab === 'design' ? 'active' : ''; ?>" href="?tab=design">
-                    <i class="bi bi-palette-fill"></i> Design Dynamo
-                </a>
-            </li>
-        </ul>
-        
-        <!-- Leaderboard Content based on active tab -->
-        <?php if ($activeTab === 'overall'): ?>
-            <!-- Overall Leaderboard -->
-            <div class="card">
-                <div class="card-header">
-                    <i class="bi bi-trophy-fill text-warning me-2"></i> Top Players - All Games
+        <div class="container-fluid py-4">
+            <h1 class="mb-4">Leaderboards</h1>
+            
+            <!-- Top Level Users -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Top Players by Level</h5>
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Rank</th>
-                                <th>Player</th>
-                                <th>Level</th>
-                                <th>Challenges Solved</th>
-                                <th>Badges</th>
-                                <th>Last Active</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (!empty($overallLeaderboard)): ?>
-                                <?php foreach ($overallLeaderboard as $index => $player): ?>
-                                    <tr>
-                                        <td>
-                                            <?php if ($index < 3): ?>
-                                                <div class="rank-<?php echo $index + 1; ?>">
-                                                    <?php echo $index + 1; ?>
-                                                </div>
-                                            <?php else: ?>
-                                                <span class="rank-number"><?php echo $index + 1; ?></span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <div class="user-cell">
-                                                <img src="https://via.placeholder.com/40/<?php echo dechex(crc32($player['username'])); ?>?text=<?php echo substr($player['username'], 0, 1); ?>" 
-                                                     alt="User" class="user-avatar">
-                                                <div>
-                                                    <span><?php echo htmlspecialchars($player['username']); ?></span>
-                                                    <span class="level-title"><?php echo getLevelTitle($player['user_level']); ?></span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="level-badge">Lvl <?php echo $player['user_level']; ?></span>
-                                            <span class="text-muted small">(<?php echo number_format($player['total_xp']); ?> XP)</span>
-                                        </td>
-                                        <td><?php echo $player['solved_count']; ?></td>
-                                        <td><?php echo $player['badge_count'] ?? 0; ?></td>
-                                        <td><?php echo date('M d, Y', strtotime($player['last_active'])); ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php else: ?>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
                                 <tr>
-                                    <td colspan="5" class="text-center py-4">No data available yet</td>
+                                    <th>Rank</th>
+                                    <th>Player</th>
+                                    <th>Level</th>
+                                    <th>Total XP</th>
+                                    <th>Progress to Next Level</th>
                                 </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <?php if (!empty($topLevelUsers)): ?>
+                                    <?php foreach ($topLevelUsers as $index => $user): ?>
+                                        <tr>
+                                            <td><?php echo $index + 1; ?></td>
+                                            <td><?php echo htmlspecialchars($user['username']); ?></td>
+                                            <td>
+                                                <span class="level-badge">Lvl <?php echo $user['level']; ?></span>
+                                                <span class="level-title">
+                                                    <?php echo function_exists('getLevelTitle') ? getLevelTitle($user['level']) : "Level {$user['level']}"; ?>
+                                                </span>
+                                            </td>
+                                            <td><?php echo number_format($user['xp']); ?> XP</td>
+                                            <td>
+                                                <div class="progress" style="height: 15px;">
+                                                    <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $user['level_progress_percent']; ?>%;" 
+                                                         aria-valuenow="<?php echo $user['level_progress_percent']; ?>" aria-valuemin="0" aria-valuemax="100">
+                                                        <?php echo $user['level_progress_percent']; ?>%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="5" class="text-center">No players found</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
             
-        <?php elseif ($activeTab === 'codequest'): ?>
-            <!-- Code Quest Leaderboard -->
-            <div class="card">
-                <div class="card-header">
-                    <i class="bi bi-code-square text-primary me-2"></i> Top Coders - Code Quest
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Rank</th>
-                                <th>Coder</th>
-                                <th>Level</th>
-                                <th>Challenges Solved</th>
-                                <th>Last Active</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (!empty($codeQuestLeaderboard)): ?>
-                                <?php foreach ($codeQuestLeaderboard as $index => $player): ?>
-                                    <tr>
-                                        <td>
-                                            <?php if ($index < 3): ?>
-                                                <div class="rank-<?php echo $index + 1; ?>">
-                                                    <?php echo $index + 1; ?>
-                                                </div>
-                                            <?php else: ?>
-                                                <span class="rank-number"><?php echo $index + 1; ?></span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <div class="user-cell">
-                                                <img src="https://via.placeholder.com/40/<?php echo dechex(crc32($player['username'])); ?>?text=<?php echo substr($player['username'], 0, 1); ?>" 
-                                                     alt="User" class="user-avatar">
-                                                <div>
-                                                    <span><?php echo htmlspecialchars($player['username']); ?></span>
-                                                    <span class="level-title"><?php echo getLevelTitle($player['user_level']); ?></span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="level-badge">Lvl <?php echo $player['user_level']; ?></span>
-                                            <span class="text-muted small">(<?php echo number_format($player['total_xp']); ?> XP)</span>
-                                        </td>
-                                        <td><?php echo $player['solved_count']; ?></td>
-                                        <td><?php echo date('M d, Y', strtotime($player['last_active'])); ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <tr>
-                                    <td colspan="4" class="text-center py-4">No data available yet</td>
-                                </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            <!-- Game-specific Leaderboards -->
+            <ul class="nav nav-tabs mb-4">
+                <li class="nav-item">
+                    <a class="nav-link <?php echo $activeTab === 'overall' ? 'active' : ''; ?>" href="?tab=overall">Overall</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?php echo $activeTab === 'codequest' ? 'active' : ''; ?>" href="?tab=codequest">Code Quest</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?php echo $activeTab === 'networking' ? 'active' : ''; ?>" href="?tab=networking">Network Nexus</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?php echo $activeTab === 'design' ? 'active' : ''; ?>" href="?tab=design">Design Dynamo</a>
+                </li>
+            </ul>
             
-        <?php elseif ($activeTab === 'networking'): ?>
-            <!-- Network Nexus Leaderboard -->
-            <div class="card">
-                <div class="card-header">
-                    <i class="bi bi-diagram-3-fill text-success me-2"></i> Top Network Engineers - Network Nexus
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Rank</th>
-                                <th>Engineer</th>
-                                <th>Level</th>
-                                <th>Networks Built</th>
-                                <th>Last Active</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (!empty($networkingLeaderboard)): ?>
-                                <?php foreach ($networkingLeaderboard as $index => $player): ?>
-                                    <tr>
-                                        <td>
-                                            <?php if ($index < 3): ?>
-                                                <div class="rank-<?php echo $index + 1; ?>">
-                                                    <?php echo $index + 1; ?>
-                                                </div>
+            <div class="row">
+                <!-- Leaderboard Table -->
+                <div class="col-lg-8">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <?php 
+                                    switch($activeTab) {
+                                        case 'codequest':
+                                            echo 'Code Quest Leaderboard';
+                                            break;
+                                        case 'networking':
+                                            echo 'Network Nexus Leaderboard';
+                                            break;
+                                        case 'design':
+                                            echo 'Design Dynamo Leaderboard';
+                                            break;
+                                        default:
+                                            echo 'Overall Leaderboard';
+                                    }
+                                ?>
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Rank</th>
+                                            <th>Player</th>
+                                            <th>Level</th>
+                                            <?php if ($activeTab === 'overall'): ?>
+                                                <th>Unique Challenges</th>
+                                                <th>Badges</th>
                                             <?php else: ?>
-                                                <span class="rank-number"><?php echo $index + 1; ?></span>
+                                                <th>Challenges Solved</th>
                                             <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <div class="user-cell">
-                                                <img src="https://via.placeholder.com/40/<?php echo dechex(crc32($player['username'])); ?>?text=<?php echo substr($player['username'], 0, 1); ?>" 
-                                                     alt="User" class="user-avatar">
-                                                <div>
-                                                    <span><?php echo htmlspecialchars($player['username']); ?></span>
-                                                    <span class="level-title"><?php echo getLevelTitle($player['user_level']); ?></span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="level-badge">Lvl <?php echo $player['user_level']; ?></span>
-                                            <span class="text-muted small">(<?php echo number_format($player['total_xp']); ?> XP)</span>
-                                        </td>
-                                        <td><?php echo $player['solved_count']; ?></td>
-                                        <td><?php echo date('M d, Y', strtotime($player['last_active'])); ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <tr>
-                                    <td colspan="4" class="text-center py-4">No data available yet</td>
-                                </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
+                                            <th>Last Active</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php 
+                                            $leaderboard = [];
+                                            switch($activeTab) {
+                                                case 'codequest':
+                                                    $leaderboard = $codeQuestLeaderboard;
+                                                    break;
+                                                case 'networking':
+                                                    $leaderboard = $networkingLeaderboard;
+                                                    break;
+                                                case 'design':
+                                                    $leaderboard = $designLeaderboard;
+                                                    break;
+                                                default:
+                                                    $leaderboard = $overallLeaderboard;
+                                            }
+                                        ?>
+                                        
+                                        <?php if (!empty($leaderboard)): ?>
+                                            <?php foreach ($leaderboard as $index => $entry): ?>
+                                                <tr>
+                                                    <td><?php echo $index + 1; ?></td>
+                                                    <td><?php echo htmlspecialchars($entry['username']); ?></td>
+                                                    <td>
+                                                        <span class="level-badge">Lvl <?php echo $entry['user_level']; ?></span>
+                                                        <span class="level-title">
+                                                            <?php echo function_exists('getLevelTitle') ? getLevelTitle($entry['user_level']) : "Level {$entry['user_level']}"; ?>
+                                                        </span>
+                                                        <div class="small text-muted"><?php echo number_format($entry['total_xp']); ?> XP</div>
+                                                    </td>
+                                                    <?php if ($activeTab === 'overall'): ?>
+                                                        <td><?php echo $entry['unique_challenges']; ?></td>
+                                                        <td>
+                                                            <span class="badge bg-info"><?php echo $entry['badge_count']; ?></span>
+                                                        </td>
+                                                    <?php else: ?>
+                                                        <td><?php echo $entry['solved_count']; ?></td>
+                                                    <?php endif; ?>
+                                                    <td><?php echo date('M d, Y', strtotime($entry['last_active'])); ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <tr>
+                                                <td colspan="5" class="text-center">No leaderboard data available</td>
+                                            </tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            
-        <?php else: ?>
-            <!-- Design Dynamo Leaderboard -->
-            <div class="card">
-                <div class="card-header">
-                    <i class="bi bi-palette-fill text-danger me-2"></i> Top Designers - Design Dynamo
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Rank</th>
-                                <th>Designer</th>
-                                <th>Level</th>
-                                <th>Designs Completed</th>
-                                <th>Last Active</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (!empty($designLeaderboard)): ?>
-                                <?php foreach ($designLeaderboard as $index => $player): ?>
-                                    <tr>
-                                        <td>
-                                            <?php if ($index < 3): ?>
-                                                <div class="rank-<?php echo $index + 1; ?>">
-                                                    <?php echo $index + 1; ?>
-                                                </div>
-                                            <?php else: ?>
-                                                <span class="rank-number"><?php echo $index + 1; ?></span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <div class="user-cell">
-                                                <img src="https://via.placeholder.com/40/<?php echo dechex(crc32($player['username'])); ?>?text=<?php echo substr($player['username'], 0, 1); ?>" 
-                                                     alt="User" class="user-avatar">
-                                                <div>
-                                                    <span><?php echo htmlspecialchars($player['username']); ?></span>
-                                                    <span class="level-title"><?php echo getLevelTitle($player['user_level']); ?></span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="level-badge">Lvl <?php echo $player['user_level']; ?></span>
-                                            <span class="text-muted small">(<?php echo number_format($player['total_xp']); ?> XP)</span>
-                                        </td>
-                                        <td><?php echo $player['solved_count']; ?></td>
-                                        <td><?php echo date('M d, Y', strtotime($player['last_active'])); ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
+                
+                <!-- Challenge Stats Section -->
+                <div class="col-lg-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Challenge Statistics</h5>
+                        </div>
+                        <div class="card-body">
+                            <?php if (!empty($challengeStats)): ?>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Challenge</th>
+                                                <th>Attempts</th>
+                                                <th>Success Rate</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($challengeStats as $stat): ?>
+                                                <tr>
+                                                    <td><?php echo htmlspecialchars($stat['challenge_name']); ?></td>
+                                                    <td><?php echo $stat['attempt_count']; ?></td>
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="progress flex-grow-1 me-2" style="height: 6px;">
+                                                                <div class="progress-bar" role="progressbar" 
+                                                                     style="width: <?php echo round($stat['success_rate']); ?>%;" 
+                                                                     aria-valuenow="<?php echo round($stat['success_rate']); ?>" 
+                                                                     aria-valuemin="0" aria-valuemax="100"></div>
+                                                            </div>
+                                                            <span class="small"><?php echo round($stat['success_rate']); ?>%</span>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
                             <?php else: ?>
-                                <tr>
-                                    <td colspan="4" class="text-center py-4">No data available yet</td>
-                                </tr>
+                                <p class="text-center text-muted">No challenge statistics available</p>
                             <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        <?php endif; ?>
-        
-        <!-- Challenge Stats Section -->
-        <div class="card mt-4">
-            <div class="card-header">
-                <i class="bi bi-bar-chart-fill me-2"></i> Challenge Statistics
-            </div>
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Challenge</th>
-                            <th>Attempts</th>
-                            <th>Solved</th>
-                            <th>Success Rate</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (!empty($challengeStats)): ?>
-                            <?php foreach ($challengeStats as $stat): ?>
-                                <tr>
-                                    <td><?php echo htmlspecialchars($stat['challenge_name']); ?></td>
-                                    <td><?php echo $stat['attempt_count']; ?></td>
-                                    <td><?php echo $stat['solved_count']; ?></td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="progress flex-grow-1 me-2">
-                                                <div class="progress-bar" role="progressbar" 
-                                                     style="width: <?php echo min(100, round($stat['success_rate'])); ?>%" 
-                                                     aria-valuenow="<?php echo round($stat['success_rate']); ?>" 
-                                                     aria-valuemin="0" aria-valuemax="100"></div>
-                                            </div>
-                                            <span><?php echo round($stat['success_rate']); ?>%</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="4" class="text-center py-4">No challenge statistics available yet</td>
-                            </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Top Level Users -->
-        <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
-                <h5 class="card-title mb-0">Top Players by Level</h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Rank</th>
-                                <th>Player</th>
-                                <th>Level</th>
-                                <th>Title</th>
-                                <th>Total XP</th>
-                                <th>Progress to Next Level</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (!empty($topLevelUsers)): ?>
-                                <?php foreach ($topLevelUsers as $index => $user): ?>
-                                    <tr>
-                                        <td><?php echo $index + 1; ?></td>
-                                        <td><?php echo htmlspecialchars($user['username']); ?></td>
-                                        <td>
-                                            <span class="level-badge">Lvl <?php echo $user['level']; ?></span>
-                                        </td>
-                                        <td><?php echo getLevelTitle($user['level']); ?></td>
-                                        <td><?php echo number_format($user['xp']); ?> XP</td>
-                                        <td>
-                                            <div class="progress" style="height: 15px;">
-                                                <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $user['level_progress_percent']; ?>%;" 
-                                                    aria-valuenow="<?php echo $user['level_progress_percent']; ?>" aria-valuemin="0" aria-valuemax="100">
-                                                    <?php echo $user['level_progress_percent']; ?>%
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <tr>
-                                    <td colspan="6" class="text-center">No players found</td>
-                                </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Your Level Card -->
+                    <?php if (isset($userXPInfo) && !empty($userXPInfo) && isset($userXPInfo['current_level'])): ?>
+                    <div class="card mt-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">Your Current Level</h5>
+                        </div>
+                        <div class="card-body text-center">
+                            <div class="mb-3">
+                                <h2 class="mb-0">Level <?php echo $userXPInfo['current_level']; ?></h2>
+                                <div class="text-muted"><?php echo function_exists('getLevelTitle') ? getLevelTitle($userXPInfo['current_level']) : "Level {$userXPInfo['current_level']}"; ?></div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <span class="badge bg-primary p-2">Total XP: <?php echo number_format($userXPInfo['total_xp']); ?></span>
+                            </div>
+                            
+                            <div class="progress mb-2" style="height: 15px;">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $userXPInfo['level_progress_percent']; ?>%;" 
+                                     aria-valuenow="<?php echo $userXPInfo['level_progress_percent']; ?>" aria-valuemin="0" aria-valuemax="100">
+                                    <?php echo $userXPInfo['level_progress_percent']; ?>%
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between text-muted small">
+                                <span>Current: <?php echo number_format($userXPInfo['current_level_xp']); ?> XP</span>
+                                <span>Next Level: <?php echo number_format($userXPInfo['next_level_xp']); ?> XP</span>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="<?php echo BASE; ?>assets/vendor/jQuery/jquery-3.6.4.min.js"></script>
+    <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

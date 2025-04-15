@@ -60,6 +60,8 @@ RewriteRule ^game/network-nexus$ games/src/game_networking.php [QSA,L]
 RewriteRule ^game/design-dynamo$ games/src/game_ux.php [QSA,L]
 RewriteRule ^game/leaderboards$ games/src/leaderboards.php [QSA,L]
 RewriteRule ^game/execute$ games/src/execute.php [QSA,L]
+RewriteRule ^game/badges$ games/src/badges-achievements.php [L]
+RewriteRule ^game/friends$ games/src/friends.php [L]
 
 # End game sub-paths
 
