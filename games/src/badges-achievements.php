@@ -546,7 +546,7 @@
                                     <div class="badge-category <?php echo $badge['badge_category']; ?>">
                                         <?php echo ucfirst($badge['badge_category']); ?>
                                     </div>
-                                    <img src="../<?php echo $badge['badge_image']; ?>" alt="<?php echo htmlspecialchars($badge['badge_name']); ?>" class="badge-image">
+                                    <img src="<?php echo $badge['badge_image']; ?>" alt="<?php echo htmlspecialchars($badge['badge_name']); ?>" class="badge-image">
                                     <div class="badge-name"><?php echo htmlspecialchars($badge['badge_name']); ?></div>
                                     <div class="badge-date">Earned: <?php echo date('M d, Y', strtotime($badge['earned_at'])); ?></div>
                                 </div>
@@ -588,7 +588,7 @@
                                 <div class="badge-category <?php echo $badge['game_type']; ?>">
                                     <?php echo ucfirst($badge['game_type']); ?>
                                 </div>
-                                <img src="../<?php echo $badge['image']; ?>" alt="<?php echo htmlspecialchars($badge['name']); ?>" class="badge-image">
+                                <img src="<?php echo GAME_IMG.'badges/'.$badge['image']; ?>" alt="<?php echo htmlspecialchars($badge['name']); ?>" class="badge-image">
                                 <div class="badge-name"><?php echo htmlspecialchars($badge['name']); ?></div>
                                 <div class="badge-date"><?php echo $badge['difficulty']; ?></div>
                                 <div class="badge-tooltip">

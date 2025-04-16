@@ -25,7 +25,7 @@ CREATE TABLE badges (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     badge_name VARCHAR(100) NOT NULL,
-    badge_image LONGBLOB, -- Column to store the image of the badge
+    badge_image VARCHAR(255), -- Column to store the image of the badge
     earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );

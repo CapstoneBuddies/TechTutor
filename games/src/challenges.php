@@ -7,8 +7,8 @@ $challenges = [
         "description" => "Write code to print 'hello world'.",
         "starter_code" => "// Write your PHP code here\n// Your goal is to print 'hello world'\n\n// Example:\n// echo 'hello world';",
         "expected_output" => "hello world",
-        "badge_name" => "Hello World Badge",
-        "badge_image" => "assets/badges/hello_world.png",
+        "badge_name" => "Hello World",
+        "badge_image" => "programming/hello_world.png",
         "xp_value" => 10, // Easiest challenge
         "difficulty" => "Beginner"
     ],
@@ -19,7 +19,7 @@ $challenges = [
         "starter_code" => "// Write your PHP code here\nfunction factorial(\$n) {\n    // Your code here\n}\n\n// Test the function\n\$n = 5;\necho factorial(\$n);",
         "expected_output" => "120",
         "badge_name" => "Factorial Master",
-        "badge_image" => "assets/badges/factorial.png",
+        "badge_image" => "programming/factorial.png",
         "xp_value" => 20,
         "difficulty" => "Beginner"
     ],
@@ -30,7 +30,7 @@ $challenges = [
         "starter_code" => "// Write your PHP code here\nfunction reverseString(\$str) {\n    // Your code here\n}\n\n// Test the function\n\$str = 'hello';\necho reverseString(\$str);",
         "expected_output" => "olleh",
         "badge_name" => "String Wizard",
-        "badge_image" => "assets/badges/string_reversal.png",
+        "badge_image" => "programming/string_reversal.png",
         "xp_value" => 15,
         "difficulty" => "Beginner"
     ],
@@ -41,7 +41,7 @@ $challenges = [
         "starter_code" => "// Write a function to check if a string is a palindrome\nfunction isPalindrome(\$str) {\n    // Your code here\n}\n\n// Test with this word\n\$word = 'racecar';\necho isPalindrome(\$word) ? 'true' : 'false';",
         "expected_output" => "true",
         "badge_name" => "Palindrome Detective",
-        "badge_image" => "assets/badges/palindrome.png",
+        "badge_image" => "programming/palindrome.png",
         "xp_value" => 25,
         "difficulty" => "Intermediate"
     ],
@@ -52,7 +52,7 @@ $challenges = [
         "starter_code" => "// Implement the FizzBuzz challenge for numbers 1-15\n\n// Your code here",
         "expected_output" => "1\n2\nFizz\n4\nBuzz\nFizz\n7\n8\nFizz\nBuzz\n11\nFizz\n13\n14\nFizzBuzz",
         "badge_name" => "FizzBuzz Champion",
-        "badge_image" => "assets/badges/fizzbuzz.png",
+        "badge_image" => "programming/fizzbuzz.png",
         "xp_value" => 30,
         "difficulty" => "Intermediate"
     ],
@@ -63,7 +63,7 @@ $challenges = [
         "starter_code" => "// Create a function to sum all elements in an array\nfunction arraySum(\$arr) {\n    // Your code here\n}\n\n// Test with this array\n\$numbers = [5, 10, 15, 20, 25];\necho arraySum(\$numbers);",
         "expected_output" => "75",
         "badge_name" => "Array Master",
-        "badge_image" => "assets/badges/array_sum.png",
+        "badge_image" => "programming/array_sum.png",
         "xp_value" => 20,
         "difficulty" => "Beginner"
     ],
@@ -74,7 +74,7 @@ $challenges = [
         "starter_code" => "// Write a function to check if a number is prime\nfunction isPrime(\$number) {\n    // Your code here\n}\n\n// Test with this number\n\$num = 29;\necho isPrime(\$num) ? 'true' : 'false';",
         "expected_output" => "true",
         "badge_name" => "Prime Detective",
-        "badge_image" => "assets/badges/prime.png",
+        "badge_image" => "programming/prime.png",
         "xp_value" => 35,
         "difficulty" => "Intermediate"
     ],
@@ -85,7 +85,7 @@ $challenges = [
         "starter_code" => "// Write a function to find the maximum value in a nested array\nfunction findMax(\$arr) {\n    // Your code here\n}\n\n// Test with this nested array\n\$nestedArray = [[3, 5], [8, 2], [1, [9, 4]]];\necho findMax(\$nestedArray);",
         "expected_output" => "9",
         "badge_name" => "Maximum Explorer",
-        "badge_image" => "assets/badges/max_value.png",
+        "badge_image" => "programming/max_value.png",
         "xp_value" => 40,
         "difficulty" => "Advanced"
     ],
@@ -96,7 +96,7 @@ $challenges = [
         "starter_code" => "// Create a function that validates passwords according to criteria\nfunction isValidPassword(\$password) {\n    // Your code here\n}\n\n// Test with this password\n\$pass = 'SecureP@ss1';\necho isValidPassword(\$pass) ? 'valid' : 'invalid';",
         "expected_output" => "valid",
         "badge_name" => "Security Expert",
-        "badge_image" => "assets/badges/password.png",
+        "badge_image" => "programming/password.png",
         "xp_value" => 45,
         "difficulty" => "Advanced"
     ],
@@ -107,7 +107,7 @@ $challenges = [
         "starter_code" => "// Implement a Caesar cipher function\nfunction caesarCipher(\$text, \$shift) {\n    // Your code here\n}\n\n// Test with this text and shift value\n\$text = 'hello';\n\$shift = 3;\necho caesarCipher(\$text, \$shift);",
         "expected_output" => "khoor",
         "badge_name" => "Encryption Expert",
-        "badge_image" => "assets/badges/cipher.png",
+        "badge_image" => "programming/cipher.png",
         "xp_value" => 50,
         "difficulty" => "Advanced"
     ],
@@ -118,7 +118,7 @@ $challenges = [
         "starter_code" => "// Create a function to check if two strings are anagrams\nfunction areAnagrams(\$str1, \$str2) {\n    // Your code here\n}\n\n// Test with these strings\n\$string1 = 'listen';\n\$string2 = 'silent';\necho areAnagrams(\$string1, \$string2) ? 'true' : 'false';",
         "expected_output" => "true",
         "badge_name" => "Anagram Detective",
-        "badge_image" => "assets/badges/anagram.png",
+        "badge_image" => "programming/anagram.png",
         "xp_value" => 40,
         "difficulty" => "Advanced"
     ]

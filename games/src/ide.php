@@ -317,7 +317,7 @@ if (isset($_POST['start_game'])) {
                             <div class="d-flex justify-content-center">
                                 <?php for ($j = $i * $badgesPerSlide; $j < min(($i + 1) * $badgesPerSlide, $totalBadges); $j++): ?>
                                     <div class="badge-card mx-2">
-                                        <img src="<?php echo GAME_IMG.'badges/'.$badges[$j]['image']; ?>" alt="<?php echo htmlspecialchars($badges[$j]['name']); ?>" class="img-fluid" style="width: 80px; height: 80px; border-radius: 10px;">
+                                        <img src="<?php echo GAME_IMG.'badges/programming/'.$badges[$j]['image']; ?>" alt="<?php echo htmlspecialchars($badges[$j]['name']); ?>" class="img-fluid" style="width: 80px; height: 80px; border-radius: 10px;">
                                         <p class="mt-2 mb-0"><?php echo htmlspecialchars($badges[$j]['name']); ?></p>
                                         <small class="text-muted"><?php echo htmlspecialchars($badges[$j]['date']); ?></small>
                                     </div>

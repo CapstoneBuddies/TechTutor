@@ -300,7 +300,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Only add the badge if the user doesn't already have it
                 if (!isset($_SESSION['badges'][$badgeName])) {
-                    $badgeImage = $selectedChallenge['badge_image'] ?? GAME_IMG.'badges/goodjob.png';
+                    $badgeImage = GAME_IMG.'badges/'.$selectedChallenge['badge_image'] ?? GAME_IMG.'badges/goodjob.png';
                     $currentDate = date('Y-m-d H:i:s');
                     
                     $_SESSION['badges'][$badgeName] = [
