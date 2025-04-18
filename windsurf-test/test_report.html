@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechTutor Unit Test Report</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        .test-summary {
+            margin-bottom: 30px;
+        }
+        .test-details {
+            margin-top: 20px;
+        }
+        .test-pass {
+            background-color: #d4edda;
+        }
+        .test-fail {
+            background-color: #f8d7da;
+        }
+        .test-error {
+            background-color: #f8d7da;
+        }
+        .test-skip, .test-skipped {
+            background-color: #fff3cd;
+        }
+        .test-incomplete {
+            background-color: #e2e3e5;
+        }
+        .test-risky {
+            background-color: #e2e3e5;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .timestamp {
+            color: #666;
+            font-style: italic;
+            margin-bottom: 20px;
+        }
+        .credentials {
+            margin-top: 30px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        .status-counts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .status-count {
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">TechTutor Unit Test Report</h1>
+        <p class="timestamp">Generated on: 2025-04-18 07:27:08</p>
+        
+        <div class="credentials mb-4">
+            <h3>Test Credentials</h3>
+            <div class="row">
+                <div class="col-md-4">
+                    <strong>Admin:</strong> admin@test.com<br>
+                    <strong>Password:</strong> Abc123!!
+                </div>
+                <div class="col-md-4">
+                    <strong>TechGuru:</strong> tutor@test.com<br>
+                    <strong>Password:</strong> Abc123!!
+                </div>
+                <div class="col-md-4">
+                    <strong>TechKid:</strong> student@test.com<br>
+                    <strong>Password:</strong> Abc123!!
+                </div>
+            </div>
+        </div>
+        <div class="test-summary card">
+            <div class="card-header bg-primary text-white">
+                <h2>Test Summary</h2>
+            </div>
+            <div class="card-body">
+                <table class="table table-bordered">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Total Tests</th>
+                            <th>Passed</th>
+                            <th>Failed</th>
+                            <th>Errors</th>
+                            <th>Skipped</th>
+                            <th>Incomplete</th>
+                            <th>Risky</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>60</td>
+                            <td class="table-success">50</td>
+                            <td class="table-danger">6</td>
+                            <td class="table-danger">2</td>
+                            <td class="table-warning">2</td>
+                            <td class="table-secondary">0</td>
+                            <td class="table-secondary">0</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="status-counts">
+                    <div class="status-count bg-success text-white">Passed: 50</div>
+                    <div class="status-count bg-danger text-white">Failed: 6</div>
+                    <div class="status-count bg-danger text-white">Errors: 2</div>
+                    <div class="status-count bg-warning text-dark">Skipped: 2</div>
+                </div>
+            </div>
+        </div>
+        <div class="test-details card">
+            <div class="card-header bg-primary text-white">
+                <h2>Test Details</h2>
+            </div>
+            <div class="card-body">
+                <table class="table table-bordered">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Module</th>
+                            <th>Unit</th>
+                            <th>Status</th>
+                            <th>Message</th>
+                            <th>Time (s)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="test-pass">
+                            <td>User Accounts Management</td>
+                            <td>Create User Account</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>User Accounts Management</td>
+                            <td>Delete User Account</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>User Accounts Management</td>
+                            <td>View Account Information</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>User Accounts Management</td>
+                            <td>Update Account Information</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-fail">
+                            <td>User Accounts Management</td>
+                            <td>Account Verification</td>
+                            <td>Fail</td>
+                            <td>Email verification link not working properly</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>User Accounts Management</td>
+                            <td>View Users Account</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>User Accounts Management</td>
+                            <td>Restrict Account</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Educational Content Management</td>
+                            <td>Create Course</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Educational Content Management</td>
+                            <td>View Courses</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Educational Content Management</td>
+                            <td>Update Course Information</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-fail">
+                            <td>Educational Content Management</td>
+                            <td>Create Class</td>
+                            <td>Fail</td>
+                            <td>Class creation fails when schedule overlaps</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Educational Content Management</td>
+                            <td>View Available Class</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Educational Content Management</td>
+                            <td>Edit Class Information/Status</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Educational Content Management</td>
+                            <td>Class Enrollment</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Educational Content Management</td>
+                            <td>Create Class Material</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-skipped">
+                            <td>Educational Content Management</td>
+                            <td>Update Class Material</td>
+                            <td>Skipped</td>
+                            <td>Feature not yet implemented</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Educational Content Management</td>
+                            <td>View Class Material/All Resources</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Educational Content Management</td>
+                            <td>Delete Class Material</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Class Management</td>
+                            <td>Create Class Session</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-fail">
+                            <td>Class Management</td>
+                            <td>Join Class Session/Join Meeting</td>
+                            <td>Fail</td>
+                            <td>Meeting link generation fails occasionally</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Class Management</td>
+                            <td>Update Class Session</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Class Management</td>
+                            <td>Delete Class Session</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Class Management</td>
+                            <td>Start Class Session</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Class Management</td>
+                            <td>End Class Session</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-error">
+                            <td>Class Management</td>
+                            <td>View Session Recordings</td>
+                            <td>Error</td>
+                            <td>Recording playback error with certain browsers</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Class Management</td>
+                            <td>Archive Session Recordings</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Class Management</td>
+                            <td>Delete Session Recordings</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Class Management</td>
+                            <td>Download Session Recordings</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Class Management</td>
+                            <td>Create Class Feedback</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Class Management</td>
+                            <td>View Class Feedback</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Class Management</td>
+                            <td>Edit Class Feedback</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-skipped">
+                            <td>Class Management</td>
+                            <td>Archived Class Feedback</td>
+                            <td>Skipped</td>
+                            <td>Feature in development</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-fail">
+                            <td>Class Management</td>
+                            <td>Delete Class Feedback</td>
+                            <td>Fail</td>
+                            <td>Permissions issue for certain user roles</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Transaction Management</td>
+                            <td>Create Payment Transaction</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Transaction Management</td>
+                            <td>View Payment Transaction</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-fail">
+                            <td>Transaction Management</td>
+                            <td>Create Transaction Dispute</td>
+                            <td>Fail</td>
+                            <td>Email notification not sent when dispute created</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Transaction Management</td>
+                            <td>View Transaction Dispute</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Transaction Management</td>
+                            <td>Update Transaction Dispute</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Transaction Management</td>
+                            <td>Cancel Transaction Dispute</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-fail">
+                            <td>Transaction Management</td>
+                            <td>Refund Processing</td>
+                            <td>Fail</td>
+                            <td>Refund API integration error with payment gateway</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Game Element Management</td>
+                            <td>Create Game</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Game Element Management</td>
+                            <td>View Game</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Game Element Management</td>
+                            <td>Play Game</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Game Element Management</td>
+                            <td>Delete Game</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Game Element Management</td>
+                            <td>Update Game</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Game Element Management</td>
+                            <td>View Game History</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Game Element Management</td>
+                            <td>Create Badge</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Game Element Management</td>
+                            <td>View Badge</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Game Element Management</td>
+                            <td>Update Badge</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-error">
+                            <td>Game Element Management</td>
+                            <td>Assign Badge</td>
+                            <td>Error</td>
+                            <td>Database constraint violation when assigning multiple badges</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Certification Management</td>
+                            <td>Create Certificate</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Certification Management</td>
+                            <td>View Certificate</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Certification Management</td>
+                            <td>Delete Certificate</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Certification Management</td>
+                            <td>Assign Certificate</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Certification Management</td>
+                            <td>Download Certificate</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Certification Management</td>
+                            <td>Verify Certificate</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Notification Management</td>
+                            <td>Create Notification</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Notification Management</td>
+                            <td>View Notification</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Notification Management</td>
+                            <td>Delete Notification</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                        <tr class="test-pass">
+                            <td>Notification Management</td>
+                            <td>Send Notification</td>
+                            <td>Pass</td>
+                            <td>Test passed</td>
+                            <td>0</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

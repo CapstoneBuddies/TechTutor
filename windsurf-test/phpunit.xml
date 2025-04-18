@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="bootstrap.php"
+         colors="true"
+         verbose="true"
+         stopOnFailure="false"
+         cacheResult="false">
+    <testsuites>
+        <testsuite name="TechTutor Test Suite">
+            <directory>.</directory>
+        </testsuite>
+    </testsuites>
+    <filter>
+        <whitelist>
+            <directory suffix=".php">../backends</directory>
+            <exclude>
+                <directory>../assets/vendor</directory>
+            </exclude>
+        </whitelist>
+    </filter>
+    <php>
+        <env name="APP_ENV" value="testing"/>
+    </php>
+</phpunit>

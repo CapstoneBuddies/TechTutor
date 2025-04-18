@@ -93,3 +93,22 @@ LEFT JOIN
     user_xp ux ON u.id = ux.user_id
 LEFT JOIN 
     level_definitions ld ON COALESCE(ux.level, 1) = ld.level; 
+
+UPDATE level_definitions
+SET badge_image = REPLACE(badge_image, 'assets/badges/', '')
+WHERE badge_image LIKE 'assets/badges/%';
+
+ALTER TABLE `badges`
+DROP COLUMN `badge_image`,
+ADD COLUMN `badge_image` VARCHAR(255);
+UPDATE badges
+SET badge_image = CONCAT(
+    REPLACE(LOWER(badge_name), ' ', '_'),
+    '.png'
+);
+update badges set badge_name = 'Hello World' WHERE badge_name = 'Hello World Badge';
+UPDATE badges
+SET badge_image = CONCAT('programming/',
+    REPLACE(LOWER(badge_name), ' ', '_'),
+    '.png'
+);

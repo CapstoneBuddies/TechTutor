@@ -373,7 +373,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Main Content -->
     <div class="main-content">
         <div class="container-fluid py-4">
@@ -385,18 +385,18 @@
                     <h5 class="card-title mb-0">Top Players by Level</h5>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Rank</th>
-                                    <th>Player</th>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Player</th>
                                     <th>Level</th>
                                     <th>Total XP</th>
                                     <th>Progress to Next Level</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                            </tr>
+                        </thead>
+                        <tbody>
                                 <?php if (!empty($topLevelUsers)): ?>
                                     <?php foreach ($topLevelUsers as $index => $user): ?>
                                         <tr>
@@ -415,19 +415,19 @@
                                                          aria-valuenow="<?php echo $user['level_progress_percent']; ?>" aria-valuemin="0" aria-valuemax="100">
                                                         <?php echo $user['level_progress_percent']; ?>%
                                                     </div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="5" class="text-center">No players found</td>
+                                            </div>
+                                        </td>
                                     </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                        <td colspan="5" class="text-center">No players found</td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
                 </div>
+            </div>
             </div>
             
             <!-- Game-specific Leaderboards -->
@@ -450,7 +450,7 @@
                 <!-- Leaderboard Table -->
                 <div class="col-lg-8">
                     <div class="card mb-4">
-                        <div class="card-header">
+                <div class="card-header">
                             <h5 class="card-title mb-0">
                                 <?php 
                                     switch($activeTab) {
@@ -468,13 +468,13 @@
                                     }
                                 ?>
                             </h5>
-                        </div>
+                </div>
                         <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Rank</th>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
                                             <th>Player</th>
                                             <th>Level</th>
                                             <?php if ($activeTab === 'overall'): ?>
@@ -483,10 +483,10 @@
                                             <?php else: ?>
                                                 <th>Challenges Solved</th>
                                             <?php endif; ?>
-                                            <th>Last Active</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
+                                <th>Last Active</th>
+                            </tr>
+                        </thead>
+                        <tbody>
                                         <?php 
                                             $leaderboard = [];
                                             switch($activeTab) {
@@ -515,67 +515,67 @@
                                                             <?php echo function_exists('getLevelTitle') ? getLevelTitle($entry['user_level']) : "Level {$entry['user_level']}"; ?>
                                                         </span>
                                                         <div class="small text-muted"><?php echo number_format($entry['total_xp']); ?> XP</div>
-                                                    </td>
+                                        </td>
                                                     <?php if ($activeTab === 'overall'): ?>
                                                         <td><?php echo $entry['unique_challenges']; ?></td>
                                                         <td>
                                                             <span class="badge bg-info"><?php echo $entry['badge_count']; ?></span>
-                                                        </td>
+                                        </td>
                                                     <?php else: ?>
                                                         <td><?php echo $entry['solved_count']; ?></td>
                                                     <?php endif; ?>
                                                     <td><?php echo date('M d, Y', strtotime($entry['last_active'])); ?></td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        <?php else: ?>
-                                            <tr>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
                                                 <td colspan="5" class="text-center">No leaderboard data available</td>
-                                            </tr>
-                                        <?php endif; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
                 </div>
-                
-                <!-- Challenge Stats Section -->
+            </div>
+                                            </div>
+                </div>
+        
+        <!-- Challenge Stats Section -->
                 <div class="col-lg-4">
                     <div class="card">
-                        <div class="card-header">
+            <div class="card-header">
                             <h5 class="card-title mb-0">Challenge Statistics</h5>
-                        </div>
+            </div>
                         <div class="card-body">
                             <?php if (!empty($challengeStats)): ?>
-                                <div class="table-responsive">
+            <div class="table-responsive">
                                     <table class="table table-sm">
-                                        <thead>
-                                            <tr>
-                                                <th>Challenge</th>
-                                                <th>Attempts</th>
-                                                <th>Success Rate</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php foreach ($challengeStats as $stat): ?>
-                                                <tr>
-                                                    <td><?php echo htmlspecialchars($stat['challenge_name']); ?></td>
-                                                    <td><?php echo $stat['attempt_count']; ?></td>
-                                                    <td>
-                                                        <div class="d-flex align-items-center">
+                    <thead>
+                        <tr>
+                            <th>Challenge</th>
+                            <th>Attempts</th>
+                            <th>Success Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                            <?php foreach ($challengeStats as $stat): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($stat['challenge_name']); ?></td>
+                                    <td><?php echo $stat['attempt_count']; ?></td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
                                                             <div class="progress flex-grow-1 me-2" style="height: 6px;">
-                                                                <div class="progress-bar" role="progressbar" 
+                                                <div class="progress-bar" role="progressbar" 
                                                                      style="width: <?php echo round($stat['success_rate']); ?>%;" 
-                                                                     aria-valuenow="<?php echo round($stat['success_rate']); ?>" 
-                                                                     aria-valuemin="0" aria-valuemax="100"></div>
-                                                            </div>
+                                                     aria-valuenow="<?php echo round($stat['success_rate']); ?>" 
+                                                     aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
                                                             <span class="small"><?php echo round($stat['success_rate']); ?>%</span>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                    </tbody>
+                </table>
                                 </div>
                             <?php else: ?>
                                 <p class="text-center text-muted">No challenge statistics available</p>

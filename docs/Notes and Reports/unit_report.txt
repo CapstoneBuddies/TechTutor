@@ -1,0 +1,107 @@
+# System Units Analysis Report
+Generated on: [Current Date]
+
+## 1. Frontend Assets
+### 1.1 Stylesheets (CSS)
+- Admin-specific styles
+- User dashboard styles
+- Authentication-related styles (login, signup, password management)
+- Common styles for different user types (techguru, techkid)
+- Layout components (header, footer)
+
+### 1.2 JavaScript Modules
+- Admin class management
+- Contact functionality
+- Dashboard operations
+- Main application logic
+- Notification system
+
+## 2. Static Resources
+### 2.1 Images
+- Blog assets
+- Client logos
+- Payment system icons
+- Portfolio images
+- Team member photos
+- User/profile defaults
+- System branding assets
+
+### 2.2 External Libraries
+- Bootstrap (UI Framework)
+- Font Awesome (Icons)
+- AOS (Animations)
+- ClockPicker (Time selection)
+
+## 3. Identified Main System Units
+Based on the file structure and naming conventions:
+
+1. Authentication System
+   - Login
+   - Signup
+   - Password Management (forgot/reset)
+   - User Verification
+
+2. User Management
+   - Profile Management
+   - User Types:
+     - TechGuru
+     - TechKid
+     - Admin
+
+3. Class Management System
+   - Class Creation/Management
+   - Subject Management
+
+4. Dashboard System
+   - User-specific dashboards
+   - Admin dashboard
+
+5. Payment Integration
+   - Multiple payment methods supported:
+   - BDO
+   - BPI
+   - GCash
+   - GrabPay
+   - Maya
+   - QR Ph
+   - UnionBank
+
+6. Notification System
+   - Custom notification handling
+
+## 4. Technical Architecture Components
+1. Frontend
+   - HTML/CSS/JavaScript
+   - Bootstrap for responsive design
+   - Custom styling for different user types
+   - Interactive UI components
+
+2. Backend (Implied from structure)
+   - PHP-based system
+   - JWT authentication (suggested by firebase/php-jwt presence)
+
+3. Asset Management
+   - Organized image assets
+   - Structured CSS/JS resources
+   - Third-party library management
+
+## 5. Recommendations
+1. Consider implementing:
+   - Unit tests for core functionalities
+   - Documentation for API endpoints
+   - Style guide for consistent UI/UX
+   - Security audit for payment integrations
+
+2. Potential Improvements:
+   - Asset optimization for better performance
+   - Implementation of a proper build system
+   - Enhanced error handling and logging
+   - Structured documentation system
+
+## Notes
+- The system appears to be an educational platform with different user roles
+- Strong emphasis on payment integration suggests a commercial educational service
+- Multiple user types indicate role-based access control
+- Extensive use of modern frontend libraries and tools
+
+End of Report
