@@ -4,7 +4,6 @@
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO"; 
 START TRANSACTION;
 
--- First, create tables with no dependencies
 CREATE TABLE `course` (
   `course_id` int(11) NOT NULL AUTO_INCREMENT,
   `course_name` varchar(255) NOT NULL,
@@ -53,7 +52,6 @@ CREATE TABLE `file_tags` (
   UNIQUE KEY `tag_name_unique` (`tag_name`)
 );
 
--- Tables with dependencies on the above tables
 CREATE TABLE `subject` (
   `subject_id` int(11) NOT NULL AUTO_INCREMENT,
   `course_id` int(11) DEFAULT NULL,
@@ -122,7 +120,6 @@ CREATE TABLE `class` (
   CONSTRAINT `class_ibfk_2` FOREIGN KEY (`tutor_id`) REFERENCES `users` (`uid`)
 );
 
--- Continue with dependent tables
 CREATE TABLE `class_schedule` (
   `schedule_id` int(11) NOT NULL AUTO_INCREMENT,
   `class_id` int(11) NOT NULL,
@@ -154,7 +151,6 @@ CREATE TABLE `enrollments` (
   CONSTRAINT `enrollments_ibfk_2` FOREIGN KEY (`student_id`) REFERENCES `users` (`uid`) ON DELETE CASCADE
 );
 
--- File system tables
 CREATE TABLE `file_folders` (
   `folder_id` int(11) NOT NULL AUTO_INCREMENT,
   `class_id` int(11) DEFAULT NULL,
@@ -285,7 +281,6 @@ CREATE TABLE `file_tag_map` (
   CONSTRAINT `file_tag_map_ibfk_2` FOREIGN KEY (`tag_id`) REFERENCES `file_tags` (`tag_id`) ON DELETE CASCADE
 );
 
--- Attendance and feedback tables
 CREATE TABLE `attendance` (
   `attendance_id` int(11) NOT NULL AUTO_INCREMENT,
   `schedule_id` int(11) NOT NULL,
@@ -336,7 +331,6 @@ CREATE TABLE `session_feedback` (
   CONSTRAINT `session_feedback_ibfk_3` FOREIGN KEY (`tutor_id`) REFERENCES `users` (`uid`) ON DELETE CASCADE
 );
 
--- File requests and upload requests
 CREATE TABLE `file_requests` (
   `request_id` int(11) NOT NULL AUTO_INCREMENT,
   `class_id` int(11) NOT NULL,
@@ -385,7 +379,6 @@ CREATE TABLE `file_upload_requests` (
   CONSTRAINT `file_upload_requests_ibfk_4` FOREIGN KEY (`file_id`) REFERENCES `file_management` (`file_id`) ON DELETE SET NULL
 );
 
--- Meeting related tables
 CREATE TABLE `meetings` (
   `meeting_id` int(11) NOT NULL AUTO_INCREMENT,
   `meeting_uid` varchar(50) NOT NULL,
@@ -442,7 +435,6 @@ CREATE TABLE `recording_visibility` (
   CONSTRAINT `fk_rec_vis_creator` FOREIGN KEY (`created_by`) REFERENCES `users` (`uid`) ON DELETE CASCADE
 );
 
--- Other tables
 CREATE TABLE `notifications` (
   `notification_id` int(11) NOT NULL AUTO_INCREMENT,
   `recipient_id` int(11) DEFAULT NULL,
@@ -485,7 +477,7 @@ CREATE TABLE `transactions` (
   KEY `idx_transaction_created_at` (`created_at`),
   CONSTRAINT `transactions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`uid`) ON DELETE CASCADE
 );
--- Transaction Dispute Table
+
 CREATE TABLE `transaction_disputes` (
   `dispute_id` int(11) NOT NULL AUTO_INCREMENT,
   `transaction_id` int(11) NOT NULL,
@@ -503,7 +495,6 @@ CREATE TABLE `transaction_disputes` (
   CONSTRAINT `transaction_disputes_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`uid`) ON DELETE CASCADE
 );
 
--- Optional: Transaction Refund Table
 CREATE TABLE `transaction_refunds` (
   `refund_id` int(11) NOT NULL AUTO_INCREMENT,
   `transaction_id` int(11) NOT NULL,

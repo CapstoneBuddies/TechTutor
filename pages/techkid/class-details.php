@@ -32,7 +32,7 @@
     }
     
     // Get class schedules and files
-    $schedules = getClassSchedules($class_id);
+    $schedules = getClassSchedules($class_id); 
     $files = getClassFiles($class_id);
 
     // Calculate progress

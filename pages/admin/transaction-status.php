@@ -5,7 +5,7 @@ require_once ROOT_PATH . '/backends/handler/paymongo_config.php';
 
 // Check if user is admin
 if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'ADMIN') {
-    header("Location: " . BASE . "login");
+    header("Location: " . BASE . "login"); 
     exit();
 }
 

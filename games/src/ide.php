@@ -413,7 +413,10 @@ if (isset($_POST['start_game'])) {
         require(['vs/editor/editor.main'], function () {
             // Language starters
             const languageStarters = {
-                php: currentChallenge.starter_code || "<?php\n// Write your PHP code here\n\n?>",
+                php: (currentChallenge?.starter_code) || `<?php
+                    // Write your PHP code here
+
+                    ?>`,
                 javascript: "// Write your JavaScript code here\n\n",
                 cpp: "#include <iostream>\n\nint main() {\n    // Write your C++ code here\n    \n    return 0;\n}",
                 java: "public class Main {\n    public static void main(String[] args) {\n        // Write your Java code here\n        \n    }\n}",

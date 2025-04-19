@@ -863,9 +863,7 @@ function getClassesWithPagination($page = 1, $items_per_page = 10) {
 function getEnrolledStudents($class_id) {
     global $conn;
 
-    try {
-        $conn->query($create_enrollments_table);
-        
+    try {        
         // Fetch enrolled students
         $students_query = "SELECT 
                             u.*,

@@ -124,7 +124,7 @@ $title = 'Course Management';
                                     <?php foreach ($courses as $course): ?>
                                     <tr>
                                         <td class="text-start"><?php echo htmlspecialchars($course['course_name']); ?></td>
-                                        <td class="text-start"><?php echo htmlspecialchars($course['course_desc'] ?? ''); ?></td>
+                                        <td class="text-start course-desc"><?php echo htmlspecialchars($course['course_desc'] ?? ''); ?></td>
                                         <td ><?php echo $course['subject_count']; ?></td>
                                         <td >
                                             <button class="btn btn-sm btn-primary action-btn" onclick="openEditModal('course', <?php echo $course['course_id']; ?>, '<?php echo addslashes($course['course_name']); ?>', '<?php echo addslashes($course['course_desc']); ?>')" data-bs-toggle="modal" title="Click to update course information">

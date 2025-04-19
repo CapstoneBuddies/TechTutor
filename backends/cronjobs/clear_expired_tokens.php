@@ -1,6 +1,6 @@
 <?php
 
-include "db.php"; 
+include "../db.php"; 
 
 // SQL query to delete expired remember_me and reset tokens
 $sql = "DELETE FROM login_tokens WHERE expiration_date < NOW()";

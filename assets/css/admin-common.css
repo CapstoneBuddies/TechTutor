@@ -866,3 +866,8 @@
 .add-subject-image, .edit-subject-image {
     margin-left: 15%;
 }
+
+.course-desc {
+    text-wrap: wrap;
+    text-overflow: ellipsis;
+}

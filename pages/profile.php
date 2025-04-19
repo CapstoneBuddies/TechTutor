@@ -156,7 +156,7 @@
                                 <input type="tel" class="form-control" name="phone" 
                                     value="<?php 
                                     $phone = $_SESSION['phone'] ?? '';
-                                    echo preg_match('/^\+\d{1,3}(.*)/', $phone, $matches) ? $matches[1] : $phone;
+                                    echo preg_match('/^\+\d{1,2}(.*)/', $phone, $matches) ? $matches[1] : $phone;
                                     ?>" 
                                     pattern="[0-9-]{12}" maxlength="12" 
                                     placeholder="XXX-XXX-XXXX">

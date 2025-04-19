@@ -342,3 +342,7 @@
     viewport-fit: cover;
     min-height: 50vh;
 }
+.reference {
+    text-wrap: wrap;
+    text-overflow: ellipsis;
+}

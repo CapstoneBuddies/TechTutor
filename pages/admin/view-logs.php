@@ -472,7 +472,7 @@
                                                 <i class="bi bi-gear-fill me-1"></i> General
                                             </a>
                                         </div>
-                                    </div>
+                                    </div> 
                                     
                                     <div class="log-content" id="logContent"><?php 
                                             if (empty($logContent)): 
