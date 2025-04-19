@@ -726,7 +726,7 @@
                                         <p class="mb-3">${formatTransactionType(transaction.type, transaction.description)}</p>
                             </div>
                                     <div class="col-md-6">
-                                        <h6 class="mb-1">Reference Number</h6>
+                                        <h6 class="mb-1 reference">Reference Number</h6>
                                         <p class="mb-3">${transaction.reference || 'N/A'}</p>
                             </div>
                             </div>

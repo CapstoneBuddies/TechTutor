@@ -593,7 +593,7 @@ function getClassDetails($class_id, $tutor_id = null) {
                     END AS status,
                     (SELECT COUNT(*)
                     FROM enrollments
-                    WHERE class_id = c.class_id) AS enrolled_students,
+                    WHERE class_id = c.class_id AND status = 'active') AS enrolled_students,
                     (SELECT AVG(sf.rating)
                     FROM session_feedback sf
                     WHERE tutor_id = techguru_id) AS average_rating
@@ -820,7 +820,7 @@ function getClassesWithPagination($page = 1, $items_per_page = 10) {
                 FROM class c
                 LEFT JOIN subject s ON c.subject_id = s.subject_id
                 LEFT JOIN users u ON c.tutor_id = u.uid
-                LEFT JOIN enrollments e ON c.class_id = e.class_id
+                LEFT JOIN enrollments e ON c.class_id = e.class_id AND e.status = 'active'
                 WHERE u.status = 1
                 GROUP BY c.class_id
                 ORDER BY c.class_id DESC
