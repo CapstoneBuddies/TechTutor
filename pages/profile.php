@@ -82,7 +82,7 @@
                             <input type="tel" class="form-control" name="phone" 
                                 value="<?php 
                                 $phone = $_SESSION['phone'] ?? '';
-                                echo preg_match('/^\+\d{1,3}(.*)/', $phone, $matches) ? $matches[1] : $phone;
+                                echo preg_match('/^\+\d{1,2}(.*)/', $phone, $matches) ? $matches[1] : $phone;
                                 ?>" 
                                 readonly>
                         </div>

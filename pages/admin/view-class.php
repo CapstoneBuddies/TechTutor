@@ -67,7 +67,7 @@
                                                     <img src="<?php echo CLASS_IMG . (!empty($class['thumbnail']) ? $class['thumbnail'] : 'default.jpg'); ?>" 
                                                          alt="Class thumbnail" 
                                                          class="class-thumbnail me-2"
-                                                         onerror="this.src='<?php echo IMG; ?>default-placeholder.png'; this.classList.add('img-error');">
+                                                         onerror="this.src='<?php echo CLASS_IMG; ?>default.jpg'; this.classList.add('img-error');">
                                                     <div>
                                                         <div class="class-name"><?php echo htmlspecialchars($class['class_name']); ?></div>
                                                         <small class="text-muted"><?php echo !empty($class['start_date']) ? date('M d, Y', strtotime($class['start_date'])) : 'N/A'; ?> - <?php echo !empty($class['end_date']) ? date('M d, Y', strtotime($class['end_date'])) : 'N/A'; ?></small>
@@ -80,7 +80,7 @@
                                                     <img src="<?php echo USER_IMG . (!empty($class['techguru_profile']) ? $class['techguru_profile'] : 'default.jpg'); ?>" 
                                                          alt="TechGuru" 
                                                          class="tutor-avatar me-2"
-                                                         onerror="this.src='<?php echo IMG; ?>default-placeholder.png'; this.classList.add('img-error');">
+                                                         onerror="this.src='<?php echo CLASS_IMG; ?>default.jpg'; this.classList.add('img-error');">
                                                     <?php echo htmlspecialchars($class['techguru_name']); ?>
                                                 </div>
                                             </td>
@@ -169,7 +169,7 @@
             document.querySelectorAll('.class-thumbnail, .tutor-avatar').forEach(img => {
                 img.addEventListener('error', function() {
                     // Set a default image or just a background
-                    this.src = '<?php echo IMG; ?>default-placeholder.png';
+                    this.src = '<?php echo CLASS_IMG; ?>default.jpg';
                     // Add a class for styling
                     this.classList.add('img-error');
                 });
