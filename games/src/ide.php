@@ -570,7 +570,7 @@ if (isset($_POST['start_game'])) {
             const solutions = {
                 // Challenge 1: Hello World
                 1: {
-                    php: `<?php\n// Solution\necho 'hello world';\n?>`,
+                    php: `<?php \n// Solution\necho 'hello world';\n ?>`,
                     javascript: `// Solution\nconsole.log('hello world');`,
                     cpp: `#include <iostream>\n\nint main() {\n    // Solution\n    std::cout << "hello world";\n    return 0;\n}`,
                     java: `public class Main {\n    public static void main(String[] args) {\n        // Solution\n        System.out.println("hello world");\n    }\n}`,
