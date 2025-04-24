@@ -55,13 +55,16 @@ RewriteRule ^sent$ backends/contact_handler.php [L]
 RewriteRule ^game$ games/index.php [L]
 
 # Game sub-paths routing
-RewriteRule ^game/codequest$ games/src/ide.php [QSA,L]
+RewriteRule ^game/codequest$ games/src/game_coding.php [QSA,L]
 RewriteRule ^game/network-nexus$ games/src/game_networking.php [QSA,L]
 RewriteRule ^game/design-dynamo$ games/src/game_ux.php [QSA,L]
 RewriteRule ^game/leaderboards$ games/src/leaderboards.php [QSA,L]
 RewriteRule ^game/execute$ games/src/execute.php [QSA,L]
 RewriteRule ^game/badges$ games/src/badges-achievements.php [L]
 RewriteRule ^game/friends$ games/src/friends.php [L]
+RewriteRule ^game/add_challenge$ games/src/add_challenge.php [QSA,L]
+RewriteRule ^game/get-design-challenge$ games/src/get_design_challenges.php [QSA,L]
+RewriteRule ^game/save-drawing$ games/src/save_drawing.php [QSA,L]
 
 # End game sub-paths
 

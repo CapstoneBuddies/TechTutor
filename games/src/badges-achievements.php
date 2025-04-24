@@ -10,7 +10,7 @@
     }
 
     // Get user ID from session
-    $userId = isset($_SESSION['user']) ? $_SESSION['user'] : 1;
+    $userId = isset($_SESSION['game']) ? $_SESSION['game'] : 1;
     
     // Get user's XP info
     $userXPInfo = getUserXPInfo($userId);
@@ -26,87 +26,257 @@
         global $pdo;
         
         try {
-            $stmt = $pdo->prepare("
-                SELECT badge_name, badge_image, earned_at, 
-                (CASE 
-                    WHEN badge_name LIKE '%Level%' OR badge_name IN (SELECT badge_name FROM level_definitions)
-                    THEN 'level'
-                    WHEN badge_name LIKE '%Coding%' OR badge_name LIKE '%Code%'
-                    THEN 'coding'
-                    WHEN badge_name LIKE '%Network%'
-                    THEN 'networking'
-                    WHEN badge_name LIKE '%Design%' OR badge_name LIKE '%UI%' OR badge_name LIKE '%UX%'
-                    THEN 'design'
-                    ELSE 'achievement'
-                END) as badge_category
-                FROM badges
-                WHERE user_id = :user_id
-                ORDER BY earned_at DESC
+            // Get the user's current XP level
+            $levelStmt = $pdo->prepare("
+                SELECT level FROM user_xp WHERE user_id = :user_id
             ");
+            $levelStmt->execute([':user_id' => $userId]);
+            $userLevel = $levelStmt->fetchColumn() ?: 1; // Default to level 1 if not found
             
-            $stmt->execute([':user_id' => $userId]);
+            // First get earned badges from game_user_badges table
+            $query = "
+                SELECT 
+                    gb.name as badge_name, 
+                    gb.image_path as badge_image, 
+                    gb.description,
+                    gub.earned_at, 
+                    CASE 
+                        WHEN gb.name LIKE '%Level%' OR gb.name IN (SELECT badge_name FROM level_definitions)
+                        THEN 'level'
+                        WHEN gb.name LIKE '%Network%' OR gb.name IN ('Basic Network Setup', 'Internet Connection', 'Office Network with Switch')
+                        THEN 'networking'
+                        WHEN gb.name LIKE '%Code%' OR gb.name LIKE '%Program%' OR gb.name IN ('Hello World', 'FizzBuzz Master', 'String Reversal')
+                        THEN 'coding'
+                        WHEN gb.name LIKE '%Design%' OR gb.name LIKE '%UI%' OR gb.name LIKE '%UX%'
+                        THEN 'design'
+                        ELSE 'achievement'
+                    END as badge_category
+                FROM game_user_badges gub
+                JOIN game_badges gb ON gub.badge_id = gb.badge_id
+                WHERE gub.user_id = :user_id
+            ";
             
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmt = $pdo->prepare($query);
+            $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+            $stmt->execute();
+            $earnedBadges = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Then get level-based badges the user should have based on their level
+            $levelQuery = "
+                SELECT 
+                    badge_name,
+                    badge_image,
+                    CONCAT('Level ', level, ' Badge') as description,
+                    NOW() as earned_at,
+                    'level' as badge_category
+                FROM level_definitions
+                WHERE level <= :user_level
+            ";
+            
+            $levelStmt = $pdo->prepare($levelQuery);
+            $levelStmt->bindParam(':user_level', $userLevel, PDO::PARAM_INT);
+            $levelStmt->execute();
+            $levelBadges = $levelStmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Merge the results, avoiding duplicates
+            $allBadges = $earnedBadges;
+            $badgeNames = array_map(function($badge) {
+                return strtolower($badge['badge_name']);
+            }, $earnedBadges);
+            
+            // Add level badges if not already included
+            foreach ($levelBadges as $badge) {
+                if (!in_array(strtolower($badge['badge_name']), $badgeNames)) {
+                    $allBadges[] = $badge;
+                }
+            }
+            
+            // Sort by earned_at descending
+            usort($allBadges, function($a, $b) {
+                return strtotime($b['earned_at']) - strtotime($a['earned_at']);
+            });
+            
+            return $allBadges;
         } catch (PDOException $e) {
-            error_log("Error getting user badges: " . $e->getMessage());
+            log_error("Error getting user badges: " . $e->getMessage());
             return [];
         }
     }
 
     // Function to get achievement completion stats
     function getAchievementStats($userId) {
-        global $pdo, $challenges;
+        global $pdo;
         
         try {
-            // Get total number of challenges
-            $totalChallenges = count($challenges);
+            // Check if we're using new schema or old schema
+            $hasGameUserProgress = $pdo->query("SHOW TABLES LIKE 'game_user_progress'")->rowCount() > 0;
+            $hasGameChallenges = $pdo->query("SHOW TABLES LIKE 'game_challenges'")->rowCount() > 0;
             
-            // Get total number of challenge types
-            $challengeTypes = [];
-            foreach ($challenges as $challenge) {
-                if (isset($challenge['difficulty'])) {
-                    $challengeTypes[$challenge['difficulty']] = true;
+            // Get total number of challenges
+            $totalChallenges = 0;
+            $challengeTypeCounts = [];
+            
+            if ($hasGameChallenges) {
+                // Get column names to ensure we use the right ones
+                $columnsStmt = $pdo->query("DESCRIBE game_challenges");
+                $columns = $columnsStmt->fetchAll(PDO::FETCH_COLUMN);
+                
+                // Determine status column name and condition
+                $hasStatus = in_array('status', $columns) || in_array('is_active', $columns);
+                $statusColumn = in_array('status', $columns) ? 'status' : 'is_active';
+                $statusCondition = $hasStatus ? "WHERE $statusColumn = 'active' OR $statusColumn = 1" : "";
+                
+                // Get type column name
+                $typeColumn = in_array('challenge_type', $columns) ? 'challenge_type' : 'type';
+                
+                // Count total challenges
+                $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM game_challenges $statusCondition");
+                $stmt->execute();
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                $totalChallenges = $result ? $result['total'] : 0;
+                
+                // Get challenge type counts
+                $stmt = $pdo->prepare("SELECT $typeColumn as challenge_type, COUNT(*) as count FROM game_challenges $statusCondition GROUP BY $typeColumn");
+                $stmt->execute();
+                $challengeTypes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                foreach ($challengeTypes as $type) {
+                    $challengeTypeCounts[$type['challenge_type']] = $type['count'];
+                }
+            } else {
+                // Use older schema with challenge_xp
+                $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM challenge_xp");
+                $stmt->execute();
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                $totalChallenges = $result ? $result['total'] : 0;
+                
+                // Get challenge type counts
+                $stmt = $pdo->prepare("SELECT challenge_type, COUNT(*) as count FROM challenge_xp GROUP BY challenge_type");
+                $stmt->execute();
+                $challengeTypes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                foreach ($challengeTypes as $type) {
+                    $challengeTypeCounts[$type['challenge_type']] = $type['count'];
                 }
             }
-            $totalDifficulties = count($challengeTypes);
             
             // Get solved challenges
-            $stmt = $pdo->prepare("
-                SELECT COUNT(*) as solved_count,
-                COUNT(DISTINCT challenge_name) as unique_challenges
-                FROM game_history
-                WHERE user_id = :user_id AND result = 'Solved'
-            ");
+            $solvedCount = 0;
+            $uniqueChallenges = 0;
+            
+            if ($hasGameUserProgress) {
+                // Get the column names first to ensure we use the right ones
+                $columnsStmt = $pdo->query("DESCRIBE game_user_progress");
+                $columns = $columnsStmt->fetchAll(PDO::FETCH_COLUMN);
+                
+                // Check for status column
+                $hasStatus = in_array('status', $columns);
+                if ($hasStatus) {
+                    $stmt = $pdo->prepare("
+                        SELECT COUNT(*) as solved_count,
+                        COUNT(DISTINCT challenge_id) as unique_challenges
+                        FROM game_user_progress
+                        WHERE user_id = :user_id AND status = 'completed'
+                    ");
+                } else {
+                    // Check for alternative status columns
+                    $hasCompleted = in_array('completed', $columns) || in_array('is_completed', $columns);
+                    $completedColumn = in_array('completed', $columns) ? 'completed' : 'is_completed';
+                    
+                    if ($hasCompleted) {
+                        $stmt = $pdo->prepare("
+                            SELECT COUNT(*) as solved_count,
+                            COUNT(DISTINCT challenge_id) as unique_challenges
+                            FROM game_user_progress
+                            WHERE user_id = :user_id AND $completedColumn = 1
+                        ");
+                    } else {
+                        // If no status column exists, count all rows
+                        $stmt = $pdo->prepare("
+                            SELECT COUNT(*) as solved_count,
+                            COUNT(DISTINCT challenge_id) as unique_challenges
+                            FROM game_user_progress
+                            WHERE user_id = :user_id
+                        ");
+                    }
+                }
+            } else {
+                // Use older schema with game_history
+                $stmt = $pdo->prepare("
+                    SELECT COUNT(*) as solved_count,
+                    COUNT(DISTINCT challenge_name) as unique_challenges
+                    FROM game_history
+                    WHERE user_id = :user_id AND result = 'Solved'
+                ");
+            }
             
             $stmt->execute([':user_id' => $userId]);
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $progressResult = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($progressResult) {
+                $solvedCount = $progressResult['solved_count'];
+                $uniqueChallenges = $progressResult['unique_challenges'];
+            }
             
             // Get total badges
             $stmt = $pdo->prepare("SELECT COUNT(*) as badge_count FROM badges WHERE user_id = :user_id");
             $stmt->execute([':user_id' => $userId]);
             $badgeResult = $stmt->fetch(PDO::FETCH_ASSOC);
             
+            // Get badge counts by type
+            $stmt = $pdo->prepare("
+                SELECT 
+                    COUNT(CASE 
+                          WHEN badge_name LIKE '%Cod%' OR badge_name LIKE '%Program%' OR 
+                               badge_name IN ('Hello World', 'FizzBuzz Master', 'String Wizard', 
+                                             'Algorithm Ace', 'Data Dynamo', 'System Sage')
+                          THEN 1 END) as coding_badges,
+                    COUNT(CASE 
+                          WHEN badge_name LIKE '%Network%' OR 
+                               badge_name IN ('Network Novice', 'Internet Explorer', 'Network Pro')
+                          THEN 1 END) as networking_badges,
+                    COUNT(CASE 
+                          WHEN badge_name LIKE '%Design%' OR badge_name LIKE '%UI%' OR 
+                               badge_name LIKE '%UX%' OR 
+                               badge_name IN ('UI Novice', 'UI Designer', 'UI Master', 
+                                            'Web Design Star', 'Mobile Design Guru', 'Logo Design Expert')
+                          THEN 1 END) as design_badges
+                FROM badges
+                WHERE user_id = :user_id
+            ");
+            $stmt->execute([':user_id' => $userId]);
+            $badgeTypeResult = $stmt->fetch(PDO::FETCH_ASSOC);
+            
             // Calculate completion percentages
-            $challengeCompletion = $totalChallenges > 0 ? ($result['unique_challenges'] / $totalChallenges) * 100 : 0;
+            $challengeCompletion = $totalChallenges > 0 ? ($uniqueChallenges / $totalChallenges) * 100 : 0;
             
             return [
                 'total_challenges' => $totalChallenges,
-                'solved_challenges' => $result['unique_challenges'],
+                'solved_challenges' => $uniqueChallenges,
                 'challenge_completion' => round($challengeCompletion),
                 'total_badges' => $badgeResult['badge_count'],
-                'difficulty_levels' => $totalDifficulties,
-                'coding_badges' => 0, // You can implement this with more detailed queries
-                'networking_badges' => 0,
-                'design_badges' => 0
+                'challenge_types' => count($challengeTypeCounts),
+                'coding_badges' => $badgeTypeResult['coding_badges'] ?? 0,
+                'networking_badges' => $badgeTypeResult['networking_badges'] ?? 0,
+                'design_badges' => $badgeTypeResult['design_badges'] ?? 0,
+                'coding_challenges' => $challengeTypeCounts['Coding'] ?? ($challengeTypeCounts['coding'] ?? 0),
+                'networking_challenges' => $challengeTypeCounts['Networking'] ?? ($challengeTypeCounts['networking'] ?? 0),
+                'design_challenges' => $challengeTypeCounts['Design'] ?? ($challengeTypeCounts['design'] ?? ($challengeTypeCounts['UI'] ?? 0)),
             ];
         } catch (PDOException $e) {
-            error_log("Error getting achievement stats: " . $e->getMessage());
+            log_error("Error getting achievement stats: " . $e->getMessage());
             return [
                 'total_challenges' => 0,
                 'solved_challenges' => 0,
                 'challenge_completion' => 0,
                 'total_badges' => 0,
-                'difficulty_levels' => 0
+                'challenge_types' => 0,
+                'coding_badges' => 0,
+                'networking_badges' => 0,
+                'design_badges' => 0,
+                'coding_challenges' => 0,
+                'networking_challenges' => 0,
+                'design_challenges' => 0,
             ];
         }
     }
@@ -125,19 +295,91 @@
     // Get achievement stats
     $achievementStats = getAchievementStats($userId);
     
-    // Available badges that could be earned (from challenges)
+    // Get available badges (ones that could potentially be earned)
     $availableBadges = [];
-    foreach ($challenges as $challenge) {
-        if (isset($challenge['badge_name']) && isset($challenge['badge_image'])) {
+
+    // Add programming badges based on challenge_xp or game_challenges table
+    try {
+        // First check if game_challenges table exists
+        $tableExists = $pdo->query("SHOW TABLES LIKE 'game_challenges'")->rowCount() > 0;
+        
+        if ($tableExists) {
+            // Get the column names first to ensure we use the right ones
+            $columnsStmt = $pdo->query("DESCRIBE game_challenges");
+            $columns = $columnsStmt->fetchAll(PDO::FETCH_COLUMN);
+            
+            // Check for key columns
+            $hasId = in_array('id', $columns);
+            $hasChallengeName = in_array('challenge_name', $columns);
+            $hasName = in_array('name', $columns);
+            $idColumn = $hasId ? 'id' : 'challenge_id';
+            $nameColumn = $hasChallengeName ? 'challenge_name' : ($hasName ? 'name' : 'title');
+            
+            // Check for status column
+            $hasStatus = in_array('status', $columns) || in_array('is_active', $columns);
+            $statusColumn = in_array('status', $columns) ? 'status' : 'is_active';
+            $statusCondition = $hasStatus ? " WHERE $statusColumn = 'active' OR $statusColumn = 1" : "";
+            
+            // Use new schema with game_challenges - dynamically building the query based on available columns
+            $query = "SELECT $idColumn as id, $nameColumn as name, 
+                      " . (in_array('badge_name', $columns) ? "badge_name," : "CONCAT('Badge for ', $nameColumn) as badge_name,") . "
+                      " . (in_array('badge_image', $columns) ? "badge_image" : "CONCAT('badges/challenge_', $idColumn, '.png')") . " as image, 
+                      " . (in_array('challenge_type', $columns) ? "challenge_type" : "type") . " as challenge_type, 
+                      " . (in_array('difficulty', $columns) ? "difficulty" : "'normal'") . " as difficulty, 
+                      " . (in_array('xp_value', $columns) ? "xp_value" : "10") . " as xp_value,
+                      " . (in_array('description', $columns) ? "description" : "CONCAT('Complete the ', $nameColumn, ' challenge')") . " as description
+                FROM game_challenges $statusCondition";
+            
+            $stmt = $pdo->prepare($query);
+        } else {
+            // Use older schema with challenge_xp and get names from challenge_details_view if it exists
+            $viewExists = $pdo->query("SHOW TABLES LIKE 'challenge_details_view'")->rowCount() > 0;
+            
+            if ($viewExists) {
+                $stmt = $pdo->prepare("
+                    SELECT cx.challenge_id as id, cdv.challenge_name as name, 
+                           COALESCE(cdv.challenge_name, CONCAT('Challenge #', cx.challenge_id)) as badge_name,
+                           CONCAT('badges/challenge_', cx.challenge_id, '.png') as image,
+                           cx.challenge_type, cdv.difficulty, cx.xp_value,
+                           'Complete this challenge to earn the badge' as description
+                    FROM challenge_xp cx
+                    LEFT JOIN challenge_details_view cdv ON cx.challenge_id = cdv.challenge_id
+                ");
+            } else {
+                // If view doesn't exist, just use challenge_xp table
+                $stmt = $pdo->prepare("
+                    SELECT challenge_id as id, 
+                           CONCAT('Challenge #', challenge_id) as name,
+                           CONCAT('Challenge #', challenge_id) as badge_name,
+                           CONCAT('badges/challenge_', challenge_id, '.png') as image,
+                           challenge_type, 'normal' as difficulty, xp_value,
+                           'Complete this challenge to earn the badge' as description
+                    FROM challenge_xp
+                ");
+            }
+        }
+        
+        $stmt->execute();
+        $challenges = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        foreach ($challenges as $challenge) {
+            // Map challenge types to game types for filtering
+            $gameType = strtolower($challenge['challenge_type']);
+            if ($gameType === 'programming') $gameType = 'coding';
+            if ($gameType === 'ui') $gameType = 'design';
+            
+            // Create an object for each badge
             $availableBadges[] = [
-                'name' => $challenge['badge_name'],
-                'image' => $challenge['badge_image'],
-                'description' => $challenge['description'],
+                'name' => $challenge['badge_name'] ?? $challenge['name'],
+                'image' => $challenge['image'],
+                'description' => $challenge['description'] ?? ('Complete ' . $challenge['name'] . ' challenge'),
                 'difficulty' => $challenge['difficulty'] ?? 'Unknown',
                 'id' => $challenge['id'],
-                'game_type' => 'coding'
+                'game_type' => $gameType
             ];
         }
+    } catch (PDOException $e) {
+        log_error("Error getting available badges: " . $e->getMessage());
     }
     
     // Add level badges from level_definitions
@@ -150,14 +392,54 @@
             $availableBadges[] = [
                 'name' => $badge['badge_name'],
                 'image' => $badge['badge_image'],
-                'description' => "Reach level {$badge['level']} by earning {$badge['xp_required']} XP",
-                'difficulty' => $badge['level'] <= 5 ? 'Beginner' : ($badge['level'] <= 10 ? 'Intermediate' : 'Advanced'),
+                'description' => 'Reach level ' . $badge['level'] . ' by earning ' . number_format($badge['xp_required']) . ' XP',
+                'difficulty' => 'Level ' . $badge['level'],
                 'id' => 'level_' . $badge['level'],
                 'game_type' => 'level'
             ];
         }
     } catch (PDOException $e) {
-        error_log("Error getting level badges: " . $e->getMessage());
+        log_error("Error getting level badges: " . $e->getMessage());
+    }
+    
+    // Add special achievement badges if they're not already included
+    $specialBadges = [
+        [
+            'name' => 'UI Novice', 
+            'image' => 'badges/ui/ui_novice.png',
+            'description' => 'Complete your first UI design challenge',
+            'difficulty' => 'Beginner',
+            'game_type' => 'design'
+        ],
+        [
+            'name' => 'Network Novice', 
+            'image' => 'badges/networking/network_novice.png',
+            'description' => 'Complete your first networking challenge',
+            'difficulty' => 'Beginner',
+            'game_type' => 'networking'
+        ],
+        [
+            'name' => 'Hello World', 
+            'image' => 'badges/programming/hello_world.png',
+            'description' => 'Write your first line of code',
+            'difficulty' => 'Beginner',
+            'game_type' => 'coding'
+        ]
+    ];
+    
+    // Add special badges if they don't already exist in the available badges
+    foreach ($specialBadges as $badge) {
+        $exists = false;
+        foreach ($availableBadges as $availableBadge) {
+            if ($availableBadge['name'] === $badge['name']) {
+                $exists = true;
+                break;
+            }
+        }
+        
+        if (!$exists) {
+            $availableBadges[] = $badge;
+        }
     }
 ?>
 
@@ -429,7 +711,7 @@
         </a>
         
         <div class="game-category">Your Profile</div>
-        <a href="../game/badges-achievements" class="active">
+        <a href="badges" class="active">
             <i class="bi bi-award-fill"></i>
             Badges & Achievements
         </a>
@@ -546,7 +828,35 @@
                                     <div class="badge-category <?php echo $badge['badge_category']; ?>">
                                         <?php echo ucfirst($badge['badge_category']); ?>
                                     </div>
-                                    <img src="<?php echo $badge['badge_image']; ?>" alt="<?php echo htmlspecialchars($badge['badge_name']); ?>" class="badge-image">
+                                    <?php 
+                                    // Handle badge image path from different sources
+                                    $imagePath = '';
+                                    if (!empty($badge['badge_image'])) {
+                                        // Check if it's a full path or just a filename
+                                        if (strpos($badge['badge_image'], '/') === 0 || strpos($badge['badge_image'], 'http') === 0) {
+                                            $imagePath = $badge['badge_image']; // Already a full path
+                                        } else {
+                                            // Check if it's from game_badges or regular badges
+                                            $imgFile = GAME_IMG.'badges/'.$badge['badge_image'];
+                                            if (file_exists($imgFile)) {
+                                                $imagePath = $imgFile;
+                                            } else {
+                                                // Try level badge path
+                                                $imgFile = GAME_IMG.'badges/level/'.$badge['badge_image'];
+                                                if (file_exists($imgFile)) {
+                                                    $imagePath = $imgFile;
+                                                } else {
+                                                    // Default fallback
+                                                    $imagePath = GAME_IMG.'badges/goodjob.png';
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        // No image specified, use default
+                                        $imagePath = GAME_IMG.'badges/goodjob.png';
+                                    }
+                                    ?>
+                                    <img src="<?php echo $imagePath; ?>" alt="<?php echo htmlspecialchars($badge['badge_name']); ?>" class="badge-image">
                                     <div class="badge-name"><?php echo htmlspecialchars($badge['badge_name']); ?></div>
                                     <div class="badge-date">Earned: <?php echo date('M d, Y', strtotime($badge['earned_at'])); ?></div>
                                 </div>
@@ -557,7 +867,13 @@
                             <i class="bi bi-award" style="font-size: 3rem; color: #ccc;"></i>
                             <p class="mt-3 text-muted">No badges earned in this category yet.</p>
                             <p class="text-muted">Complete challenges to earn badges!</p>
-                            <a href="ide.php" class="btn btn-primary mt-2">Start a Challenge</a>
+                            <?php if($_GET['tab'] === 'networking'): ?>
+                            <a href="network-nexus" class="btn btn-primary mt-2">Start a Challenge</a>
+                            <?php elseif($_GET['tab'] === 'design'): ?>
+                            <a href="design-dynamo" class="btn btn-primary mt-2">Start a Challenge</a>
+                            <?php else: ?>
+                            <a href="codequest" class="btn btn-primary mt-2">Start a Challenge</a>
+                            <?php endif; ?>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -588,7 +904,7 @@
                                 <div class="badge-category <?php echo $badge['game_type']; ?>">
                                     <?php echo ucfirst($badge['game_type']); ?>
                                 </div>
-                                <img src="<?php echo GAME_IMG.'badges/'.$badge['image']; ?>" alt="<?php echo htmlspecialchars($badge['name']); ?>" class="badge-image">
+                                <img src="<?php echo file_exists(GAME_IMG.'badges/'.$badge['image']) ? GAME_IMG.'badges/'.$badge['image'] : GAME_IMG.'badges/goodjob.png'; ?>" alt="<?php echo htmlspecialchars($badge['name']); ?>" class="badge-image">
                                 <div class="badge-name"><?php echo htmlspecialchars($badge['name']); ?></div>
                                 <div class="badge-date"><?php echo $badge['difficulty']; ?></div>
                                 <div class="badge-tooltip">

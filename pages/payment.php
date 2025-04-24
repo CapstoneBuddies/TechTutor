@@ -53,6 +53,65 @@ if ($class_id > 0) {
 <!DOCTYPE html>
 <html lang="en">
 <?php include ROOT_PATH . '/components/head.php'; ?>
+<style>
+        .payment-method-option {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .payment-method-option:hover {
+            border-color: #0d6efd;
+            background-color: rgba(13, 110, 253, 0.05);
+            transform: translateY(-2px);
+        }
+        
+        .payment-method-option.selected {
+            border-color: #0d6efd;
+            background-color: rgba(13, 110, 253, 0.1);
+            box-shadow: 0 4px 10px rgba(13, 110, 253, 0.1);
+        }
+        
+        .payment-method-option img {
+            height: 28px;
+            width: auto;
+            margin-right: 12px;
+        }
+        
+        .payment-method-option span {
+            font-weight: 500;
+        }
+        
+        .payment-method-option .bi-chevron-right {
+            transition: transform 0.2s ease;
+        }
+        
+        .payment-method-option:hover .bi-chevron-right {
+            transform: translateX(3px);
+        }
+        
+        .payment-method-option.selected .bi-chevron-right {
+            transform: translateX(3px);
+        }
+        
+        .transaction-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.25rem;
+        }
+        
+        .token-icon {
+            background-color: rgba(13, 110, 253, 0.1);
+            color: #0d6efd;
+        }
+    </style>
 <body>
     <!-- Header -->
     <?php include ROOT_PATH . '/components/header.php'; ?>
@@ -838,65 +897,5 @@ if ($class_id > 0) {
             });
         }
     </script>
-
-    <style>
-        .payment-method-option {
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 12px 16px;
-            margin-bottom: 12px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .payment-method-option:hover {
-            border-color: #0d6efd;
-            background-color: rgba(13, 110, 253, 0.05);
-            transform: translateY(-2px);
-        }
-        
-        .payment-method-option.selected {
-            border-color: #0d6efd;
-            background-color: rgba(13, 110, 253, 0.1);
-            box-shadow: 0 4px 10px rgba(13, 110, 253, 0.1);
-        }
-        
-        .payment-method-option img {
-            height: 28px;
-            width: auto;
-            margin-right: 12px;
-        }
-        
-        .payment-method-option span {
-            font-weight: 500;
-        }
-        
-        .payment-method-option .bi-chevron-right {
-            transition: transform 0.2s ease;
-        }
-        
-        .payment-method-option:hover .bi-chevron-right {
-            transform: translateX(3px);
-        }
-        
-        .payment-method-option.selected .bi-chevron-right {
-            transform: translateX(3px);
-        }
-        
-        .transaction-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            font-size: 1.25rem;
-        }
-        
-        .token-icon {
-            background-color: rgba(13, 110, 253, 0.1);
-            color: #0d6efd;
-        }
-    </style>
 </body>
 </html>

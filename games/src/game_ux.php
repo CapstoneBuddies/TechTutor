@@ -1,6 +1,5 @@
 <?php    
     include 'config.php';
-    include 'challenges.php';
     global $pdo;
 ?>
 <!DOCTYPE html>
@@ -804,7 +803,7 @@
 
         // Load challenges from the server
         function loadChallenges() {
-            fetch('get_design_challenges.php')
+            fetch('get-design-challenge')
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
@@ -914,7 +913,7 @@
         document.getElementById('confirm-submit').addEventListener('click', () => {
             const imageData = canvas.toDataURL();
 
-            fetch('save_drawing.php', {
+            fetch('save-drawing', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: `image=${encodeURIComponent(imageData)}&challenge_id=${currentChallenge.id}`

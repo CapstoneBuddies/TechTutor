@@ -7,35 +7,77 @@
 // Check if the user is online
 if(!isset($_SESSION['user'])) {
     $_SESSION['Invalid Action'];
-    header("Location: ../login");
+    header("Location: login");
+    exit; // Add exit after redirect for security
 }
 
-// Check if user record exist for gamification
-$query = "SELECT 1 FROM users WHERE email = :email";
-$check_stmt = $pdo->prepare($query);
-$check_stmt->execute([':email' => $_SESSION['email']]);
-$result = $check_stmt->fetch(PDO::FETCH_ASSOC);
-if(!$result) {
-    $add_user = $pdo->prepare("INSERT INTO users(username, email) VALUES(:username, :email)");
-    $username = $_SESSION['first_name'].' '.$_SESSION['last_name'];
-    $add_user->execute([':username'=>$username, ':email'=>$_SESSION['email'] ]);
+// Check if user record exists for gamification
+try {
+    $query = "SELECT id FROM users WHERE email = :email";
+    $check_stmt = $pdo->prepare($query);
+    $check_stmt->execute([':email' => $_SESSION['email']]);
+    $result = $check_stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if(!$result) {
+        // Create new user record
+        $add_user = $pdo->prepare("INSERT INTO users(username, email) VALUES(:username, :email)");
+        $username = $_SESSION['first_name'].' '.$_SESSION['last_name'];
+        $add_user->execute([':username'=>$username, ':email'=>$_SESSION['email'] ]);
+        
+        // Initialize XP record for the new user
+        $userId = $pdo->lastInsertId();
+        $add_xp = $pdo->prepare("INSERT INTO user_xp(user_id, xp, level) VALUES(:user_id, 0, 1)");
+        $add_xp->execute([':user_id' => $userId]);
+    }
+    else {
+        $_SESSION['game'] = $result['id'];
+    }
+} catch (PDOException $e) {
+    log_error("Error checking/creating user: " . $e->getMessage());
 }
 
-// Fetch game history from the database
-$userId = isset($_SESSION['user']) ? $_SESSION['user'] : 1; // Use session user ID if available
-$stmt = $pdo->prepare("SELECT date, result, challenge_name FROM game_history WHERE user_id = :user_id ORDER BY date DESC LIMIT 10");
-$stmt->execute([':user_id' => $userId]);
-$gameHistory = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Fetch game history from the database using game_user_progress instead of game_history
+$userId = $_SESSION['game'];
+
+try {
+    $stmt = $pdo->prepare("
+        SELECT 
+            gup.completed_at as date, 
+            CASE 
+                WHEN gup.score > 0 THEN 'Solved' 
+                ELSE 'In Progress' 
+            END as result, 
+            gc.name as challenge_name 
+        FROM game_user_progress gup
+        JOIN game_challenges gc ON gup.challenge_id = gc.challenge_id
+        WHERE gup.user_id = :user_id 
+        ORDER BY gup.completed_at DESC 
+        LIMIT 10
+    ");
+    $stmt->execute([':user_id' => $userId]);
+    $gameHistory = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // No need to map status to result as we're directly calculating it in the query
+} catch (PDOException $e) {
+    log_error("Error fetching game history: " . $e->getMessage());
+    $gameHistory = []; // Initialize as empty array on error
+}
 
 // Get user XP and level information
 $userXPInfo = getUserXPInfo($userId);
 
 // Fetch badges from the db
-$q = "SELECT * FROM badges WHERE user_id = :userId";
-$getBadges = $pdo->prepare($q);
-$getBadges->execute([':userId' => $_SESSION['user']]);
-$result = $getBadges->fetchAll(PDO::FETCH_ASSOC);
-$badges = isset($result) ? $result : [];
+try {
+    $q = "SELECT * FROM badges WHERE user_id = :userId";
+    $getBadges = $pdo->prepare($q);
+    $getBadges->execute([':userId' => $_SESSION['user']]);
+    $result = $getBadges->fetchAll(PDO::FETCH_ASSOC);
+    $badges = isset($result) ? $result : [];
+} catch (PDOException $e) {
+    log_error("Error fetching badges: " . $e->getMessage());
+    $badges = [];
+}
+
 $gameMessage = isset($_SESSION['game_message']) ? $_SESSION['game_message'] : null;
 
 // Clear the game message after displaying it
@@ -256,6 +298,84 @@ unset($_SESSION['game_message']);
         .stat-card .stat-label {
             color: #6c757d;
             font-size: 0.9rem;
+        }
+        
+        /* XP Progress Bar Styling */
+        .xp-progress-container {
+            background-color: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        .xp-level {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .xp-level-number {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #2c3e50;
+        }
+        
+        .xp-level-title {
+            color: #6c757d;
+        }
+        
+        .xp-progress {
+            height: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        
+        .xp-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4481eb, #04befe);
+            border-radius: 5px;
+            transition: width 1s ease-in-out;
+            position: relative;
+        }
+        
+        .xp-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                45deg,
+                rgba(255, 255, 255, 0.2) 25%,
+                transparent 25%,
+                transparent 50%,
+                rgba(255, 255, 255, 0.2) 50%,
+                rgba(255, 255, 255, 0.2) 75%,
+                transparent 75%
+            );
+            background-size: 15px 15px;
+            animation: xp-bar-animation 1s linear infinite;
+        }
+        
+        @keyframes xp-bar-animation {
+            0% {
+                background-position: 0 0;
+            }
+            100% {
+                background-position: 15px 0;
+            }
+        }
+        
+        .xp-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #6c757d;
         }
     </style>
 </head>

@@ -10,7 +10,7 @@
     }
 
     // Get user ID from session
-    $userId = isset($_SESSION['user']) ? $_SESSION['user'] : 1;
+    $userId = isset($_SESSION['game']) ? $_SESSION['game'] : 1;
     
     // Get user's XP info
     $userXPInfo = getUserXPInfo($userId);
@@ -65,6 +65,7 @@
                     $messageType = 'danger';
                 }
             } catch (PDOException $e) {
+                log_error('Error processing friend request: ' . $e->getMessage());
                 $message = 'Error processing request: ' . $e->getMessage();
                 $messageType = 'danger';
             }
@@ -100,6 +101,7 @@
                     }
                 }
             } catch (PDOException $e) {
+                log_error('Error processing friend request action: ' . $e->getMessage());
                 $message = 'Error processing request: ' . $e->getMessage();
                 $messageType = 'danger';
             }
@@ -118,6 +120,7 @@
         $pendingStmt->execute([':userId' => $userId]);
         $pendingRequests = $pendingStmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
+        log_error('Error fetching pending requests: ' . $e->getMessage());
         $pendingRequests = [];
     }
     
@@ -136,6 +139,7 @@
         $friendsStmt->execute([':userId' => $userId]);
         $friends = $friendsStmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
+        log_error('Error fetching friends: ' . $e->getMessage());
         $friends = [];
     }
     
@@ -156,6 +160,7 @@
         $suggestionsStmt->execute([':userId' => $userId]);
         $suggestions = $suggestionsStmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
+        log_error('Error fetching friend suggestions: ' . $e->getMessage());
         $suggestions = [];
     }
 ?>

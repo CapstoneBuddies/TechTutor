@@ -1,150 +1,359 @@
 <?php
-// Define available challenges - can be expanded in the future
-$challenges = [
-    [
-        "id" => 1,
-        "name" => "Hello World",
-        "description" => "Write code to print 'hello world'.",
-        "starter_code" => "// Write your PHP code here\n// Your goal is to print 'hello world'\n\n// Example:\n// echo 'hello world';",
-        "expected_output" => "hello world",
-        "badge_name" => "Hello World",
-        "badge_image" => "programming/hello_world.png",
-        "xp_value" => 10, // Easiest challenge
-        "difficulty" => "Beginner"
-    ],
-    [
-        "id" => 2,
-        "name" => "Factorial Calculator",
-        "description" => "Write a function to calculate the factorial of a number.",
-        "starter_code" => "// Write your PHP code here\nfunction factorial(\$n) {\n    // Your code here\n}\n\n// Test the function\n\$n = 5;\necho factorial(\$n);",
-        "expected_output" => "120",
-        "badge_name" => "Factorial Master",
-        "badge_image" => "programming/factorial.png",
-        "xp_value" => 20,
-        "difficulty" => "Beginner"
-    ],
-    [
-        "id" => 3,
-        "name" => "String Reversal",
-        "description" => "Write a function to reverse a string.",
-        "starter_code" => "// Write your PHP code here\nfunction reverseString(\$str) {\n    // Your code here\n}\n\n// Test the function\n\$str = 'hello';\necho reverseString(\$str);",
-        "expected_output" => "olleh",
-        "badge_name" => "String Wizard",
-        "badge_image" => "programming/string_reversal.png",
-        "xp_value" => 15,
-        "difficulty" => "Beginner"
-    ],
-    [
-        "id" => 4,
-        "name" => "Palindrome Checker",
-        "description" => "Create a function that checks if a string is a palindrome (reads the same backward as forward).",
-        "starter_code" => "// Write a function to check if a string is a palindrome\nfunction isPalindrome(\$str) {\n    // Your code here\n}\n\n// Test with this word\n\$word = 'racecar';\necho isPalindrome(\$word) ? 'true' : 'false';",
-        "expected_output" => "true",
-        "badge_name" => "Palindrome Detective",
-        "badge_image" => "programming/palindrome.png",
-        "xp_value" => 25,
-        "difficulty" => "Intermediate"
-    ],
-    [
-        "id" => 5,
-        "name" => "FizzBuzz Challenge",
-        "description" => "Write a program that prints numbers from 1 to 15. For multiples of 3, print 'Fizz' instead of the number. For multiples of 5, print 'Buzz'. For numbers that are multiples of both 3 and 5, print 'FizzBuzz'.",
-        "starter_code" => "// Implement the FizzBuzz challenge for numbers 1-15\n\n// Your code here",
-        "expected_output" => "1\n2\nFizz\n4\nBuzz\nFizz\n7\n8\nFizz\nBuzz\n11\nFizz\n13\n14\nFizzBuzz",
-        "badge_name" => "FizzBuzz Champion",
-        "badge_image" => "programming/fizzbuzz.png",
-        "xp_value" => 30,
-        "difficulty" => "Intermediate"
-    ],
-    [
-        "id" => 6,
-        "name" => "Array Sum",
-        "description" => "Write a function that calculates the sum of all elements in an array.",
-        "starter_code" => "// Create a function to sum all elements in an array\nfunction arraySum(\$arr) {\n    // Your code here\n}\n\n// Test with this array\n\$numbers = [5, 10, 15, 20, 25];\necho arraySum(\$numbers);",
-        "expected_output" => "75",
-        "badge_name" => "Array Master",
-        "badge_image" => "programming/array_sum.png",
-        "xp_value" => 20,
-        "difficulty" => "Beginner"
-    ],
-    [
-        "id" => 7,
-        "name" => "Prime Number Checker",
-        "description" => "Create a function that checks if a number is prime.",
-        "starter_code" => "// Write a function to check if a number is prime\nfunction isPrime(\$number) {\n    // Your code here\n}\n\n// Test with this number\n\$num = 29;\necho isPrime(\$num) ? 'true' : 'false';",
-        "expected_output" => "true",
-        "badge_name" => "Prime Detective",
-        "badge_image" => "programming/prime.png",
-        "xp_value" => 35,
-        "difficulty" => "Intermediate"
-    ],
-    [
-        "id" => 8,
-        "name" => "Find Maximum Value",
-        "description" => "Write a function to find the maximum value in a nested array without using built-in max functions.",
-        "starter_code" => "// Write a function to find the maximum value in a nested array\nfunction findMax(\$arr) {\n    // Your code here\n}\n\n// Test with this nested array\n\$nestedArray = [[3, 5], [8, 2], [1, [9, 4]]];\necho findMax(\$nestedArray);",
-        "expected_output" => "9",
-        "badge_name" => "Maximum Explorer",
-        "badge_image" => "programming/max_value.png",
-        "xp_value" => 40,
-        "difficulty" => "Advanced"
-    ],
-    [
-        "id" => 9,
-        "name" => "Password Validator",
-        "description" => "Create a function that validates if a password meets these criteria: at least 8 characters, contains at least one uppercase letter, one lowercase letter, one number, and one special character (!@#$%^&*).",
-        "starter_code" => "// Create a function that validates passwords according to criteria\nfunction isValidPassword(\$password) {\n    // Your code here\n}\n\n// Test with this password\n\$pass = 'SecureP@ss1';\necho isValidPassword(\$pass) ? 'valid' : 'invalid';",
-        "expected_output" => "valid",
-        "badge_name" => "Security Expert",
-        "badge_image" => "programming/password.png",
-        "xp_value" => 45,
-        "difficulty" => "Advanced"
-    ],
-    [
-        "id" => 10, 
-        "name" => "Caesar Cipher",
-        "description" => "Implement a Caesar cipher encryption function that shifts each letter in a string by a given number of positions in the alphabet.",
-        "starter_code" => "// Implement a Caesar cipher function\nfunction caesarCipher(\$text, \$shift) {\n    // Your code here\n}\n\n// Test with this text and shift value\n\$text = 'hello';\n\$shift = 3;\necho caesarCipher(\$text, \$shift);",
-        "expected_output" => "khoor",
-        "badge_name" => "Encryption Expert",
-        "badge_image" => "programming/cipher.png",
-        "xp_value" => 50,
-        "difficulty" => "Advanced"
-    ],
-    [
-        "id" => 11,
-        "name" => "Anagram Checker",
-        "description" => "Create a function that checks if two strings are anagrams of each other (contain the same characters in different order).",
-        "starter_code" => "// Create a function to check if two strings are anagrams\nfunction areAnagrams(\$str1, \$str2) {\n    // Your code here\n}\n\n// Test with these strings\n\$string1 = 'listen';\n\$string2 = 'silent';\necho areAnagrams(\$string1, \$string2) ? 'true' : 'false';",
-        "expected_output" => "true",
-        "badge_name" => "Anagram Detective",
-        "badge_image" => "programming/anagram.png",
-        "xp_value" => 40,
-        "difficulty" => "Advanced"
-    ]
-];
+require_once __DIR__.'/config.php';
 
 /**
- * Get challenge details by ID
+ * Get all challenges from the database
  * 
- * @param int $challengeId The ID of the challenge to retrieve
- * @return array|null The challenge details or null if not found
+ * @return array Array of challenges
  */
-function getChallengeById($challengeId) {
-    global $challenges;
+function getChallenges($type = null) {
+    global $pdo;
+    try {
+        $sql = "SELECT * FROM `game_challenges` ORDER BY `difficulty_id`, `challenge_id`";
+        if ($type !== null) {
+            $sql = "SELECT * FROM `game_challenges` WHERE `challenge_type` = :type ORDER BY `difficulty_id`, `challenge_id`";
+        }
+
+        $stmt = $pdo->prepare($sql);
+        if ($type !== null) {
+            $stmt->bindParam(':type', $type);
+        }
+        $stmt->execute();
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Process each result to decode and merge `content`
+        foreach ($results as &$challenge) {
+            if (isset($challenge['content'])) {
+                $contentData = json_decode($challenge['content'], true);
+                if (is_array($contentData)) {
+                    $challenge = array_merge($challenge, $contentData);
+                }
+                unset($challenge['content']);
+            }
+        }
+
+        return $results;
+    } catch (PDOException $e) {
+        log_error("Error fetching challenges: " . $e->getMessage());
+        return [];
+    }
+}
+
+
+/**
+ * Get a specific challenge by ID
+ * 
+ * @param int $id Challenge ID
+ * @return array|null Challenge data or null if not found
+ */
+function getChallengeById($id) {
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM `game_challenges` WHERE `challenge_id` = :id");
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        log_error("Error fetching challenge #$id: " . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Record a completed challenge for a user
+ * 
+ * @param int $userId User ID
+ * @param int $challengeId Challenge ID 
+ * @param int $score Score earned
+ * @param int $timeTaken Time taken in seconds
+ * @return bool Success status
+ */
+function recordCompletedChallenge($userId, $challengeId, $score, $timeTaken) {
+    global $pdo;
+    try {
+        // First check if already completed
+        $checkStmt = $pdo->prepare("SELECT `progress_id` FROM `game_user_progress` WHERE `user_id` = :user_id AND `challenge_id` = :challenge_id");
+        $checkStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+        $checkStmt->bindParam(':challenge_id', $challengeId, PDO::PARAM_INT);
+        $checkStmt->execute();
+        
+        if ($checkStmt->rowCount() > 0) {
+            // Update the existing record if score is better
+            $existingRecord = $checkStmt->fetch(PDO::FETCH_ASSOC);
+            $stmt = $pdo->prepare("UPDATE `game_user_progress` SET `score` = :score, `time_taken` = :time_taken, `completed_at` = NOW() 
+                                  WHERE `progress_id` = :id AND `score` < :score");
+            $stmt->bindParam(':score', $score, PDO::PARAM_INT);
+            $stmt->bindParam(':time_taken', $timeTaken, PDO::PARAM_INT);
+            $stmt->bindParam(':id', $existingRecord['progress_id'], PDO::PARAM_INT);
+        } else {
+            // Insert new record
+            $stmt = $pdo->prepare("INSERT INTO `game_user_progress` (`user_id`, `challenge_id`, `score`, `time_taken`, `completed_at`) 
+                                  VALUES (:user_id, :challenge_id, :score, :time_taken, NOW())");
+            $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+            $stmt->bindParam(':challenge_id', $challengeId, PDO::PARAM_INT);
+            $stmt->bindParam(':score', $score, PDO::PARAM_INT);
+            $stmt->bindParam(':time_taken', $timeTaken, PDO::PARAM_INT);
+        }
+        
+        $stmt->execute();
+        return true;
+    } catch (PDOException $e) {
+        log_error("Error recording challenge completion: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Get completed challenges for a user
+ * 
+ * @param int $userId User ID
+ * @return array Array of completed challenges
+ */
+function getUserCompletedChallenges($userId) {
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("
+            SELECT c.*, up.score, up.time_taken, up.completed_at
+            FROM `game_user_progress` up
+            JOIN `game_challenges` c ON up.challenge_id = c.challenge_id
+            WHERE up.user_id = :user_id
+            ORDER BY up.completed_at DESC
+        ");
+        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        log_error("Error fetching user completed challenges: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Get user progress statistics
+ * 
+ * @param int $userId User ID
+ * @return array User statistics
+ */
+function getUserStats($userId) {
+    global $pdo;
+    try {
+        // Get total completed challenges
+        $completedStmt = $pdo->prepare("
+            SELECT COUNT(*) as completed_count, SUM(score) as total_score
+            FROM `game_user_progress`
+            WHERE `user_id` = :user_id
+        ");
+        $completedStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+        $completedStmt->execute();
+        $completedData = $completedStmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Get total available challenges
+        $totalStmt = $pdo->prepare("SELECT COUNT(*) as total_count FROM `game_challenges` WHERE `is_active` = 1");
+        $totalStmt->execute();
+        $totalData = $totalStmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Calculate completion percentage
+        $completionPercentage = 0;
+        if ($totalData['total_count'] > 0) {
+            $completionPercentage = round(($completedData['completed_count'] / $totalData['total_count']) * 100);
+        }
+        
+        return [
+            'completed_count' => $completedData['completed_count'] ?? 0,
+            'total_count' => $totalData['total_count'] ?? 0,
+            'total_score' => $completedData['total_score'] ?? 0,
+            'completion_percentage' => $completionPercentage
+        ];
+    } catch (PDOException $e) {
+        log_error("Error fetching user stats: " . $e->getMessage());
+        return [
+            'completed_count' => 0,
+            'total_count' => 0,
+            'total_score' => 0,
+            'completion_percentage' => 0
+        ];
+    }
+}
+
+/**
+ * Get network level details
+ * 
+ * @param int $levelNumber The level number to retrieve
+ * @return array Network level details
+ */
+function getNetworkLevel($levelNumber) {
+    global $pdo;
+
+    try {
+        // Find the network challenge with the requested level number
+        $stmt = $pdo->prepare("
+            SELECT * FROM `game_challenges` 
+            WHERE `challenge_type` = 'networking'
+            ORDER BY `xp_value` ASC
+            LIMIT :offset, 1
+        ");
+        $offset = $levelNumber - 1; // Convert level number to zero-based index
+        $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        $challenge = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$challenge) {
+            throw new Exception("Network level not found");
+        }
+        
+        // Parse the JSON content field
+        $content = json_decode($challenge['content'], true);
+
+        if (!$content) {
+            throw new Exception("Invalid challenge content format");
+        }
+        
+        // Construct the level data
+        $levelData = [
+            'title' => $challenge['name'],
+            'description' => $content['description'],
+            'devices' => $content['devices'] ?? [],
+            'solution' => $content['connections'] ?? [],
+            'points' => $content['points'] ?? 100
+        ];
+        
+        return $levelData;
+    } catch (Exception $e) {
+        log_error("Error retrieving network level #$levelNumber: " . $e->getMessage());
+        
+        // Fall back to the default levels if database query fails
+        return getDefaultNetworkLevel($levelNumber);
+    }
+}
+
+/**
+ * Check if the network solution is correct
+ * 
+ * @param int $level Level number
+ * @param array $connections User-provided connections
+ * @return array Result with success status and message
+ */
+function checkNetworkSolution($level, $connections) {
+    $levelData = getNetworkLevel($level);
+    $solution = $levelData['solution'];
     
-    foreach ($challenges as $challenge) {
-        if ($challenge['id'] == $challengeId) {
-            return $challenge;
+    // Check if all required connections are present
+    foreach ($solution as $requiredConnection) {
+        $found = false;
+        foreach ($connections as $userConnection) {
+            if (
+                ($userConnection['source'] === $requiredConnection['source'] && 
+                 $userConnection['target'] === $requiredConnection['target']) || 
+                ($userConnection['source'] === $requiredConnection['target'] && 
+                 $userConnection['target'] === $requiredConnection['source'])
+            ) {
+                $found = true;
+                break;
+            }
+        }
+        
+        if (!$found) {
+            return [
+                'success' => false,
+                'message' => "Missing connection between {$requiredConnection['source']} and {$requiredConnection['target']}",
+                'points' => 0
+            ];
         }
     }
     
-    return null;
+    // Check if there are any extra connections that shouldn't be there
+    foreach ($connections as $userConnection) {
+        $valid = false;
+        foreach ($solution as $requiredConnection) {
+            if (
+                ($userConnection['source'] === $requiredConnection['source'] && 
+                 $userConnection['target'] === $requiredConnection['target']) || 
+                ($userConnection['source'] === $requiredConnection['target'] && 
+                 $userConnection['target'] === $requiredConnection['source'])
+            ) {
+                $valid = true;
+                break;
+            }
+        }
+        
+        if (!$valid) {
+            return [
+                'success' => false,
+                'message' => "Invalid connection between {$userConnection['source']} and {$userConnection['target']}",
+                'points' => 0
+            ];
+        }
+    }
+    
+    // If we get here, the solution is correct
+    return [
+        'success' => true,
+        'message' => "Network configured correctly!",
+        'points' => $levelData['points'] ?? 100
+    ];
 }
+
 /**
- * Define the network levels and solutions
+ * Save a new challenge to the database
+ * 
+ * @param array $challengeData Challenge data including type-specific content
+ * @param int $userId ID of the user creating the challenge
+ * @return int|bool The new challenge ID or false on error
  */
-function getNetworkLevel($level) {
+function saveChallenge($challengeData, $userId) {
+    global $pdo;
+    
+    try {
+        // Prepare content based on challenge type
+        $content = [];
+        
+        if ($challengeData['challenge_type'] === 'programming') {
+            $content = [
+                'starter_code' => $challengeData['starter_code'] ?? '',
+                'expected_output' => $challengeData['expected_output'] ?? ''
+            ];
+        } else if ($challengeData['challenge_type'] === 'networking') {
+            $content = [
+                'devices' => $challengeData['devices'] ?? [],
+                'solution' => $challengeData['solution'] ?? [],
+                'points' => $challengeData['points'] ?? 100
+            ];
+        }
+        
+        $jsonContent = json_encode($content);
+        
+        $stmt = $pdo->prepare("
+            INSERT INTO `game_challenges` 
+            (`challenge_type`, `name`, `description`, `difficulty_id`, `content`, `badge_name`, `badge_image`, `xp_value`, `created_by`)
+            VALUES
+            (:challenge_type, :name, :description, :difficulty_id, :content, :badge_name, :badge_image, :xp_value, :created_by)
+        ");
+        
+        $stmt->bindParam(':challenge_type', $challengeData['challenge_type']);
+        $stmt->bindParam(':name', $challengeData['name']);
+        $stmt->bindParam(':description', $challengeData['description']);
+        $stmt->bindParam(':difficulty_id', $challengeData['difficulty_id'], PDO::PARAM_INT);
+        $stmt->bindParam(':content', $jsonContent);
+        $stmt->bindParam(':badge_name', $challengeData['badge_name']);
+        $stmt->bindParam(':badge_image', $challengeData['badge_image']);
+        $stmt->bindParam(':xp_value', $challengeData['xp_value'], PDO::PARAM_INT);
+        $stmt->bindParam(':created_by', $userId, PDO::PARAM_INT);
+        
+        $stmt->execute();
+        return $pdo->lastInsertId();
+    } catch (PDOException $e) {
+        log_error("Error saving new challenge: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Default network levels as fallback when database is unavailable
+ * 
+ * @param int $level Level number to retrieve
+ * @return array Level data
+ */
+function getDefaultNetworkLevel($level) {
     $levels = [
         1 => [
             'title' => 'Basic Network Setup',
@@ -207,66 +416,5 @@ function getNetworkLevel($level) {
     ];
     
     return $levels[$level] ?? $levels[1];
-}
-
-/**
- * Check if the network solution is correct
- */
-function checkNetworkSolution($level, $connections) {
-    $levelData = getNetworkLevel($level);
-    $solution = $levelData['solution'];
-    
-    // Check if all required connections are present
-    foreach ($solution as $requiredConnection) {
-        $found = false;
-        foreach ($connections as $userConnection) {
-            if (
-                ($userConnection['source'] === $requiredConnection['source'] && 
-                 $userConnection['target'] === $requiredConnection['target']) || 
-                ($userConnection['source'] === $requiredConnection['target'] && 
-                 $userConnection['target'] === $requiredConnection['source'])
-            ) {
-                $found = true;
-                break;
-            }
-        }
-        
-        if (!$found) {
-            return [
-                'success' => false,
-                'message' => "Missing connection between {$requiredConnection['source']} and {$requiredConnection['target']}"
-            ];
-        }
-    }
-    
-    // Check if there are any extra connections that shouldn't be there
-    foreach ($connections as $userConnection) {
-        $valid = false;
-        foreach ($solution as $requiredConnection) {
-            if (
-                ($userConnection['source'] === $requiredConnection['source'] && 
-                 $userConnection['target'] === $requiredConnection['target']) || 
-                ($userConnection['source'] === $requiredConnection['target'] && 
-                 $userConnection['target'] === $requiredConnection['source'])
-            ) {
-                $valid = true;
-                break;
-            }
-        }
-        
-        if (!$valid) {
-            return [
-                'success' => false,
-                'message' => "Invalid connection between {$userConnection['source']} and {$userConnection['target']}"
-            ];
-        }
-    }
-    
-    // All connections are correct
-    return [
-        'success' => true,
-        'points' => $levelData['points'],
-        'message' => 'Network configured correctly!'
-    ];
 }
 ?> 

@@ -1,4 +1,4 @@
-<?php    
+<?php
     include 'config.php';
     include 'challenges.php';
     include 'xp_manager.php';
@@ -13,7 +13,7 @@
     $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'codequest';
 
     // Get user ID from session
-    $userId = isset($_SESSION['user']) ? $_SESSION['user'] : 1;
+    $userId = isset($_SESSION['game']) ? $_SESSION['game'] : 1;
     
     // Get user's XP info
     $userXPInfo = getUserXPInfo($userId);
@@ -28,81 +28,154 @@
         try {
             $query = "";
             
-            switch ($gameType) {
-                case 'codequest':
-                    // Code Quest leaderboard - based on coding challenges solved
-                    $query = "SELECT u.username, COUNT(CASE WHEN gh.result = 'Solved' AND gh.challenge_name LIKE 'Coding%' THEN 1 END) as solved_count, 
-                              MAX(gh.date) as last_active,
-                              COALESCE(ux.level, 1) as user_level,
-                              COALESCE(ux.xp, 0) as total_xp
-                              FROM users u
-                              LEFT JOIN game_history gh ON u.id = gh.user_id
-                              LEFT JOIN user_xp ux ON u.id = ux.user_id
-                              GROUP BY u.id
-                              HAVING solved_count > 0
-                              ORDER BY solved_count DESC, user_level DESC, total_xp DESC, last_active DESC
-                              LIMIT :limit";
-                    break;
-                    
-                case 'networking':
-                    // Network Nexus leaderboard - based on network levels completed
-                    $query = "SELECT u.username, COUNT(CASE WHEN gh.result = 'Solved' AND gh.challenge_name LIKE 'Network%' THEN 1 END) as solved_count, 
-                              MAX(gh.date) as last_active,
-                              COALESCE(ux.level, 1) as user_level,
-                              COALESCE(ux.xp, 0) as total_xp
-                              FROM users u
-                              LEFT JOIN game_history gh ON u.id = gh.user_id
-                              LEFT JOIN user_xp ux ON u.id = ux.user_id
-                              GROUP BY u.id
-                              HAVING solved_count > 0
-                              ORDER BY solved_count DESC, user_level DESC, total_xp DESC, last_active DESC
-                              LIMIT :limit";
-                    break;
-                    
-                case 'design':
-                    // Design Dynamo leaderboard - based on UX challenges completed
-                    $query = "SELECT u.username, COUNT(CASE WHEN gh.result = 'Solved' AND gh.challenge_name LIKE 'Design%' THEN 1 END) as solved_count, 
-                              MAX(gh.date) as last_active,
-                              COALESCE(ux.level, 1) as user_level,
-                              COALESCE(ux.xp, 0) as total_xp
-                              FROM users u
-                              LEFT JOIN game_history gh ON u.id = gh.user_id
-                              LEFT JOIN user_xp ux ON u.id = ux.user_id
-                              GROUP BY u.id
-                              HAVING solved_count > 0
-                              ORDER BY solved_count DESC, user_level DESC, total_xp DESC, last_active DESC
-                              LIMIT :limit";
-                    break;
-                    
-                case 'overall':
-                default:
-                    // Overall leaderboard - based on all challenges
-                    $query = "SELECT u.username, COUNT(CASE WHEN gh.result = 'Solved' THEN 1 END) as solved_count, 
-                              COUNT(DISTINCT gh.challenge_name) as unique_challenges,
-                              (SELECT COUNT(*) FROM badges b WHERE b.user_id = u.id) as badge_count,
-                              MAX(gh.date) as last_active,
-                              COALESCE(ux.level, 1) as user_level,
-                              COALESCE(ux.xp, 0) as total_xp
-                              FROM users u
-                              LEFT JOIN game_history gh ON u.id = gh.user_id
-                              LEFT JOIN user_xp ux ON u.id = ux.user_id
-                              GROUP BY u.id
-                              HAVING solved_count > 0
-                              ORDER BY user_level DESC, total_xp DESC, solved_count DESC, badge_count DESC
-                              LIMIT :limit";
+            // Check if we have the new tables or need to use old schema
+            $hasGameUserProgress = $pdo->query("SHOW TABLES LIKE 'game_user_progress'")->rowCount() > 0;
+            $hasGameChallenges = $pdo->query("SHOW TABLES LIKE 'game_challenges'")->rowCount() > 0;
+            
+            if ($hasGameUserProgress && $hasGameChallenges) {
+                // Use new schema
+                switch ($gameType) {
+                    case 'codequest':
+                        // Code Quest leaderboard - based on coding challenges solved
+                        $query = "SELECT u.username, COUNT(CASE WHEN gh.result = 'Solved' AND cx.challenge_type = 'Coding' THEN 1 END) as solved_count, 
+                                MAX(gh.date) as last_active,
+                                COALESCE(ux.level, 1) as user_level,
+                                COALESCE(ux.xp, 0) as total_xp
+                                FROM users u
+                                LEFT JOIN game_history gh ON u.id = gh.user_id
+                                LEFT JOIN challenge_xp cx ON gh.challenge_name = CONCAT('Challenge #', cx.challenge_id)
+                                LEFT JOIN user_xp ux ON u.id = ux.user_id
+                                GROUP BY u.id
+                                HAVING solved_count > 0
+                                ORDER BY solved_count DESC, user_level DESC, total_xp DESC, last_active DESC
+                                LIMIT :limit";
+                        break;
+                        
+                    case 'networking':
+                        // Network Nexus leaderboard - based on network levels completed
+                        $query = "SELECT u.username, COUNT(CASE WHEN gh.result = 'Solved' AND cx.challenge_type = 'Networking' THEN 1 END) as solved_count, 
+                                MAX(gh.date) as last_active,
+                                COALESCE(ux.level, 1) as user_level,
+                                COALESCE(ux.xp, 0) as total_xp
+                                FROM users u
+                                LEFT JOIN game_history gh ON u.id = gh.user_id
+                                LEFT JOIN challenge_xp cx ON gh.challenge_name = CONCAT('Challenge #', cx.challenge_id)
+                                LEFT JOIN user_xp ux ON u.id = ux.user_id
+                                GROUP BY u.id
+                                HAVING solved_count > 0
+                                ORDER BY solved_count DESC, user_level DESC, total_xp DESC, last_active DESC
+                                LIMIT :limit";
+                        break;
+                        
+                    case 'design':
+                        // Design Dynamo leaderboard - based on UX challenges completed
+                        $query = "SELECT u.username, COUNT(CASE WHEN gh.result = 'Solved' AND cx.challenge_type = 'UI' THEN 1 END) as solved_count, 
+                                MAX(gh.date) as last_active,
+                                COALESCE(ux.level, 1) as user_level,
+                                COALESCE(ux.xp, 0) as total_xp
+                                FROM users u
+                                LEFT JOIN game_history gh ON u.id = gh.user_id
+                                LEFT JOIN challenge_xp cx ON gh.challenge_name = CONCAT('Challenge #', cx.challenge_id)
+                                LEFT JOIN user_xp ux ON u.id = ux.user_id
+                                GROUP BY u.id
+                                HAVING solved_count > 0
+                                ORDER BY solved_count DESC, user_level DESC, total_xp DESC, last_active DESC
+                                LIMIT :limit";
+                        break;
+                        
+                    case 'overall':
+                    default:
+                        // Overall leaderboard - based on all challenges
+                        $query = "SELECT u.username, COUNT(CASE WHEN gh.result = 'Solved' THEN 1 END) as solved_count, 
+                                COUNT(DISTINCT gh.challenge_name) as unique_challenges,
+                                (SELECT COUNT(*) FROM badges b WHERE b.user_id = u.id) as badge_count,
+                                COALESCE(ux.level, 1) as user_level,
+                                COALESCE(ux.xp, 0) as total_xp,
+                                MAX(gh.date) as last_active
+                                FROM users u
+                                LEFT JOIN game_history gh ON u.id = gh.user_id
+                                LEFT JOIN user_xp ux ON u.id = ux.user_id
+                                GROUP BY u.id
+                                HAVING solved_count > 0
+                                ORDER BY user_level DESC, total_xp DESC, solved_count DESC
+                                LIMIT :limit";
+                        break;
+                }
+            } else {
+                // Use old schema with game_history
+                switch ($gameType) {
+                    case 'codequest':
+                        // Code Quest leaderboard - based on coding challenges solved
+                        $query = "SELECT u.username, COUNT(CASE WHEN gh.result = 'Solved' AND gh.challenge_name LIKE 'Coding%' THEN 1 END) as solved_count, 
+                                MAX(gh.date) as last_active,
+                                COALESCE(ux.level, 1) as user_level,
+                                COALESCE(ux.xp, 0) as total_xp
+                                FROM users u
+                                LEFT JOIN game_history gh ON u.id = gh.user_id
+                                LEFT JOIN user_xp ux ON u.id = ux.user_id
+                                GROUP BY u.id
+                                HAVING solved_count > 0
+                                ORDER BY solved_count DESC, user_level DESC, total_xp DESC, last_active DESC
+                                LIMIT :limit";
+                        break;
+                        
+                    case 'networking':
+                        // Network Nexus leaderboard - based on network levels completed
+                        $query = "SELECT u.username, COUNT(CASE WHEN gh.result = 'Solved' AND gh.challenge_name LIKE 'Network%' THEN 1 END) as solved_count, 
+                                MAX(gh.date) as last_active,
+                                COALESCE(ux.level, 1) as user_level,
+                                COALESCE(ux.xp, 0) as total_xp
+                                FROM users u
+                                LEFT JOIN game_history gh ON u.id = gh.user_id
+                                LEFT JOIN user_xp ux ON u.id = ux.user_id
+                                GROUP BY u.id
+                                HAVING solved_count > 0
+                                ORDER BY solved_count DESC, user_level DESC, total_xp DESC, last_active DESC
+                                LIMIT :limit";
+                        break;
+                        
+                    case 'design':
+                        // Design Dynamo leaderboard - based on UX challenges completed
+                        $query = "SELECT u.username, COUNT(CASE WHEN gh.result = 'Solved' AND gh.challenge_name LIKE 'Design%' THEN 1 END) as solved_count, 
+                                MAX(gh.date) as last_active,
+                                COALESCE(ux.level, 1) as user_level,
+                                COALESCE(ux.xp, 0) as total_xp
+                                FROM users u
+                                LEFT JOIN game_history gh ON u.id = gh.user_id
+                                LEFT JOIN user_xp ux ON u.id = ux.user_id
+                                GROUP BY u.id
+                                HAVING solved_count > 0
+                                ORDER BY solved_count DESC, user_level DESC, total_xp DESC, last_active DESC
+                                LIMIT :limit";
+                        break;
+                        
+                    case 'overall':
+                    default:
+                        // Overall leaderboard - based on all challenges
+                        $query = "SELECT u.username, COUNT(CASE WHEN gh.result = 'Solved' THEN 1 END) as solved_count, 
+                                COUNT(DISTINCT gh.challenge_name) as unique_challenges,
+                                (SELECT COUNT(*) FROM badges b WHERE b.user_id = u.id) as badge_count,
+                                COALESCE(ux.level, 1) as user_level,
+                                COALESCE(ux.xp, 0) as total_xp,
+                                MAX(gh.date) as last_active
+                                FROM users u
+                                LEFT JOIN game_history gh ON u.id = gh.user_id
+                                LEFT JOIN user_xp ux ON u.id = ux.user_id
+                                GROUP BY u.id
+                                HAVING solved_count > 0
+                                ORDER BY user_level DESC, total_xp DESC, solved_count DESC
+                                LIMIT :limit";
+                        break;
+                }
             }
             
-            if (!empty($query)) {
-                $stmt = $pdo->prepare($query);
-                $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
-                $stmt->execute();
-                
-                return $stmt->fetchAll(PDO::FETCH_ASSOC);
-            }
+            $stmt = $pdo->prepare($query);
+            $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+            $stmt->execute();
             
-            return [];
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
-            error_log("Leaderboard error: " . $e->getMessage());
+            log_error("Leaderboard error: " . $e->getMessage());
             return [];
         }
     }
@@ -112,40 +185,51 @@
         global $pdo;
         
         try {
-            $filter = '';
+            // Map the game type to the challenge_type in the database
+            $challengeType = '';
             switch ($gameType) {
                 case 'codequest':
-                    $filter = "WHERE challenge_name LIKE 'Coding%'";
+                    $challengeType = 'programming';
                     break;
+                case 'network-nexus':
                 case 'networking':
-                    $filter = "WHERE challenge_name LIKE 'Network%'";
+                    $challengeType = 'networking';
                     break;
+                case 'design-dynamo':
                 case 'design':
-                    $filter = "WHERE challenge_name LIKE 'Design%'";
+                case 'ui':
+                    $challengeType = 'ui';
                     break;
                 default:
-                    // All challenges
-                    $filter = '';
+                    $challengeType = $gameType;
             }
             
-            $query = "SELECT challenge_name, 
-                      COUNT(*) as attempt_count,
-                      SUM(CASE WHEN result = 'Solved' THEN 1 ELSE 0 END) as solved_count,
-                      SUM(CASE WHEN result = 'Solved' THEN xp_earned ELSE 0 END) as total_xp_earned,
-                      (SUM(CASE WHEN result = 'Solved' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) as success_rate
-                      FROM game_history
-                      $filter
-                      GROUP BY challenge_name
-                      HAVING attempt_count > 0
-                      ORDER BY attempt_count DESC
-                      LIMIT 10";
+            // Get challenge statistics using game_user_progress and game_challenges tables
+            $query = "SELECT 
+                    c.name as challenge_name, 
+                    COUNT(gup.progress_id) as attempt_count,
+                    SUM(CASE WHEN gup.score > 0 THEN 1 ELSE 0 END) as solved_count,
+                    ROUND((SUM(CASE WHEN gup.score > 0 THEN 1 ELSE 0 END) / GREATEST(COUNT(gup.progress_id), 1)) * 100) as success_rate
+                FROM game_challenges c
+                LEFT JOIN game_user_progress gup ON c.challenge_id = gup.challenge_id
+                WHERE c.challenge_type = :challenge_type
+                GROUP BY c.challenge_id, c.name
+                ORDER BY attempt_count DESC, c.challenge_id ASC
+                LIMIT 5";
             
             $stmt = $pdo->prepare($query);
-            $stmt->execute();
+            $stmt->execute([':challenge_type' => $challengeType]);
             
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // If no results found, log it
+            if (empty($results)) {
+                log_error("No challenge stats found for type: " . $challengeType);
+            }
+            
+            return $results;
         } catch (PDOException $e) {
-            error_log("Challenge stats error: " . $e->getMessage());
+            log_error("Challenge stats error: " . $e->getMessage());
             return [];
         }
     }

@@ -77,7 +77,7 @@ function addUserXP($userId, $xpAmount) {
             'level_info' => $levelUpInfo
         ];
     } catch (PDOException $e) {
-        error_log("XP error: " . $e->getMessage());
+        log_error("XP error: " . $e->getMessage());
         return [
             'success' => false,
             'error' => "Could not update XP: " . $e->getMessage()
@@ -102,7 +102,7 @@ function calculateUserLevel($totalXP) {
         
         return $result && $result['max_level'] ? $result['max_level'] : 1;
     } catch (PDOException $e) {
-        error_log("Level calculation error: " . $e->getMessage());
+        log_error("Level calculation error: " . $e->getMessage());
         return 1; // Default to level 1 if there's an error
     }
 }
@@ -117,29 +117,71 @@ function getUserXPInfo($userId) {
     global $pdo;
     
     try {
+        // First check if the user has an existing XP record
         $stmt = $pdo->prepare("
-            SELECT * FROM user_level_view
-            WHERE user_id = :user_id
+            SELECT ux.user_id, ux.xp as total_xp, ux.level as current_level,
+            ld1.xp_required as current_level_xp,
+            ld2.xp_required as next_level_xp,
+            ld1.badge_name as level_title
+            FROM user_xp ux
+            JOIN level_definitions ld1 ON ux.level = ld1.level
+            LEFT JOIN level_definitions ld2 ON ux.level + 1 = ld2.level
+            WHERE ux.user_id = :user_id
         ");
         $stmt->execute([':user_id' => $userId]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if ($result) {
-            return $result;
+            // Calculate progress to next level
+            $currentLevelXP = (int)$result['current_level_xp'];
+            $nextLevelXP = $result['next_level_xp'] ? (int)$result['next_level_xp'] : $currentLevelXP * 2;
+            $totalXP = (int)$result['total_xp'];
+            
+            $xpForCurrentLevel = $totalXP - $currentLevelXP;
+            $xpRequiredForNextLevel = $nextLevelXP - $currentLevelXP;
+            $progressPercent = $xpRequiredForNextLevel > 0 
+                ? min(100, round(($xpForCurrentLevel / $xpRequiredForNextLevel) * 100)) 
+                : 100;
+            
+            return [
+                'user_id' => $userId,
+                'total_xp' => $totalXP,
+                'current_level' => (int)$result['current_level'],
+                'level_title' => $result['level_title'],
+                'current_level_xp' => $currentLevelXP,
+                'next_level_xp' => $nextLevelXP,
+                'xp_for_current_level' => $xpForCurrentLevel,
+                'xp_required_for_next_level' => $xpRequiredForNextLevel,
+                'level_progress_percent' => $progressPercent
+            ];
+        } else {
+            // User has no XP record yet, create default values
+            return [
+                'user_id' => $userId,
+                'total_xp' => 0,
+                'current_level' => 1,
+                'level_title' => 'Newbie',
+                'current_level_xp' => 0,
+                'next_level_xp' => 100,
+                'xp_for_current_level' => 0,
+                'xp_required_for_next_level' => 100,
+                'level_progress_percent' => 0
+            ];
         }
-        
-        // If no record exists, return default values
+    } catch (PDOException $e) {
+        log_error("Error getting user XP info: " . $e->getMessage());
+        // Return default values in case of error
         return [
             'user_id' => $userId,
             'total_xp' => 0,
             'current_level' => 1,
+            'level_title' => 'Newbie',
             'current_level_xp' => 0,
             'next_level_xp' => 100,
+            'xp_for_current_level' => 0,
+            'xp_required_for_next_level' => 100,
             'level_progress_percent' => 0
         ];
-    } catch (PDOException $e) {
-        error_log("XP info error: " . $e->getMessage());
-        return null;
     }
 }
 
@@ -157,20 +199,9 @@ function getLevelTitle($level) {
         $stmt->execute([':level' => $level]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        if ($result && $result['badge_name']) {
-            return $result['badge_name'];
-        }
-        
-        // Default level titles if not found in database
-        $defaultTitles = [
-            1 => 'Newbie',
-            2 => 'Junior Coder',
-            3 => 'Debug Detective'
-        ];
-        
-        return isset($defaultTitles[$level]) ? $defaultTitles[$level] : "Level $level";
+        return $result && $result['badge_name'] ? $result['badge_name'] : "Level $level";
     } catch (PDOException $e) {
-        error_log("Level title error: " . $e->getMessage());
+        log_error("Level title error: " . $e->getMessage());
         return "Level $level"; // Default to "Level X" if there's an error
     }
 }
@@ -195,7 +226,7 @@ function getAllLevelTitles() {
         
         return $titles;
     } catch (PDOException $e) {
-        error_log("Get all level titles error: " . $e->getMessage());
+        log_error("Get all level titles error: " . $e->getMessage());
         
         // Return default titles if database query fails
         return [
@@ -230,7 +261,7 @@ function awardLevelBadge($userId, $level, $badgeName, $badgeImage) {
         
         if (!$stmt->fetch()) {
             // Add the badge
-            $stmt = $pdo->prepare("INSERT INTO badges (user_id, badge_name, badge_image) VALUES (:user_id, :badge_name, :badge_image)");
+            $stmt = $pdo->prepare("INSERT INTO badges (user_id, badge_name, badge_image, earned_at) VALUES (:user_id, :badge_name, :badge_image, NOW())");
             $stmt->execute([
                 ':user_id' => $userId,
                 ':badge_name' => $badgeName,
@@ -242,7 +273,7 @@ function awardLevelBadge($userId, $level, $badgeName, $badgeImage) {
         
         return false; // Badge already exists
     } catch (PDOException $e) {
-        error_log("Badge award error: " . $e->getMessage());
+        log_error("Badge award error: " . $e->getMessage());
         return false;
     }
 }
@@ -257,13 +288,13 @@ function getChallengeXP($challengeId) {
     global $pdo;
     
     try {
-        $stmt = $pdo->prepare("SELECT xp_value FROM challenge_xp WHERE challenge_id = :challenge_id");
+        $stmt = $pdo->prepare("SELECT xp_value FROM game_challenges WHERE id = :challenge_id");
         $stmt->execute([':challenge_id' => $challengeId]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
         return $result ? $result['xp_value'] : 10; // Default to 10 XP if not found
     } catch (PDOException $e) {
-        error_log("Challenge XP error: " . $e->getMessage());
+        log_error("Challenge XP error: " . $e->getMessage());
         return 10; // Default to 10 XP if there's an error
     }
 }
@@ -283,10 +314,16 @@ function getTopUsersByLevel($limit = 10) {
                 u.username, 
                 COALESCE(ux.level, 1) as level, 
                 COALESCE(ux.xp, 0) as xp,
-                ulv.level_progress_percent
+                CASE 
+                    WHEN ux.level IS NULL THEN 0
+                    ELSE ROUND(
+                        ((ux.xp - ld1.xp_required) / NULLIF((ld2.xp_required - ld1.xp_required), 0)) * 100
+                    )
+                END as level_progress_percent
             FROM users u
             LEFT JOIN user_xp ux ON u.id = ux.user_id
-            LEFT JOIN user_level_view ulv ON u.id = ulv.user_id
+            LEFT JOIN level_definitions ld1 ON ux.level = ld1.level
+            LEFT JOIN level_definitions ld2 ON ux.level + 1 = ld2.level
             ORDER BY level DESC, xp DESC
             LIMIT :limit
         ");
@@ -295,7 +332,7 @@ function getTopUsersByLevel($limit = 10) {
         
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
-        error_log("Top users error: " . $e->getMessage());
+        log_error("Top users error: " . $e->getMessage());
         return [];
     }
 }

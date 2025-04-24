@@ -6,7 +6,7 @@ header('Content-Type: application/json');
 
 try {
     // Get all design challenges
-    $stmt = $pdo->query("SELECT id, title, description, difficulty, example_image, criteria FROM design_challenges ORDER BY difficulty, title");
+    $stmt = $pdo->query("SELECT * FROM design_challenges ORDER BY difficulty, title");
     $challenges = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // Parse JSON criteria back to arrays
@@ -15,7 +15,6 @@ try {
             $challenge['criteria'] = json_decode($challenge['criteria'], true);
         }
     }
-    
     echo json_encode(['status' => 'success', 'challenges' => $challenges]);
 } catch (PDOException $e) {
     // Log error but don't expose database errors

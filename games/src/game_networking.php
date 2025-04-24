@@ -18,9 +18,37 @@
             'level' => 1,
             'score' => 0,
             'connections' => [],
+            'connection_history' => [],
             'devices' => [],
             'completed_levels' => []
         ];
+    }
+
+    // Check if user has admin privileges
+    $isAdmin = isset($_SESSION['role']) && ($_SESSION['role'] === 'TECHGURU' || $_SESSION['role'] === 'ADMIN');
+
+    // Get the maximum level number from the database
+    try {
+        $maxLevelQuery = $pdo->prepare("
+            SELECT COUNT(*) as max_level 
+            FROM game_challenges 
+            WHERE challenge_type = 'networking'
+        ");
+        $maxLevelQuery->execute();
+        $maxLevelData = $maxLevelQuery->fetch(PDO::FETCH_ASSOC);
+        $maxLevel = $maxLevelData['max_level'];
+        
+        // Check if all levels are completed
+        $allLevelsCompleted = false;
+        if (isset($_SESSION['network_game']['level']) && $_SESSION['network_game']['level'] > $maxLevel) {
+            // Reset to max level and mark as completed
+            $_SESSION['network_game']['level'] = $maxLevel;
+            $allLevelsCompleted = true;
+        }
+    } catch (PDOException $e) {
+        log_error("Error getting max level: " . $e->getMessage());
+        $maxLevel = 3; // Default fallback value
+        $allLevelsCompleted = false;
     }
 
     // Handle form submissions
@@ -32,52 +60,227 @@
                     $target = $_POST['target'] ?? '';
                     
                     if (!empty($source) && !empty($target)) {
+                        // Generate a unique ID for this connection
+                        $conn_id = uniqid('conn_');
+                        
+                        // Add to connections array with ID
                         $_SESSION['network_game']['connections'][] = [
+                            'id' => $conn_id,
                             'source' => $source,
-                            'target' => $target
+                            'target' => $target,
+                            'timestamp' => time()
                         ];
+                        
+                        // Add to history
+                        $_SESSION['network_game']['connection_history'][] = [
+                            'id' => $conn_id,
+                            'action' => 'connect',
+                            'source' => $source,
+                            'target' => $target,
+                            'timestamp' => time()
+                        ];
+                        
                         $message = "Connected {$source} to {$target}";
+                    }
+                    break;
+                
+                case 'disconnect':
+                    $conn_id = $_POST['connection_id'] ?? '';
+                    
+                    if (!empty($conn_id)) {
+                        // Find and remove the connection
+                        foreach ($_SESSION['network_game']['connections'] as $key => $conn) {
+                            if ($conn['id'] === $conn_id) {
+                                $source = $conn['source'];
+                                $target = $conn['target'];
+                                
+                                // Remove from connections array
+                                unset($_SESSION['network_game']['connections'][$key]);
+                                
+                                // Reindex array
+                                $_SESSION['network_game']['connections'] = array_values($_SESSION['network_game']['connections']);
+                                
+                                // Add to history
+                                $_SESSION['network_game']['connection_history'][] = [
+                                    'action' => 'disconnect',
+                                    'source' => $source,
+                                    'target' => $target,
+                                    'timestamp' => time()
+                                ];
+                                
+                                $message = "Disconnected {$source} from {$target}";
+                                break;
+                            }
+                        }
                     }
                     break;
                     
                 case 'check_solution':
                     $level = $_SESSION['network_game']['level'];
                     $connections = $_SESSION['network_game']['connections'];
+
+                    // Don't process if all levels are completed
+                    if ($level > $maxLevel) {
+                        $message = "All levels completed! No more submissions are being recorded.";
+                        break;
+                    }
+
+                    // Extract just source and target for solution checking
+                    $simpleConnections = array_map(function($conn) {
+                        return [
+                            'source' => $conn['source'],
+                            'target' => $conn['target']
+                        ];
+                    }, $connections);
                     
-                    $result = checkNetworkSolution($level, $connections);
+                    $result = checkNetworkSolution($level, $simpleConnections);
                     if ($result['success']) {
                         $_SESSION['network_game']['completed_levels'][$level] = true;
                         $_SESSION['network_game']['score'] += $result['points'];
                         
-                        // Save to database
+                        // Find the challenge ID for this level
+                        $challengeId = null;
                         try {
-                            $stmt = $pdo->prepare("INSERT INTO game_history (user_id, challenge_name, result) 
-                                                  VALUES (:user_id, :challenge_name, 'Solved')");
-                            $stmt->execute([
-                                ':user_id' => $_SESSION['user_id'] ?? 1,
-                                ':challenge_name' => "Network Level {$level}"
-                            ]);
+                            $stmt = $pdo->prepare("
+                                SELECT challenge_id 
+                                FROM `game_challenges` 
+                                WHERE challenge_type = 'networking' 
+                                ORDER BY challenge_id 
+                                LIMIT :offset, 1
+                            ");
+                            $offset = $level - 1;
+                            $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+                            $stmt->execute();
+                            $challengeIdResult = $stmt->fetch(PDO::FETCH_ASSOC);
+                            
+                            if ($challengeIdResult) {
+                                $challengeId = $challengeIdResult['challenge_id'];
+                            }
                         } catch (PDOException $e) {
-                            error_log("Database error: " . $e->getMessage());
+                            log_error("Error finding challenge ID for network level $level: " . $e->getMessage());
                         }
                         
-                        // Award badge for completing level
-                        if (!isset($_SESSION['badges'])) {
-                            $_SESSION['badges'] = [];
+                        if ($challengeId) {
+                            // Save to game_user_progress
+                            try {
+                                // Check if there's an existing record
+                                $checkStmt = $pdo->prepare("
+                                    SELECT `progress_id`, `score` 
+                                    FROM `game_user_progress` 
+                                    WHERE `user_id` = :user_id AND `challenge_id` = :challenge_id
+                                ");
+                                $checkStmt->bindParam(':user_id', $_SESSION['game'], PDO::PARAM_INT);
+                                $checkStmt->bindParam(':challenge_id', $challengeId, PDO::PARAM_INT);
+                                $checkStmt->execute();
+                                $existingProgress = $checkStmt->fetch(PDO::FETCH_ASSOC);
+                                
+                                if ($existingProgress) {
+                                    // Update only if new score is higher
+                                    if ($result['points'] > $existingProgress['score']) {
+                                        $updateStmt = $pdo->prepare("
+                                            UPDATE `game_user_progress` 
+                                            SET `score` = :score, `completed_at` = NOW() 
+                                            WHERE `progress_id` = :progress_id
+                                        ");
+                                        $updateStmt->bindParam(':score', $result['points'], PDO::PARAM_INT);
+                                        $updateStmt->bindParam(':progress_id', $existingProgress['progress_id'], PDO::PARAM_INT);
+                                        $updateStmt->execute();
+                                    }
+                                } else {
+                                    // Insert new record
+                                    $insertStmt = $pdo->prepare("
+                                        INSERT INTO `game_user_progress` 
+                                        (`user_id`, `challenge_id`, `score`, `time_taken`, `completed_at`) 
+                                        VALUES (:user_id, :challenge_id, :score, :time_taken, NOW())
+                                    ");
+                                    $insertStmt->bindParam(':user_id', $_SESSION['game'], PDO::PARAM_INT);
+                                    $insertStmt->bindParam(':challenge_id', $challengeId, PDO::PARAM_INT);
+                                    $insertStmt->bindParam(':score', $result['points'], PDO::PARAM_INT);
+                                    $timeTaken = 0; // Placeholder, you might want to track actual time
+                                    $insertStmt->bindParam(':time_taken', $timeTaken, PDO::PARAM_INT);
+                                    $insertStmt->execute();
+                                }
+                                
+                                // Check if the user already has a related badge
+                                try {
+                                    // Get the challenge name for this level to use as badge name
+                                    $levelQuery = $pdo->prepare("
+                                        SELECT name FROM game_challenges 
+                                        WHERE challenge_type = 'networking' 
+                                        ORDER BY challenge_id 
+                                        LIMIT :offset, 1
+                                    ");
+                                    $offset = $level - 1;
+                                    $levelQuery->bindParam(':offset', $offset, PDO::PARAM_INT);
+                                    $levelQuery->execute();
+                                    $levelData = $levelQuery->fetch(PDO::FETCH_ASSOC);
+                                    
+                                    if ($levelData) {
+                                        $badgeName = $levelData['name'];
+                                        
+                                        // Find badge ID
+                                        $badgeStmt = $pdo->prepare("
+                                            SELECT badge_id FROM game_badges WHERE name = :badge_name
+                                        ");
+                                        $badgeStmt->bindParam(':badge_name', $badgeName);
+                                        $badgeStmt->execute();
+                                        $badgeResult = $badgeStmt->fetch(PDO::FETCH_ASSOC);
+                                        
+                                        if ($badgeResult) {
+                                            // Check if user already has this badge
+                                            $userBadgeStmt = $pdo->prepare("
+                                                SELECT 1 FROM game_user_badges 
+                                                WHERE user_id = :user_id AND badge_id = :badge_id
+                                            ");
+                                            $userBadgeStmt->bindParam(':user_id', $_SESSION['game'], PDO::PARAM_INT);
+                                            $userBadgeStmt->bindParam(':badge_id', $badgeResult['badge_id'], PDO::PARAM_INT);
+                                            $userBadgeStmt->execute();
+                                            
+                                            if (!$userBadgeStmt->fetch()) {
+                                                // Award the badge to the user
+                                                $awardStmt = $pdo->prepare("
+                                                    INSERT INTO game_user_badges 
+                                                    (user_id, badge_id, earned_at) 
+                                                    VALUES (:user_id, :badge_id, NOW())
+                                                ");
+                                                $awardStmt->bindParam(':user_id', $_SESSION['game'], PDO::PARAM_INT);
+                                                $awardStmt->bindParam(':badge_id', $badgeResult['badge_id'], PDO::PARAM_INT);
+                                                
+                                                if ($awardStmt->execute()) {
+                                                    // Add to message that badge was earned
+                                                    $message .= " You earned the {$badgeName} badge!";
+                                                }
+                                            }
+                                        } else {
+                                            // Badge doesn't exist in database, log error
+                                            log_error("Badge '{$badgeName}' not found in database");
+                                        }
+                                    }
+                                } catch (PDOException $e) {
+                                    log_error("Error getting badge for level {$level}: " . $e->getMessage());
+                                }
+                            } catch (PDOException $e) {
+                                log_error("Error saving network challenge completion: " . $e->getMessage());
+                            }
                         }
                         
-                        $badgeName = "Network Level {$level} Master";
-                        if (!isset($_SESSION['badges'][$badgeName])) {
-                            $_SESSION['badges'][$badgeName] = [
-                                'name' => $badgeName,
-                                'image' => "assets/badges/network{$level}.png",
-                                'date' => date('Y-m-d H:i:s')
-                            ];
-                        }
+                        // Add to history
+                        $_SESSION['network_game']['connection_history'][] = [
+                            'action' => 'level_complete',
+                            'level' => $level,
+                            'timestamp' => time()
+                        ];
                         
                         $message = "Great job! Network configured correctly. +{$result['points']} points";
                         $gameCompleted = true;
                     } else {
+                        // Add to history
+                        $_SESSION['network_game']['connection_history'][] = [
+                            'action' => 'check_failed',
+                            'message' => $result['message'],
+                            'timestamp' => time()
+                        ];
+                        
                         $message = "Incorrect network configuration. {$result['message']}";
                     }
                     break;
@@ -86,10 +289,26 @@
                     $currentLevel = $_SESSION['network_game']['level'];
                     $_SESSION['network_game']['level'] = $currentLevel + 1;
                     $_SESSION['network_game']['connections'] = [];
+                    
+                    // Add to history
+                    $_SESSION['network_game']['connection_history'][] = [
+                        'action' => 'next_level',
+                        'from_level' => $currentLevel,
+                        'to_level' => $currentLevel + 1,
+                        'timestamp' => time()
+                    ];
+                    
                     $message = "Starting Level " . ($_SESSION['network_game']['level']);
                     break;
                     
                 case 'reset_level':
+                    // Add to history before clearing connections
+                    $_SESSION['network_game']['connection_history'][] = [
+                        'action' => 'reset_level',
+                        'level' => $_SESSION['network_game']['level'],
+                        'timestamp' => time()
+                    ];
+                    
                     $_SESSION['network_game']['connections'] = [];
                     $message = "Level reset";
                     break;
@@ -99,6 +318,12 @@
                         'level' => 1,
                         'score' => 0,
                         'connections' => [],
+                        'connection_history' => [
+                            [
+                                'action' => 'reset_game',
+                                'timestamp' => time()
+                            ]
+                        ],
                         'devices' => [],
                         'completed_levels' => []
                     ];
@@ -121,7 +346,7 @@
         public function __construct($pdo) {
             $this->pdo = $pdo;
             // Get current user ID from session or use a default
-            $this->userId = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 1;
+            $this->userId = isset($_SESSION['game']) ? $_SESSION['game'] : 1;
         }
         
         /**
@@ -129,13 +354,14 @@
          */
         public function getLeaderboard($limit = 10) {
             try {
-                $query = "SELECT u.username, COUNT(CASE WHEN gh.result = 'Solved' THEN 1 END) as solved_count, 
-                          COUNT(DISTINCT gh.challenge_name) as unique_challenges,
-                          (SELECT COUNT(*) FROM badges b WHERE b.user_id = u.id) as badge_count
+                $query = "SELECT u.username, 
+                          COUNT(DISTINCT gup.challenge_id) as solved_count, 
+                          SUM(gup.score) as total_score,
+                          (SELECT COUNT(*) FROM game_user_badges gub WHERE gub.user_id = u.id) as badge_count
                           FROM users u
-                          LEFT JOIN game_history gh ON u.id = gh.user_id
+                          LEFT JOIN game_user_progress gup ON u.id = gup.user_id
                           GROUP BY u.id
-                          ORDER BY solved_count DESC, unique_challenges DESC
+                          ORDER BY solved_count DESC, total_score DESC
                           LIMIT :limit";
                 
                 $stmt = $this->pdo->prepare($query);
@@ -144,7 +370,7 @@
                 
                 return $stmt->fetchAll(PDO::FETCH_ASSOC);
             } catch (PDOException $e) {
-                error_log("Leaderboard error: " . $e->getMessage());
+                log_error("Leaderboard error: " . $e->getMessage());
                 return [];
             }
         }
@@ -154,12 +380,16 @@
          */
         public function getChallengeStats() {
             try {
-                $query = "SELECT challenge_name, 
-                          COUNT(*) as attempt_count,
-                          SUM(CASE WHEN result = 'Solved' THEN 1 ELSE 0 END) as solved_count,
-                          (SUM(CASE WHEN result = 'Solved' THEN 1 ELSE 0 END) / COUNT(*)) * 100 as success_rate
-                          FROM game_history
-                          GROUP BY challenge_name
+                $query = "SELECT gc.name as challenge_name, 
+                          COUNT(gup.progress_id) as attempt_count,
+                          COUNT(DISTINCT gup.user_id) as unique_users,
+                          AVG(gup.score) as avg_score,
+                          gdl.name as difficulty
+                          FROM game_challenges gc
+                          LEFT JOIN game_difficulty_levels gdl ON gc.difficulty_id = gdl.difficulty_id
+                          LEFT JOIN game_user_progress gup ON gc.challenge_id = gup.challenge_id
+                          WHERE gc.challenge_type = 'networking'
+                          GROUP BY gc.challenge_id, gc.name, gdl.name
                           ORDER BY attempt_count DESC";
                 
                 $stmt = $this->pdo->prepare($query);
@@ -167,75 +397,110 @@
                 
                 return $stmt->fetchAll(PDO::FETCH_ASSOC);
             } catch (PDOException $e) {
-                error_log("Challenge stats error: " . $e->getMessage());
+                log_error("Challenge stats error: " . $e->getMessage());
                 return [];
             }
         }
         
         /**
-         * Get user progress across all challenges
+         * Get progress data for a specific user
          */
         public function getUserProgress($userId = null) {
-            if ($userId === null) {
+            if (is_null($userId)) {
                 $userId = $this->userId;
             }
             
             try {
-                // Get all challenges completed by the user
-                $query = "SELECT challenge_name, result, MAX(date) as last_attempt
-                          FROM game_history 
-                          WHERE user_id = :user_id
-                          GROUP BY challenge_name
-                          ORDER BY last_attempt DESC";
+                // First get all challenges
+                $query = "SELECT 
+                            gc.challenge_id,
+                            gc.name AS challenge_name,
+                            gc.challenge_type,
+                            gdl.name AS difficulty,
+                            gc.xp_value
+                          FROM 
+                            game_challenges gc
+                          JOIN 
+                            game_difficulty_levels gdl ON gc.difficulty_id = gdl.difficulty_id
+                          WHERE 
+                            gc.challenge_type = 'networking'
+                          ORDER BY 
+                            gc.difficulty_id ASC, 
+                            gc.name ASC";
+                
+                $stmt = $this->pdo->prepare($query);
+                $stmt->execute();
+                $challenges = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                // Now get user progress separately
+                $query = "SELECT 
+                            challenge_id,
+                            score,
+                            time_taken,
+                            completed_at
+                          FROM 
+                            game_user_progress
+                          WHERE 
+                            user_id = :user_id";
                 
                 $stmt = $this->pdo->prepare($query);
                 $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
                 $stmt->execute();
+                $progress = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 
-                $userChallenges = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                
-                // Build a progress object with all challenges
-                $progress = [];
-                foreach ($GLOBALS['challenges'] as $challenge) {
-                    $completed = false;
-                    $lastAttempt = null;
-                    
-                    foreach ($userChallenges as $userChallenge) {
-                        if ($userChallenge['challenge_name'] === $challenge['name']) {
-                            $completed = ($userChallenge['result'] === 'Solved');
-                            $lastAttempt = $userChallenge['last_attempt'];
-                            break;
-                        }
-                    }
-                    
-                    $progress[] = [
-                        'id' => $challenge['id'],
-                        'name' => $challenge['name'],
-                        'completed' => $completed,
-                        'last_attempt' => $lastAttempt
-                    ];
+                // Create a lookup array for progress
+                $progressLookup = [];
+                foreach ($progress as $item) {
+                    $progressLookup[$item['challenge_id']] = $item;
                 }
                 
-                return $progress;
+                // Combine the data
+                $result = [];
+                foreach ($challenges as $challenge) {
+                    $challengeProgress = [
+                        'challenge_id' => $challenge['challenge_id'],
+                        'challenge_name' => $challenge['challenge_name'],
+                        'challenge_type' => $challenge['challenge_type'],
+                        'difficulty' => $challenge['difficulty'],
+                        'xp_value' => $challenge['xp_value'],
+                        'score' => null,
+                        'time_taken' => null,
+                        'completed_at' => null
+                    ];
+                    
+                    // If we have progress for this challenge, add it
+                    if (isset($progressLookup[$challenge['challenge_id']])) {
+                        $userProgress = $progressLookup[$challenge['challenge_id']];
+                        $challengeProgress['score'] = $userProgress['score'];
+                        $challengeProgress['time_taken'] = $userProgress['time_taken'];
+                        $challengeProgress['completed_at'] = $userProgress['completed_at'];
+                    }
+                    
+                    $result[] = $challengeProgress;
+                }
+                
+                return $result;
             } catch (PDOException $e) {
-                error_log("User progress error: " . $e->getMessage());
+                log_error("User progress error: " . $e->getMessage());
                 return [];
             }
         }
         
         /**
-         * Get badges earned by a specific user
+         * Get badges for a specific user
          */
         public function getUserBadges($userId = null) {
-            if ($userId === null) {
+            if (is_null($userId)) {
                 $userId = $this->userId;
             }
             
             try {
-                $query = "SELECT badge_name, badge_image_path, date_earned
-                          FROM badges
-                          WHERE user_id = :user_id
-                          ORDER BY date_earned DESC";
+                $query = "SELECT gb.name as badge_name, gb.image_path as badge_image_path, 
+                          gub.earned_at as date_earned, gb.description
+                          FROM game_badges gb
+                          JOIN game_user_badges gub ON gb.badge_id = gub.badge_id
+                          WHERE gub.user_id = :user_id
+                          ORDER BY gub.earned_at DESC";
                 
                 $stmt = $this->pdo->prepare($query);
                 $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
@@ -243,54 +508,38 @@
                 
                 return $stmt->fetchAll(PDO::FETCH_ASSOC);
             } catch (PDOException $e) {
-                error_log("User badges error: " . $e->getMessage());
+                log_error("User badges error: " . $e->getMessage());
                 return [];
             }
         }
         
         /**
-         * Share a challenge completion on social media (mock function)
+         * Add a friend
          */
-        public function shareAchievement($challengeId, $platform = 'twitter') {
-            // Find the challenge
-            $challenge = null;
-            foreach ($GLOBALS['challenges'] as $c) {
-                if ($c['id'] == $challengeId) {
-                    $challenge = $c;
-                    break;
-                }
-            }
-            
-            if (!$challenge) {
-                return [
-                    'success' => false,
-                    'message' => 'Challenge not found'
-                ];
-            }
-            
-            // In a real implementation, this would connect to social media APIs
-            // For now, we'll just return a success message
-            return [
-                'success' => true,
-                'message' => "Achievement for '{$challenge['name']}' challenge shared on $platform!",
-                'share_url' => "https://codequest.example.com/share?challenge={$challengeId}&platform={$platform}"
-            ];
-        }
-        
-        /**
-         * Add a friend connection between users (mock function)
-         */
-        public function addFriend($friendId) {
+        public function addFriend($friendName) {
             try {
-                // Since the user_friends table doesn't exist, we'll return a mock success response
-                // instead of trying to query a non-existent table
+                // Check if friend exists
+                $stmt = $this->pdo->prepare("SELECT id FROM users WHERE username = :username LIMIT 1");
+                $stmt->bindParam(':username', $friendName, PDO::PARAM_STR);
+                $stmt->execute();
+                
+                $friend = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if (!$friend) {
+                    return [
+                        'success' => false,
+                        'message' => 'Friend not found'
+                    ];
+                }
+                
+                // In a real implementation, we would add a friendship relation to a database table
                 
                 return [
                     'success' => true,
                     'message' => 'Friend added successfully (mock)'
                 ];
             } catch (PDOException $e) {
-                error_log("Add friend error: " . $e->getMessage());
+                log_error("Add friend error: " . $e->getMessage());
                 return [
                     'success' => false,
                     'message' => 'Database error occurred'
@@ -299,29 +548,26 @@
         }
         
         /**
-         * Get friend activity feed
+         * Get friend activity (mock implementation)
          */
         public function getFriendActivity() {
             try {
-                // Since the user_friends table doesn't exist, we'll return a mock response
-                // instead of trying to query a non-existent table
+                // In a real implementation, we would query recent activity of friends
                 
                 return [
                     [
-                        'username' => 'User1',
-                        'challenge_name' => 'Hello World',
-                        'result' => 'Solved',
-                        'date' => date('Y-m-d H:i:s', strtotime('-1 day'))
+                        'username' => 'NetworkFriend1',
+                        'activity' => 'Completed Network Level 3',
+                        'timestamp' => date('Y-m-d H:i:s', time() - 3600)
                     ],
                     [
-                        'username' => 'User2',
-                        'challenge_name' => 'Factorial Calculator',
-                        'result' => 'Solved',
-                        'date' => date('Y-m-d H:i:s', strtotime('-2 day'))
+                        'username' => 'NetworkFriend2',
+                        'activity' => 'Earned Network Pro Badge',
+                        'timestamp' => date('Y-m-d H:i:s', time() - 7200)
                     ]
                 ];
             } catch (PDOException $e) {
-                error_log("Friend activity error: " . $e->getMessage());
+                log_error("Friend activity error: " . $e->getMessage());
                 return [];
             }
         }
@@ -413,10 +659,18 @@
         $friendMessage = $result['message'];
     }
 
+    // Initialize the GameNetworking class if not already done
+    if (!isset($gameNetworking)) {
+        $gameNetworking = new GameNetworking($pdo);
+    }
+    
+    // Get user progress
+    $userProgress = $gameNetworking->getUserProgress();
+    
     // Calculate completion percentage
     $completedCount = 0;
     foreach ($userProgress as $challenge) {
-        if ($challenge['completed']) {
+        if (!empty($challenge['score'])) {
             $completedCount++;
         }
     }
@@ -430,6 +684,16 @@
     $score = $_SESSION['network_game']['score'];
     $connections = $_SESSION['network_game']['connections'];
     $devices = $levelData['devices'];
+
+    // Get connection history (limit to last 10 items)
+    $connectionHistory = !empty($_SESSION['network_game']['connection_history']) 
+        ? array_slice($_SESSION['network_game']['connection_history'], -10) 
+        : [];
+
+    // Display completion message if all levels are finished
+    if ($allLevelsCompleted) {
+        $message = "Congratulations! You have completed all levels.";
+    }
 ?>
 
 <!DOCTYPE html>
@@ -456,6 +720,26 @@
             margin: 0 auto;
             padding: 20px;
         }
+        
+        /* Create a flex layout for the game content */
+        .game-layout {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        /* Main game content area */
+        .game-main-content {
+            flex: 1;
+            min-width: 0; /* Prevent flex items from overflowing */
+        }
+        
+        /* Sidebar for connection history */
+        .game-sidebar {
+            width: 300px;
+            flex-shrink: 0;
+        }
+        
         .header {
             display: flex;
             justify-content: space-between;
@@ -492,6 +776,16 @@
         }
         .device:hover {
             transform: scale(1.1);
+        }
+        .device.selected {
+            box-shadow: 0 0 0 3px #e1b12c, 0 0 10px 3px rgba(225, 177, 44, 0.5);
+            border-radius: 30%;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 3px #e1b12c, 0 0 10px 3px rgba(225, 177, 44, 0.5); }
+            50% { box-shadow: 0 0 0 5px #e1b12c, 0 0 15px 5px rgba(225, 177, 44, 0.5); }
+            100% { box-shadow: 0 0 0 3px #e1b12c, 0 0 10px 3px rgba(225, 177, 44, 0.5); }
         }
         .device-info {
             position: absolute;
@@ -597,6 +891,136 @@
         .modal-footer {
             border-top-color: #333;
         }
+        
+        /* Connection history styles */
+        .connection-history {
+            background-color: #16213e;
+            border-radius: 10px;
+            padding: 15px;
+            height: 100%;
+            overflow-y: auto;
+        }
+        .connection-history h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            border-bottom: 1px solid #333;
+            padding-bottom: 8px;
+        }
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            font-size: 14px;
+        }
+        .history-item:last-child {
+            border-bottom: none;
+        }
+        .history-item.connect {
+            color: #4cd137;
+        }
+        .history-item.disconnect {
+            color: #e84118;
+        }
+        .history-item .remove-btn {
+            background-color: #e84118;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 2px 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .history-item .timestamp {
+            color: #999;
+            font-size: 12px;
+        }
+        
+        /* Connection mode indicator */
+        .connection-mode-indicator {
+            padding: 8px 12px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            background-color: rgba(225, 177, 44, 0.2);
+            border: 1px solid #e1b12c;
+            font-size: 14px;
+            display: none;
+        }
+        .connection-mode-indicator.active {
+            display: block;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .connection-form {
+                flex-direction: column;
+            }
+            .connection-form .form-select,
+            .connection-form button {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            
+            /* Stack layout on mobile */
+            .game-layout {
+                flex-direction: column;
+            }
+            
+            .game-sidebar {
+                width: 100%;
+            }
+        }
+        
+        /* Badge styling */
+        .badge-card {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            height: 100%;
+            transition: all 0.3s ease;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .badge-card img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            margin-bottom: 10px;
+        }
+        
+        .badge-earned {
+            background-color: #e8f5e9;
+            border-color: #4caf50;
+        }
+        
+        .badge-locked {
+            background-color: #f5f5f5;
+            opacity: 0.7;
+            filter: grayscale(80%);
+        }
+        
+        .badge-earned img {
+            filter: drop-shadow(0 0 3px rgba(76, 175, 80, 0.5));
+        }
+        
+        .badge-description {
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+        
+        .badge-status {
+            font-size: 0.8rem;
+            font-style: italic;
+            color: #757575;
+        }
+        
+        .badge-earned .badge-status {
+            color: #2e7d32;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -612,9 +1036,20 @@
             <div>
                 <h2 class="level-title">Level <?php echo $currentLevel; ?>: <?php echo htmlspecialchars($levelData['title']); ?></h2>
             </div>
+            <div class="level-indicator">
+                Level: <span class="badge bg-primary"><?php echo $_SESSION['network_game']['level']; ?> of <?php echo $maxLevel; ?></span>
+                <?php if ($allLevelsCompleted): ?>
+                <span class="badge bg-success ms-2">All Completed!</span>
+                <?php endif; ?>
+            </div>
             <div class="score">
                 Score: <?php echo $score; ?>
             </div>
+            <?php if ($isAdmin): ?>
+            <button id="add-challenge-btn" class="btn btn-success me-2">
+                <i class="fas fa-plus-circle"></i> Add Challenge
+            </button>
+            <?php endif; ?>
         </div>
         
         <?php if (!empty($message)): ?>
@@ -623,95 +1058,304 @@
             </div>
         <?php endif; ?>
         
-        <div class="level-description">
-            <?php echo htmlspecialchars($levelData['description']); ?>
-        </div>
-        
-        <div class="network-area" id="networkArea">
-            <?php foreach ($devices as $id => $device): ?>
-                <div class="device <?php echo $device['type']; ?>" 
-                     id="<?php echo $id; ?>" 
-                     data-device-id="<?php echo $id; ?>"
-                     data-device-type="<?php echo $device['type']; ?>"
-                     data-ip="<?php echo $device['ip']; ?>"
-                     style="left: <?php echo $device['x']; ?>px; top: <?php echo $device['y']; ?>px;">
-                    <div class="device-info"><?php echo $id; ?></div>
-                    <?php if (!empty($device['ip'])): ?>
-                        <div class="ip-address"><?php echo $device['ip']; ?></div>
+        <!-- Flex layout wrapper -->
+        <div class="game-layout">
+            <!-- Main game content -->
+            <div class="game-main-content">
+                <div class="level-description">
+                    <?php echo htmlspecialchars($levelData['description']); ?>
+                </div>
+                
+                <!-- Connection mode indicator -->
+                <div id="connectionModeIndicator" class="connection-mode-indicator">
+                    <i class="fas fa-plug"></i> Connection mode: Click on a second device to connect
+                </div>
+                
+                <div class="network-area" id="networkArea">
+                    <?php foreach ($devices as $id => $device): ?>
+                        <div class="device <?php echo $device['type']; ?>" 
+                             id="<?php echo $id; ?>" 
+                             data-device-id="<?php echo $id; ?>"
+                             data-device-type="<?php echo $device['type']; ?>"
+                             data-ip="<?php echo $device['ip']; ?>"
+                             style="left: <?php echo $device['x']; ?>px; top: <?php echo $device['y']; ?>px;">
+                            <div class="device-info"><?php echo $id; ?></div>
+                            <?php if (!empty($device['ip'])): ?>
+                                <div class="ip-address"><?php echo $device['ip']; ?></div>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                    
+                    <?php foreach ($connections as $index => $connection): ?>
+                        <div class="connection-line" 
+                             id="connection-<?php echo $connection['id']; ?>" 
+                             data-source="<?php echo $connection['source']; ?>" 
+                             data-target="<?php echo $connection['target']; ?>"
+                             data-conn-id="<?php echo $connection['id']; ?>"></div>
+                    <?php endforeach; ?>
+                </div>
+                
+                <div class="control-panel">
+                    <form method="post" id="connectionForm" class="connection-form">
+                        <select name="source" id="sourceSelect" class="form-select" required>
+                            <option value="">Select source device</option>
+                            <?php foreach ($devices as $id => $device): ?>
+                                <option value="<?php echo $id; ?>"><?php echo $id; ?> (<?php echo $device['type']; ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
+                        
+                        <select name="target" id="targetSelect" class="form-select" required>
+                            <option value="">Select target device</option>
+                            <?php foreach ($devices as $id => $device): ?>
+                                <option value="<?php echo $id; ?>"><?php echo $id; ?> (<?php echo $device['type']; ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
+                        
+                        <input type="hidden" name="action" value="connect">
+                        <button type="submit" class="btn btn-primary">Connect Devices</button>
+                    </form>
+                    
+                    <div class="d-flex gap-2">
+                        <form method="post">
+                            <input type="hidden" name="action" value="check_solution">
+                            <button type="submit" class="btn btn-success">Check Solution</button>
+                        </form>
+                        
+                        <form method="post">
+                            <input type="hidden" name="action" value="reset_level">
+                            <button type="submit" class="btn btn-secondary">Reset Level</button>
+                        </form>
+                    </div>
+                </div>
+                
+                <?php if ($gameCompleted): ?>
+                    <div class="text-center mt-3">
+                        <form method="post">
+                            <input type="hidden" name="action" value="next_level">
+                            <button type="submit" class="btn btn-primary">Next Level</button>
+                        </form>
+                    </div>
+                <?php endif; ?>
+            </div>
+            
+            <!-- Sidebar with connection history -->
+            <div class="game-sidebar">
+                <!-- Connection History Panel -->
+                <div class="connection-history">
+                    <h3>Connection History</h3>
+                    <?php if (empty($connections)): ?>
+                        <div class="history-item">No connections yet. Connect some devices!</div>
+                    <?php else: ?>
+                        <?php foreach ($connections as $connection): ?>
+                            <div class="history-item connect">
+                                <div>
+                                    Connected <strong><?php echo htmlspecialchars($connection['source']); ?></strong> to 
+                                    <strong><?php echo htmlspecialchars($connection['target']); ?></strong>
+                                    <span class="timestamp"><?php echo date('H:i:s', $connection['timestamp']); ?></span>
+                                </div>
+                                <form method="post" style="display: inline;">
+                                    <input type="hidden" name="action" value="disconnect">
+                                    <input type="hidden" name="connection_id" value="<?php echo $connection['id']; ?>">
+                                    <button type="submit" class="remove-btn" title="Remove connection">
+                                        <i class="fas fa-times"></i> Remove
+                                    </button>
+                                </form>
+                            </div>
+                        <?php endforeach; ?>
                     <?php endif; ?>
                 </div>
-            <?php endforeach; ?>
-            
-            <?php foreach ($connections as $index => $connection): ?>
-                <div class="connection-line" id="connection-<?php echo $index; ?>" 
-                     data-source="<?php echo $connection['source']; ?>" 
-                     data-target="<?php echo $connection['target']; ?>"></div>
-            <?php endforeach; ?>
-        </div>
-        
-        <div class="control-panel">
-            <form method="post" class="connection-form">
-                <select name="source" class="form-select" required>
-                    <option value="">Select source device</option>
-                    <?php foreach ($devices as $id => $device): ?>
-                        <option value="<?php echo $id; ?>"><?php echo $id; ?> (<?php echo $device['type']; ?>)</option>
-                    <?php endforeach; ?>
-                </select>
-                
-                <select name="target" class="form-select" required>
-                    <option value="">Select target device</option>
-                    <?php foreach ($devices as $id => $device): ?>
-                        <option value="<?php echo $id; ?>"><?php echo $id; ?> (<?php echo $device['type']; ?>)</option>
-                    <?php endforeach; ?>
-                </select>
-                
-                <input type="hidden" name="action" value="connect">
-                <button type="submit" class="btn btn-primary">Connect Devices</button>
-            </form>
-            
-            <div class="d-flex gap-2">
-                <form method="post">
-                    <input type="hidden" name="action" value="check_solution">
-                    <button type="submit" class="btn btn-success">Check Solution</button>
-                </form>
-                
-                <form method="post">
-                    <input type="hidden" name="action" value="reset_level">
-                    <button type="submit" class="btn btn-secondary">Reset Level</button>
-                </form>
             </div>
         </div>
         
-        <?php if ($gameCompleted): ?>
-            <div class="text-center mt-3">
-                <form method="post">
-                    <input type="hidden" name="action" value="next_level">
-                    <button type="submit" class="btn btn-primary">Next Level</button>
-                </form>
+        <!-- Badges section -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Your Badges</h5>
             </div>
+            <div class="card-body">
+                <div class="row">
+                    <?php
+                    // Get all available badges
+                    $badgesQuery = "
+                        SELECT gb.badge_id, gb.name, gb.image_path, gb.description,
+                               CASE WHEN gub.user_badge_id IS NOT NULL THEN 1 ELSE 0 END as earned,
+                               gub.earned_at
+                        FROM game_badges gb
+                        LEFT JOIN game_user_badges gub ON gb.badge_id = gub.badge_id AND gub.user_id = :user_id
+                        WHERE gb.name IN (
+                            SELECT name FROM game_challenges WHERE challenge_type = 'networking'
+                        )
+                        ORDER BY gb.badge_id ASC
+                    ";
+                    
+                    try {
+                        $badgesStmt = $pdo->prepare($badgesQuery);
+                        $badgesStmt->bindParam(':user_id', $_SESSION['game'], PDO::PARAM_INT);
+                        $badgesStmt->execute();
+                        $badges = $badgesStmt->fetchAll(PDO::FETCH_ASSOC);
+                        
+                        if (empty($badges)) {
+                            echo '<div class="col-12"><p>No badges available yet.</p></div>';
+                        } else {
+                            foreach ($badges as $badge) {
+                                // Default image if none specified
+                                $imagePath = (!empty($badge['image_path']) && file_exists(GAME_IMG.'badges/'.$badge['image_path'])) ? GAME_IMG.'badges/'.$badge['image_path'] : GAME_IMG.'badges/goodjob.png';
+                                
+                                // Badge CSS class
+                                $badgeClass = $badge['earned'] ? 'badge-earned' : 'badge-locked';
+                                
+                                // Badge text
+                                $earnedText = $badge['earned'] ? 
+                                    'Earned on ' . date('M d, Y', strtotime($badge['earned_at'])) : 
+                                    'Not yet earned';
+                                
+                                echo '<div class="col-md-3 col-sm-6 mb-4">';
+                                echo '<div class="badge-card ' . $badgeClass . '">';
+                                echo '<img src="' . $imagePath . '" alt="' . htmlspecialchars($badge['name']) . ' Badge">';
+                                echo '<h5>' . htmlspecialchars($badge['name']) . '</h5>';
+                                echo '<p class="badge-description">' . htmlspecialchars($badge['description']) . '</p>';
+                                echo '<p class="badge-status">' . $earnedText . '</p>';
+                                echo '</div>';
+                                echo '</div>';
+                            }
+                        }
+                    } catch (PDOException $e) {
+                        log_error("Error fetching badges: " . $e->getMessage());
+                        echo '<div class="col-12"><p>Unable to load badges.</p></div>';
+                    }
+                    ?>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Level complete modal -->
+        <div class="modal fade" id="levelCompleteModal" tabindex="-1" aria-labelledby="levelCompleteModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title" id="levelCompleteModalLabel">Level Complete!</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p><?php echo $message; ?></p>
+                        <?php if ($_SESSION['network_game']['level'] < $maxLevel) { ?>
+                            <p>Ready for the next challenge?</p>
+                        <?php } else { ?>
+                            <p>Congratulations! You have completed all available levels!</p>
+                            <div class="alert alert-success mt-3">
+                                <strong>All Levels Completed!</strong> You've mastered all the networking challenges.
+                            </div>
+                        <?php } ?>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <?php if ($_SESSION['network_game']['level'] < $maxLevel) { ?>
+                        <form method="post">
+                            <input type="hidden" name="action" value="next_level">
+                            <button type="submit" class="btn btn-primary">Next Level</button>
+                        </form>
+                        <?php } ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- All levels complete modal -->
+        <div class="modal fade" id="allCompletedModal" tabindex="-1" aria-labelledby="allCompletedModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="allCompletedModalLabel">Congratulations!</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="text-center mb-4">
+                            <i class="fas fa-trophy text-warning" style="font-size: 4rem;"></i>
+                        </div>
+                        <h4 class="text-center">You've Completed All Networking Levels!</h4>
+                        <p class="text-center mt-3">You've mastered all the networking challenges in our database. Check back later for new challenges!</p>
+                        
+                        <div class="mt-4">
+                            <h5>Your Achievements:</h5>
+                            <ul>
+                                <li>Completed <strong><?php echo $maxLevel; ?></strong> network challenges</li>
+                                <li>Total score: <strong><?php echo $score; ?></strong> points</li>
+                                <li>Unlocked all networking badges</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <form method="post">
+                            <input type="hidden" name="action" value="reset_game">
+                            <button type="submit" class="btn btn-outline-danger">Reset Game</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Hidden form for device click connections -->
+        <form id="clickConnectionForm" method="post" style="display: none;">
+            <input type="hidden" name="action" value="connect">
+            <input type="hidden" id="clickSourceDevice" name="source" value="">
+            <input type="hidden" id="clickTargetDevice" name="target" value="">
+        </form>
+        
+        <!-- Add Challenge Modal -->
+        <?php if ($isAdmin): ?>
+        <div class="modal fade" id="addChallengeModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Network Challenge</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="addChallengeForm" method="post" action="add_challenge.php">
+                            <input type="hidden" name="challenge_type" value="networking">
+                            <div class="mb-3">
+                                <label for="challenge_name" class="form-label">Challenge Name</label>
+                                <input type="text" class="form-control" id="challenge_name" name="challenge_name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description</label>
+                                <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="difficulty" class="form-label">Difficulty</label>
+                                    <select class="form-select" id="difficulty" name="difficulty" required>
+                                        <option value="Easy">Easy</option>
+                                        <option value="Medium">Medium</option>
+                                        <option value="Hard">Hard</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="xp_value" class="form-label">XP Value</label>
+                                    <input type="number" class="form-control" id="xp_value" name="xp_value" min="10" max="500" value="100" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="network_diagram" class="form-label">Network Diagram (JSON)</label>
+                                <textarea class="form-control" id="network_diagram" name="network_diagram" rows="5" placeholder='{"nodes":[{"id":"device1","type":"computer","x":100,"y":100},{"id":"router","type":"router","x":300,"y":100}],"connections":[{"source":"device1","target":"router"}]}'></textarea>
+                                <small class="form-text text-muted">Define the network topology as JSON with nodes and expected connections</small>
+                            </div>
+                            <div class="mb-3">
+                                <label for="expected_solution" class="form-label">Expected Solution (JSON)</label>
+                                <textarea class="form-control" id="expected_solution" name="expected_solution" rows="3" placeholder='[{"source":"device1","target":"router"},{"source":"device2","target":"router"}]'></textarea>
+                                <small class="form-text text-muted">Define the expected connections as a JSON array</small>
+                            </div>
+                            <div class="text-end">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Save Challenge</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
         <?php endif; ?>
-    </div>
-    
-    <!-- Level Complete Modal -->
-    <div class="modal fade" id="levelCompleteModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Level Complete!</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Congratulations! You've successfully completed level <?php echo $currentLevel; ?>.</p>
-                    <p>Points earned: <?php echo isset($levelData['points']) ? $levelData['points'] : 0; ?></p>
-                </div>
-                <div class="modal-footer">
-                    <form method="post">
-                        <input type="hidden" name="action" value="next_level">
-                        <button type="submit" class="btn btn-primary">Next Level</button>
-                    </form>
-                </div>
-            </div>
-        </div>
     </div>
     
     <!-- Bootstrap JS -->
@@ -753,19 +1397,114 @@
             });
         }
         
+        // Initialize click-to-connect functionality
+        function initClickToConnect() {
+            const devices = document.querySelectorAll('.device');
+            const connectionIndicator = document.getElementById('connectionModeIndicator');
+            const connectionForm = document.getElementById('clickConnectionForm');
+            const sourceInput = document.getElementById('clickSourceDevice');
+            const targetInput = document.getElementById('clickTargetDevice');
+            
+            // Track connection state
+            let isConnecting = false;
+            let selectedDevice = null;
+            
+            // Add click handler to each device
+            devices.forEach(device => {
+                device.addEventListener('click', function() {
+                    const deviceId = this.getAttribute('data-device-id');
+                    
+                    // If not in connection mode, start connection mode
+                    if (!isConnecting) {
+                        // Clear any previous selections
+                        devices.forEach(d => d.classList.remove('selected'));
+                        
+                        // Mark this device as selected
+                        this.classList.add('selected');
+                        selectedDevice = deviceId;
+                        
+                        // Show connection mode indicator
+                        connectionIndicator.classList.add('active');
+                        
+                        // Set as source in the form
+                        sourceInput.value = deviceId;
+                        
+                        // Update dropdown in the manual form for visual consistency
+                        const sourceDropdown = document.getElementById('sourceSelect');
+                        if (sourceDropdown) {
+                            sourceDropdown.value = deviceId;
+                        }
+                        
+                        // Start connection mode
+                        isConnecting = true;
+                    } 
+                    // If we're already in connection mode and user clicks a different device, complete the connection
+                    else if (deviceId !== selectedDevice) {
+                        // Set as target in the form
+                        targetInput.value = deviceId;
+                        
+                        // Exit connection mode
+                        isConnecting = false;
+                        connectionIndicator.classList.remove('active');
+                        devices.forEach(d => d.classList.remove('selected'));
+                        
+                        // Submit the connection
+                        connectionForm.submit();
+                    }
+                    // If user clicks the same device again, cancel connection mode
+                    else {
+                        isConnecting = false;
+                        this.classList.remove('selected');
+                        connectionIndicator.classList.remove('active');
+                    }
+                });
+            });
+            
+            // Allow user to cancel connection mode by clicking anywhere in the network area
+            const networkArea = document.getElementById('networkArea');
+            networkArea.addEventListener('click', function(e) {
+                // Only cancel if clicking the background (not a device)
+                if (e.target === this && isConnecting) {
+                    isConnecting = false;
+                    devices.forEach(d => d.classList.remove('selected'));
+                    connectionIndicator.classList.remove('active');
+                }
+            });
+        }
+        
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             drawConnections();
-            
-            // Show level complete modal if needed
+            initClickToConnect();
+        });
+        
+        // Redraw connections on window resize
+        window.addEventListener('resize', drawConnections);
+        
+        window.addEventListener('load', function() {
             <?php if ($gameCompleted): ?>
+            // Level complete - show modal
             const levelCompleteModal = new bootstrap.Modal(document.getElementById('levelCompleteModal'));
             levelCompleteModal.show();
             <?php endif; ?>
         });
         
-        // Redraw connections on window resize
-        window.addEventListener('resize', drawConnections);
+        <?php if ($isAdmin): ?>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('add-challenge-btn').addEventListener('click', function() {
+                var addChallengeModal = new bootstrap.Modal(document.getElementById('addChallengeModal'));
+                addChallengeModal.show();
+            });
+        });
+        <?php endif; ?>
+        
+        // Show all levels complete modal if all levels are completed
+        window.addEventListener('load', function() {
+            <?php if ($allLevelsCompleted): ?>
+            const allCompletedModal = new bootstrap.Modal(document.getElementById('allCompletedModal'));
+            allCompletedModal.show();
+            <?php endif; ?>
+        });
     </script>
 </body>
 </html>
