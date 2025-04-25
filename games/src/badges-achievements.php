@@ -732,8 +732,16 @@
     <!-- Main Content -->
     <div class="main-content">
         <div class="container-fluid py-4">
-            <h1 class="mb-4">Badges & Achievements</h1>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="mb-0">Badges & Achievements</h1>
             
+            <?php if($_SESSION['role'] === 'ADMIN'): ?>
+            <a href="generate-badges" class="btn btn-lg btn-outline-primary btn-sm d-inline-flex align-items-center gap-1">
+                <i class="bi bi-gear-fill"></i>Badge Manager
+            </a>
+            <?php endif; ?>
+            </div>
+
             <!-- Achievement Stats -->
             <div class="row mb-4">
                 <div class="col-md-4">

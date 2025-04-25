@@ -450,8 +450,6 @@
                 <option value="cpp">C++</option>
                 <option value="java">Java</option>
                 <option value="python">Python</option>
-                <option value="csharp">C#</option>
-                <option value="ruby">Ruby</option>
             </select>
         </div>
         <div class="button-group">
@@ -661,8 +659,19 @@
                                     <td>
                                         <button class="btn btn-sm btn-danger delete-challenge-btn" 
                                                 data-challenge-id="<?php echo $challenge['challenge_id']; ?>"
-                                                data-challenge-name="<?php echo htmlspecialchars($challenge['name']); ?>">
-                                             <i class="bi bi-trash"></i> Delete
+                                                data-challenge-name="<?php echo htmlspecialchars($challenge['name']); ?>" title="Delete">
+                                             <i class="bi bi-trash"></i> 
+                                        </button>
+                                        <button class="btn btn-sm btn-primary update-challenge-btn"
+                                                data-challenge-id="<?php echo $challenge['challenge_id']; ?>"
+                                                data-challenge-name="<?php echo htmlspecialchars($challenge['name']); ?>"
+                                                data-challenge-description="<?php echo htmlspecialchars($challenge['description']); ?>"
+                                                data-challenge-starter-code="<?php echo htmlspecialchars($challenge['starter_code'] ?? ''); ?>"
+                                                data-challenge-expected-output="<?php echo htmlspecialchars($challenge['expected_output']); ?>"
+                                                data-challenge-xp="<?php echo $challenge['xp_value']; ?>"
+                                                data-challenge-difficulty="<?php echo $challenge['difficulty_id']; ?>"
+                                                title="Update">
+                                            <i class="bi bi-pencil"></i> 
                                         </button>
                                     </td>
                                 </tr>
@@ -693,6 +702,61 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" id="close-delete-confirm-modal">Cancel</button>
                     <button type="button" class="btn btn-danger" id="confirm-delete">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Challenge Modal -->
+    <div class="modal" id="updateChallengeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Update Coding Challenge</h5>
+                    <button type="button" class="btn-close" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="updateChallengeForm" method="post" action="update_challenge">
+                        <input type="hidden" name="challenge_id" id="update_challenge_id">
+                        <input type="hidden" name="challenge_type" value="programming">
+                        <div class="mb-3">
+                            <label for="update_challenge_name" class="form-label">Challenge Name</label>
+                            <input type="text" class="form-control" id="update_challenge_name" name="challenge_name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="update_description" class="form-label">Description (Max 500 characters)</label>
+                            <textarea class="form-control" id="update_description" name="description" rows="3" maxlength="500" required></textarea>
+                            <small class="text-muted" id="update-description-counter">0/500 characters</small>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="update_difficulty" class="form-label">Difficulty</label>
+                                <select class="form-select" id="update_difficulty" name="difficulty" required>
+                                    <option value="1">Easy</option>
+                                    <option value="2">Medium</option>
+                                    <option value="3">Hard</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="update_xp_value" class="form-label">XP Value</label>
+                                <input type="number" class="form-control" id="update_xp_value" name="xp_value" min="10" max="500" value="100" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="update_starter_code" class="form-label">Starter Code (Comments/Hints)</label>
+                            <textarea class="form-control" id="update_starter_code" name="starter_code" rows="5" placeholder="// Write your code here&#10;// Hint: This is what you need to do"></textarea>
+                            <small class="text-muted">Include comments to help users understand what they need to do</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="update_expected_output" class="form-label">Expected Output</label>
+                            <textarea class="form-control" id="update_expected_output" name="expected_output" rows="3" placeholder="Exact output that will be used to validate the solution" required></textarea>
+                            <small class="text-muted">This will be checked against user submissions for all programming languages</small>
+                        </div>
+                        <div class="text-end">
+                            <button type="button" class="btn btn-secondary" id="close-update-challenge-modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -776,7 +840,7 @@
             }
             
             // Register click handlers for all close buttons
-            document.querySelectorAll('.btn-close, #close-challenge-modal, #close-add-challenge-modal, #close-delete-confirm-modal').forEach(function(button) {
+            document.querySelectorAll('.btn-close, #close-challenge-modal, #close-add-challenge-modal, #close-delete-confirm-modal, #close-update-challenge-modal').forEach(function(button) {
                 button.addEventListener('click', function() {
                     var modal = this.closest('.modal');
                     if (modal) {
@@ -806,6 +870,37 @@
                     
                     // Show the delete confirmation modal
                     showModal('deleteConfirmModal');
+                }
+                
+                // Check if clicked element is an update button or its child
+                var updateButton = e.target.closest('.update-challenge-btn');
+                if (updateButton) {
+                    // Get challenge data from button attributes
+                    var challengeId = updateButton.getAttribute('data-challenge-id');
+                    var challengeName = updateButton.getAttribute('data-challenge-name');
+                    var challengeDescription = updateButton.getAttribute('data-challenge-description');
+                    var challengeStarterCode = updateButton.getAttribute('data-challenge-starter-code');
+                    var challengeExpectedOutput = updateButton.getAttribute('data-challenge-expected-output');
+                    var challengeXp = updateButton.getAttribute('data-challenge-xp');
+                    var challengeDifficulty = updateButton.getAttribute('data-challenge-difficulty');
+                    
+                    // Populate the update form with challenge data
+                    document.getElementById('update_challenge_id').value = challengeId;
+                    document.getElementById('update_challenge_name').value = challengeName;
+                    document.getElementById('update_description').value = challengeDescription;
+                    document.getElementById('update_starter_code').value = challengeStarterCode;
+                    document.getElementById('update_expected_output').value = challengeExpectedOutput;
+                    document.getElementById('update_xp_value').value = challengeXp;
+                    document.getElementById('update_difficulty').value = challengeDifficulty;
+                    
+                    // Update the character counter
+                    var updateDescriptionCounter = document.getElementById('update-description-counter');
+                    if (updateDescriptionCounter) {
+                        updateDescriptionCounter.textContent = challengeDescription.length + '/500 characters';
+                    }
+                    
+                    // Show the update challenge modal
+                    showModal('updateChallengeModal');
                 }
             });
             
@@ -857,6 +952,44 @@
                 });
             }
             
+            // Handle update form submission
+            document.getElementById('updateChallengeForm').addEventListener('submit', function(event) {
+                event.preventDefault();
+                
+                // Get form data
+                var formData = new FormData(this);
+                
+                // Send update request
+                fetch('<?php echo BASE; ?>games/src/update_challenge.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('Server responded with status: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(function(data) {
+                    if (data.success) {
+                        // Show success message
+                        alert('Challenge updated successfully!');
+                        
+                        // Close the update modal
+                        hideModal('updateChallengeModal');
+                        
+                        // Refresh the page to show updated data
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Error:', error);
+                    alert('An error occurred: ' + error.message);
+                });
+            });
+            
             // Add character counter functionality for description field
             var descriptionArea = document.getElementById('description');
             var counter = document.getElementById('description-counter');
@@ -870,6 +1003,23 @@
                         counter.classList.add('text-danger');
                     } else {
                         counter.classList.remove('text-danger');
+                    }
+                });
+            }
+            
+            // Add character counter functionality for update description field
+            var updateDescriptionArea = document.getElementById('update_description');
+            var updateCounter = document.getElementById('update-description-counter');
+            
+            if (updateDescriptionArea && updateCounter) {
+                updateDescriptionArea.addEventListener('input', function() {
+                    var count = this.value.length;
+                    updateCounter.textContent = count + '/500 characters';
+                    
+                    if (count > 500) {
+                        updateCounter.classList.add('text-danger');
+                    } else {
+                        updateCounter.classList.remove('text-danger');
                     }
                 });
             }

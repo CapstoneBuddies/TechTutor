@@ -53,7 +53,7 @@ if (typeof window.monacoAlreadyInitialized === 'undefined') {
     require(['vs/editor/editor.main'], function () {
         // Language starters
         const languageStarters = {
-            php: (currentChallenge?.starter_code) || `<?php
+            php: `<?php \n\n ${(currentChallenge.starter_code)} \n\n ?>` || `<?php
     // Write your PHP code here
     
 ?>`,

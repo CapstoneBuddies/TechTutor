@@ -53,6 +53,7 @@ RewriteRule ^(.+)/$ %1 [R=301,L]
 RewriteRule ^help$ pages/help_center.php [L]
 RewriteRule ^sent$ backends/contact_handler.php [L]
 RewriteRule ^game$ games/index.php [L]
+RewriteRule ^game/generate-badges$ games/automation/badge_manager.php [QSA,L]
 
 # Game sub-paths routing
 RewriteRule ^game/codequest$ games/src/game_coding.php [QSA,L]

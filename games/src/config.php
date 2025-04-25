@@ -25,6 +25,7 @@ try {
 define('GAME_ROOT_PATH', __DIR__);
 define('GAME_ASSETS_PATH', GAME_ROOT_PATH . '/assets');
 define('GAME_CHALLENGES_PATH', GAME_ROOT_PATH . '/challenges');
+define('JUDGE0_API_KEY', $_ENV['JUDGE0_API_KEY']);
 
 // Points and scoring configuration
 define('DIFFICULTY_MULTIPLIER', 1.5);  // Points get multiplied by difficulty level * this value
@@ -33,9 +34,9 @@ define('TIME_BONUS_POINTS', 25);       // Bonus points for completing under the 
 
 // User session verification
 function isUserLoggedIn() {
-    return isset($_SESSION['user_id']) && !empty($_SESSION['user_id']);
+    return isset($_SESSION['user']) && !empty($_SESSION['user']);
 }
 
 function getUserId() {
-    return $_SESSION['user_id'] ?? null;
+    return $_SESSION['user'] ?? null;
 }

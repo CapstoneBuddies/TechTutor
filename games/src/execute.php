@@ -1,288 +1,268 @@
 <?php
-    // Reduce execution time to prevent server timeouts
-    ini_set('max_execution_time', 5); // Limit execution to 5 seconds
-    set_time_limit(5);
-    
-    // Set memory limit to prevent excessive memory usage
-    ini_set('memory_limit', '64M');
-    
-    // Turn off output buffering to send data as it's generated
-    ob_implicit_flush(true);
-    ob_end_flush();
-    
-    // Set proper headers for JSON response to prevent fetch errors
-    header('Content-Type: application/json');
-    header('Cache-Control: no-cache, must-revalidate');
-    
-    include 'config.php';
-    include 'challenges.php';
-    // Include XP manager if file exists
-    if (file_exists(__DIR__.'/xp_manager.php')) {
-        include 'xp_manager.php';
-    }
-    
-    // Start session if not already started
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+/**
+ * Code Execution Script
+ * 
+ * This file handles code execution requests using Judge0 API
+ * It receives code from the client, sends it to Judge0 for processing,
+ * and returns the results
+ */
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    try {
-        // Get the submitted code, challenge ID, and language - use simple defaults
-        $code = $_POST['code'] ?? '';
-        $challengeId = (int)($_POST['challenge_id'] ?? 1);
-        $language = $_POST['language'] ?? 'php';
-        
-        // Get current user ID from session or use a default
-        $userId = $_SESSION['game'] ?? 1;
+// Include necessary configuration
+include 'config.php';
+include 'challenges.php';
 
-        // Get challenge details - simplified query with LIMIT for performance
-        $selectedChallenge = null;
-        
-        try {
-            $stmt = $pdo->prepare("SELECT * FROM game_challenges WHERE challenge_id = ? LIMIT 1");
-            $stmt->execute([$challengeId]);
-            $selectedChallenge = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            // If not found, try the challenges array
-            if (!$selectedChallenge && !empty($challenges)) {
-                foreach ($challenges as $challenge) {
-                    if ($challenge['id'] == $challengeId || $challenge['challenge_id'] == $challengeId) {
-                        $selectedChallenge = $challenge;
-                        $selectedChallenge['challenge_id'] = $selectedChallenge['id'] ?? $selectedChallenge['challenge_id'];
-                        $selectedChallenge['challenge_name'] = $selectedChallenge['name'] ?? $selectedChallenge['challenge_name'];
-                        $selectedChallenge['challenge_type'] = $selectedChallenge['challenge_type'] ?? 'Coding';
-                        break;
-                    }
-                }
-            }
-        } catch (PDOException $e) {
-            log_error("Failed to get challenge details: " . $e->getMessage());
-        }
+// Set headers for JSON response
+header('Content-Type: application/json');
 
-        if (!$selectedChallenge && !empty($challenges)) {
-            $selectedChallenge = $challenges[0];
-            $selectedChallenge['challenge_id'] = $selectedChallenge['id'] ?? 1;
-            $selectedChallenge['challenge_name'] = $selectedChallenge['name'] ?? 'Challenge';
-            $selectedChallenge['challenge_type'] = $selectedChallenge['challenge_type'] ?? 'Coding';
-        }
-
-        $expectedOutput = $selectedChallenge['expected_output'] ?? 'hello world';
-        $challengeName = $selectedChallenge['challenge_name'] ?? ($selectedChallenge['name'] ?? 'Challenge');
-        
-        // Process code based on language - OPTIMIZED for speed
-        $output = '';
-        $executionError = false;
-        
-        // FASTER PHP EXECUTION - don't use temp files or eval
-        if ($language === 'php') {
-            // Extract expected output from code without executing
-            if (strpos($code, $expectedOutput) !== false) {
-                // If code contains the expected output string, we can consider it correct
-                $output = $expectedOutput;
-            } else {
-                // Check if they're printing the expected output
-                if (preg_match('/echo\s+[\'"]([^\'"]+)[\'"];?/i', $code, $matches) ||
-                    preg_match('/echo\s*\(\s*[\'"]([^\'"]+)[\'"].*?\);?/i', $code, $matches) ||
-                    preg_match('/print\s+[\'"]([^\'"]+)[\'"];?/i', $code, $matches) ||
-                    preg_match('/print\s*\(\s*[\'"]([^\'"]+)[\'"].*?\);?/i', $code, $matches)) {
-                    $output = $matches[1];
-                } else {
-                    // Check for variable output
-                    $varMatch = preg_match('/echo\s+\$(\w+);?/i', $code, $varMatches);
-                    if ($varMatch && preg_match('/\$' . $varMatches[1] . '\s*=\s*[\'"]([^\'"]+)[\'"];?/i', $code, $valueMatches)) {
-                        $output = $valueMatches[1];
-                    } else {
-                        // Look for any direct occurrences of expected output
-                        if (stripos($code, $expectedOutput) !== false) {
-                            $output = $expectedOutput;
-                        } else {
-                            $output = "Echo or print your output to see results";
-                        }
-                    }
-                }
-            }
-        }
-        // JAVASCRIPT EXECUTION - simplified
-        else if ($language === 'javascript') {
-            // Simple pattern matching for console.log
-            if (preg_match('/console\.log\s*\(\s*[\'"]([^\'"]+)[\'"].*?\)/i', $code, $matches)) {
-                $output = $matches[1];
-            } else if (strpos($code, $expectedOutput) !== false) {
-                $output = $expectedOutput;
-            } else {
-                $output = "Use console.log() to see output";
-            }
-        }
-        // PYTHON EXECUTION - simplified
-        else if ($language === 'python') {
-            // Pattern matching for print statements
-            if (preg_match('/print\s*\(\s*[\'"]([^\'"]+)[\'"].*?\)/i', $code, $matches)) {
-                $output = $matches[1];
-            } else if (strpos($code, $expectedOutput) !== false) {
-                $output = $expectedOutput;
-            } else {
-                $output = "Use print() to see output";
-            }
-        }
-        // OTHER LANGUAGES - just check for expected output presence
-        else {
-            if (strpos($code, $expectedOutput) !== false) {
-                $output = $expectedOutput;
-            } else {
-                $output = "Simulated execution - " . strtoupper($language);
-            }
-        }
-        
-        // Determine if the solution is correct
-        $solved = trim($output) === trim($expectedOutput);
-        $xpEarned = 0;
-        $alreadyCompleted = false;
-        $xpResult = null;
-        
-        // Only process XP and badges if the solution is correct
-        if ($solved) {
-            try {
-                // Check if already completed - OPTIMIZED with single query
-                try {
-                    $stmt = $pdo->prepare(
-                        "SELECT EXISTS(
-                            SELECT 1 FROM game_user_progress 
-                            WHERE user_id = ? AND challenge_id = ? AND score > 0
-                        ) AS completed"
-                    );
-                    $stmt->execute([$userId, $challengeId]);
-                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                    $alreadyCompleted = $result && $result['completed'];
-                } catch (PDOException $e) {
-                    // Fallback to game_history
-                    try {
-                        $stmt = $pdo->prepare(
-                            "SELECT EXISTS(
-                                SELECT 1 FROM game_history 
-                                WHERE user_id = ? AND challenge_name = ? AND result = 'Solved'
-                            ) AS completed"
-                        );
-                        $stmt->execute([$userId, $challengeName]);
-                        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                        $alreadyCompleted = $result && $result['completed'];
-                    } catch (PDOException $e2) {
-                        log_error("Error checking completion: " . $e2->getMessage());
-                    }
-                }
-                
-                // If not already completed, award XP and record completion
-                if (!$alreadyCompleted) {
-                    // Calculate XP
-                    $xpValue = $selectedChallenge['xp_value'] ?? 10;
-                    $difficulty = $selectedChallenge['difficulty'] ?? 'normal';
-                    
-                    // Simplify difficulty adjustment
-                    if ($difficulty === 'easy') $xpValue = max(5, $xpValue);
-                    if ($difficulty === 'hard') $xpValue = max(15, $xpValue);
-                    
-                    $xpEarned = $xpValue;
-                    
-                    // Record completion - OPTIMIZED with single query
-                    try {
-                        if ($pdo->query("SHOW TABLES LIKE 'game_user_progress'")->rowCount() > 0) {
-                            // Only attempt INSERT ON DUPLICATE KEY UPDATE to reduce queries
-                            $stmt = $pdo->prepare(
-                                "INSERT INTO game_user_progress 
-                                 (user_id, challenge_id, score, time_taken, completed_at) 
-                                 VALUES (?, ?, ?, 0, NOW()) 
-                                 ON DUPLICATE KEY UPDATE 
-                                 score = VALUES(score), completed_at = NOW()"
-                            );
-                            $stmt->execute([$userId, $challengeId, $xpEarned]);
-                        } else {
-                            // Simple insert into game_history
-                            $stmt = $pdo->prepare(
-                                "INSERT INTO game_history 
-                                 (user_id, challenge_name, result, xp_earned, timestamp) 
-                                 VALUES (?, ?, 'Solved', ?, NOW())"
-                            );
-                            $stmt->execute([$userId, $challengeName, $xpEarned]);
-                        }
-                    } catch (PDOException $e) {
-                        log_error("Error recording completion: " . $e->getMessage());
-                    }
-                    
-                    // Use XP manager function if available (fastest option)
-                    if (function_exists('addUserXP')) {
-                        try {
-                            $xpResult = addUserXP($userId, $xpEarned);
-                        } catch (Exception $e) {
-                            log_error("XP manager error: " . $e->getMessage());
-                            
-                            // Fallback: Update XP directly (simpler query)
-                            try {
-                                $stmt = $pdo->prepare(
-                                    "INSERT INTO user_xp (user_id, xp, level) 
-                                     VALUES (?, ?, 1) 
-                                     ON DUPLICATE KEY UPDATE 
-                                     xp = xp + ?, level = GREATEST(level, 1)"
-                                );
-                                $stmt->execute([$userId, $xpEarned, $xpEarned]);
-                            } catch (PDOException $e2) {
-                                log_error("XP update error: " . $e2->getMessage());
-                            }
-                        }
-                    }
-                    
-                    // Get user XP info if needed with simple query
-                    if (function_exists('getUserXPInfo')) {
-                        try {
-                            $userXPInfo = getUserXPInfo($userId);
-                        } catch (Exception $e) {
-                            // Just log, don't worry about getting XP info
-                            log_error("Error getting XP info: " . $e->getMessage());
-                        }
-                    }
-                    
-                    // Create badge if solution is correct (simple query)
-                    try {
-                        $insert_query = "INSERT INTO `game_user_badges`(user_id, badge_id) VALUES(?, ?)";
-                        $insert_stmt = $pdo->prepare($insert_query);
-                        $insert_stmt->execute([$userId, $challengeId]);
-                        
-                    } catch (PDOException $e) {
-                        log_error("Badge error: " . $e->getMessage());
-                    }
-                }
-            } catch (Exception $e) {
-                log_error("General processing error: " . $e->getMessage());
-            }
-        }
-        
-        // Return a lightweight response - minimal JSON data
-        echo json_encode([
-            'output' => $output,
-            'solved' => $solved,
-            'expected' => $expectedOutput,
-            'challenge_id' => $challengeId,
-            'xp_earned' => $xpEarned,
-            'already_earned' => $alreadyCompleted,
-            'language' => $language
-        ], JSON_PARTIAL_OUTPUT_ON_ERROR);
-        
-    } catch (Exception $e) {
-        // Simple error response
-        echo json_encode([
-            'output' => 'Processing error',
-            'solved' => false,
-            'error' => true,
-            'message' => $e->getMessage()
-        ]);
-        
-        log_error("Code execution error: " . $e->getMessage());
-    }
-} else {
-    // Handle non-POST requests
+// Check if this is a POST request
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode([
-        'output' => 'Invalid request method',
-        'solved' => false,
-        'error' => true
+        'success' => false,
+        'error' => 'Invalid request method. Only POST is supported.'
     ]);
+    exit;
 }
-?>
+
+// Get the submitted code, challenge ID, and language
+$code = isset($_POST['code']) ? $_POST['code'] : '';
+$challengeId = isset($_POST['challenge_id']) ? intval($_POST['challenge_id']) : 0;
+$language = isset($_POST['language']) ? $_POST['language'] : 'php';
+
+// Validate inputs
+if (empty($code)) {
+    echo json_encode([
+        'success' => false,
+        'error' => 'No code provided.'
+    ]);
+    exit;
+}
+
+if ($challengeId <= 0) {
+    echo json_encode([
+        'success' => false,
+        'error' => 'Invalid challenge ID.'
+    ]);
+    exit;
+}
+
+// Get the challenge details
+$challenge = getChallengeById($challengeId);
+if (!$challenge) {
+    echo json_encode([
+        'success' => false,
+        'error' => 'Challenge not found.'
+    ]);
+    exit;
+}
+
+// Extract challenge content data
+$contentData = json_decode($challenge['content'], true);
+$expectedOutput = isset($contentData['expected_output']) ? $contentData['expected_output'] : '';
+
+// Map frontend language names to Judge0 language IDs
+$languageMap = [
+    'php' => 68,       // PHP 7.4
+    'javascript' => 63, // JavaScript (Node.js 12.14.0)
+    'cpp' => 54,       // C++ (GCC 9.2.0)
+    'java' => 62,      // Java (OpenJDK 13.0.1)
+    'python' => 71,    // Python 3.8.1
+    'csharp' => 51,    // C# (Mono 6.6.0.161)
+    'ruby' => 72       // Ruby 2.7.0
+];
+
+// Check if language is supported
+if (!isset($languageMap[$language])) {
+    echo json_encode([
+        'success' => false,
+        'error' => 'Unsupported programming language.'
+    ]);
+    exit;
+}
+
+// Configure Judge0 API parameters
+$judge0LangId = $languageMap[$language];
+$judge0Url = 'https://judge0-ce.p.rapidapi.com';
+$apiKey = JUDGE0_API_KEY; // From config file
+
+// Prepare the API request to submit code
+$submitUrl = $judge0Url . '/submissions';
+$submitHeaders = [
+    'X-RapidAPI-Key: ' . $apiKey,
+    'X-RapidAPI-Host: judge0-ce.p.rapidapi.com',
+    'Content-Type: application/json'
+];
+
+$submitData = json_encode([
+    'language_id' => $judge0LangId,
+    'source_code' => $code,
+    'stdin' => isset($contentData['input_data']) ? $contentData['input_data'] : '',
+    'expected_output' => $expectedOutput
+]);
+
+// Initialize cURL session for submission
+$ch = curl_init($submitUrl);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, $submitHeaders);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $submitData);
+// Execute the API call
+$response = curl_exec($ch);
+
+// Check for cURL errors
+if (curl_errno($ch)) {
+    echo json_encode([
+        'success' => false,
+        'error' => 'API request error: ' . curl_error($ch)
+    ]);
+    curl_close($ch);
+    exit;
+}
+
+curl_close($ch);
+$responseData = json_decode($response, true);
+
+// If we don't get a token, there was an error
+if (!isset($responseData['token'])) {
+    echo json_encode([
+        'success' => false,
+        'error' => 'Failed to submit code to execution API.',
+        'api_response' => $responseData
+    ]);
+    exit;
+}
+
+$token = $responseData['token'];
+// Prepare to poll for results
+$getResultUrl = $judge0Url . '/submissions/' . $token;
+$getResultHeaders = [
+    'X-RapidAPI-Key: ' . $apiKey,
+    'X-RapidAPI-Host: judge0-ce.p.rapidapi.com'
+];
+
+// Poll for results (with a timeout)
+$maxAttempts = 10;
+$interval = 1; // seconds
+$attempt = 0;
+$result = null;
+
+while ($attempt < $maxAttempts) {
+    // Wait before polling
+    sleep($interval);
+    $attempt++;
+    
+    // Initialize cURL session for getting results
+    $ch = curl_init($getResultUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $getResultHeaders);
+    
+    // Execute the API call
+    $resultResponse = curl_exec($ch);
+
+    // Check for cURL errors
+    if (curl_errno($ch)) {
+        continue; // Try again
+    }
+    
+    curl_close($ch);
+    $result = json_decode($resultResponse, true);
+    
+    // If the code has finished processing, break the loop
+    if (isset($result['status']) && $result['status']['id'] >= 3) {
+        break;
+    }
+}
+
+// If we couldn't get a result after max attempts
+if (!$result || !isset($result['status'])) {
+    echo json_encode([
+        'success' => false,
+        'error' => 'Timed out waiting for execution results.'
+    ]);
+    exit;
+}
+
+// Decode the response data
+$stdout = isset($result['stdout']) ? $result['stdout'] : '';
+$stderr = isset($result['stderr']) ? $result['stderr'] : '';
+$compile_output = isset($result['compile_output']) ? $result['compile_output'] : '';
+$statusId = $result['status']['id'];
+$statusDescription = $result['status']['description'];
+
+// Determine if the solution is correct (output matches expected)
+$isCorrect = false;
+$executionTime = $result['time'] ?? 0;
+
+// Normalize both outputs (trim whitespace, normalize line endings)
+$normalizedStdout = preg_replace('/\s+/', ' ', trim($stdout));
+$normalizedExpected = preg_replace('/\s+/', ' ', trim($expectedOutput));
+
+if ($statusId == 3) { // Status 3 = Accepted
+    $isCorrect = ($normalizedStdout == $normalizedExpected);
+}
+
+// Record completion if correct
+$alreadyEarned = false;
+$xpEarned = 0;
+
+if ($isCorrect && isset($_SESSION['game'])) {
+    $userId = $_SESSION['game'];
+    
+    // Calculate score based on challenge difficulty
+    $difficultyLevel = $challenge['difficulty_id'] ?? 1;
+    $basePoints = $challenge['xp_value'] ?? 100;
+    $score = $basePoints * ($difficultyLevel * DIFFICULTY_MULTIPLIER);
+    
+    // Add time bonus if applicable
+    if ($executionTime < TIME_BONUS_THRESHOLD) {
+        $score += TIME_BONUS_POINTS;
+    }
+    
+    // Check if already completed
+    $checkStmt = $pdo->prepare("SELECT `progress_id`, `score` FROM `game_user_progress` WHERE `user_id` = :user_id AND `challenge_id` = :challenge_id");
+    $checkStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+    $checkStmt->bindParam(':challenge_id', $challengeId, PDO::PARAM_INT);
+    $checkStmt->execute();
+    
+    if ($checkStmt->rowCount() > 0) {
+        $existingProgress = $checkStmt->fetch(PDO::FETCH_ASSOC);
+        $alreadyEarned = true;
+        // Only update if new score is higher
+        if ($score > $existingProgress['score']) {
+            $xpEarned = $score - $existingProgress['score'];
+            recordCompletedChallenge($userId, $challengeId, $score, $executionTime);
+        } else {
+            $xpEarned = 0;
+        }
+    } else {
+        // First time completion
+        $xpEarned = $score;
+        recordCompletedChallenge($userId, $challengeId, $score, $executionTime);
+    }
+}
+
+// Prepare the final response
+$output = '';
+if (!empty($stderr)) {
+    $output = $stderr;
+} else if (!empty($compile_output)) {
+    $output = $compile_output;
+} else {
+    $output = $stdout;
+}
+
+// Return a consistent response format
+echo json_encode([
+    'success' => ($statusId == 3), // Success if execution completed normally
+    'solved' => $isCorrect,        // Used by the frontend
+    'is_correct' => $isCorrect,    // Keep our original field too
+    'already_earned' => $alreadyEarned,
+    'xp_earned' => $xpEarned,
+    'status' => [
+        'id' => $statusId,
+        'description' => $statusDescription
+    ],
+    'output' => $output,
+    'execution_time' => $executionTime,
+    'expected_output' => $expectedOutput,
+    'next_challenge_id' => $isCorrect ? ($challengeId + 1) : $challengeId
+]);
