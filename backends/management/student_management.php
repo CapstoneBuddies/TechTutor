@@ -804,7 +804,7 @@ function checkPendingInvitation($student_id, $class_id) {
 function isWithin24Hours($scheduleId) {
     global $conn;
 
-    $stmt = $conn->prepare("SELECT status_changed_at FROM class_schedule WHERE schedule_id = ? AND status = 'completed' LIMIT 1");
+    $stmt = $conn->prepare("SELECT status_changed_at FROM class_schedule WHERE schedule_id = ? LIMIT 1");
     $stmt->bind_param('i',$scheduleId);
     $stmt->execute();
 
@@ -813,13 +813,17 @@ function isWithin24Hours($scheduleId) {
         $completionDateTime = new DateTime($row['status_changed_at']);
         $completionDateTime->add(new DateInterval('PT24H'));
         $currentDateTime = new DateTime();
-    
+
+        $d1 = $currentDateTime->format('Y-m-d H:i:s');
+        $d2 = $completionDateTime->format('Y-m-d H:i:s');
+
+        log_error($d1.' '.$d2);
+
         if($currentDateTime < $completionDateTime) {
             return true;
         }
         return false;
     }
-    log_error($completionDateTime->format('Y-m-d H:i:s').' Current: '.$currentDateTime->format('Y-m-d H:i:s'));
     return null;
 }
 
