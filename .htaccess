@@ -1,6 +1,9 @@
+lsapi_phpini /home/capstonebuddies/public_html/php.ini
+
 ErrorDocument 404 /pages/error/404.php 
 ErrorDocument 403 /pages/error/403.php  
 ErrorDocument 500 /pages/error/500.php
+
 
 <IfModule mod_headers.c>
     # Allow CORS for all resources (images, JS, CSS, etc.)

@@ -721,7 +721,7 @@
         </a>
         
         <div class="user-info">
-            <img src="<?php echo $_SESSION['profile'] ?>" alt="User Avatar">
+            <img src="<?php log_error(print_r($_SESSION,true));echo $_SESSION['profile']; ?>" alt="User Avatar">
             <div class="user-details">
                 <div class="user-name"><?php echo $_SESSION['name']; ?></div>
                 <div class="user-role">Level <?php echo $userXPInfo['current_level']; ?> - <?php echo getLevelTitle($userXPInfo['current_level']); ?></div>
