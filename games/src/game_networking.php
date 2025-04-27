@@ -25,7 +25,7 @@
     }
 
     // Check if user has admin privileges
-    $isAdmin = isset($_SESSION['role']) && ($_SESSION['role'] === 'TECHGURU' || $_SESSION['role'] === 'ADMIN');
+    $hasPrivilege = isset($_SESSION['role']) && ($_SESSION['role'] === 'TECHGURU' || $_SESSION['role'] === 'ADMIN');
 
     // Get the maximum level number from the database
     try {
@@ -55,6 +55,17 @@
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($_POST['action'])) {
             switch ($_POST['action']) {
+                case 'select_level':
+                    $selectedLevel = intval($_POST['selected_level'] ?? 1);
+                    if ($selectedLevel >= 1 && $selectedLevel <= $maxLevel) {
+                        $_SESSION['network_game']['level'] = $selectedLevel;
+                        // Optionally reset connections and state
+                        $_SESSION['network_game']['connections'] = [];
+                        $_SESSION['network_game']['connection_history'] = [];
+                        $_SESSION['network_game']['devices'] = [];
+                    }
+                    break;
+                
                 case 'connect':
                     $source = $_POST['source'] ?? '';
                     $target = $_POST['target'] ?? '';
@@ -328,6 +339,38 @@
                         'completed_levels' => []
                     ];
                     $message = "Game reset to Level 1";
+                    break;
+                    
+                case 'delete_level':
+                    $deleteLevelNum = intval($_POST['delete_level_num'] ?? 0);
+                    $challengeId = intval($_POST['challenge_id'] ?? 0);
+                    if ($deleteLevelNum > 0 && $challengeId > 0) {
+                        require_once __DIR__ . '/challenges.php';
+                        $challenge = getChallengeById($challengeId);
+                        $canDelete = false;
+                        if ($challenge) {
+                            if ($_SESSION['role'] === 'ADMIN') {
+                                $canDelete = true;
+                            } elseif ($_SESSION['role'] === 'TECHGURU' && isset($challenge['created_by']) && $challenge['created_by'] == $_SESSION['game']) {
+                                $canDelete = true;
+                            }
+                        }
+                        log_error($canDelete);
+                        if ($canDelete) {
+                            $_POST['challenge_id'] = $challengeId;
+                            ob_start();
+                            $deleteResponse = ob_get_clean();
+                            $deleteResult = json_decode($deleteResponse, true);
+                            if ($deleteResult && !empty($deleteResult['success'])) {
+                                $message = "Level $deleteLevelNum deleted successfully.";
+                                $_SESSION['network_game']['level'] = 1;
+                            } else {
+                                $message = "Failed to delete level: " . ($deleteResult['message'] ?? 'Unknown error.');
+                            }
+                        } else {
+                            $message = "You do not have permission to delete this level.";
+                        }
+                    }
                     break;
             }
         }
@@ -706,6 +749,7 @@
     <link href="<?php echo BASE; ?>assets/img/stand_alone_logo.png" rel="icon">
     <link href="<?php echo BASE; ?>assets/img/apple-touch-icon.png" rel="apple-touch-icon">
     <link rel="stylesheet" href="<?php echo BASE; ?>assets/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="<?php echo BASE; ?>assets/vendor/bootstrap-icons/bootstrap-icons.min.css">
     <link rel="stylesheet" href="<?php echo BASE; ?>assets/vendor/fontawesome/css/all.min.css">
     <style>
         body {
@@ -1021,6 +1065,57 @@
             color: #2e7d32;
             font-weight: bold;
         }
+        
+        /* Custom level dropdown styles */
+        .level-dropdown {
+            max-width: 400px;
+        }
+        
+        .level-dropdown .dropdown-toggle {
+            width: 100%;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .level-dropdown .dropdown-toggle::after {
+            margin-left: 0.5em;
+        }
+        
+        .level-dropdown .dropdown-menu {
+            width: 100%;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 0.5rem 0;
+        }
+        
+        .level-dropdown .dropdown-menu li {
+            padding: 0.25rem 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .level-dropdown .dropdown-menu li:last-child {
+            border-bottom: none;
+        }
+        
+        .level-dropdown .dropdown-menu li:hover {
+            background-color: rgba(50, 151, 168, 1);
+        }
+        
+        .level-dropdown .level-text {
+            font-weight: bold;
+            padding: 0.375rem 0;
+            cursor: pointer;
+        }
+        
+        .level-dropdown .level-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
     </style>
 </head>
 <body>
@@ -1031,6 +1126,58 @@
     
     <div class="game-container">
         <h1 class="text-center mb-4">Network Configuration Game</h1>
+        
+        <!-- Level dropdown and info section -->
+        <div class="level-dropdown">
+            <div class="dropdown">
+                <button class="btn btn-outline-primary dropdown-toggle" type="button" id="levelDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span>Level <?php echo $_SESSION['network_game']['level']; ?></span>
+                    <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="levelDropdownBtn">
+                    <?php for ($i = 1; $i <= $maxLevel; $i++):
+                        $challenge = $getNetworkLevel[$i] ?? null;
+                        $isActive = ($_SESSION['network_game']['level'] == $i);
+                    ?>
+                    <li onclick="selectLevel(<?= $i ?>)">
+                        <span class="level-text" data-level="<?= $i ?>" >
+                            Level <?= $i ?>
+                        </span>
+                        <div class="level-buttons">
+                            <?php if ($_SESSION['role'] === 'ADMIN'): ?>
+                            <form method="get" action="update_challenge.php" style="display:inline;">
+                                <input type="hidden" name="challenge_id" value="<?= htmlspecialchars($i) ?>">
+                                <button type="submit" class="btn btn-sm btn-warning" title="Update Level <?= $i ?>">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                            </form>
+                            <?php endif; ?>
+                            
+                            <?php if (($_SESSION['role'] === 'ADMIN' || $_SESSION['role'] === 'TECHGURU')): ?>
+                            <form method="post" style="display:inline;" onsubmit="return confirm('Delete Level <?= $i ?>? This cannot be undone.');">
+                                <input type="hidden" name="action" value="delete_level">
+                                <input type="hidden" name="delete_level_num" value="<?= $i ?>">
+                                <input type="hidden" name="challenge_id" value="<?= htmlspecialchars($i) ?>">
+                                <button type="submit" class="btn btn-sm btn-danger" title="Delete Level <?= $i ?>">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                            <?php endif; ?>
+                        </div>
+                    </li>
+                    <?php endfor; ?>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Add Challenge Button (if admin) -->
+        <?php if ($hasPrivilege): ?>
+        <div class="text-center mb-3">
+            <button id="add-challenge-btn" class="btn btn-success">
+                <i class="fas fa-plus-circle"></i> Add Challenge
+            </button>
+        </div>
+        <?php endif; ?>
         
         <div class="header">
             <div>
@@ -1045,11 +1192,6 @@
             <div class="score">
                 Score: <?php echo $score; ?>
             </div>
-            <?php if ($isAdmin): ?>
-            <button id="add-challenge-btn" class="btn btn-success me-2">
-                <i class="fas fa-plus-circle"></i> Add Challenge
-            </button>
-            <?php endif; ?>
         </div>
         
         <?php if (!empty($message)): ?>
@@ -1303,7 +1445,7 @@
         </form>
         
         <!-- Add Challenge Modal -->
-        <?php if ($isAdmin): ?>
+        <?php if ($hasPrivilege): ?>
         <div class="modal fade" id="addChallengeModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
@@ -1362,6 +1504,30 @@
     <script src="<?php echo BASE; ?>assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     
     <script>
+        // Function to handle level selection from dropdown
+        function selectLevel(level) {
+            // Create and submit a form to select the level
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.style.display = 'none';
+            
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = 'select_level';
+            
+            const levelInput = document.createElement('input');
+            levelInput.type = 'hidden';
+            levelInput.name = 'selected_level';
+            levelInput.value = level;
+            
+            form.appendChild(actionInput);
+            form.appendChild(levelInput);
+            document.body.appendChild(form);
+            
+            form.submit();
+        }
+        
         // Draw connections between devices
         function drawConnections() {
             const connections = document.querySelectorAll('.connection-line');
@@ -1489,7 +1655,7 @@
             <?php endif; ?>
         });
         
-        <?php if ($isAdmin): ?>
+        <?php if ($hasPrivilege): ?>
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('add-challenge-btn').addEventListener('click', function() {
                 var addChallengeModal = new bootstrap.Modal(document.getElementById('addChallengeModal'));

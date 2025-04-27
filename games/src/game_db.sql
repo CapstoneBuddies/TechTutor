@@ -565,3 +565,5 @@ BEGIN
 END$$
 
 DELIMITER ;
+
+UPDATE game_challenges SET badge_image = CONCAT(challenge_type,'/',REPLACE(LOWER(name), ' ', '_'),'.png')

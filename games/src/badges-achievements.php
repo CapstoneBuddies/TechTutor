@@ -842,15 +842,15 @@
                                     if (!empty($badge['badge_image'])) {
                                         // Check if it's a full path or just a filename
                                         if (strpos($badge['badge_image'], '/') === 0 || strpos($badge['badge_image'], 'http') === 0) {
-                                            $imagePath = $badge['badge_image']; // Already a full path
+                                            $imagePath = GAME_IMG.'badges/'.$badge['badge_image']; // Already a full path
                                         } else {
                                             // Check if it's from game_badges or regular badges
                                             $imgFile = GAME_IMG.'badges/'.$badge['badge_image'];
-                                            if (file_exists($imgFile)) {
+                                            if (file_exists(ROOT_PATH.$imgFile)) {
                                                 $imagePath = $imgFile;
                                             } else {
                                                 // Try level badge path
-                                                $imgFile = GAME_IMG.'badges/level/'.$badge['badge_image'];
+                                                $imgFile = GAME_IMG.'badges/'.$badge['badge_image'];
                                                 if (file_exists($imgFile)) {
                                                     $imagePath = $imgFile;
                                                 } else {
@@ -912,7 +912,7 @@
                                 <div class="badge-category <?php echo $badge['game_type']; ?>">
                                     <?php echo ucfirst($badge['game_type']); ?>
                                 </div>
-                                <img src="<?php echo file_exists(GAME_IMG.'badges/'.$badge['image']) ? GAME_IMG.'badges/'.$badge['image'] : GAME_IMG.'badges/goodjob.png'; ?>" alt="<?php echo htmlspecialchars($badge['name']); ?>" class="badge-image">
+                                <img src="<?php echo file_exists(ROOT_PATH.GAME_IMG.'badges/'.$badge['image']) ? GAME_IMG.'badges/'.$badge['image'] : GAME_IMG.'badges/goodjob.png'; ?>" alt="<?php echo htmlspecialchars($badge['name']); ?>" class="badge-image">
                                 <div class="badge-name"><?php echo htmlspecialchars($badge['name']); ?></div>
                                 <div class="badge-date"><?php echo $badge['difficulty']; ?></div>
                                 <div class="badge-tooltip">

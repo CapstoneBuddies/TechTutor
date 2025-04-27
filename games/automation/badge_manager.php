@@ -661,6 +661,14 @@ foreach ($existingBadges as $badge) {
                 <div class="alert alert-info"><?php echo htmlspecialchars($message); ?></div>
                 <?php endif; ?>
             </div>
+                    
+            <div class="row mt-4">
+                <div class="col-12 text-center">
+                    <a href="<?php echo BASE; ?>game/" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Game Dashboard
+                    </a>
+                </div>
+            </div>
         </div>
         
         <div class="row">
@@ -814,14 +822,6 @@ foreach ($existingBadges as $badge) {
                         <?php endif; ?>
                     </div>
                 </div>
-            </div>
-        </div>
-        
-        <div class="row mt-4">
-            <div class="col-12 text-center">
-                <a href="<?php echo BASE; ?>games/" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Back to Game Dashboard
-                </a>
             </div>
         </div>
     </div>
