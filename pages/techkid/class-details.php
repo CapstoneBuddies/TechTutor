@@ -439,6 +439,7 @@
                                                                 <div class="d-flex gap-2">
                                                                     <?php 
                                                                     $time_limit = isWithin24Hours($schedule['schedule_id']);
+                                                                    
                                                                     if (!$hasRated && (!empty($time_limit) && $time_limit)): 
                                                                     ?>
                                                                         <button type="button" 

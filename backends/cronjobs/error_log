@@ -1,0 +1,5 @@
+[27-Apr-2025 04:00:02 UTC] PHP Warning:  Constant ROOT_PATH already defined in /home/capstonebuddies/public_html/backends/config.php on line 8
+[27-Apr-2025 07:00:02 UTC] PHP Warning:  Constant ROOT_PATH already defined in /home/capstonebuddies/public_html/backends/config.php on line 8
+[27-Apr-2025 10:00:03 UTC] PHP Warning:  Constant ROOT_PATH already defined in /home/capstonebuddies/public_html/backends/config.php on line 8
+[27-Apr-2025 13:00:02 UTC] PHP Warning:  Constant ROOT_PATH already defined in /home/capstonebuddies/public_html/backends/config.php on line 8
+[27-Apr-2025 16:00:03 UTC] PHP Warning:  Constant ROOT_PATH already defined in /home/capstonebuddies/public_html/backends/config.php on line 8

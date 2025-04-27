@@ -809,15 +809,12 @@ function isWithin24Hours($scheduleId) {
     $stmt->execute();
 
     $result = $stmt->get_result();
-    if($row = $result->fetch_assoc() && !empty($row['status_changed_at'])) {
+    $row = $result->fetch_assoc();
+    
+    if(!empty($row['status_changed_at'])) {
         $completionDateTime = new DateTime($row['status_changed_at']);
         $completionDateTime->add(new DateInterval('PT24H'));
         $currentDateTime = new DateTime();
-
-        $d1 = $currentDateTime->format('Y-m-d H:i:s');
-        $d2 = $completionDateTime->format('Y-m-d H:i:s');
-
-        log_error($d1.' '.$d2);
 
         if($currentDateTime < $completionDateTime) {
             return true;
