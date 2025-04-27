@@ -117,6 +117,38 @@ try {
             break;
             
         case 'delete-subject':
+            $subjectId = $_POST['subject_id'] ?? '';
+
+            if (!$subjectId) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Subject ID is required']);
+                exit();
+            }
+
+            $conn->begin_transaction();
+            try {
+                // Delete related classes first
+                $stmt = $conn->prepare("DELETE FROM class WHERE subject_id = ?");
+                $stmt->bind_param("i", $subjectId);
+                $stmt->execute();
+
+                // Finally, delete the course
+                $stmt = $conn->prepare("DELETE FROM `subject` WHERE subject_id = ?");
+                $stmt->bind_param("i", $subjectId);
+                $stmt->execute();
+
+                $conn->commit();
+
+                http_response_code(200);
+                echo json_encode(['success' => true, 'message' => 'Subject deleted successfully']);
+                exit();
+            } catch (Exception $e) {
+                $conn->rollback();
+                log_error("Error deleting subject: " . $e->getMessage(),'security');
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Failed to delete subject']);
+                exit();
+            }
             break;
 
         case 'update-subject-cover':
