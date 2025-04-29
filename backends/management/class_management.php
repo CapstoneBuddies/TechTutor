@@ -2468,4 +2468,183 @@ function enrollStudent($studentId, $classId) {
         return ['success' => false, 'message' => $e->getMessage()];
     }
 }
+
+/**
+ * Get comprehensive teaching statistics for a TechGuru
+ * 
+ * @param int $tutor_id The ID of the tutor
+ * @return array Array containing teaching statistics and performance data
+ */
+function getTechGuruStats($tutor_id) {
+    global $conn;
+    
+    try {
+        // Get basic stats
+        $stats = getClassStats($tutor_id);
+        
+        // Get total teaching hours
+        $hours_query = "SELECT 
+                COALESCE(SUM(
+                    TIME_TO_SEC(TIMEDIFF(cs.end_time, cs.start_time))/3600
+                ), 0) as total_hours
+            FROM class_schedule cs
+            JOIN class c ON cs.class_id = c.class_id
+            WHERE c.tutor_id = ? 
+            AND cs.status = 'completed'";
+        
+        $stmt = $conn->prepare($hours_query);
+        $stmt->bind_param("i", $tutor_id);
+        $stmt->execute();
+        $hours_result = $stmt->get_result()->fetch_assoc();
+        $total_hours = round($hours_result['total_hours']);
+        
+        // Get performance trend data (last 6 months)
+        $performance_query = "SELECT 
+                DATE_FORMAT(cs.session_date, '%Y-%m') as date,
+                ROUND(AVG(
+                    CASE 
+                        WHEN sf.rating IS NOT NULL THEN sf.rating * 20 
+                        ELSE 0 
+                    END
+                ), 1) as performance,
+                ROUND(AVG(
+                    COALESCE(
+                        (SELECT COUNT(*) 
+                         FROM attendance a 
+                         WHERE a.schedule_id = cs.schedule_id 
+                         AND a.status = 'present') * 100.0 / 
+                        NULLIF((SELECT COUNT(*) 
+                               FROM enrollments e 
+                               WHERE e.class_id = cs.class_id 
+                               AND e.status = 'active'), 0),
+                        0
+                    )
+                ), 1) as engagement
+            FROM class_schedule cs
+            JOIN class c ON cs.class_id = c.class_id
+            LEFT JOIN session_feedback sf ON cs.schedule_id = sf.session_id
+            WHERE c.tutor_id = ? 
+            AND cs.status = 'completed'
+            AND cs.session_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+            GROUP BY DATE_FORMAT(cs.session_date, '%Y-%m')
+            ORDER BY date ASC";
+        
+        $stmt = $conn->prepare($performance_query);
+        $stmt->bind_param("i", $tutor_id);
+        $stmt->execute();
+        $performance_data = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        
+        // Format dates for display
+        foreach ($performance_data as &$data) {
+            $date_obj = DateTime::createFromFormat('Y-m', $data['date']);
+            $data['date'] = $date_obj->format('M Y');
+        }
+        
+        // If no data, provide sample data for visualization
+        if (empty($performance_data)) {
+            $current_month = new DateTime();
+            $performance_data = [];
+            
+            for ($i = 5; $i >= 0; $i--) {
+                $month = clone $current_month;
+                $month->modify("-$i months");
+                
+                $performance_data[] = [
+                    'date' => $month->format('M Y'),
+                    'performance' => 0,
+                    'engagement' => 0
+                ];
+            }
+        }
+        
+        // Return combined data
+        return [
+            'total_classes' => $stats['total_classes'],
+            'active_classes' => $stats['active_classes'],
+            'completed_classes' => $stats['completed_classes'],
+            'total_students' => $stats['total_students'],
+            'total_hours' => $total_hours,
+            'performance_data' => $performance_data
+        ];
+    } catch (Exception $e) {
+        error_log("Error getting tech guru stats: " . $e->getMessage());
+        return [
+            'total_classes' => 0,
+            'active_classes' => 0,
+            'completed_classes' => 0,
+            'total_students' => 0,
+            'total_hours' => 0,
+            'performance_data' => []
+        ];
+    }
+}
+
+/**
+ * Get class performance data for a TechGuru
+ * 
+ * @param int $tutor_id The ID of the tutor
+ * @return array Array of classes with performance metrics
+ */
+function getClassPerformanceData($tutor_id) {
+    global $conn;
+    
+    try {
+        $query = "SELECT 
+                c.class_id,
+                c.class_name,
+                c.thumbnail,
+                c.start_date,
+                c.status,
+                s.subject_name,
+                COUNT(DISTINCT e.student_id) AS student_count,
+                COALESCE(AVG(
+                    CASE WHEN sf.rating IS NOT NULL THEN sf.rating ELSE NULL END
+                ), 0) as rating,
+                COALESCE(
+                    (SELECT COUNT(*) FROM class_schedule cs 
+                     WHERE cs.class_id = c.class_id AND cs.status = 'completed') * 100.0 / 
+                    NULLIF((SELECT COUNT(*) FROM class_schedule cs 
+                          WHERE cs.class_id = c.class_id), 0),
+                    0
+                ) as completion_rate,
+                COALESCE(
+                    (SELECT AVG(CASE 
+                                  WHEN sf.rating IS NOT NULL THEN sf.rating * 20
+                                  ELSE 60 -- Default value if no ratings
+                                END)
+                     FROM session_feedback sf
+                     JOIN class_schedule cs ON sf.session_id = cs.schedule_id
+                     WHERE cs.class_id = c.class_id),
+                    60 -- Default value if no sessions with feedback
+                ) as avg_performance
+            FROM class c
+            LEFT JOIN subject s ON c.subject_id = s.subject_id
+            LEFT JOIN enrollments e ON c.class_id = e.class_id AND e.status = 'active'
+            LEFT JOIN class_schedule cs ON c.class_id = cs.class_id
+            LEFT JOIN session_feedback sf ON cs.schedule_id = sf.session_id
+            WHERE c.tutor_id = ?
+            GROUP BY c.class_id
+            ORDER BY c.status = 'active' DESC, c.start_date DESC";
+             
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("i", $tutor_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $classes = $result->fetch_all(MYSQLI_ASSOC);
+
+        // Process the results
+        foreach ($classes as &$class) {
+            // Ensure numeric values
+            $class['rating'] = round(floatval($class['rating']), 1);
+            $class['completion_rate'] = round(floatval($class['completion_rate']), 1);
+            $class['avg_performance'] = round(floatval($class['avg_performance']), 1);
+            $class['student_count'] = intval($class['student_count']);
+        }
+
+        return $classes;
+    } catch (Exception $e) {
+        error_log("Error getting class performance data: " . $e->getMessage());
+        return [];
+    }
+}
 ?>

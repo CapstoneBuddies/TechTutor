@@ -616,4 +616,154 @@ class RatingManagement {
             return [];
         }
     }
+
+    /**
+     * Get recent teaching activities for a tutor
+     * 
+     * @param int $tutor_id The ID of the tutor
+     * @param int $limit Number of activities to retrieve (default: 10)
+     * @return array Array of recent activities with details
+     */
+    public function getTutorRecentActivities($tutor_id, $limit = 10) {
+        global $conn;
+        
+        try {
+            $query = "
+                (SELECT 
+                    'session' as activity_type,
+                    'clock-fill' as icon,
+                    'primary' as type_color,
+                    cs.schedule_id as activity_id,
+                    CONCAT('Class session: ', c.class_name) as title,
+                    CONCAT('You completed a session with ', COUNT(DISTINCT a.student_id), ' students') as description,
+                    cs.session_date as activity_date,
+                    CONCAT(
+                        DATE_FORMAT(cs.start_time, '%h:%i %p'), 
+                        ' - ', 
+                        DATE_FORMAT(cs.end_time, '%h:%i %p')
+                    ) as activity_time,
+                    cs.updated_at as timestamp
+                FROM class_schedule cs
+                JOIN class c ON cs.class_id = c.class_id
+                LEFT JOIN attendance a ON cs.schedule_id = a.schedule_id AND a.status = 'present'
+                WHERE c.tutor_id = ? AND cs.status = 'completed'
+                GROUP BY cs.schedule_id
+                ORDER BY cs.session_date DESC, cs.start_time DESC
+                LIMIT 10)
+                
+                UNION
+                
+                (SELECT 
+                    'feedback' as activity_type,
+                    'star-fill' as icon,
+                    'warning' as type_color,
+                    sf.rating_id as activity_id,
+                    CONCAT('New feedback: ', CASE WHEN sf.rating >= 4 THEN 'Excellent' 
+                                             WHEN sf.rating = 3 THEN 'Good' 
+                                             ELSE 'Needs improvement' END) as title,
+                    CONCAT('You received a ', sf.rating, '-star rating from a student') as description,
+                    NULL as activity_date,
+                    NULL as activity_time,
+                    sf.created_at as timestamp
+                FROM session_feedback sf
+                WHERE sf.tutor_id = ?
+                ORDER BY sf.created_at DESC
+                LIMIT 10)
+                
+                UNION
+                
+                (SELECT 
+                    'class' as activity_type,
+                    'mortarboard-fill' as icon,
+                    'success' as type_color,
+                    c.class_id as activity_id,
+                    CONCAT('Class updated: ', c.class_name) as title,
+                    CASE 
+                        WHEN c.status = 'active' THEN 'Class is now active and open for enrollment'
+                        WHEN c.status = 'completed' THEN 'Class has been marked as completed'
+                        ELSE 'Class details were updated'
+                    END as description,
+                    NULL as activity_date,
+                    NULL as activity_time,
+                    c.updated_at as timestamp
+                FROM class c
+                WHERE c.tutor_id = ? AND c.updated_at > DATE_SUB(NOW(), INTERVAL 30 DAY)
+                ORDER BY c.updated_at DESC
+                LIMIT 10)
+                
+                ORDER BY timestamp DESC
+                LIMIT ?";
+            
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param("iiii", $tutor_id, $tutor_id, $tutor_id, $limit);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $activities = $result->fetch_all(MYSQLI_ASSOC);
+            
+            // Process the results
+            foreach ($activities as &$activity) {
+                // Format the timestamp for display
+                $timestamp = new DateTime($activity['timestamp']);
+                $now = new DateTime();
+                $diff = $now->diff($timestamp);
+                
+                if ($diff->days == 0) {
+                    if ($diff->h == 0) {
+                        if ($diff->i == 0) {
+                            $activity['timestamp'] = 'Just now';
+                        } else {
+                            $activity['timestamp'] = $diff->i . ' minute' . ($diff->i > 1 ? 's' : '') . ' ago';
+                        }
+                    } else {
+                        $activity['timestamp'] = $diff->h . ' hour' . ($diff->h > 1 ? 's' : '') . ' ago';
+                    }
+                } else if ($diff->days == 1) {
+                    $activity['timestamp'] = 'Yesterday';
+                } else if ($diff->days < 7) {
+                    $activity['timestamp'] = $diff->days . ' days ago';
+                } else {
+                    $activity['timestamp'] = $timestamp->format('M d, Y');
+                }
+            }
+            
+            return $activities;
+        } catch (Exception $e) {
+            error_log("Error getting tutor recent activities: " . $e->getMessage());
+            return [];
+        }
+    }
+}
+
+/**
+ * Get recent teaching activities for a tutor (non-class wrapper function)
+ * 
+ * @param int $tutor_id The ID of the tutor
+ * @param int $limit Number of activities to retrieve (default: 10)
+ * @return array Array of recent activities with details
+ */
+function getTutorRecentActivities($tutor_id, $limit = 10) {
+    $ratingManager = new RatingManagement();
+    return $ratingManager->getTutorRecentActivities($tutor_id, $limit);
+}
+
+/**
+ * Get rating statistics for a tutor (non-class wrapper function)
+ * 
+ * @param int $tutor_id The ID of the tutor
+ * @return array Rating statistics in the format needed for reports.php
+ */
+function getTutorRatingStats($tutor_id) {
+    $ratingManager = new RatingManagement();
+    $stats = $ratingManager->getTutorRatingStats($tutor_id);
+    
+    // Add distribution array for chart
+    $distribution = [
+        $stats['five_star'],
+        $stats['four_star'],
+        $stats['three_star'],
+        $stats['two_star'],
+        $stats['one_star']
+    ];
+    
+    return array_merge($stats, ['distribution' => $distribution]);
 }

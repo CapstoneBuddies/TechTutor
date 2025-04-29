@@ -31,9 +31,6 @@ ErrorDocument 500 /pages/error/500.php
      # BigBlueButton API hooks endpoint
      RewriteRule ^bigbluebutton/api/hooks(.*)$ backends/handler/meeting_webhook.php [QSA,L]
      
-     # Test endpoint for BBB Webhook
-     RewriteRule ^test-bbb-hooks$ test_bbb_hooks.php [QSA,L]
-     
      # Block the problematic hook/list endpoint that exposes ENV data
      RewriteRule ^hook/list$ - [F,L]
      
@@ -150,6 +147,7 @@ RewriteRule ^dashboard/s/enrollments$ pages/techkid/enrollments.php [L]
 RewriteRule ^dashboard/s/enrollments/class$ pages/techkid/enroll-class.php [L,QSA]
 RewriteRule ^dashboard/s/files$ pages/techkid/files.php [L,QSA]
 RewriteRule ^dashboard/s/schedule$ pages/techkid/schedule.php [L]
+RewriteRule ^dashboard/s/reports$ pages/techkid/reports.php [L]
 
 # ----------------------------------
 # 👨‍🏫 TechGuru (Tutors) Routes
@@ -166,6 +164,7 @@ RewriteRule ^dashboard/t/class/details/files$ pages/techguru/class-files.php [L,
 RewriteRule ^dashboard/t/class/details/analytics$ pages/techguru/analytics.php [L,QSA]
 RewriteRule ^dashboard/t/class/details/recordings$ pages/techguru/recordings.php [L,QSA]
 RewriteRule ^dashboard/t/class/details/feedbacks$ pages/techguru/feedbacks.php [L]
+RewriteRule ^dashboard/t/reports$ pages/techguru/reports.php [L]
 
 #
 RewriteRule ^dashboard/t/class/students$ pages/techguru/students.php [L]
@@ -180,6 +179,7 @@ RewriteRule ^dashboard/a/users$ pages/admin/view-users.php [L]
 RewriteRule ^dashboard/a/users/details$ pages/admin/user-details.php [L,QSA]
 RewriteRule ^dashboard/a/webhooks$ pages/admin/manage-webhooks.php [L]
 RewriteRule ^dashboard/a/status$ pages/admin/transaction-status.php [L]
+RewriteRule ^dashboard/a/reports$ pages/admin/reports.php [L]
 
 RewriteRule ^dashboard/a/certificates$ pages/admin/certificates.php [L]
 RewriteRule ^dashboard/a/verify-certificate$ pages/admin/verify-certificate.php [L,QSA]

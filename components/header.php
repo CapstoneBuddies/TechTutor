@@ -77,6 +77,10 @@
                     <i class="bi bi-journal-bookmark-fill"></i>
                     <span>Courses</span>
                 </a>
+                <a href="<?php echo BASE.$role; ?>reports" class="nav-item <?php echo $current_page == 'reports.php' ? 'active' : ''; ?>">
+                    <i class="bi bi-graph-up"></i>
+                    <span>Reports</span>
+                </a>
                 <a href="<?php echo BASE.$role; ?>logs" class="nav-item <?php echo $current_page == 'view-logs.php' ? 'active' : ''; ?>">
                     <i class="bi bi-file-earmark-text"></i>
                     <span>Logs</span>
@@ -91,6 +95,10 @@
             <a href="<?php echo BASE.$role; ?>class" class="nav-item <?php echo $is_teaching_page ? 'active' : ''; ?>">
                 <i class="bi bi-people"></i>
                 <span>Classes</span>
+            </a>
+            <a href="<?php echo BASE.$role; ?>reports" class="nav-item <?php echo $current_page == 'reports.php' ? 'active' : ''; ?>">
+                <i class="bi bi-graph-up"></i>
+                <span>Reports</span>
             </a>
             <a href="<?php echo BASE.$role; ?>certificates" class="nav-item <?php echo $current_page == 'certificates.php' ? 'active' : ''; ?>">
                 <i class="bi bi-award"></i>
@@ -115,6 +123,10 @@
                 <a href="<?php echo BASE.$role; ?>certificates" class="nav-item <?php echo $current_page == 'certificates.php' ? 'active' : ''; ?>">
                     <i class="fas fa-certificate"></i>
                     <span>My Certificates</span>
+                </a>
+                <a href="<?php echo BASE.$role; ?>reports" class="nav-item <?php echo $current_page == 'reports.php' ? 'active' : ''; ?>">
+                    <i class="bi bi-graph-up"></i>
+                    <span>Reports</span>
                 </a>
             <?php endif; ?>
             <!-- Common Bottom Links -->

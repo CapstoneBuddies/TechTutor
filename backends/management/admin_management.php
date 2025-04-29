@@ -547,5 +547,156 @@ function getAdminClassFiles($class_id) {
         log_error("Admin error getting class files: " . $e->getMessage(), "admin");
         return [];
     }
-} 
+}
+
+/**
+ * Get platform-wide statistics for admin reporting
+ * 
+ * @param string $period Optional period filter (weekly, monthly, yearly)
+ * @return array Comprehensive platform statistics
+ */
+function getPlatformStats($period = 'all') {
+    global $conn;
+    
+    try {
+        // Date condition based on period
+        $dateCondition = "";
+        if ($period === 'weekly') {
+            $dateCondition = "AND DATE(created_at) >= DATE_SUB(CURRENT_DATE, INTERVAL 1 WEEK)";
+        } elseif ($period === 'monthly') {
+            $dateCondition = "AND DATE(created_at) >= DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH)";
+        } elseif ($period === 'yearly') {
+            $dateCondition = "AND DATE(created_at) >= DATE_SUB(CURRENT_DATE, INTERVAL 1 YEAR)";
+        }
+        
+        // User statistics
+        $usersQuery = "SELECT 
+            COUNT(CASE WHEN role = 'TECHKID' THEN 1 END) as total_students,
+            COUNT(CASE WHEN role = 'TECHGURU' THEN 1 END) as total_tutors,
+            COUNT(CASE WHEN role = 'ADMIN' THEN 1 END) as total_admins,
+            COUNT(CASE WHEN status = 1 THEN 1 END) as active_users,
+            COUNT(CASE WHEN status = 0 THEN 1 END) as inactive_users,
+            COUNT(CASE WHEN role = 'TECHKID' AND DATE(created_at) >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY) THEN 1 END) as new_students,
+            COUNT(CASE WHEN role = 'TECHGURU' AND DATE(created_at) >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY) THEN 1 END) as new_tutors
+        FROM users
+        WHERE 1=1 " . $dateCondition;
+        
+        $result = $conn->query($usersQuery);
+        $userStats = $result->fetch_assoc();
+        
+        // Education statistics
+        $educationQuery = "SELECT 
+            (SELECT COUNT(*) FROM course) as total_courses,
+            (SELECT COUNT(*) FROM subject WHERE is_active = 1) as active_subjects,
+            (SELECT COUNT(*) FROM class WHERE status = 'active') as active_classes,
+            (SELECT COUNT(*) FROM class WHERE status = 'completed') as completed_classes,
+            (SELECT COUNT(*) FROM enrollments WHERE status = 'active') as active_enrollments,
+            (SELECT COUNT(*) FROM enrollments WHERE status = 'completed') as completed_enrollments,
+            (SELECT AVG(rating) FROM users WHERE role = 'TECHGURU' AND rating > 0) as avg_tutor_rating
+        FROM dual";
+        
+        $result = $conn->query($educationQuery);
+        $educationStats = $result->fetch_assoc();
+        
+        // Activity statistics
+        $activityQuery = "SELECT 
+            COUNT(DISTINCT cs.schedule_id) as total_sessions,
+            SUM(TIMESTAMPDIFF(MINUTE, cs.start_time, cs.end_time)) / 60 as total_teaching_hours,
+            COUNT(DISTINCT m.meeting_id) as total_online_meetings,
+            COUNT(DISTINCT CASE WHEN m.recording_url IS NOT NULL THEN m.meeting_id END) as total_recordings,
+            COUNT(DISTINCT sf.feedback_id) as total_feedbacks
+        FROM class_schedule cs
+        LEFT JOIN meetings m ON cs.schedule_id = m.schedule_id
+        LEFT JOIN session_feedback sf ON cs.schedule_id = sf.session_id
+        WHERE cs.status = 'completed'";
+        
+        $result = $conn->query($activityQuery);
+        $activityStats = $result->fetch_assoc();
+        
+        // Growth trend over the last 12 months
+        $growthQuery = "SELECT 
+            DATE_FORMAT(created_at, '%Y-%m') as month,
+            COUNT(CASE WHEN role = 'TECHKID' THEN 1 END) as new_students,
+            COUNT(CASE WHEN role = 'TECHGURU' THEN 1 END) as new_tutors,
+            COUNT(*) as total_new_users
+        FROM users
+        WHERE created_at >= DATE_SUB(CURRENT_DATE, INTERVAL 12 MONTH)
+        GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+        ORDER BY month ASC";
+        
+        $result = $conn->query($growthQuery);
+        $growthData = $result->fetch_all(MYSQLI_ASSOC);
+        
+        // Format months for display
+        foreach ($growthData as &$data) {
+            $date = DateTime::createFromFormat('Y-m', $data['month']);
+            $data['month_display'] = $date->format('M Y');
+        }
+        
+        // Calculate growth percentages
+        $totalUsers = $userStats['total_students'] + $userStats['total_tutors'] + $userStats['total_admins'];
+        $newUsers = $userStats['new_students'] + $userStats['new_tutors'];
+        $monthlyGrowth = $totalUsers > 0 ? round(($newUsers / $totalUsers) * 100, 1) : 0;
+        
+        // Subject popularity (top 5)
+        $subjectPopularityQuery = "SELECT 
+            s.subject_name,
+            COUNT(DISTINCT e.enrollment_id) as enrollment_count
+        FROM subject s
+        JOIN class c ON s.subject_id = c.subject_id
+        JOIN enrollments e ON c.class_id = e.class_id
+        WHERE e.status = 'active'
+        GROUP BY s.subject_id
+        ORDER BY enrollment_count DESC
+        LIMIT 5";
+        
+        $result = $conn->query($subjectPopularityQuery);
+        $popularSubjects = $result->fetch_all(MYSQLI_ASSOC);
+        
+        // Return combined statistics
+        return [
+            'user_stats' => array_merge($userStats, [
+                'total_users' => $totalUsers,
+                'monthly_growth' => $monthlyGrowth
+            ]),
+            'education_stats' => $educationStats,
+            'activity_stats' => $activityStats,
+            'growth_data' => $growthData,
+            'popular_subjects' => $popularSubjects
+        ];
+    } catch (Exception $e) {
+        log_error("Error getting platform statistics: " . $e->getMessage(), 'admin');
+        return [
+            'user_stats' => [
+                'total_students' => 0,
+                'total_tutors' => 0,
+                'total_admins' => 0,
+                'active_users' => 0,
+                'inactive_users' => 0,
+                'new_students' => 0,
+                'new_tutors' => 0,
+                'total_users' => 0,
+                'monthly_growth' => 0
+            ],
+            'education_stats' => [
+                'total_courses' => 0,
+                'active_subjects' => 0,
+                'active_classes' => 0,
+                'completed_classes' => 0,
+                'active_enrollments' => 0,
+                'completed_enrollments' => 0,
+                'avg_tutor_rating' => 0
+            ],
+            'activity_stats' => [
+                'total_sessions' => 0,
+                'total_teaching_hours' => 0,
+                'total_online_meetings' => 0,
+                'total_recordings' => 0,
+                'total_feedbacks' => 0
+            ],
+            'growth_data' => [],
+            'popular_subjects' => []
+        ];
+    }
+}
 ?>

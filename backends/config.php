@@ -17,14 +17,7 @@
 	$dotenv->load();
 
 	// Base URL configuration
-	if (isset($_SERVER['HTTP_HOST']) && (
-	    strpos($_SERVER['HTTP_HOST'], 'localhost') !== false || 
-	    strpos($_SERVER['HTTP_HOST'], '192.168.') !== false || 
-	    strpos($_SERVER['HTTP_HOST'], '127.0.0.1') !== false)) {
-	    define('BASE', '/capstone-1/');
-	} else {
-	    define('BASE', '/');
-	}
+	define('BASE',  $_ENV['BASE'] ?? '/');
 
 
 	define('CSS', BASE.'assets/css/');
