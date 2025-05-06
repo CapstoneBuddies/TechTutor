@@ -21,6 +21,13 @@
         exit();
     }
 
+    // Check if student already take the diagnostic exam
+    $examTaken = hasTakenExam($class_id, $_SESSION['user']);
+    
+    if(!$examTaken) {
+        $_SESSION['exam'] = "You haven't taken the Diagnostic Exam yet, Please take the exam first";
+    }
+
     // Initialize MeetingManagement class
     $meetingManager = new MeetingManagement();
 
@@ -41,6 +48,9 @@
         return $schedule['status'] == 'completed';
     }));
     $progress_percentage = $total_sessions > 0 ? ($completed_sessions / $total_sessions) * 100 : 0;
+
+    $proficiency = getStudentLevel($class_id, $_SESSION['user']);
+    
 
     $title = htmlspecialchars($classDetails['class_name']);
 ?>
@@ -186,6 +196,11 @@
                     showToast('error', 'An error occurred. Please try again.');
                 });
             }
+
+            <?php if(isset($_SESSION['exam']) && empty($_SESSION['exam'])): ?>
+                alert("<?php echo $_SESSION['exam']; ?>");
+                window.location.href = '../../enrollments/class/exams?id=<?php echo $class_id; ?>';
+            <?php unset($_SESSION['exam']); endif; ?>
         </script>
         
         <?php include ROOT_PATH . '/components/header.php'; ?>
@@ -239,6 +254,7 @@
                                             <p><strong>Subject:</strong> <?php echo htmlspecialchars($classDetails['subject_name']); ?></p>
                                             <p><strong>Course:</strong> <?php echo htmlspecialchars($classDetails['course_name']); ?></p>
                                             <p><strong>Duration:</strong> <?php echo date('M d, Y', strtotime($classDetails['start_date'])); ?> - <?php echo date('M d, Y', strtotime($classDetails['end_date'])); ?></p>
+                                            <p title="<?php echo htmlspecialchars($proficiency['description']); ?>"><strong>Proficiency: </strong><?php echo htmlspecialchars($proficiency['level']); ?> - <?php echo htmlspecialchars($proficiency['title']); ?></p>
                                         </div>
                                         <div class="col-md-6">
                                             <p>
@@ -266,7 +282,7 @@
                                     </div>
                                     <div class="mt-4">
                                         <h3 class="h5 mb-3">Description</h3>
-                                        <p class="text-muted"><?php echo nl2br(htmlspecialchars($classDetails['class_desc'])); ?></p>
+                                        <p class="text-muted" style="text-wrap: wrap;"><?php echo nl2br(htmlspecialchars($classDetails['class_desc'])); ?></p>
                                     </div>
                                 </div>
                             </div>

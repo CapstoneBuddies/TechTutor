@@ -884,7 +884,7 @@
                     const modal = bootstrap.Modal.getInstance(modalElement);
                     modal.hide();
                     // Reload the transactions list
-                    loadTransactions(currentPage, currentFilter);
+                    setTimeout(()=>{ window.location.reload(); }, 3000);
                 } else {
                     showToast('error', data.message);
                 }
@@ -948,7 +948,6 @@
                                 </div>
                             </form>
                         `;
-                        
                         modalBody.innerHTML = html;
                     } else {
                         modalBody.innerHTML = `<div class="alert alert-danger">${data.message || 'Failed to load transaction details'}</div>`;

@@ -54,6 +54,9 @@
 	define('SMTP_USER_2',$_ENV['MAIL_USER_2']);
 	define('SMTP_PASSWORD_2',$_ENV['MAIL_PASS_2']);
 
+	define('GENAI_KEY',$_ENV['GENAI_KEY']);
+	define('GEMINI_KEY',$_ENV['GEMINI_KEY']);
+
 	// Set Default time to Philippines
 	date_default_timezone_set('Asia/Manila');
 

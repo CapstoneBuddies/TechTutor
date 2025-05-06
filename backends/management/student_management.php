@@ -277,8 +277,8 @@ function getUpcomingClassSchedules($student_id) {
                 TIMESTAMPDIFF(MINUTE, cs.start_time, cs.end_time) AS duration_minutes,
                 u.first_name AS tutor_first_name,
                 u.last_name AS tutor_last_name,
-                CONCAT(u.first_name, ' ', u.last_name) AS tutor_name,
                 u.profile_picture AS tutor_avatar,
+                CONCAT(u.first_name, ' ', u.last_name) AS tutor_name,
                 CASE 
                     WHEN cs.session_date = CURDATE() AND 
                          TIME(NOW()) BETWEEN cs.start_time AND cs.end_time 
@@ -514,16 +514,7 @@ function getStudentSchedule($student_id, $include_completed = false) {
                 s.subject_name,
                 CONCAT(u.first_name,' ',u.last_name) AS tutor_name,
                 u.profile_picture AS tutor_avatar,
-                e.status as enrollment_status,
-                CASE 
-                    WHEN cs.session_date < CURDATE() OR 
-                         (cs.session_date = CURDATE() AND cs.end_time < CURRENT_TIME() OR e.status = 'completed') 
-                    THEN 'completed'
-                    WHEN cs.session_date = CURDATE() AND 
-                         CURRENT_TIME() BETWEEN cs.start_time AND cs.end_time 
-                    THEN 'in_progress'
-                    ELSE 'upcoming'
-                END as session_status
+                e.status as enrollment_status
             FROM enrollments e
             JOIN class c ON e.class_id = c.class_id
             JOIN class_schedule cs ON c.class_id = cs.class_id
@@ -597,19 +588,42 @@ function getEnrolledSubjectsForStudent($studentId) {
     try {
         $stmt = $conn->prepare("
             SELECT 
-                s.*,
+                s.subject_id,
+                s.subject_name, 
+                s.subject_desc,
+                s.image,
+                s.is_active,
+                c.course_id,
                 c.course_name,
                 e.enrollment_date,
-                e.status
+                e.status,
+                p.level,
+                COALESCE(AVG(sp.performance_score), 0) as avg_performance
             FROM enrollments e
             JOIN class cl ON e.class_id = cl.class_id
             JOIN subject s ON cl.subject_id = s.subject_id
             JOIN course c ON s.course_id = c.course_id
+            LEFT JOIN performances p ON e.performance_id = p.id
+            LEFT JOIN student_progress sp ON e.student_id = sp.student_id AND cl.class_id = sp.class_id
             WHERE e.student_id = ?
-            AND u.status = 1
-            ORDER BY e.enrollment_date DESC
+            GROUP BY s.subject_id, c.course_id, s.subject_name, s.subject_desc, s.image, s.is_active, 
+                     c.course_name, e.enrollment_date, e.status, p.level
+            ORDER BY c.course_name, s.subject_name
         ");
-        $stmt->execute([$studentId]);
+        
+        if (!$stmt) {
+            log_error("Error preparing statement in getEnrolledSubjectsForStudent: " . $conn->error, 'database');
+            return [];
+        }
+        
+        $stmt->bind_param('i', $studentId);
+        $result = $stmt->execute();
+        
+        if (!$result) {
+            log_error("Error executing statement in getEnrolledSubjectsForStudent: " . $stmt->error, 'database');
+            return [];
+        }
+        
         $result = $stmt->get_result();
         
         $enrolledSubjects = [];
@@ -621,15 +635,137 @@ function getEnrolledSubjectsForStudent($studentId) {
                 'image' => $row['image'],
                 'is_active' => $row['is_active'],
                 'course_name' => $row['course_name'],
+                'course_id' => $row['course_id'],
                 'enrollment_date' => $row['enrollment_date'],
-                'status' => $row['status']
+                'status' => $row['status'],
+                'performance_level' => $row['level'],
+                'performance_score' => $row['avg_performance']
             ];
         }
         
         return $enrolledSubjects;
     } catch (Exception $e) {
-        log_error($e->getMessage());
+        log_error("Error in getEnrolledSubjectsForStudent: " . $e->getMessage(), 'database');
         return [];
+    }
+}
+
+/**
+ * Get student performance by course and subject
+ * 
+ * @param int $student_id The student ID to get performance for
+ * @return array Performance data organized by course
+ */
+function getStudentSkillsAssessment($student_id) {
+    global $conn;
+    try {
+        // Get all courses
+        $courses_query = "SELECT course_id, course_name FROM course ORDER BY course_name";
+        $courses_result = $conn->query($courses_query);
+        
+        if (!$courses_result) {
+            log_error("Error in getStudentSkillsAssessment (courses query): " . $conn->error, 'database');
+            return [
+                'courses' => [],
+                'average_performance' => 0,
+                'has_data' => false
+            ];
+        }
+        
+        $courses = [];
+        
+        while ($course = $courses_result->fetch_assoc()) {
+            $courses[$course['course_id']] = [
+                'name' => $course['course_name'],
+                'subjects' => [],
+                'average_performance' => 0
+            ];
+        }
+        
+        // Direct database query for enrolled subjects with performance data
+        $sql = "
+            SELECT 
+                s.subject_id,
+                s.subject_name, 
+                c.course_id,
+                c.course_name,
+                COALESCE(AVG(sp.performance_score), 0) as avg_performance
+            FROM enrollments e
+            JOIN class cl ON e.class_id = cl.class_id
+            JOIN subject s ON cl.subject_id = s.subject_id
+            JOIN course c ON s.course_id = c.course_id
+            LEFT JOIN student_progress sp ON e.student_id = sp.student_id AND e.class_id = sp.class_id
+            WHERE e.student_id = ?
+            GROUP BY s.subject_id, c.course_id, s.subject_name, c.course_name
+            ORDER BY c.course_name, s.subject_name
+        ";
+        
+        $stmt = $conn->prepare($sql);
+        
+        if (!$stmt) {
+            log_error("Error preparing statement in getStudentSkillsAssessment: " . $conn->error, 'database');
+            return [
+                'courses' => [],
+                'average_performance' => 0,
+                'has_data' => false
+            ];
+        }
+        
+        $stmt->bind_param('i', $student_id);
+        $stmt->execute();
+        $subjects_result = $stmt->get_result();
+        
+        $total_performance = 0;
+        $subject_count = 0;
+        
+        // Organize subjects by course
+        while ($subject = $subjects_result->fetch_assoc()) {
+            $course_id = $subject['course_id'];
+            if (isset($courses[$course_id])) {
+                $performance = floatval($subject['avg_performance']);
+                if ($performance <= 0) {
+                    $performance = 70; // Default value if no performance data
+                }
+                
+                $courses[$course_id]['subjects'][] = [
+                    'name' => $subject['subject_name'],
+                    'performance' => $performance
+                ];
+                
+                $total_performance += $performance;
+                $subject_count++;
+            }
+        }
+        
+        // Calculate average performance for each course
+        foreach ($courses as $id => $course) {
+            if (!empty($course['subjects'])) {
+                $course_total = 0;
+                foreach ($course['subjects'] as $subject) {
+                    $course_total += $subject['performance'];
+                }
+                $courses[$id]['average_performance'] = round($course_total / count($course['subjects']), 1);
+            } else {
+                // Remove courses with no enrolled subjects
+                unset($courses[$id]);
+            }
+        }
+        
+        // Prepare data for chart display
+        $result = [
+            'courses' => array_values($courses),
+            'average_performance' => $subject_count > 0 ? round($total_performance / $subject_count, 1) : 0,
+            'has_data' => $subject_count > 0
+        ];
+        
+        return $result;
+    } catch (Exception $e) {
+        log_error("Error in getStudentSkillsAssessment: " . $e->getMessage(), 'database');
+        return [
+            'courses' => [],
+            'average_performance' => 0,
+            'has_data' => false
+        ];
     }
 }
 
@@ -779,14 +915,14 @@ function checkStudentEnrollment($student_id, $class_id) {
                 c.class_id
             FROM enrollments e
             JOIN class c ON e.class_id = c.class_id
-            WHERE e.student_id = ? 
-            AND e.class_id = ?
-            AND e.status NOT IN ('dropped', 'pending')
+            WHERE e.class_id = ? AND e.student_id = ? AND e.status = 'active'
         ");
         
-        $stmt->bind_param("ii", $student_id, $class_id);
+        $stmt->bind_param("ii", $class_id, $student_id);
         $stmt->execute();
-        return $stmt->get_result()->fetch_assoc();
+        $result = $stmt->get_result();
+        
+        return $result->fetch_assoc();
     } catch (Exception $e) {
         log_error("Error checking enrollment: " . $e->getMessage(), "student");
         return null;
@@ -822,7 +958,9 @@ function checkPendingInvitation($student_id, $class_id) {
         
         $stmt->bind_param("ii", $student_id, $class_id);
         $stmt->execute();
-        return $stmt->get_result()->fetch_assoc();
+        $result = $stmt->get_result();
+        
+        return $result->fetch_assoc();
     } catch (Exception $e) {
         log_error("Error checking pending invitation: " . $e->getMessage(), "student");
         return null;
@@ -1064,10 +1202,10 @@ function getStudentClassHistory($student_id) {
                     AND cr.student_id = ?
                 ), 0) as performance
             FROM enrollments e
-            JOIN class c ON c.class_id = e.class_id
-            JOIN subject s ON s.subject_id = c.subject_id
-            JOIN users u ON u.uid = c.tutor_id
-            LEFT JOIN class_schedule cs ON cs.class_id = c.class_id
+            JOIN class c ON e.class_id = c.class_id
+            JOIN subject s ON c.subject_id = s.subject_id
+            JOIN users u ON c.tutor_id = u.uid
+            LEFT JOIN class_schedule cs ON c.class_id = cs.class_id
             WHERE e.student_id = ?
             GROUP BY c.class_id
             ORDER BY e.enrollment_date DESC
@@ -1101,51 +1239,122 @@ function getStudentClassHistory($student_id) {
 }
 
 /**
- * Get student's performance metrics across all classes
+ * Get student's performance metrics across all courses
+ * Organized by course with performance data
+ * @param int $student_id The student's ID
+ * @return array Performance metrics by course
  */
 function getStudentPerformanceMetrics($student_id) {
     global $conn;
     $metrics = [
         'average_score' => 0,
-        'distribution' => [0, 0, 0, 0] // Excellent, Good, Average, Needs Improvement
+        'courses' => [],
+        'has_data' => false
     ];
     
     try {
-        // Get average performance across all classes
+        // Get overall average performance from student_progress
         $stmt = $conn->prepare("
-            SELECT AVG(rating) as avg_rating
-            FROM class_ratings
-            WHERE student_id = ?
+            SELECT AVG(COALESCE(sp.performance_score, 0)) as avg_score
+            FROM student_progress sp
+            WHERE sp.student_id = ?
         ");
         
+        if (!$stmt) {
+            log_error("Error preparing statement in getStudentPerformanceMetrics (avg): " . $conn->error, 'database');
+            return $metrics;
+        }
+        
         $stmt->bind_param("i", $student_id);
-        $stmt->execute();
+        $result = $stmt->execute();
+        
+        if (!$result) {
+            log_error("Error executing statement in getStudentPerformanceMetrics (avg): " . $stmt->error, 'database');
+            return $metrics;
+        }
+        
         $result = $stmt->get_result();
         $avg = $result->fetch_assoc();
         
-        $metrics['average_score'] = round(($avg['avg_rating'] ?: 0) * 20, 1); // Convert 5-star rating to percentage
+        $metrics['average_score'] = round(($avg['avg_score'] ?: 0), 1);
         
-        // Get performance distribution
+        // Get course-specific performance metrics
         $stmt = $conn->prepare("
             SELECT 
+                c.course_id,
+                c.course_name,
+                COALESCE(AVG(sp.performance_score), 0) as avg_performance,
+                COUNT(DISTINCT e.class_id) as class_count,
                 CASE 
-                    WHEN rating >= 4.5 THEN 0 -- Excellent
-                    WHEN rating >= 3.5 THEN 1 -- Good
-                    WHEN rating >= 2.5 THEN 2 -- Average
-                    ELSE 3 -- Needs Improvement
-                END as category,
-                COUNT(*) as count
-            FROM class_ratings
-            WHERE student_id = ?
-            GROUP BY category
+                    WHEN AVG(sp.performance_score) >= 90 THEN 'Excellent'
+                    WHEN AVG(sp.performance_score) >= 70 THEN 'Good'
+                    WHEN AVG(sp.performance_score) >= 50 THEN 'Average'
+                    ELSE 'Needs Improvement'
+                END as performance_level,
+                CASE 
+                    WHEN AVG(sp.performance_score) >= 90 THEN 'A'
+                    WHEN AVG(sp.performance_score) >= 80 THEN 'B'
+                    WHEN AVG(sp.performance_score) >= 70 THEN 'C'
+                    WHEN AVG(sp.performance_score) >= 60 THEN 'D'
+                    WHEN AVG(sp.performance_score) >= 50 THEN 'E'
+                    ELSE 'F'
+                END as level_code
+            FROM enrollments e
+            JOIN class cl ON e.class_id = cl.class_id
+            JOIN subject s ON cl.subject_id = s.subject_id
+            JOIN course c ON s.course_id = c.course_id
+            LEFT JOIN student_progress sp ON e.student_id = sp.student_id AND e.class_id = sp.class_id
+            WHERE e.student_id = ?
+            GROUP BY c.course_id, c.course_name
+            ORDER BY avg_performance DESC
         ");
         
-        $stmt->bind_param("i", $student_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        if (!$stmt) {
+            log_error("Error preparing statement in getStudentPerformanceMetrics (courses): " . $conn->error, 'database');
+            return $metrics;
+        }
         
-        while ($row = $result->fetch_assoc()) {
-            $metrics['distribution'][$row['category']] = (int)$row['count'];
+        $stmt->bind_param("i", $student_id);
+        $result = $stmt->execute();
+        
+        if (!$result) {
+            log_error("Error executing statement in getStudentPerformanceMetrics (courses): " . $stmt->error, 'database');
+            return $metrics;
+        }
+        
+        $results = $stmt->get_result();
+        
+        if ($results->num_rows > 0) {
+            $metrics['has_data'] = true;
+            
+            while ($row = $results->fetch_assoc()) {
+                // Get a color based on performance level
+                $color = '';
+                switch ($row['performance_level']) {
+                    case 'Excellent':
+                        $color = 'rgba(25, 135, 84, 0.8)'; // Green
+                        break;
+                    case 'Good':
+                        $color = 'rgba(13, 110, 253, 0.8)'; // Blue
+                        break;
+                    case 'Average':
+                        $color = 'rgba(255, 193, 7, 0.8)'; // Yellow
+                        break;
+                    default:
+                        $color = 'rgba(220, 53, 69, 0.8)'; // Red
+                        break;
+                }
+                
+                $metrics['courses'][] = [
+                    'course_id' => $row['course_id'],
+                    'course_name' => $row['course_name'],
+                    'performance' => round($row['avg_performance'], 1),
+                    'class_count' => $row['class_count'],
+                    'level' => $row['level_code'] ?? 'N/A',
+                    'level_text' => $row['performance_level'],
+                    'color' => $color
+                ];
+            }
         }
         
         return $metrics;
@@ -1155,9 +1364,59 @@ function getStudentPerformanceMetrics($student_id) {
     }
 }
 
+function getStudentLevel($class_id, $student_id) {
+    global $conn;
+    log_error($student_id);
+
+    $stmt = $conn->prepare("SELECT level, title, description FROM performances WHERE id = (SELECT performance_id FROM enrollments WHERE student_id = ? AND class_id = ?)" );
+    $stmt->bind_param('ii', $student_id, $class_id);
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_assoc();
+
+    return $result;
+}
+
 /**
- * Get student's attendance records
+ * Get student progress data for a TechGuru
+ * 
+ * @param int $tutorId The ID of the tutor
+ * @return array Array containing student progress data
  */
+function getStudentProgressData($tutorId) {
+    global $conn;
+    
+    try {
+        // Check if the student_progress table exists
+        $tableCheck = $conn->query("SHOW TABLES LIKE 'student_progress'");
+        if ($tableCheck->num_rows == 0) {
+            // Table doesn't exist, return empty array instead of crashing
+            log_error("student_progress table does not exist - returning empty array");
+            return [];
+        }
+        
+        // If table exists, proceed with original query
+        $query = "SELECT 
+            sp.*,
+            c.class_name,
+            CONCAT(u.first_name, ' ', u.last_name) as student_name,
+            u.profile_picture
+        FROM student_progress sp
+        JOIN class c ON sp.class_id = c.class_id
+        JOIN users u ON sp.student_id = u.uid
+        WHERE c.tutor_id = ?
+        ORDER BY sp.assessment_date DESC";
+        
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("i", $tutor_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_all(MYSQLI_ASSOC);
+        
+    } catch (Exception $e) {
+        log_error("Error getting student progress data: " . $e->getMessage());
+        return [];
+    }
+}
 function getStudentAttendanceRecords($student_id) {
     global $conn;
     $attendance = [
@@ -1178,15 +1437,26 @@ function getStudentAttendanceRecords($student_id) {
             AND cs.session_date <= CURRENT_DATE
         ");
         
+        if (!$stmt) {
+            log_error("Error preparing statement in getStudentAttendanceRecords: " . $conn->error, 'database');
+            return $attendance;
+        }
+        
         $stmt->bind_param("i", $student_id);
-        $stmt->execute();
+        $result = $stmt->execute();
+        
+        if (!$result) {
+            log_error("Error executing statement in getStudentAttendanceRecords: " . $stmt->error, 'database');
+            return $attendance;
+        }
+        
         $result = $stmt->get_result();
         $stats = $result->fetch_assoc();
         
-        $attendance['total_sessions'] = (int)$stats['total_sessions'];
-        $attendance['attended_sessions'] = (int)$stats['attended_sessions'];
-        $attendance['attendance_rate'] = $stats['total_sessions'] > 0 
-            ? round(($stats['attended_sessions'] / $stats['total_sessions']) * 100, 1)
+        $attendance['total_sessions'] = (int)($stats['total_sessions'] ?? 0);
+        $attendance['attended_sessions'] = (int)($stats['attended_sessions'] ?? 0);
+        $attendance['attendance_rate'] = $attendance['total_sessions'] > 0 
+            ? round(($attendance['attended_sessions'] / $attendance['total_sessions']) * 100, 1)
             : 0;
         
         return $attendance;
@@ -1198,78 +1468,79 @@ function getStudentAttendanceRecords($student_id) {
 
 /**
  * Get student's recent learning activities
+ * 
+ * @param int $student_id The student ID to get activities for
+ * @return array Array of recent activities with type, details, and timestamps
  */
 function getStudentRecentActivities($student_id) {
     global $conn;
     $activities = [];
     
     try {
-        // Combine various activities (class completion, ratings, file uploads, etc.)
-        $stmt = $conn->prepare("
+        // Create a union query for various student activities
+        $sql = "
             (SELECT 
-                'class_completion' as type,
+                'enrollment' as type,
                 'check-circle' as icon,
                 'success' as type_color,
                 c.class_name as title,
-                'Completed the class successfully' as description,
+                'Enrolled in new class' as description,
                 e.enrollment_date as timestamp
             FROM enrollments e
-            JOIN class c ON c.class_id = e.class_id
-            WHERE e.student_id = ? AND e.status = 'completed'
+            JOIN class c ON e.class_id = c.class_id
+            WHERE e.student_id = ? 
             ORDER BY e.enrollment_date DESC
             LIMIT 5)
             
             UNION ALL
             
             (SELECT 
-                'class_rating' as type,
-                'star' as icon,
-                'warning' as type_color,
-                c.class_name as title,
-                CONCAT('Rated the class ', cr.rating, ' stars') as description,
-                cr.rating_date as timestamp
-            FROM class_ratings cr
-            JOIN class c ON c.class_id = cr.class_id
-            WHERE cr.student_id = ?
-            ORDER BY cr.rating_date DESC
-            LIMIT 5)
-            
-            UNION ALL
-            
-            (SELECT 
-                'file_upload' as type,
-                'file-earmark-arrow-up' as icon,
-                'info' as type_color,
-                f.file_name as title,
-                'Uploaded a new file' as description,
-                f.upload_time as timestamp
-            FROM unified_files f
-            WHERE f.user_id = ?
-            ORDER BY f.upload_time DESC
-            LIMIT 5)
-            
-            UNION ALL
-            
-            (SELECT 
-                'attendance' as type,
-                'calendar-check' as icon,
+                'progress' as type,
+                'graph-up' as icon,
                 'primary' as type_color,
                 c.class_name as title,
-                'Attended class session' as description,
-                cs.session_date as timestamp
-            FROM attendance a
-            JOIN class_schedule cs ON cs.schedule_id = a.schedule_id
-            JOIN class c ON c.class_id = cs.class_id
-            WHERE a.student_id = ? AND a.status = 'present'
-            ORDER BY cs.session_date DESC
+                CONCAT('Progress assessment: ', sp.performance_score, '%') as description,
+                sp.assessment_date as timestamp
+            FROM student_progress sp
+            JOIN class c ON sp.class_id = c.class_id
+            WHERE sp.student_id = ?
+            ORDER BY sp.assessment_date DESC
+            LIMIT 5)
+            
+            UNION ALL
+            
+            (SELECT 
+                'completion' as type,
+                'award' as icon,
+                'warning' as type_color,
+                c.class_name as title,
+                'Completed class successfully' as description,
+                e.enrollment_date as timestamp
+            FROM enrollments e
+            JOIN class c ON e.class_id = c.class_id
+            WHERE e.student_id = ? AND e.status = 'completed'
+            ORDER BY e.enrollment_date DESC
             LIMIT 5)
             
             ORDER BY timestamp DESC
             LIMIT 10
-        ");
+        ";
         
-        $stmt->bind_param("iiii", $student_id, $student_id, $student_id, $student_id);
-        $stmt->execute();
+        $stmt = $conn->prepare($sql);
+        
+        if (!$stmt) {
+            log_error("Error preparing statement in getStudentRecentActivities: " . $conn->error, 'database');
+            return [];
+        }
+        
+        $stmt->bind_param("iii", $student_id, $student_id, $student_id);
+        $result = $stmt->execute();
+        
+        if (!$result) {
+            log_error("Error executing statement in getStudentRecentActivities: " . $stmt->error, 'database');
+            return [];
+        }
+        
         $result = $stmt->get_result();
         
         while ($row = $result->fetch_assoc()) {
@@ -1286,112 +1557,6 @@ function getStudentRecentActivities($student_id) {
         return $activities;
     } catch (Exception $e) {
         log_error("Error in getStudentRecentActivities: " . $e->getMessage(), 'database');
-        return [];
-    }
-}
-
-/**
- * Get detailed student progress metrics for a specific tutor
- * 
- * @param int $tutor_id The ID of the tutor
- * @return array Array of students with detailed performance metrics
- */
-function getStudentProgressByTutor($tutor_id) {
-    global $conn;
-    
-    try {
-        // First, get the basic student information from enrollments
-        // This step identifies which students we need to get metrics for
-        $basic_query = "SELECT DISTINCT 
-                u.uid as student_id,
-                CONCAT(u.first_name, ' ', u.last_name) as name,
-                u.email,
-                u.profile_picture,
-                COALESCE(
-                    (SELECT MAX(last_activity) FROM user_activity WHERE user_id = u.uid),
-                    u.last_login
-                ) as last_active
-            FROM users u
-            JOIN enrollments e ON u.uid = e.student_id AND e.status = 'active'
-            JOIN class c ON e.class_id = c.class_id AND c.tutor_id = ?
-            WHERE u.status = 1
-            ORDER BY last_active DESC";
-            
-        $stmt = $conn->prepare($basic_query);
-        $stmt->bind_param("i", $tutor_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $students = $result->fetch_all(MYSQLI_ASSOC);
-        
-        // If no students found, return empty array
-        if (empty($students)) {
-            return [];
-        }
-        
-        // Process each student separately to avoid complex queries
-        foreach ($students as &$student) {
-            // Set default profile image if not present
-            if (empty($student['profile_picture'])) {
-                $student['profile_picture'] = 'default.jpg';
-            }
-            
-            // Ensure last_active is a valid datetime
-            if (empty($student['last_active'])) {
-                $student['last_active'] = date('Y-m-d H:i:s');
-            }
-            
-            // Get classes enrolled count
-            $classes_query = "SELECT COUNT(DISTINCT e.class_id) as classes_enrolled
-                FROM enrollments e
-                JOIN class c ON e.class_id = c.class_id AND c.tutor_id = ?
-                WHERE e.student_id = ? AND e.status = 'active'";
-                
-            $stmt = $conn->prepare($classes_query);
-            $stmt->bind_param("ii", $tutor_id, $student['student_id']);
-            $stmt->execute();
-            $classes_result = $stmt->get_result()->fetch_assoc();
-            $student['classes_enrolled'] = intval($classes_result['classes_enrolled'] ?? 0);
-            
-            // Get average performance (based on ratings)
-            $performance_query = "SELECT 
-                    COALESCE(AVG(sf.rating) * 20, 60) as avg_performance
-                FROM session_feedback sf
-                JOIN class_schedule cs ON sf.session_id = cs.schedule_id
-                JOIN class c ON cs.class_id = c.class_id AND c.tutor_id = ?
-                WHERE sf.student_id = ? AND sf.rating IS NOT NULL";
-                
-            $stmt = $conn->prepare($performance_query);
-            $stmt->bind_param("ii", $tutor_id, $student['student_id']);
-            $stmt->execute();
-            $performance_result = $stmt->get_result()->fetch_assoc();
-            $student['avg_performance'] = round(floatval($performance_result['avg_performance'] ?? 60), 1);
-            
-            // Get attendance rate
-            $attendance_query = "SELECT 
-                    COUNT(DISTINCT cs.schedule_id) as total_sessions,
-                    COUNT(DISTINCT CASE WHEN a.status = 'present' THEN cs.schedule_id END) as attended_sessions
-                FROM class_schedule cs
-                JOIN class c ON cs.class_id = c.class_id AND c.tutor_id = ?
-                LEFT JOIN attendance a ON cs.schedule_id = a.schedule_id AND a.student_id = ?
-                WHERE cs.session_date <= CURRENT_DATE";
-                
-            $stmt = $conn->prepare($attendance_query);
-            $stmt->bind_param("ii", $tutor_id, $student['student_id']);
-            $stmt->execute();
-            $attendance_result = $stmt->get_result()->fetch_assoc();
-            
-            $total_sessions = intval($attendance_result['total_sessions'] ?? 0);
-            $attended_sessions = intval($attendance_result['attended_sessions'] ?? 0);
-            
-            $student['attendance_rate'] = $total_sessions > 0 
-                ? round(($attended_sessions / $total_sessions) * 100, 1)
-                : 0;
-        }
-        
-        return $students;
-    } catch (Exception $e) {
-        // Log error properly
-        log_error("Error in getStudentProgressByTutor: " . $e->getMessage(), 'database');
         return [];
     }
 }

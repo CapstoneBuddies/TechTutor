@@ -3,7 +3,6 @@
  * Class management functions for TechTutor platform
  * Handles all class-related database operations for TechGuru users
  */
-
 /**
  * Get all classes for a TechGuru
  * 
@@ -54,7 +53,6 @@ function getTechGuruClasses($tutor_id) {
         return [];
     }
 }
-
 /**
  * Get statistics about a TechGuru's classes
  * 
@@ -89,8 +87,6 @@ function getClassStats($tutor_id) {
         ];
     }
 }
-
-
 /**
  * Delete a class and all its related data
  * 
@@ -153,7 +149,6 @@ function deleteClass($class_id, $tutor_id) {
         return false;
     }
 }
-
 /**
  * Create a new class with schedules
  * 
@@ -300,8 +295,6 @@ function createClass($data) {
         ];
     }
 }
-
-
 /**
  * Get subject details by name
  * 
@@ -548,7 +541,6 @@ function getClassFiles($class_id) {
         return [];
     }
 }
-
 /**
  * Get a single class's details
  * 
@@ -632,10 +624,6 @@ function getClassDetails($class_id, $tutor_id = null) {
         return null;
     }
 }
-
-
-
-
 /**
  * Update a class's status and notify relevant users
  * 
@@ -723,7 +711,6 @@ function updateClassStatus($class_id, $tutor_id = null, $new_status = null) {
         return false;
     }
 }
-
 /**
  * Get all course details
  * 
@@ -887,8 +874,6 @@ function getEnrolledStudents($class_id) {
         return [];
     }
 }
-
-
 /**
  * Update class schedules
  * 
@@ -1816,7 +1801,7 @@ function getClassAnalytics($classId, $tutorId) {
             COUNT(*) as total_sessions,
             SUM(TIMESTAMPDIFF(MINUTE, cs.start_time, cs.end_time)) as total_minutes,
             COUNT(DISTINCT m.meeting_uid) as total_meetings,
-            SUM(CASE WHEN m.recording_url IS NOT NULL THEN 1 ELSE 0 END) as total_recordings
+            0 as total_recordings
         FROM class_schedule cs
         LEFT JOIN meetings m ON cs.schedule_id = m.schedule_id
         WHERE cs.class_id = ? AND cs.status IN ('completed', 'confirmed')";
@@ -1858,7 +1843,6 @@ function getClassAnalytics($classId, $tutorId) {
             cs.end_time,
             cs.status,
             m.meeting_uid,
-            m.recording_url,
             TIMESTAMPDIFF(MINUTE, cs.start_time, cs.end_time) as duration_minutes
         FROM class_schedule cs
         LEFT JOIN meetings m ON cs.schedule_id = m.schedule_id
@@ -1938,7 +1922,7 @@ function getTutorAnalytics($tutorId, $period = 'all_time') {
             COUNT(*) as total_sessions,
             SUM(TIMESTAMPDIFF(MINUTE, cs.start_time, cs.end_time)) as total_minutes,
             COUNT(DISTINCT cs.class_id) as total_classes,
-            SUM(CASE WHEN m.recording_url IS NOT NULL THEN 1 ELSE 0 END) as total_recordings
+            0 as total_recordings
         FROM class_schedule cs
         JOIN class c ON cs.class_id = c.class_id
         LEFT JOIN meetings m ON cs.schedule_id = m.schedule_id
@@ -2479,102 +2463,48 @@ function getTechGuruStats($tutor_id) {
     global $conn;
     
     try {
-        // Get basic stats
-        $stats = getClassStats($tutor_id);
+        // Get basic teaching statistics
+        $query = "SELECT 
+            COUNT(DISTINCT c.class_id) as total_classes,
+            COUNT(DISTINCT e.student_id) as total_students,
+            SUM(TIMESTAMPDIFF(HOUR, cs.start_time, cs.end_time)) as total_hours,
+            COUNT(DISTINCT CASE WHEN c.status = 'completed' THEN c.class_id END) as completed_classes,
+            COUNT(DISTINCT CASE WHEN c.status = 'active' THEN c.class_id END) as active_classes
+        FROM class c
+        LEFT JOIN enrollments e ON c.class_id = e.class_id AND e.status = 'active'
+        LEFT JOIN class_schedule cs ON c.class_id = cs.class_id AND cs.status = 'completed'
+        WHERE c.tutor_id = ?";
         
-        // Get total teaching hours
-        $hours_query = "SELECT 
-                COALESCE(SUM(
-                    TIME_TO_SEC(TIMEDIFF(cs.end_time, cs.start_time))/3600
-                ), 0) as total_hours
-            FROM class_schedule cs
-            JOIN class c ON cs.class_id = c.class_id
-            WHERE c.tutor_id = ? 
-            AND cs.status = 'completed'";
-        
-        $stmt = $conn->prepare($hours_query);
+        $stmt = $conn->prepare($query);
         $stmt->bind_param("i", $tutor_id);
         $stmt->execute();
-        $hours_result = $stmt->get_result()->fetch_assoc();
-        $total_hours = round($hours_result['total_hours']);
+        $stats = $stmt->get_result()->fetch_assoc();
         
-        // Get performance trend data (last 6 months)
-        $performance_query = "SELECT 
-                DATE_FORMAT(cs.session_date, '%Y-%m') as date,
-                ROUND(AVG(
-                    CASE 
-                        WHEN sf.rating IS NOT NULL THEN sf.rating * 20 
-                        ELSE 0 
-                    END
-                ), 1) as performance,
-                ROUND(AVG(
-                    COALESCE(
-                        (SELECT COUNT(*) 
-                         FROM attendance a 
-                         WHERE a.schedule_id = cs.schedule_id 
-                         AND a.status = 'present') * 100.0 / 
-                        NULLIF((SELECT COUNT(*) 
-                               FROM enrollments e 
-                               WHERE e.class_id = cs.class_id 
-                               AND e.status = 'active'), 0),
-                        0
-                    )
-                ), 1) as engagement
-            FROM class_schedule cs
-            JOIN class c ON cs.class_id = c.class_id
-            LEFT JOIN session_feedback sf ON cs.schedule_id = sf.session_id
-            WHERE c.tutor_id = ? 
-            AND cs.status = 'completed'
-            AND cs.session_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
-            GROUP BY DATE_FORMAT(cs.session_date, '%Y-%m')
-            ORDER BY date ASC";
-        
-        $stmt = $conn->prepare($performance_query);
+        // Get average class rating
+        $query = "SELECT AVG(rating) as avg_rating, COUNT(*) as rating_count 
+                 FROM session_feedback 
+                 WHERE tutor_id = ?";
+        $stmt = $conn->prepare($query);
         $stmt->bind_param("i", $tutor_id);
         $stmt->execute();
-        $performance_data = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $rating_stats = $stmt->get_result()->fetch_assoc();
         
-        // Format dates for display
-        foreach ($performance_data as &$data) {
-            $date_obj = DateTime::createFromFormat('Y-m', $data['date']);
-            $data['date'] = $date_obj->format('M Y');
-        }
+        // Combine all statistics
+        return array_merge($stats, [
+            'avg_rating' => $rating_stats['avg_rating'] ?? 0,
+            'rating_count' => $rating_stats['rating_count'] ?? 0
+        ]);
         
-        // If no data, provide sample data for visualization
-        if (empty($performance_data)) {
-            $current_month = new DateTime();
-            $performance_data = [];
-            
-            for ($i = 5; $i >= 0; $i--) {
-                $month = clone $current_month;
-                $month->modify("-$i months");
-                
-                $performance_data[] = [
-                    'date' => $month->format('M Y'),
-                    'performance' => 0,
-                    'engagement' => 0
-                ];
-            }
-        }
-        
-        // Return combined data
-        return [
-            'total_classes' => $stats['total_classes'],
-            'active_classes' => $stats['active_classes'],
-            'completed_classes' => $stats['completed_classes'],
-            'total_students' => $stats['total_students'],
-            'total_hours' => $total_hours,
-            'performance_data' => $performance_data
-        ];
     } catch (Exception $e) {
-        error_log("Error getting tech guru stats: " . $e->getMessage());
+        error_log("Error getting TechGuru stats: " . $e->getMessage());
         return [
             'total_classes' => 0,
-            'active_classes' => 0,
-            'completed_classes' => 0,
             'total_students' => 0,
             'total_hours' => 0,
-            'performance_data' => []
+            'completed_classes' => 0,
+            'active_classes' => 0,
+            'avg_rating' => 0,
+            'rating_count' => 0
         ];
     }
 }
@@ -2583,68 +2513,165 @@ function getTechGuruStats($tutor_id) {
  * Get class performance data for a TechGuru
  * 
  * @param int $tutor_id The ID of the tutor
- * @return array Array of classes with performance metrics
+ * @return array Array containing class performance data
  */
 function getClassPerformanceData($tutor_id) {
     global $conn;
     
     try {
         $query = "SELECT 
-                c.class_id,
-                c.class_name,
-                c.thumbnail,
-                c.start_date,
-                c.status,
-                s.subject_name,
-                COUNT(DISTINCT e.student_id) AS student_count,
-                COALESCE(AVG(
-                    CASE WHEN sf.rating IS NOT NULL THEN sf.rating ELSE NULL END
-                ), 0) as rating,
-                COALESCE(
-                    (SELECT COUNT(*) FROM class_schedule cs 
-                     WHERE cs.class_id = c.class_id AND cs.status = 'completed') * 100.0 / 
-                    NULLIF((SELECT COUNT(*) FROM class_schedule cs 
-                          WHERE cs.class_id = c.class_id), 0),
-                    0
-                ) as completion_rate,
-                COALESCE(
-                    (SELECT AVG(CASE 
-                                  WHEN sf.rating IS NOT NULL THEN sf.rating * 20
-                                  ELSE 60 -- Default value if no ratings
-                                END)
-                     FROM session_feedback sf
-                     JOIN class_schedule cs ON sf.session_id = cs.schedule_id
-                     WHERE cs.class_id = c.class_id),
-                    60 -- Default value if no sessions with feedback
-                ) as avg_performance
-            FROM class c
-            LEFT JOIN subject s ON c.subject_id = s.subject_id
-            LEFT JOIN enrollments e ON c.class_id = e.class_id AND e.status = 'active'
-            LEFT JOIN class_schedule cs ON c.class_id = cs.class_id
-            LEFT JOIN session_feedback sf ON cs.schedule_id = sf.session_id
-            WHERE c.tutor_id = ?
-            GROUP BY c.class_id
-            ORDER BY c.status = 'active' DESC, c.start_date DESC";
-             
+            c.class_id,
+            c.class_name,
+            c.status,
+            s.subject_name,
+            c.start_date,
+            COUNT(DISTINCT e.student_id) as student_count,
+            AVG(sf.rating) as rating,
+            (SELECT COUNT(*) FROM class_schedule cs 
+             WHERE cs.class_id = c.class_id AND cs.status = 'completed') as completed_sessions,
+            (SELECT COUNT(*) FROM class_schedule cs 
+             WHERE cs.class_id = c.class_id) as total_sessions,
+            (SELECT AVG(performance_score) FROM student_progress 
+             WHERE class_id = c.class_id) as avg_performance
+        FROM class c
+        LEFT JOIN subject s ON c.subject_id = s.subject_id
+        LEFT JOIN enrollments e ON c.class_id = e.class_id AND e.status = 'active'
+        LEFT JOIN session_feedback sf ON c.class_id = sf.class_id
+        WHERE c.tutor_id = ?
+        GROUP BY c.class_id
+        ORDER BY c.start_date DESC";
+        
         $stmt = $conn->prepare($query);
         $stmt->bind_param("i", $tutor_id);
         $stmt->execute();
-        $result = $stmt->get_result();
-        $classes = $result->fetch_all(MYSQLI_ASSOC);
-
-        // Process the results
-        foreach ($classes as &$class) {
-            // Ensure numeric values
-            $class['rating'] = round(floatval($class['rating']), 1);
-            $class['completion_rate'] = round(floatval($class['completion_rate']), 1);
-            $class['avg_performance'] = round(floatval($class['avg_performance']), 1);
-            $class['student_count'] = intval($class['student_count']);
+        $results = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        
+        // Calculate completion rate and format data
+        foreach ($results as &$class) {
+            $class['completion_rate'] = $class['total_sessions'] > 0 
+                ? round(($class['completed_sessions'] / $class['total_sessions']) * 100) 
+                : 0;
+            $class['avg_performance'] = $class['avg_performance'] ?? 0;
+            $class['rating'] = $class['rating'] ?? 0;
         }
-
-        return $classes;
+        
+        return $results;
+        
     } catch (Exception $e) {
         error_log("Error getting class performance data: " . $e->getMessage());
         return [];
     }
+}
+function generateExamJSON($class_id, $examType) {
+    global $conn;
+
+    // Get Information
+    $stmt = $conn->prepare("SELECT c.course_name, s.subject_name FROM subject s JOIN course c ON s.course_id = c.course_id  WHERE s.subject_id = (SELECT subject_id FROM class WHERE class_id = ?)");
+    $stmt->bind_param('i',$class_id);
+    $stmt->bind_result($course, $subject);
+    $stmt->execute();
+
+    if(!$stmt->fetch()) {
+        $stmt->close();
+        return [];
+    }
+    $stmt->close();
+
+    $apiKey = GEMINI_KEY; // Replace with your actual Gemini API key
+
+    $prompt = <<<EOT
+Course: $course
+Subject: $subject
+Exam Type: $examType
+
+Create a proficiency exam based on the exam type pertaining to the above subject.
+This proficiency exam must be in JSON format and will check the proficiency level of the user.
+
+The proficiency levels are:
+
+A1 = Novice -> New to the topic. No prior knowledge or experience.
+A2 = Beginner -> Understands basic concepts and terms. Can follow instructions with guidance.
+B1 = Developing -> Grasps core concepts and can perform simple tasks. Still needs occasional support.
+B2 = Proficient -> Solid understanding and able to apply concepts independently. This is the minimum level required to teach or tutor others.
+C1 = Advanced -> Applies knowledge to solve real-world or novel problems. Can evaluate and explain complex concepts.
+C2 = Mastery -> Demonstrates full command and flexibility. Can innovate, mentor, and teach at expert levels with ease.
+
+Only output the exam JSON. No extra text.
+
+*Sample Exam JSON Format:*
+
+```json
+{
+  "questions": {
+    "1": {"<Question>": {"a": "<choice>", "b": "<choice>", "c": "<choice>", "d": "<choice>"}},
+    "2": {"<Question>": {"a": "<choice>", "b": "<choice>", "c": "<choice>", "d": "<choice>"}},
+    ...
+  },
+  "answers": {
+    "1": "<correct choice letter>",
+    "2": "<correct choice letter>",
+    ...
+  },
+  "proficiency_criteria": {
+    "A1": 5,
+    "A2": 10,
+    "B1": 15,
+    "B2": 20,
+    "C1": 25,
+    "C2": 30
+  }
+}
+EOT;
+
+    $postData = [
+        "contents" => [
+            [
+                "parts" => [
+                    ["text" => $prompt]
+                ]
+            ]
+        ]
+    ];
+
+    $ch = curl_init('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' . $apiKey);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json'
+        ],
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode($postData)
+    ]);
+
+    $response = curl_exec($ch);
+    curl_close($ch);
+
+    if (!$response) {
+        return "Error contacting Gemini API.";
+    }
+
+    $data = json_decode($response, true);
+    $content = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
+
+    // Extract only the JSON part using regex
+    if (preg_match('/```json(.*?)```/s', $content, $matches)) {
+        $json = trim($matches[1]);
+    } elseif (preg_match('/\{.*\}/s', $content, $matches)) {
+        $json = trim($matches[0]);
+    } else {
+        return "No valid JSON found.";
+    }
+
+    return $json;
+}
+
+function hasTakenExam($class_id, $student_id, $examType = 'diagnostic') {
+    global $conn;
+
+    $stmt = $conn->prepare("SELECT diagnostics_taken FROM enrollments WHERE student_id = ? AND class_id = ?");
+    $stmt->bind_param('ii', $student_id, $class_id);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_assoc()['diagnostics_taken'];
+
 }
 ?>

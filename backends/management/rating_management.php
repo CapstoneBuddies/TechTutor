@@ -728,7 +728,7 @@ class RatingManagement {
             
             return $activities;
         } catch (Exception $e) {
-            error_log("Error getting tutor recent activities: " . $e->getMessage());
+            log_error("Error getting tutor recent activities: " . $e->getMessage(), 'database');
             return [];
         }
     }

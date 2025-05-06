@@ -112,7 +112,7 @@ INSERT INTO `performances`(`level`,`title`,`description`) VALUES
 ('C1', 'Advanced', 'Applies knowledge to solve real-world or novel problems. Can evaluate and explain complex concepts.'),
 ('C2', 'Mastery', 'Demonstrates full command and flexibility. Can innovate, mentor, and teach at expert levels with ease.');
 
-ALTER TABLE `enrollments` ADD COLUMN `performance_id` int NULL AFTER `students_id`;
+ALTER TABLE `enrollments` ADD COLUMN `performance_id` int NULL AFTER `student_id`;
 ALTER TABLE `enrollments` ADD CONSTRAINT `enrollments_ibfk_3` FOREIGN KEY (`performance_id`) REFERENCES `performances`(`id`);
 
 ALTER TABLE `class` ADD COLUMN `diagnostics` JSON null AFTER `class_size`;

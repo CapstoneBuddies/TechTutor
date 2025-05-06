@@ -105,6 +105,7 @@ CREATE TABLE `class` (
   `start_date` datetime NOT NULL,
   `end_date` datetime NOT NULL,
   `class_size` int(11) DEFAULT NULL,
+  `class` ADD COLUMN `diagnostics` JSON null,
   `status` enum('active','restricted','completed','pending') NOT NULL DEFAULT 'active',
   `is_free` tinyint(1) NOT NULL DEFAULT 1,
   `price` float(10,2) DEFAULT NULL,
@@ -135,12 +136,40 @@ CREATE TABLE `class_schedule` (
   CONSTRAINT `class_schedule_ibfk_1` FOREIGN KEY (`class_id`) REFERENCES `class` (`class_id`)
 );
 
+CREATE TABLE IF NOT EXISTS `performances` (
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
+  `level` VARCHAR(3) NOT NULL,
+  `title` VARCHAR(20) NOT NULL,
+  `description` TEXT
+);
+
+CREATE TABLE `student_progress` (
+  `progress_id` int(11) NOT NULL AUTO_INCREMENT,
+  `class_id` int(11) NOT NULL,
+  `student_id` int(11) NOT NULL,
+  `performance_score` decimal(5,2) DEFAULT 0.00,
+  `assessment_date` date NOT NULL,
+  `assessment_type` enum('diagnostic','midterm','final') NOT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`progress_id`),
+  KEY `idx_progress_class` (`class_id`),
+  KEY `idx_progress_student` (`student_id`),
+  KEY `idx_progress_date` (`assessment_date`),
+  KEY `idx_progress_type` (`assessment_type`),
+  CONSTRAINT `student_progress_ibfk_1` FOREIGN KEY (`class_id`) REFERENCES `class` (`class_id`) ON DELETE CASCADE,
+  CONSTRAINT `student_progress_ibfk_2` FOREIGN KEY (`student_id`) REFERENCES `users` (`uid`) ON DELETE CASCADE
+);
+
 CREATE TABLE `enrollments` (
   `enrollment_id` int(11) NOT NULL AUTO_INCREMENT,
   `class_id` int(11) NOT NULL,
   `student_id` int(11) NOT NULL,
+  `performance_id` int NULL,
   `enrollment_date` timestamp NOT NULL DEFAULT current_timestamp(),
   `status` enum('active','completed','dropped','pending') NOT NULL DEFAULT 'active',
+  `diagnostics_taken` TINYINT(1) DEFAULT 0,
   `message` TEXT NULL,
   PRIMARY KEY (`enrollment_id`),
   UNIQUE KEY `unique_enrollment` (`class_id`,`student_id`),
@@ -148,7 +177,8 @@ CREATE TABLE `enrollments` (
   KEY `idx_enrollment_student` (`student_id`),
   KEY `idx_enrollment_status` (`status`),
   CONSTRAINT `enrollments_ibfk_1` FOREIGN KEY (`class_id`) REFERENCES `class` (`class_id`) ON DELETE CASCADE,
-  CONSTRAINT `enrollments_ibfk_2` FOREIGN KEY (`student_id`) REFERENCES `users` (`uid`) ON DELETE CASCADE
+  CONSTRAINT `enrollments_ibfk_2` FOREIGN KEY (`student_id`) REFERENCES `users` (`uid`) ON DELETE CASCADE,
+  CONSTRAINT `enrollments_ibfk_3` FOREIGN KEY (`performance_id`) REFERENCES `performances`(`id`)
 );
 
 CREATE TABLE `file_folders` (
@@ -633,6 +663,14 @@ DELIMITER ;
 --
 -- Dumped Values
 --
+INSERT INTO `performance`(`level`,`title`,`description`) VALUES
+('A1', 'Novice', 'New to the topic. No prior knowledge or experience.'),
+('A2', 'Beginner', 'Understands basic concepts and terms. Can follow instructions with guidance.'),
+('B1', 'Developing', 'Grasps core concepts and can perform simple tasks. Still needs occasional support.'),
+('B2', 'Proficient', 'Solid understanding and able to apply concepts independently. This is the minimum level required to teach or tutor others.'),
+('C1', 'Advanced', 'Applies knowledge to solve real-world or novel problems. Can evaluate and explain complex concepts.'),
+('C2', 'Mastery', 'Demonstrates full command and flexibility. Can innovate, mentor, and teach at expert levels with ease.');
+
 INSERT INTO `file_categories` (`category_id`, `category_name`, `description`) VALUES
 (1, 'Lecture Notes', 'Course lecture materials and presentations'),
 (2, 'Assignments', 'Homework and practice exercises'),

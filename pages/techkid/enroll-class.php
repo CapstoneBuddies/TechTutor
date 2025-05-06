@@ -255,7 +255,14 @@ $title = htmlspecialchars($classDetails['class_name']);
                                 // Redirect to payment page with class info
                                 location.href = `${BASE}payment?class_id=${data.class_id}&amount=${data.price}`;
                             }
-                        } else {
+                        } else if (data.require_exam) {
+                            showLoading(false);
+                            showToast('error', data.message);
+                            setTimeout(() => {
+                                location.href = data.redirect;
+                            }, 3000);
+                        }
+                         else {
                             showLoading(false);
                             showToast('error', data.message || "Failed to enroll in the class.");
                         }

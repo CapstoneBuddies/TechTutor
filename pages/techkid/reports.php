@@ -10,13 +10,13 @@
         header('Location: ' . BASE . 'login');
         exit();
     }
-
     // Initialize data arrays
     $learning_stats = [];
     $class_history = [];
     $performance_data = [];
     $attendance_data = [];
     $recent_activities = [];
+    $skills_assessment = [];
 
     try {
         // Fetch comprehensive learning statistics
@@ -33,6 +33,9 @@
         
         // Get recent learning activities
         $recent_activities = getStudentRecentActivities($_SESSION['user']);
+        
+        // Get skills assessment by course
+        $skills_assessment = getStudentSkillsAssessment($_SESSION['user']);
         
     } catch (Exception $e) {
         log_error("Reports page error: " . $e->getMessage(), 2);
@@ -81,7 +84,7 @@
                                 </div>
                                 <div>
                                     <h6 class="stat-label mb-1">Total Classes</h6>
-                                    <h3 class="stat-value mb-0"><?php echo $learning_stats['total_classes']; ?></h3>
+                                    <h3 class="stat-value mb-0"><?php echo isset($learning_stats['total_classes']) ? htmlspecialchars($learning_stats['total_classes']) : 'N/A'; ?></h3>
                                 </div>
                             </div>
                         </div>
@@ -96,7 +99,7 @@
                                 </div>
                                 <div>
                                     <h6 class="stat-label mb-1">Learning Hours</h6>
-                                    <h3 class="stat-value mb-0"><?php echo $learning_stats['total_hours']; ?></h3>
+                                    <h3 class="stat-value mb-0"><?php echo isset($learning_stats['total_hours']) ? htmlspecialchars($learning_stats['total_hours']) : 'N/A'; ?></h3>
                                 </div>
                             </div>
                         </div>
@@ -111,7 +114,7 @@
                                 </div>
                                 <div>
                                     <h6 class="stat-label mb-1">Avg. Performance</h6>
-                                    <h3 class="stat-value mb-0"><?php echo number_format($performance_data['average_score'], 1); ?>%</h3>
+                                    <h3 class="stat-value mb-0"><?php echo isset($performance_data['average_score']) ? number_format($performance_data['average_score'], 1) . '%' : 'N/A'; ?></h3>
                                 </div>
                             </div>
                         </div>
@@ -126,7 +129,7 @@
                                 </div>
                                 <div>
                                     <h6 class="stat-label mb-1">Attendance Rate</h6>
-                                    <h3 class="stat-value mb-0"><?php echo number_format($attendance_data['attendance_rate'], 1); ?>%</h3>
+                                    <h3 class="stat-value mb-0"><?php echo isset($attendance_data['attendance_rate']) ? number_format($attendance_data['attendance_rate'], 1) . '%' : 'N/A'; ?></h3>
                                 </div>
                             </div>
                         </div>
@@ -154,11 +157,29 @@
                 <div class="col-md-4">
                     <div class="content-card bg-snow h-100">
                         <div class="card-body">
-                            <h5 class="section-title mb-3">Performance Distribution</h5>
-                            <div style="height: 600px; width: 100%; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
+                            <h5 class="section-title mb-3">
+                                <i class="bi bi-bar-chart-fill me-2 text-primary"></i>
+                                Course Performance
+                            </h5>
+                            <div style="height: 300px; width: 100%; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
                                 <canvas id="performanceChart"></canvas>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Skills Radar Chart -->
+        <div class="content-section mb-4">
+            <div class="content-card bg-snow">
+                <div class="card-body">
+                    <h5 class="section-title mb-3">
+                        <i class="bi bi-bullseye me-2 text-primary"></i>
+                        Skills Assessment
+                    </h5>
+                    <div style="height: 400px; width: 100%; max-width: 700px; margin: 0 auto;">
+                        <canvas id="skillsRadarChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -300,144 +321,219 @@
     <?php include ROOT_PATH . '/components/footer.php'; ?>
 
     <!-- Charts.js for visualizations -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script>
         // Initialize charts when the page loads
         document.addEventListener('DOMContentLoaded', function() {
-            initializeCharts();
+            // --- Learning Progress Chart ---
+            const learningCtx = document.getElementById('learningProgressChart').getContext('2d');
             
-            // Add event listeners for filter buttons
-            document.querySelectorAll('[data-filter]').forEach(button => {
-                button.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    
-                    // Remove active class from all filter items
-                    document.querySelectorAll('[data-filter]').forEach(item => {
-                        item.classList.remove('active');
-                    });
-                    
-                    // Add active class to clicked item
-                    this.classList.add('active');
-                    
-                    // Get filter value
-                    const filter = this.dataset.filter;
-                    
-                    // Apply filter to table rows
-                    if (filter === 'all') {
-                        document.querySelectorAll('tbody tr').forEach(row => {
-                            row.style.display = '';
-                        });
-                    } else {
-                        document.querySelectorAll('tbody tr').forEach(row => {
-                            const status = row.querySelector('.badge').textContent.toLowerCase().trim();
-                            row.style.display = status === filter ? '' : 'none';
-                        });
+            // Extract data from PHP for learning progress
+            <?php
+            // Process learning history data from class_history
+            $months = [];
+            $hoursData = [];
+            $performanceData = [];
+            
+            // Get last 6 months for chart labels
+            for ($i = 5; $i >= 0; $i--) {
+                $month = date('M Y', strtotime("-$i months"));
+                $months[] = $month;
+                $hoursData[$month] = 0;
+                $performanceData[$month] = 0;
+            }
+            
+            // Fill in data from the class history if available
+            if (!empty($class_history)) {
+                foreach ($class_history as $class) {
+                    if (isset($class['month']) && isset($class['hours']) && isset($class['performance'])) {
+                        $month = $class['month'];
+                        if (isset($hoursData[$month])) {
+                            $hoursData[$month] += $class['hours'];
+                            $performanceData[$month] = ($performanceData[$month] > 0) 
+                                ? ($performanceData[$month] + $class['performance']) / 2 
+                                : $class['performance'];
+                        }
                     }
-                });
-            });
-        });
-
-        function initializeCharts() {
-            // Learning Progress Chart
-            const progressCtx = document.getElementById('learningProgressChart').getContext('2d');
-            new Chart(progressCtx, {
+                }
+            }
+            ?>
+            
+            new Chart(learningCtx, {
                 type: 'line',
                 data: {
-                    labels: <?php echo json_encode(array_column($learning_stats['progress_data'], 'date')); ?>,
-                    datasets: [{
-                        label: 'Learning Hours',
-                        data: <?php echo json_encode(array_column($learning_stats['progress_data'], 'hours')); ?>,
-                        borderColor: '#0d6efd',
-                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                        tension: 0.4,
-                        fill: true
-                    }]
+                    labels: <?php echo json_encode(array_values($months)); ?>,
+                    datasets: [
+                        {
+                            label: 'Learning Hours',
+                            data: <?php echo json_encode(array_values($hoursData)); ?>,
+                            borderColor: '#0d6efd',
+                            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Performance Score',
+                            data: <?php echo json_encode(array_values($performanceData)); ?>,
+                            borderColor: '#198754',
+                            backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            yAxisID: 'y1',
+                            borderDash: [5, 5]
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
                     plugins: {
                         legend: {
-                            display: false
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                boxWidth: 10
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    let value = context.parsed.y;
+                                    if (label === 'Learning Hours') {
+                                        return label + ': ' + value.toFixed(1) + ' hrs';
+                                    } else {
+                                        return label + ': ' + value.toFixed(1) + '%';
+                                    }
+                                }
+                            }
                         }
                     },
                     scales: {
                         y: {
-                            beginAtZero: true,
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
                             title: {
                                 display: true,
                                 text: 'Hours'
+                            },
+                            beginAtZero: true
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Performance (%)'
+                            },
+                            beginAtZero: true,
+                            max: 100,
+                            grid: {
+                                drawOnChartArea: false
                             }
                         }
                     }
                 }
             });
 
-            // Performance Distribution Chart
-            const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+            // --- Course Performance Chart (Vertical Bar) ---
+            const performanceChartCtx = document.getElementById('performanceChart').getContext('2d');
             
-            // Check if there's any data in the distribution
-            const hasPerformanceData = <?php echo json_encode(array_sum($performance_data['distribution']) > 0); ?>;
+            <?php
+            // Process data for course performance chart
+            $hasPerformanceData = !empty($performance_data['courses']);
+            $courseLabels = [];
+            $performanceValues = [];
+            $barColors = [];
             
-            let performanceData = hasPerformanceData 
-                ? <?php echo json_encode($performance_data['distribution']); ?>
-                : [25, 25, 25, 25]; // Equal distribution for sample
-                
-            let backgroundColors = hasPerformanceData
-                ? ['#198754', '#0d6efd', '#ffc107', '#dc3545']  // Regular colors
-                : ['#dddddd', '#cccccc', '#bbbbbb', '#aaaaaa']; // Gray shades for sample
+            if ($hasPerformanceData) {
+                foreach ($performance_data['courses'] as $course) {
+                    $courseLabels[] = $course['course_name'];
+                    $performanceValues[] = $course['performance'];
+                    $barColors[] = $course['color'];
+                }
+            }
+            ?>
             
-            new Chart(performanceCtx, {
-                type: 'doughnut',
+            const coursePerformanceChart = new Chart(performanceChartCtx, {
+                type: 'bar',
                 data: {
-                    labels: ['Excellent', 'Good', 'Average', 'Needs Improvement'],
+                    labels: <?php echo json_encode($courseLabels); ?>,
                     datasets: [{
-                        data: performanceData,
-                        backgroundColor: backgroundColors,
-                        borderWidth: 0,
-                        hoverOffset: 10
+                        label: 'Performance Score',
+                        data: <?php echo json_encode($performanceValues); ?>,
+                        backgroundColor: <?php echo json_encode($barColors); ?>,
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        barPercentage: 0.7,
+                        categoryPercentage: 0.8
                     }]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: true,
-                    layout: {
-                        padding: {
-                            left: 10,
-                            right: 10,
-                            top: 10,
-                            bottom: 50 // More padding at bottom for legend
-                        }
-                    },
-                    cutout: '60%',
+                    maintainAspectRatio: false,
+                    indexAxis: 'x', // Vertical bars
                     plugins: {
                         legend: {
-                            position: 'bottom',
-                            align: 'center',
-                            labels: {
-                                boxWidth: 20,
-                                boxHeight: 20,
-                                padding: 20,
-                                font: {
-                                    size: 14
-                                },
-                                color: hasPerformanceData ? undefined : '#999999', // Grayed out text for sample
-                                usePointStyle: true,
-                                pointStyle: 'circle'
-                            },
-                            maxHeight: 100,
-                            display: true
+                            display: false
                         },
                         tooltip: {
-                            enabled: hasPerformanceData, // Disable tooltips for sample data
                             callbacks: {
+                                title: function(tooltipItems) {
+                                    return tooltipItems[0].label;
+                                },
                                 label: function(context) {
-                                    let label = context.label || '';
-                                    let value = context.formattedValue;
-                                    let total = context.dataset.data.reduce((acc, data) => acc + data, 0);
-                                    let percentage = Math.round((context.raw / total) * 100);
-                                    return `${label}: ${value} (${percentage}%)`;
+                                    return `Performance: ${context.raw}%`;
+                                },
+                                afterLabel: function(context) {
+                                    const courseIndex = context.dataIndex;
+                                    if (courseIndex >= 0 && <?php echo !empty($performance_data['courses']) ? 'true' : 'false'; ?>) {
+                                        const courses = <?php echo json_encode($performance_data['courses']); ?>;
+                                        return `Level: ${courses[courseIndex].level} (${courses[courseIndex].level_text})`;
+                                    }
+                                    return '';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Performance Score',
+                                font: {
+                                    weight: 'bold'
+                                }
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45,
+                                font: {
+                                    size: 11
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Courses',
+                                font: {
+                                    weight: 'bold'
                                 }
                             }
                         }
@@ -445,9 +541,8 @@
                 }
             });
             
-            // If no performance data, add a "No Data Available" text overlay
-            if (!hasPerformanceData) {
-                // Add "Sample Data" label
+            // Add "No Data Available" message if there are no courses
+            if (!<?php echo !empty($performance_data['courses']) ? 'true' : 'false'; ?>) {
                 const chartContainer = document.getElementById('performanceChart').parentNode;
                 const noDataLabel = document.createElement('div');
                 noDataLabel.style.position = 'absolute';
@@ -455,12 +550,130 @@
                 noDataLabel.style.left = '50%';
                 noDataLabel.style.transform = 'translate(-50%, -50%)';
                 noDataLabel.style.textAlign = 'center';
-                noDataLabel.style.pointerEvents = 'none'; // Don't interfere with chart interactions
-                noDataLabel.innerHTML = '<span style="color: #666; font-size: 14px; background: rgba(255,255,255,0.8); padding: 5px 10px; border-radius: 4px;">Sample Data</span>';
+                noDataLabel.style.pointerEvents = 'none';
+                noDataLabel.innerHTML = '<span style="color: #666; font-size: 16px; background: rgba(255,255,255,0.8); padding: 10px 15px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">No Course Data Available</span>';
                 chartContainer.style.position = 'relative';
                 chartContainer.appendChild(noDataLabel);
             }
-        }
+
+            // --- Skills Radar Chart ---
+            const skillsRadarCtx = document.getElementById('skillsRadarChart').getContext('2d');
+            
+            <?php
+            // Process the skills assessment data properly using course table data
+            $hasSkillsAssessmentData = isset($skills_assessment['has_data']) ? $skills_assessment['has_data'] : false;
+            $courseLabels = [];
+            $performanceData = [];
+            
+            if ($hasSkillsAssessmentData && !empty($skills_assessment['courses'])) {
+                foreach ($skills_assessment['courses'] as $course) {
+                    $courseLabels[] = $course['name'];
+                    $performanceData[] = $course['average_performance'];
+                }
+            }
+            ?>
+            
+            // Only proceed with real data, no placeholder/sample data
+            const hasRealSkillsData = <?php echo json_encode($hasSkillsAssessmentData && count($courseLabels) > 0); ?>;
+            
+            new Chart(skillsRadarCtx, {
+                type: 'radar',
+                data: {
+                    labels: <?php echo json_encode($courseLabels); ?>,
+                    datasets: [{
+                        label: 'Course Performance',
+                        data: <?php echo json_encode($performanceData); ?>,
+                        backgroundColor: 'rgba(255, 107, 0, 0.2)', // Using TechTutor orange
+                        borderColor: 'rgba(255, 107, 0, 1)',       // Using TechTutor orange
+                        pointBackgroundColor: 'rgba(255, 107, 0, 1)',
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: {
+                                display: true,
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            },
+                            suggestedMin: 0,
+                            suggestedMax: 100,
+                            ticks: {
+                                stepSize: 20,
+                                backdropColor: 'rgba(255, 255, 255, 0.8)'
+                            },
+                            pointLabels: {
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                            titleColor: '#333',
+                            bodyColor: '#333',
+                            borderColor: 'rgba(255, 107, 0, 0.5)',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.formattedValue + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Add "No Data Available" message if there's no real course data
+            if (!hasRealSkillsData) {
+                const chartContainer = document.getElementById('skillsRadarChart').parentNode;
+                const noDataLabel = document.createElement('div');
+                noDataLabel.style.position = 'absolute';
+                noDataLabel.style.top = '50%';
+                noDataLabel.style.left = '50%';
+                noDataLabel.style.transform = 'translate(-50%, -50%)';
+                noDataLabel.style.textAlign = 'center';
+                noDataLabel.style.pointerEvents = 'none';
+                noDataLabel.innerHTML = '<span style="color: #666; font-size: 16px; background: rgba(255,255,255,0.8); padding: 10px 15px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">No Course Data Available</span>';
+                chartContainer.style.position = 'relative';
+                chartContainer.appendChild(noDataLabel);
+            }
+            
+            // Add responsive behavior for charts
+            const resizeCharts = () => {
+                const width = window.innerWidth;
+                
+                // Adjust chart sizes for mobile
+                if (width < 768) {
+                    // Mobile adjustments
+                    document.querySelector('#learningProgressChart').parentNode.style.height = '350px';
+                    document.querySelector('#performanceChart').parentNode.style.height = '250px';
+                    document.querySelector('#skillsRadarChart').parentNode.style.height = '300px';
+                } else {
+                    // Desktop adjustments
+                    document.querySelector('#learningProgressChart').parentNode.style.height = '500px';
+                    document.querySelector('#performanceChart').parentNode.style.height = '300px';
+                    document.querySelector('#skillsRadarChart').parentNode.style.height = '400px';
+                }
+            };
+            
+            // Call resize function initially and on window resize
+            resizeCharts();
+            window.addEventListener('resize', resizeCharts);
+        });
 
         // Function to export report as PDF
         function exportReport() {
@@ -488,13 +701,18 @@
                 new Promise(resolve => {
                     const performanceCanvas = document.getElementById('performanceChart');
                     resolve(performanceCanvas.toDataURL('image/png'));
+                }),
+                new Promise(resolve => {
+                    const skillsRadarCanvas = document.getElementById('skillsRadarChart');
+                    resolve(skillsRadarCanvas.toDataURL('image/png'));
                 })
-            ]).then(([learningProgressImage, performanceImage]) => {
+            ]).then(([learningProgressImage, performanceImage, skillsRadarImage]) => {
                 // Create form data to send to server
                 const formData = new FormData();
                 formData.append('action', 'generate_pdf_report');
                 formData.append('learning_progress_image', learningProgressImage);
                 formData.append('performance_image', performanceImage);
+                formData.append('skills_radar_image', skillsRadarImage);
                 
                 // Send request directly to the API endpoint
                 fetch('<?php echo BASE; ?>api/generate-report.php', {

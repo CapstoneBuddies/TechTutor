@@ -138,16 +138,17 @@ try {
         $check_stmt->execute();
         $check_result = $check_stmt->get_result();
         $enrollment_id = 0;
-        
+
         if($check_result->num_rows > 0){
             $check_row = $check_result->fetch_assoc();
-            if($check_row['status'] == 'dropped') {
+            if($check_row['status'] === 'dropped') {
                 $update_stmt = $conn->prepare("UPDATE enrollments SET status = 'active' WHERE class_id = ? AND student_id = ?");
                 $update_stmt->bind_param("ii", $class_id, $student_id);
                 if (!$update_stmt->execute()) {
                     throw new Exception('Failed to update enrollment record.');
                 }
                 $enrollment_id = $check_row['enrollment_id'];
+                log_error($enrollment_id);
                 $update_stmt->close();
             }
         }
@@ -163,18 +164,7 @@ try {
         }
         
         $check_stmt->close();
-
-        // Create initial attendance records for all scheduled sessions
-        $attend_stmt = $conn->prepare("INSERT INTO attendance (student_id, schedule_id, status, created_at) 
-                              SELECT ?, schedule_id, 'pending', NOW() 
-                              FROM class_schedule 
-                              WHERE class_id = ?");
-        $attend_stmt->bind_param("ii", $_SESSION['user'], $class_id);
-        if (!$attend_stmt->execute()) {
-            throw new Exception('Failed to create attendance records.');
-        }
-        $attend_stmt->close();
-
+        
         // Send notification to student
         sendNotification(
             $student_id, 
@@ -203,6 +193,29 @@ try {
 
         // Commit transaction
         $conn->commit();
+
+
+        // Check if student has already taken the diagnostic exam for this class
+        $stmt = $conn->prepare("SELECT diagnostics_taken FROM enrollments WHERE class_id = ? AND student_id = ?");
+        $stmt->bind_param("ii", $class_id, $student_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $diagnostics_taken = false;
+        if ($row = $result->fetch_assoc()) {
+            $diagnostics_taken = (bool)$row['diagnostics_taken'];
+        }
+        $stmt->close();
+    
+        if (!$diagnostics_taken) {
+            echo json_encode([
+                'success' => false,
+                'require_exam' => true,
+                'redirect' => BASE . "dashboard/s/enrollments/class/exams?id=" . $class_id,
+                'message' => "You must take the diagnostic exam before enrolling. (Don't worry this wont affect anything)"
+            ]);
+            exit;
+        }
+        
 
         log_error("Successful enrollment: Student ID {$student_id} enrolled in class ID {$class_id} with attendance records created", "info");
         echo json_encode([

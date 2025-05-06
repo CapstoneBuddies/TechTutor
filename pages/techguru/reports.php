@@ -377,193 +377,39 @@
     </div>
 
     <?php include ROOT_PATH . '/components/footer.php'; ?>
-
-    <!-- Charts.js for visualizations -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script>
-        // Initialize charts when the page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeCharts();
-            
-            // Add event listeners for filter buttons
-            document.querySelectorAll('[data-filter]').forEach(button => {
-                button.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    
-                    // Remove active class from all filter items
-                    document.querySelectorAll('[data-filter]').forEach(item => {
-                        item.classList.remove('active');
-                    });
-                    
-                    // Add active class to clicked item
-                    this.classList.add('active');
-                    
-                    // Get filter value
-                    const filter = this.dataset.filter;
-                    
-                    // Apply filter to table rows
-                    document.querySelectorAll('tbody tr').forEach(row => {
-                        if (filter === 'all') {
-                            row.style.display = '';
-                        } else {
-                            const status = row.querySelector('.badge')?.textContent.toLowerCase().trim();
-                            row.style.display = status === filter ? '' : 'none';
-                        }
-                    });
-                });
-            });
-        });
-
-        function initializeCharts() {
-            // Teaching Performance Chart
-            const performanceCtx = document.getElementById('teachingPerformanceChart').getContext('2d');
-            new Chart(performanceCtx, {
-                type: 'line',
-                data: {
-                    labels: <?php echo json_encode(array_column($teaching_stats['performance_data'], 'date')); ?>,
-                    datasets: [{
-                        label: 'Student Performance',
-                        data: <?php echo json_encode(array_column($teaching_stats['performance_data'], 'performance')); ?>,
-                        borderColor: '#0d6efd',
-                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                        tension: 0.4,
-                        fill: true
-                    }, {
-                        label: 'Class Engagement',
-                        data: <?php echo json_encode(array_column($teaching_stats['performance_data'], 'engagement')); ?>,
-                        borderColor: '#198754',
-                        backgroundColor: 'rgba(25, 135, 84, 0.1)',
-                        tension: 0.4,
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: {
-                            position: 'top'
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Score'
-                            }
-                        }
-                    }
-                }
-            });
-
-            // Rating Distribution Chart
-            const ratingCtx = document.getElementById('ratingDistributionChart').getContext('2d');
-            new Chart(ratingCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['5 Stars', '4 Stars', '3 Stars', '2 Stars', '1 Star'],
-                    datasets: [{
-                        data: <?php echo json_encode($rating_data['distribution']); ?>,
-                        backgroundColor: ['#198754', '#0d6efd', '#ffc107', '#fd7e14', '#dc3545'],
-                        borderWidth: 0,
-                        hoverOffset: 10
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    cutout: '60%',
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                boxWidth: 20,
-                                padding: 20,
-                                font: {
-                                    size: 14
-                                },
-                                usePointStyle: true,
-                                pointStyle: 'circle'
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // Function to export report as PDF
         function exportReport() {
             // Show loading indicator
-            const loadingIndicator = document.createElement('div');
-            loadingIndicator.id = 'pdf-loading';
-            loadingIndicator.innerHTML = `
-                <div class="d-flex align-items-center justify-content-center position-fixed top-0 start-0 w-100 h-100" style="background: rgba(0,0,0,0.5); z-index: 9999;">
-                    <div class="bg-white p-4 rounded shadow-lg text-center">
-                        <div class="spinner-border text-primary mb-3" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <p class="mb-0">Generating PDF report...</p>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(loadingIndicator);
+            const loading = document.getElementById('loadingIndicator');
+            if (loading) loading.classList.remove('d-none');
             
-            // Convert charts to images
-            Promise.all([
-                new Promise(resolve => {
-                    const performanceCanvas = document.getElementById('teachingPerformanceChart');
-                    resolve(performanceCanvas.toDataURL('image/png'));
-                }),
-                new Promise(resolve => {
-                    const ratingCanvas = document.getElementById('ratingDistributionChart');
-                    resolve(ratingCanvas.toDataURL('image/png'));
-                })
-            ]).then(([performanceImage, ratingImage]) => {
-                // Create form data to send to server
-                const formData = new FormData();
-                formData.append('action', 'generate_pdf_report');
-                formData.append('performance_image', performanceImage);
-                formData.append('rating_image', ratingImage);
-                
-                // Send request to the API endpoint
-                fetch('<?php echo BASE; ?>api/generate-report.php', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => {
-                    // Remove loading indicator
-                    document.body.removeChild(loadingIndicator);
-                    
-                    if (!response.ok) {
-                        throw new Error('Failed to generate PDF');
-                    }
-                    
-                    return response.blob();
-                })
-                .then(blob => {
-                    // Create download link for PDF
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.style.display = 'none';
-                    a.href = url;
-                    a.download = 'Teaching Performance Report_<?php echo htmlspecialchars($_SESSION["name"]); ?>.pdf';
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                })
-                .catch(error => {
-                    console.error('Error generating PDF:', error);
-                    document.body.removeChild(loadingIndicator);
-                    alert('Failed to generate PDF report. Please try again.');
-                });
-            }).catch(error => {
-                console.error('Error processing charts:', error);
-                document.body.removeChild(loadingIndicator);
-                alert('Failed to process chart images. Please try again.');
+            // Get the dashboard content
+            const element = document.querySelector('.dashboard-content');
+            
+            // Configure html2pdf options
+            const opt = {
+                margin: [10, 10, 10, 10],
+                filename: 'teaching_performance_report.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            
+            // Generate PDF
+            html2pdf().set(opt).from(element).save().then(() => {
+                // Hide loading indicator when done
+                if (loading) loading.classList.add('d-none');
             });
         }
+        
+        // Initialize charts when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize charts here
+            // This is a placeholder - you'll need to implement the actual chart initialization
+            // based on your data structure
+        });
     </script>
 </body>
 </html>

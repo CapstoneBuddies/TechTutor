@@ -367,6 +367,8 @@ if (function_exists('log_error')) {
             // Send the error to the server
             logError(error.message || message, source, `Line: ${lineno}, Col: ${colno}`);
 
+            console.log(error);
+
             // Return true to prevent the default browser behavior (console logging the error)
             return true;
         };

@@ -1,4 +1,4 @@
-lsapi_phpini /home/capstonebuddies/public_html/php.ini
+#lsapi_phpini /home/capstonebuddies/public_html/php.ini
 
 ErrorDocument 404 /pages/error/404.php 
 ErrorDocument 403 /pages/error/403.php  
@@ -138,6 +138,7 @@ RewriteRule ^dashboard/[a-z]$ backends/role_redirect.php [L]
 RewriteRule ^dashboard/s/certificates$ pages/techkid/certificate.php [L]
 RewriteRule ^dashboard/s/class$ pages/techkid/class.php [L]
 RewriteRule ^dashboard/s/class/details$ pages/techkid/class-details.php [L,QSA]
+RewriteRule ^dashboard/s/class/details$ pages/techkid/class-details.php [L,QSA]
 RewriteRule ^dashboard/s/class/details/feedbacks$ pages/techkid/class-feedbacks.php [L,QSA]
 RewriteRule ^dashboard/s/class/feedbacks$ pages/techkid/class-feedback.php [L,QSA]
 RewriteRule ^dashboard/s/class/files$ pages/techkid/class-files.php [L,QSA]
@@ -145,6 +146,7 @@ RewriteRule ^dashboard/s/class/meeting$ pages/techkid/meeting.php [L,QSA]
 RewriteRule ^dashboard/s/class/recordings$ pages/techkid/class-recordings.php [L,QSA]
 RewriteRule ^dashboard/s/enrollments$ pages/techkid/enrollments.php [L]
 RewriteRule ^dashboard/s/enrollments/class$ pages/techkid/enroll-class.php [L,QSA]
+RewriteRule ^dashboard/s/enrollments/class/exams$ pages/techkid/exams.php [L,QSA]
 RewriteRule ^dashboard/s/files$ pages/techkid/files.php [L,QSA]
 RewriteRule ^dashboard/s/schedule$ pages/techkid/schedule.php [L]
 RewriteRule ^dashboard/s/reports$ pages/techkid/reports.php [L]
@@ -229,6 +231,7 @@ RewriteRule ^api/download-certificate$ backends/api/download-certificate.php [L,
 # 🌍 API Endpoints
 # ----------------------------------
 RewriteRule ^api/toggle-class-status$ backends/api/toggle-class-status.php [L]
+RewriteRule ^submit-exam$ backends/api/exams.php [L]
 RewriteRule ^api/enroll-class$ backends/api/enroll-class.php [L]
 RewriteRule ^api/drop-class$ backends/api/drop-class.php [L]
 RewriteRule ^api/update-enrollment-status$ backends/api/update-enrollment-status.php [L]
