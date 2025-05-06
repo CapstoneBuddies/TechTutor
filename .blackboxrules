@@ -1,0 +1,2 @@
+For database related actions, always refer to my @/sql/db.sql file for the database schema
+Do not attempt to update my @/sql/db.sql but instead save it to my @/sql/db_suggestion.sql
