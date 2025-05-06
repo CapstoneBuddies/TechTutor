@@ -13,6 +13,15 @@
     
     // Get platform statistics based on selected period
     $platform_stats = getPlatformStats($period);
+
+    
+    // Get enhanced data for new visualizations
+    $course_performance = getCoursePerformanceMetrics();
+    $user_activity = getUserActivityTimeline(12); // Get 12 months of data
+    $tutor_ratings = getTutorPerformanceDistribution();
+    $class_performance = getClassPerformanceMetrics();
+    $attendance_distribution = getAttendanceDistribution();
+    $transaction_analytics = getTransactionAnalytics(12);
     
     $title = "Platform Performance Report";
 ?>
@@ -282,10 +291,10 @@
                         <div class="mt-3">
                             <div class="d-flex align-items-center justify-content-between mb-1">
                                 <small class="text-muted">Monthly Growth</small>
-                                <small class="text-primary fw-bold">+<?php echo $platform_stats['user_stats']['monthly_growth']; ?>%</small>
+                                <small class="text-primary fw-bold">+<?php echo number_format($platform_stats['user_stats']['monthly_growth']); ?>%</small>
                             </div>
                             <div class="progress">
-                                <div class="progress-bar bg-primary" style="width: <?php echo min($platform_stats['user_stats']['monthly_growth'] * 5, 100); ?>%"></div>
+                                <div class="progress-bar bg-primary" style="width: <?php echo isset($platform_stats['user_stats']['monthly_growth']) ? min(floatval($platform_stats['user_stats']['monthly_growth']) * 5, 100) : 0; ?>%"></div>
                             </div>
                         </div>
                     </div>
@@ -339,7 +348,7 @@
                         <div class="metric-icon">
                             <i class="bi bi-star-fill"></i>
                         </div>
-                        <h3><?php echo number_format($platform_stats['education_stats']['avg_tutor_rating'], 1); ?></h3>
+                        <h3><?php echo number_format($platform_stats['education_stats']['avg_tutor_rating'] ?? 0, 1); ?></h3>
                         <p class="text-muted mb-0">Avg. Tutor Rating</p>
                         <div class="mt-3">
                             <div class="d-flex align-items-center justify-content-between mb-1">
@@ -353,7 +362,40 @@
                     </div>
                 </div>
             </div>
-        </div>
+            <div class="row g-4 mt-4">
+                <div class="col-md-6">
+                    <div class="content-card bg-snow h-100">
+                        <div class="card-body">
+                            <h5 class="section-title mb-3 text-center">
+                                <i class="bi bi-currency-dollar me-2 text-success"></i>
+                                Earnings Overview
+                            </h5>
+                            <p class="text-muted text-center mb-4">Monthly earnings and transaction counts</p>
+                            <div style="height: 100%; width: 100%;">
+                                <canvas id="earningsChart" height="300"></canvas>
+                            </div>
+                            <div style="height: 100%; width: 100%; margin-top: 2rem;">
+                                <canvas id="transactionsChart" height="300"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="content-card bg-snow h-100">
+                        <div class="card-body">
+                            <h5 class="section-title mb-3 text-center">
+                                <i class="bi bi-pie-chart-fill me-2 text-info"></i>
+                                Transaction Status Breakdown
+                            </h5>
+                            <p class="text-muted text-center mb-4">Distribution of transaction statuses</p>
+                            <div style="height: 100%; width: 100%;">
+                                <canvas id="transactionStatusChart" height="300"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div> 
 
         <!-- User Growth Chart -->
         <div class="content-section mb-4">
@@ -404,7 +446,7 @@
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center">
                                     <span class="stat-label">Monthly Growth</span>
-                                    <span class="stat-value text-success">+<?php echo $platform_stats['user_stats']['monthly_growth']; ?>%</span>
+                                    <span class="stat-value text-success">+<?php echo isset($platform_stats['user_stats']['monthly_growth']) ? number_format($platform_stats['user_stats']['monthly_growth'], 1) : '0'; ?>%</span>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center">
                                     <span class="stat-label">New Students (30 days)</span>
@@ -529,10 +571,63 @@
                     <div class="content-card bg-snow h-100">
                         <div class="card-body">
                             <h5 class="section-title mb-3 text-center">Popular Subjects</h5>
-                            <div style="height: 350px; max-width: 450px; margin: 0 auto;">
+                            <div style="height: 350px; margin: 0 auto;">
                                 <canvas id="popularSubjectsChart"></canvas>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced Visualizations -->
+        <div class="content-section mb-4">
+            <div class="row g-4">
+                <!-- Course Performance Metrics Chart -->
+                <div class="col-md-6">
+                    <div class="content-card bg-snow h-100">
+                        <div class="card-body">
+                            <h5 class="section-title mb-3 text-center">
+                                <i class="bi bi-bar-chart-fill me-2 text-primary"></i>
+                                Course Performance
+                            </h5>
+                            <p class="text-muted text-center mb-4">Average student performance by course type</p>
+                            <div style="height: 350px; width: 100%; margin: 0 auto;">
+                                <canvas id="coursePerformanceChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tutor Rating Distribution -->
+                <div class="col-md-6">
+                    <div class="content-card bg-snow h-100">
+                        <div class="card-body">
+                            <h5 class="section-title mb-3 text-center">
+                                <i class="bi bi-stars me-2 text-warning"></i>
+                                Tutor Rating Distribution
+                            </h5>
+                            <p class="text-muted text-center mb-4">Distribution of tutor ratings across the platform</p>
+                            <div style="height: 350px; width: 100%; margin: 0 auto;">
+                                <canvas id="tutorRatingChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Platform Activity Timeline -->
+        <div class="content-section mb-4">
+            <div class="content-card bg-snow">
+                <div class="card-body">
+                    <h5 class="section-title mb-3 text-center">
+                        <i class="bi bi-activity me-2 text-danger"></i>
+                        Platform Activity Timeline
+                    </h5>
+                    <p class="text-muted text-center mb-4">Monthly trends of logins, enrollments, and course completions</p>
+                    <div style="height: 400px; width: 100%;">
+                        <canvas id="activityTimelineChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -557,7 +652,7 @@
                                             with <?php echo number_format($platform_stats['user_stats']['active_users']); ?> active users (<?php echo round(($platform_stats['user_stats']['active_users'] / ($platform_stats['user_stats']['total_users'] ?: 1)) * 100, 1); ?>% active rate).
                                             In the last 30 days, we've welcomed <?php echo number_format($platform_stats['user_stats']['new_students']); ?> new students
                                             and <?php echo number_format($platform_stats['user_stats']['new_tutors']); ?> new tutors, representing a
-                                            <?php echo $platform_stats['user_stats']['monthly_growth']; ?>% monthly growth rate.
+                                            <?php echo isset($platform_stats['user_stats']['monthly_growth']) ? number_format($platform_stats['user_stats']['monthly_growth'], 1) : '0'; ?>% monthly growth rate.
                                         </p>
                                     </div>
                                 </div>
@@ -647,6 +742,268 @@
                 </div>
             </div>
         </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Attendance Distribution Chart
+                const attendanceCtx = document.getElementById('attendanceDistributionChart').getContext('2d');
+                const attendanceData = {
+                    labels: <?php echo json_encode($attendance_distribution['statuses'] ?? []); ?>,
+                    datasets: [{
+                        label: 'Attendance Count',
+                        data: <?php echo json_encode($attendance_distribution['counts'] ?? []); ?>,
+                        backgroundColor: [
+                            '#198754', // present - green
+                            '#dc3545', // absent - red
+                            '#ffc107', // late - yellow
+                            '#6c757d'  // pending - gray
+                        ],
+                        borderColor: [
+                            '#198754',
+                            '#dc3545',
+                            '#ffc107',
+                            '#6c757d'
+                        ],
+                        borderWidth: 1
+                    }]
+                };
+
+                const attendanceChart = new Chart(attendanceCtx, {
+                    type: 'doughnut',
+                    data: attendanceData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '60%',
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    boxWidth: 12,
+                                    padding: 15,
+                                    font: {
+                                        size: 12
+                                    },
+                                    usePointStyle: true,
+                                    pointStyle: 'circle'
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        let value = context.raw;
+                                        let total = context.dataset.data.reduce((acc, data) => acc + data, 0);
+                                        let percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                        return `${label}: ${value} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+            }
+        });
+    });
+
+    // Transaction Analytics Charts
+    document.addEventListener('DOMContentLoaded', function() {
+        const earningsCtx = document.getElementById('earningsChart').getContext('2d');
+        const transactionsCtx = document.getElementById('transactionsChart').getContext('2d');
+        const transactionStatusCtx = document.getElementById('transactionStatusChart').getContext('2d');
+
+        const months = <?php echo json_encode($transaction_analytics['months'] ?? []); ?>;
+        const monthlyEarnings = <?php echo json_encode($transaction_analytics['monthly_earnings'] ?? []); ?>;
+        const monthlyTransactions = <?php echo json_encode($transaction_analytics['monthly_transactions'] ?? []); ?>;
+        const statusCounts = <?php echo json_encode($transaction_analytics['status_counts'] ?? []); ?>;
+
+        // Earnings Line Chart
+        const earningsChart = new Chart(earningsCtx, {
+            type: 'line',
+            data: {
+                labels: months,
+                datasets: [{
+                    label: 'Monthly Earnings (₱)',
+                    data: monthlyEarnings,
+                    borderColor: '#198754',
+                    backgroundColor: 'rgba(25, 135, 84, 0.2)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return '₱' + context.parsed.y.toFixed(2);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '₱' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Transactions Bar Chart
+        const transactionsChart = new Chart(transactionsCtx, {
+            type: 'bar',
+            data: {
+                labels: months,
+                datasets: [{
+                    label: 'Number of Transactions',
+                    data: monthlyTransactions,
+                    backgroundColor: '#0d6efd'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.parsed.y + ' transactions';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+
+        // Transaction Status Doughnut Chart
+        const statusLabels = Object.keys(statusCounts);
+        const statusData = Object.values(statusCounts);
+        const statusColors = {
+            'pending': '#ffc107',
+            'processing': '#0d6efd',
+            'succeeded': '#198754',
+            'failed': '#dc3545'
+        };
+        const backgroundColors = statusLabels.map(label => statusColors[label] || '#6c757d');
+
+        const transactionStatusChart = new Chart(transactionStatusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: statusLabels,
+                datasets: [{
+                    data: statusData,
+                    backgroundColor: backgroundColors,
+                    borderColor: backgroundColors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '60%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 15,
+                            font: { size: 12 },
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                let value = context.raw;
+                                let total = context.dataset.data.reduce((acc, data) => acc + data, 0);
+                                let percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Class Performance Chart
+                const classPerformanceCtx = document.getElementById('classPerformanceChart').getContext('2d');
+                const classPerformanceChart = new Chart(classPerformanceCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: <?php echo json_encode($class_performance['performance_titles'] ?? []); ?>,
+                        datasets: [{
+                            label: 'Number of Enrollments',
+                            data: <?php echo json_encode($class_performance['counts'] ?? []); ?>,
+                            backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1,
+                            borderRadius: 4,
+                            barPercentage: 0.7,
+                            categoryPercentage: 0.8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `Enrollments: ${context.raw}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Number of Enrollments',
+                                    font: {
+                                        weight: 'bold'
+                                    }
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Performance Title',
+                                    font: {
+                                        weight: 'bold'
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+        </script>
     </div>
 
     <?php include ROOT_PATH . '/components/footer.php'; ?>
@@ -656,51 +1013,50 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            initializeCharts();
-        });
-
-        function initializeCharts() {
+            try {
             // User Growth Chart
             const growthCtx = document.getElementById('userGrowthChart').getContext('2d');
             new Chart(growthCtx, {
                 type: 'line',
                 data: {
-                    labels: <?php echo json_encode(array_column($platform_stats['growth_data'], 'month_display')); ?>,
-                    datasets: [{
-                        label: 'New Students',
-                        data: <?php echo json_encode(array_column($platform_stats['growth_data'], 'new_students')); ?>,
-                        borderColor: '#0d6efd',
-                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                        tension: 0.3,
-                        fill: true
-                    }, {
-                        label: 'New Tutors',
-                        data: <?php echo json_encode(array_column($platform_stats['growth_data'], 'new_tutors')); ?>,
-                        borderColor: '#198754',
-                        backgroundColor: 'rgba(25, 135, 84, 0.1)',
-                        tension: 0.3,
-                        fill: true
-                    }]
+            labels: <?php echo json_encode(array_column($platform_stats['growth_data'] ?? [], 'month_display') ?: []); ?>,
+            datasets: [{
+                // Add error handling for datasets
+                label: 'New Students',
+                data: <?php echo json_encode(array_column($platform_stats['growth_data'] ?? [], 'new_students') ?: []); ?>,
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3,
+                pointBackgroundColor: '#0d6efd',
+                pointRadius: 4
+            }, {
+                label: 'New Tutors',
+                data: <?php echo json_encode(array_column($platform_stats['growth_data'] ?? [], 'new_tutors') ?: []); ?>,
+                borderColor: '#198754',
+                backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3,
+                pointBackgroundColor: '#198754',
+                pointRadius: 4
+            }]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: true,
+                    maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            position: 'top'
+                            position: 'top',
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
                         },
                         title: {
                             display: true,
-                            text: 'User Growth (Last 12 Months)'
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'New Users'
-                            }
+                            text: 'New Users'
                         }
                     }
                 }
@@ -711,26 +1067,26 @@
             new Chart(subjectsCtx, {
                 type: 'bar',
                 data: {
-                    labels: <?php echo json_encode(array_column($platform_stats['popular_subjects'], 'subject_name')); ?>,
-                    datasets: [{
-                        label: 'Enrollments',
-                        data: <?php echo json_encode(array_column($platform_stats['popular_subjects'], 'enrollment_count')); ?>,
-                        backgroundColor: [
-                            'rgba(255, 99, 132, 0.7)',
-                            'rgba(54, 162, 235, 0.7)',
-                            'rgba(255, 206, 86, 0.7)',
-                            'rgba(75, 192, 192, 0.7)',
-                            'rgba(153, 102, 255, 0.7)'
-                        ],
-                        borderColor: [
-                            'rgb(255, 99, 132)',
-                            'rgb(54, 162, 235)',
-                            'rgb(255, 206, 86)',
-                            'rgb(75, 192, 192)',
-                            'rgb(153, 102, 255)'
-                        ],
-                        borderWidth: 1
-                    }]
+            labels: <?php echo json_encode(array_column($platform_stats['popular_subjects'] ?? [], 'subject_name') ?: []); ?>,
+            datasets: [{
+                label: 'Enrollments',
+                data: <?php echo json_encode(array_column($platform_stats['popular_subjects'] ?? [], 'enrollment_count') ?: []); ?>,
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 206, 86, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(153, 102, 255, 0.7)'
+                ],
+                borderColor: [
+                    'rgb(255, 99, 132)',
+                    'rgb(54, 162, 235)',
+                    'rgb(255, 206, 86)',
+                    'rgb(75, 192, 192)',
+                    'rgb(153, 102, 255)'
+                ],
+                borderWidth: 1
+            }]
                 },
                 options: {
                     responsive: true,
@@ -793,30 +1149,262 @@
                     }
                 }
             });
-        }
-
-        // Function to export report as PDF
-        function exportReport() {
-            // Show loading indicator
-            const loadingIndicator = document.createElement('div');
-            loadingIndicator.id = 'pdf-loading';
-            loadingIndicator.innerHTML = `
-                <div class="d-flex align-items-center justify-content-center position-fixed top-0 start-0 w-100 h-100" style="background: rgba(0,0,0,0.5); z-index: 9999;">
-                    <div class="bg-white p-4 rounded shadow-lg text-center">
-                        <div class="spinner-border text-primary mb-3" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <p class="mb-0">Generating PDF report...</p>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(loadingIndicator);
             
-            setTimeout(() => {
-                document.body.removeChild(loadingIndicator);
-                alert('PDF generation would be implemented using the API endpoint for report generation.');
-            }, 1500);
-        }
+            // NEW CHARTS
+            
+            // Course Performance Chart
+            const coursePerformanceCtx = document.getElementById('coursePerformanceChart').getContext('2d');
+            
+            <?php
+            // Process data for course performance chart
+            $hasCourseData = $course_performance['has_data'] ?? false;
+            $courseLabels = [];
+            $performanceValues = [];
+            $barColors = [];
+            
+            if ($hasCourseData && !empty($course_performance['courses'])) {
+                foreach ($course_performance['courses'] as $course) {
+                    $courseLabels[] = $course['course_name'];
+                    $performanceValues[] = $course['avg_performance'];
+                    $barColors[] = $course['color'];
+                }
+            }
+            ?>
+            
+            new Chart(coursePerformanceCtx, {
+                type: 'bar',
+                data: {
+                    labels: <?php echo json_encode($courseLabels); ?>,
+                    datasets: [{
+                        label: 'Performance Score',
+                        data: <?php echo json_encode($performanceValues); ?>,
+                        backgroundColor: <?php echo json_encode($barColors); ?>,
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        barPercentage: 0.7,
+                        categoryPercentage: 0.8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y', // Horizontal bars
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(tooltipItems) {
+                                    return tooltipItems[0].label;
+                                },
+                                label: function(context) {
+                                    return `Performance: ${context.raw}%`;
+                                },
+                                afterLabel: function(context) {
+                                    const courseIndex = context.dataIndex;
+                                    if (courseIndex >= 0 && <?php echo !empty($course_performance['courses']) ? 'true' : 'false'; ?>) {
+                                        const courses = <?php echo json_encode($course_performance['courses']); ?>;
+                                        return `Students: ${courses[courseIndex].student_count} | Classes: ${courses[courseIndex].class_count}`;
+                                    }
+                                    return '';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Average Performance Score (%)',
+                                font: {
+                                    weight: 'bold'
+                                }
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Course',
+                                font: {
+                                    weight: 'bold'
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Activity Timeline Chart
+            const activityTimelineCtx = document.getElementById('activityTimelineChart').getContext('2d');
+            
+            new Chart(activityTimelineCtx, {
+                type: 'line',
+                data: {
+                    labels: <?php echo json_encode($user_activity['months']); ?>,
+                    datasets: [
+                        {
+                            label: 'User Logins',
+                            data: <?php echo json_encode($user_activity['logins']); ?>,
+                            borderColor: '#FF6B00', // TechTutor orange
+                            backgroundColor: 'rgba(255, 107, 0, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3,
+                            pointBackgroundColor: '#FF6B00',
+                            pointRadius: 4,
+                            order: 1
+                        },
+                        {
+                            label: 'New Enrollments',
+                            data: <?php echo json_encode($user_activity['enrollments']); ?>,
+                            borderColor: '#0d6efd',
+                            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3,
+                            pointBackgroundColor: '#0d6efd',
+                            pointRadius: 4,
+                            order: 2
+                        },
+                        {
+                            label: 'Course Completions',
+                            data: <?php echo json_encode($user_activity['completions']); ?>,
+                            borderColor: '#198754',
+                            backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3,
+                            pointBackgroundColor: '#198754',
+                            pointRadius: 4,
+                            order: 3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Count',
+                                font: {
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Tutor Rating Distribution Chart
+            const tutorRatingCtx = document.getElementById('tutorRatingChart').getContext('2d');
+            
+            new Chart(tutorRatingCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: <?php echo json_encode($tutor_ratings['rating_ranges']); ?>,
+                    datasets: [{
+                        data: <?php echo json_encode($tutor_ratings['tutors']); ?>,
+                        backgroundColor: <?php echo json_encode($tutor_ratings['colors']); ?>,
+                        borderWidth: 1,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '60%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 15,
+                                font: {
+                                    size: 12
+                                },
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    let value = context.raw;
+                                    let total = context.dataset.data.reduce((acc, data) => acc + data, 0);
+                                    let percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                    return `${label}: ${value} tutors (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Add "No Data Available" messages where needed
+            if (!<?php echo $hasCourseData ? 'true' : 'false'; ?>) {
+                addNoDataMessage('coursePerformanceChart', 'No Course Data Available');
+            }
+            
+            if (!<?php echo $user_activity['has_data'] ? 'true' : 'false'; ?>) {
+                addNoDataMessage('activityTimelineChart', 'No Activity Data Available');
+            }
+            
+            if (!<?php echo $tutor_ratings['has_data'] ? 'true' : 'false'; ?>) {
+                addNoDataMessage('tutorRatingChart', 'No Tutor Rating Data Available');
+            }
+            
+            // Helper function to add a "No Data Available" message to a chart
+            function addNoDataMessage(chartId, message) {
+                const chartContainer = document.getElementById(chartId).parentNode;
+                const noDataLabel = document.createElement('div');
+                noDataLabel.style.position = 'absolute';
+                noDataLabel.style.top = '50%';
+                noDataLabel.style.left = '50%';
+                noDataLabel.style.transform = 'translate(-50%, -50%)';
+                noDataLabel.style.textAlign = 'center';
+                noDataLabel.style.pointerEvents = 'none';
+                noDataLabel.innerHTML = '<span style="color: #666; font-size: 16px; background: rgba(255,255,255,0.8); padding: 10px 15px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">' + message + '</span>';
+                chartContainer.style.position = 'relative';
+                chartContainer.appendChild(noDataLabel);
+            }
+            } catch (error) {
+                console.error('Error initializing charts:', error);
+                // Display a user-friendly error message
+                const errorMessage = document.createElement('div');
+                errorMessage.className = 'alert alert-warning';
+                errorMessage.innerHTML = '<strong>Notice:</strong> Some charts could not be displayed. Please try refreshing the page.';
+                document.querySelector('.dashboard-content').prepend(errorMessage);
+            }
+        });
     </script>
 </body>
 </html>

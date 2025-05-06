@@ -562,11 +562,11 @@ function getPlatformStats($period = 'all') {
         // Date condition based on period
         $dateCondition = "";
         if ($period === 'weekly') {
-            $dateCondition = "AND DATE(created_at) >= DATE_SUB(CURRENT_DATE, INTERVAL 1 WEEK)";
+            $dateCondition = "AND DATE(created_on) >= DATE_SUB(CURRENT_DATE, INTERVAL 1 WEEK)";
         } elseif ($period === 'monthly') {
-            $dateCondition = "AND DATE(created_at) >= DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH)";
+            $dateCondition = "AND DATE(created_on) >= DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH)";
         } elseif ($period === 'yearly') {
-            $dateCondition = "AND DATE(created_at) >= DATE_SUB(CURRENT_DATE, INTERVAL 1 YEAR)";
+            $dateCondition = "AND DATE(created_on) >= DATE_SUB(CURRENT_DATE, INTERVAL 1 YEAR)";
         }
         
         // User statistics
@@ -576,8 +576,8 @@ function getPlatformStats($period = 'all') {
             COUNT(CASE WHEN role = 'ADMIN' THEN 1 END) as total_admins,
             COUNT(CASE WHEN status = 1 THEN 1 END) as active_users,
             COUNT(CASE WHEN status = 0 THEN 1 END) as inactive_users,
-            COUNT(CASE WHEN role = 'TECHKID' AND DATE(created_at) >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY) THEN 1 END) as new_students,
-            COUNT(CASE WHEN role = 'TECHGURU' AND DATE(created_at) >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY) THEN 1 END) as new_tutors
+            COUNT(CASE WHEN role = 'TECHKID' AND DATE(created_on) >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY) THEN 1 END) as new_students,
+            COUNT(CASE WHEN role = 'TECHGURU' AND DATE(created_on) >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY) THEN 1 END) as new_tutors
         FROM users
         WHERE 1=1 " . $dateCondition;
         
@@ -603,10 +603,11 @@ function getPlatformStats($period = 'all') {
             COUNT(DISTINCT cs.schedule_id) as total_sessions,
             SUM(TIMESTAMPDIFF(MINUTE, cs.start_time, cs.end_time)) / 60 as total_teaching_hours,
             COUNT(DISTINCT m.meeting_id) as total_online_meetings,
-            COUNT(DISTINCT CASE WHEN m.recording_url IS NOT NULL THEN m.meeting_id END) as total_recordings,
-            COUNT(DISTINCT sf.feedback_id) as total_feedbacks
+            COUNT(DISTINCT rv.id) as total_recordings,
+            COUNT(DISTINCT sf.rating_id) as total_feedbacks
         FROM class_schedule cs
         LEFT JOIN meetings m ON cs.schedule_id = m.schedule_id
+        LEFT JOIN recording_visibility rv ON cs.schedule_id = rv.schedule_id
         LEFT JOIN session_feedback sf ON cs.schedule_id = sf.session_id
         WHERE cs.status = 'completed'";
         
@@ -615,13 +616,13 @@ function getPlatformStats($period = 'all') {
         
         // Growth trend over the last 12 months
         $growthQuery = "SELECT 
-            DATE_FORMAT(created_at, '%Y-%m') as month,
+            DATE_FORMAT(created_on, '%Y-%m') as month,
             COUNT(CASE WHEN role = 'TECHKID' THEN 1 END) as new_students,
             COUNT(CASE WHEN role = 'TECHGURU' THEN 1 END) as new_tutors,
             COUNT(*) as total_new_users
         FROM users
-        WHERE created_at >= DATE_SUB(CURRENT_DATE, INTERVAL 12 MONTH)
-        GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+        WHERE created_on >= DATE_SUB(CURRENT_DATE, INTERVAL 12 MONTH)
+        GROUP BY DATE_FORMAT(created_on, '%Y-%m')
         ORDER BY month ASC";
         
         $result = $conn->query($growthQuery);
@@ -697,6 +698,427 @@ function getPlatformStats($period = 'all') {
             'growth_data' => [],
             'popular_subjects' => []
         ];
+    }
+}
+
+/**
+ * Get course performance metrics for admin reports
+ * 
+ * @return array Data on course performance metrics
+ */
+function getCoursePerformanceMetrics() {
+    global $conn;
+    $metrics = [
+        'courses' => [],
+        'has_data' => false
+    ];
+    
+    try {
+        // Get course performance data
+        $sql = "
+            SELECT 
+                c.course_id,
+                c.course_name,
+                COUNT(DISTINCT s.subject_id) as subject_count,
+                COUNT(DISTINCT cl.class_id) as class_count,
+                COUNT(DISTINCT e.student_id) as student_count,
+                COALESCE(AVG(sp.performance_score), 0) as avg_performance
+            FROM course c
+            LEFT JOIN subject s ON c.course_id = s.course_id
+            LEFT JOIN class cl ON s.subject_id = cl.subject_id
+            LEFT JOIN enrollments e ON cl.class_id = e.class_id
+            LEFT JOIN student_progress sp ON e.student_id = sp.student_id AND e.class_id = sp.class_id
+            GROUP BY c.course_id, c.course_name
+            ORDER BY c.course_name
+        ";
+        
+        $result = $conn->query($sql);
+        
+        if (!$result) {
+            log_error("Error in getCoursePerformanceMetrics: " . $conn->error, 'database');
+            return $metrics;
+        }
+        
+        if ($result->num_rows > 0) {
+            $metrics['has_data'] = true;
+            
+            while ($row = $result->fetch_assoc()) {
+                // Calculate color based on performance
+                $performance = floatval($row['avg_performance']);
+                $color = '';
+                
+                if ($performance >= 90) {
+                    $color = 'rgba(25, 135, 84, 0.8)'; // Green (Excellent)
+                } elseif ($performance >= 70) {
+                    $color = 'rgba(13, 110, 253, 0.8)'; // Blue (Good)
+                } elseif ($performance >= 50) {
+                    $color = 'rgba(255, 193, 7, 0.8)'; // Yellow (Average)
+                } else {
+                    $color = 'rgba(220, 53, 69, 0.8)'; // Red (Needs Improvement)
+                }
+                
+                $metrics['courses'][] = [
+                    'course_id' => $row['course_id'],
+                    'course_name' => $row['course_name'],
+                    'subject_count' => $row['subject_count'],
+                    'class_count' => $row['class_count'],
+                    'student_count' => $row['student_count'],
+                    'avg_performance' => round($row['avg_performance'], 1),
+                    'color' => $color
+                ];
+            }
+        }
+        
+        return $metrics;
+    } catch (Exception $e) {
+        log_error("Error in getCoursePerformanceMetrics: " . $e->getMessage(), 'database');
+        return $metrics;
+    }
+}
+
+/**
+ * Get user activity timeline for admin reports
+ * 
+ * @param int $limit Number of months to retrieve
+ * @return array Monthly activity data for the specified period
+ */
+function getUserActivityTimeline($limit = 12) {
+    global $conn;
+    $timeline = [
+        'months' => [],
+        'logins' => [],
+        'enrollments' => [],
+        'completions' => [],
+        'has_data' => false
+    ];
+    
+    try {
+        $sql = "
+            SELECT 
+                DATE_FORMAT(date_point, '%b %Y') as month_label,
+                DATE_FORMAT(date_point, '%Y-%m') as month_key,
+                (
+                    SELECT COUNT(*) 
+                    FROM users 
+                    WHERE DATE_FORMAT(last_login, '%Y-%m') = DATE_FORMAT(date_point, '%Y-%m')
+                ) as login_count,
+                (
+                    SELECT COUNT(*) 
+                    FROM enrollments 
+                    WHERE DATE_FORMAT(enrollment_date, '%Y-%m') = DATE_FORMAT(date_point, '%Y-%m')
+                ) as enrollment_count,
+                (
+                    SELECT COUNT(*) 
+                    FROM enrollments 
+                    WHERE DATE_FORMAT(enrollment_date, '%Y-%m') = DATE_FORMAT(date_point, '%Y-%m')
+                    AND status = 'completed'
+                ) as completion_count
+            FROM (
+                SELECT CURDATE() - INTERVAL (a.a + (10 * b.a) + (100 * c.a)) DAY as date_point
+                FROM (SELECT 0 as a UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9) as a
+                CROSS JOIN (SELECT 0 as a UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9) as b
+                CROSS JOIN (SELECT 0 as a UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9) as c
+            ) as dates
+            WHERE date_point <= CURDATE() AND date_point >= DATE_SUB(CURDATE(), INTERVAL ? MONTH)
+            GROUP BY month_key
+            ORDER BY date_point;
+        ";
+        
+        $stmt = $conn->prepare($sql);
+        
+        if (!$stmt) {
+            log_error("Error preparing statement in getUserActivityTimeline: " . $conn->error, 'database');
+            return $timeline;
+        }
+        
+        $stmt->bind_param("i", $limit);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows > 0) {
+            $timeline['has_data'] = true;
+            
+            while ($row = $result->fetch_assoc()) {
+                $timeline['months'][] = $row['month_label'];
+                $timeline['logins'][] = intval($row['login_count']);
+                $timeline['enrollments'][] = intval($row['enrollment_count']);
+                $timeline['completions'][] = intval($row['completion_count']);
+            }
+        }
+        
+        return $timeline;
+    } catch (Exception $e) {
+        log_error("Error in getUserActivityTimeline: " . $e->getMessage(), 'database');
+        return $timeline;
+    }
+}
+
+/**
+ * Get tutor performance distribution for admin reports
+ * 
+ * @return array Performance distribution data for tutors
+ */
+function getTutorPerformanceDistribution() {
+    global $conn;
+    $distribution = [
+        'rating_ranges' => ['4.5-5.0', '4.0-4.4', '3.5-3.9', '3.0-3.4', 'Below 3.0'],
+        'tutors' => [0, 0, 0, 0, 0],
+        'colors' => [
+            'rgba(25, 135, 84, 0.8)',  // Green (Excellent)
+            'rgba(13, 110, 253, 0.8)',  // Blue (Very Good)
+            'rgba(255, 193, 7, 0.8)',  // Yellow (Good)
+            'rgba(255, 136, 0, 0.8)',  // Orange (Average)
+            'rgba(220, 53, 69, 0.8)'   // Red (Below Average)
+        ],
+        'has_data' => false
+    ];
+    
+    try {
+        $sql = "
+            SELECT 
+                CASE
+                    WHEN rating >= 4.5 THEN 0
+                    WHEN rating >= 4.0 THEN 1
+                    WHEN rating >= 3.5 THEN 2
+                    WHEN rating >= 3.0 THEN 3
+                    ELSE 4
+                END as rating_category,
+                COUNT(*) as tutor_count
+            FROM users
+            WHERE role = 'TECHGURU' AND rating > 0
+            GROUP BY rating_category
+            ORDER BY rating_category
+        ";
+        
+        $result = $conn->query($sql);
+        
+        if (!$result) {
+            log_error("Error in getTutorPerformanceDistribution: " . $conn->error, 'database');
+            return $distribution;
+        }
+        
+        $hasValues = false;
+        
+        while ($row = $result->fetch_assoc()) {
+            $category = intval($row['rating_category']);
+            $count = intval($row['tutor_count']);
+            
+            if ($category >= 0 && $category <= 4) {
+                $distribution['tutors'][$category] = $count;
+                if ($count > 0) {
+                    $hasValues = true;
+                }
+            }
+        }
+        
+        $distribution['has_data'] = $hasValues;
+        
+        return $distribution;
+    } catch (Exception $e) {
+        log_error("Error in getTutorPerformanceDistribution: " . $e->getMessage(), 'database');
+        return $distribution;
+    }
+}
+/**
+ * Get class performance metrics for admin reports
+ * 
+ * @return array Data on class performance metrics
+ */
+function getClassPerformanceMetrics() {
+    global $conn;
+    $metrics = [
+        'performance_titles' => [],
+        'counts' => [],
+        'has_data' => false
+    ];
+
+    try {
+        $sql = "
+            SELECT p.title, COUNT(e.enrollment_id) AS count
+            FROM performances p
+            LEFT JOIN enrollments e ON p.id = e.performance_id
+            GROUP BY p.title
+            ORDER BY count DESC
+        ";
+
+        $result = $conn->query($sql);
+
+        if (!$result) {
+            log_error("Error in getClassPerformanceMetrics: " . $conn->error, 'database');
+            return $metrics;
+        }
+
+        if ($result->num_rows > 0) {
+            $metrics['has_data'] = true;
+
+            while ($row = $result->fetch_assoc()) {
+                $metrics['performance_titles'][] = $row['title'];
+                $metrics['counts'][] = intval($row['count']);
+            }
+        }
+
+        return $metrics;
+    } catch (Exception $e) {
+        log_error("Exception in getClassPerformanceMetrics: " . $e->getMessage(), 'database');
+        return $metrics;
+    }
+}
+
+/**
+ * Get attendance distribution counts for admin reports
+ * 
+ * @return array Attendance status counts
+ */
+function getAttendanceDistribution() {
+    global $conn;
+    $distribution = [
+        'statuses' => ['present', 'absent', 'late', 'pending'],
+        'counts' => [0, 0, 0, 0],
+        'has_data' => false
+    ];
+
+    try {
+        $sql = "
+            SELECT status, COUNT(*) as count
+            FROM attendance
+            GROUP BY status
+        ";
+
+        $result = $conn->query($sql);
+
+        if (!$result) {
+            log_error("Error in getAttendanceDistribution: " . $conn->error, 'database');
+            return $distribution;
+        }
+
+        if ($result->num_rows > 0) {
+            $distribution['has_data'] = true;
+
+            while ($row = $result->fetch_assoc()) {
+                $status = $row['status'];
+                $count = intval($row['count']);
+                $index = array_search($status, $distribution['statuses']);
+                if ($index !== false) {
+                    $distribution['counts'][$index] = $count;
+                }
+            }
+        }
+
+        return $distribution;
+    } catch (Exception $e) {
+        log_error("Exception in getAttendanceDistribution: " . $e->getMessage(), 'database');
+        return $distribution;
+    }
+}
+
+/**
+ * Get earnings and transactions analytics for admin reports
+ * 
+ * @param int $months Number of months to include in timeline (default 12)
+ * @return array Analytics data including monthly earnings, transaction counts, and status breakdown
+ */
+function getTransactionAnalytics($months = 12) {
+    global $conn;
+    $analytics = [
+        'monthly_earnings' => [],
+        'monthly_transactions' => [],
+        'status_counts' => [],
+        'total_earnings' => 0,
+        'total_transactions' => 0,
+        'has_data' => false
+    ];
+
+    try {
+        // Get monthly earnings and transaction counts for last $months months
+        $sql = "
+            SELECT 
+                DATE_FORMAT(created_at, '%Y-%m') as month,
+                SUM(amount) as total_amount,
+                COUNT(*) as transaction_count
+            FROM transactions
+            WHERE status = 'succeeded' AND created_at >= DATE_SUB(CURRENT_DATE, INTERVAL ? MONTH)
+            GROUP BY month
+            ORDER BY month ASC
+        ";
+
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            log_error('Error preparing statement in getTransactionAnalytics: ' . $conn->error, 'database');
+            return $analytics;
+        }
+        $stmt->bind_param('i', $months);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $monthly_earnings = [];
+        $monthly_transactions = [];
+        while ($row = $result->fetch_assoc()) {
+            $monthly_earnings[$row['month']] = floatval($row['total_amount']);
+            $monthly_transactions[$row['month']] = intval($row['transaction_count']);
+        }
+
+        // Fill missing months with zero values
+        $period = new DatePeriod(
+            new DateTime(date('Y-m-01', strtotime("-$months months"))),
+            new DateInterval('P1M'),
+            new DateTime(date('Y-m-01'))
+        );
+
+        $months_labels = [];
+        $earnings_data = [];
+        $transactions_data = [];
+        foreach ($period as $dt) {
+            $month_key = $dt->format('Y-m');
+            $months_labels[] = $dt->format('M Y');
+            $earnings_data[] = $monthly_earnings[$month_key] ?? 0;
+            $transactions_data[] = $monthly_transactions[$month_key] ?? 0;
+        }
+
+        // Get transaction counts by status
+        $status_sql = "
+            SELECT status, COUNT(*) as count
+            FROM transactions
+            GROUP BY status
+        ";
+        $status_result = $conn->query($status_sql);
+        $status_counts = [];
+        if ($status_result) {
+            while ($row = $status_result->fetch_assoc()) {
+                $status_counts[$row['status']] = intval($row['count']);
+            }
+        }
+
+        // Get total earnings and total transactions
+        $total_sql = "
+            SELECT 
+                COALESCE(SUM(amount), 0) as total_earnings,
+                COUNT(*) as total_transactions
+            FROM transactions
+            WHERE status = 'succeeded'
+        ";
+        $total_result = $conn->query($total_sql);
+        $total_earnings = 0;
+        $total_transactions = 0;
+        if ($total_result) {
+            $total_row = $total_result->fetch_assoc();
+            $total_earnings = floatval($total_row['total_earnings']);
+            $total_transactions = intval($total_row['total_transactions']);
+        }
+
+        $analytics = [
+            'months' => $months_labels,
+            'monthly_earnings' => $earnings_data,
+            'monthly_transactions' => $transactions_data,
+            'status_counts' => $status_counts,
+            'total_earnings' => $total_earnings,
+            'total_transactions' => $total_transactions,
+            'has_data' => true
+        ];
+
+        return $analytics;
+    } catch (Exception $e) {
+        log_error('Exception in getTransactionAnalytics: ' . $e->getMessage(), 'database');
+        return $analytics;
     }
 }
 ?>
