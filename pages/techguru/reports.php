@@ -22,10 +22,19 @@
         $class_performance = getClassPerformanceData($tutor_id);
 
         // Get student progress data
-        $student_progress = getStudentProgressByTutor($tutor_id);
+        $student_progress = getStudentProgressData($tutor_id);
+
+        // Initialize rating management
+        $ratingManager = new RatingManagement();
 
         // Get rating and feedback data
         $rating_data = getTutorRatingStats($tutor_id);
+
+        // Get teaching performance trends
+        $performance_trends = $ratingManager->getTeachingPerformanceTrends($tutor_id);
+
+        // Get rating distribution
+        $rating_distribution = $ratingManager->getRatingDistribution($tutor_id);
 
         // Get recent activities
         $recent_activities = getTutorRecentActivities($tutor_id);
@@ -39,6 +48,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <?php include ROOT_PATH . '/components/head.php'; ?>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <body data-base="<?php echo BASE; ?>">
     <?php include ROOT_PATH . '/components/header.php'; ?>
 
@@ -142,6 +153,59 @@
                             <div style="height: 500px; width: 100%; margin: 0 auto;">
                                 <canvas id="teachingPerformanceChart"></canvas>
                             </div>
+                            <script>
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    const performanceCtx = document.getElementById('teachingPerformanceChart').getContext('2d');
+                                    new Chart(performanceCtx, {
+                                        type: 'line',
+                                        data: {
+                                            labels: <?php echo json_encode($performance_trends['labels']); ?>,
+                                            datasets: [{
+                                                label: 'Student Performance',
+                                                data: <?php echo json_encode($performance_trends['student_performance']); ?>,
+                                                borderColor: 'rgb(25, 135, 84)',
+                                                backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                                                tension: 0.4
+                                            }, {
+                                                label: 'Completion Rate',
+                                                data: <?php echo json_encode($performance_trends['completion_rates']); ?>,
+                                                borderColor: 'rgb(13, 110, 253)',
+                                                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                                                tension: 0.4
+                                            }, {
+                                                label: 'Attendance Rate',
+                                                data: <?php echo json_encode($performance_trends['attendance_rates']); ?>,
+                                                borderColor: 'rgb(255, 193, 7)',
+                                                backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                                                tension: 0.4
+                                            }]
+                                        },
+                                        options: {
+                                            responsive: true,
+                                            maintainAspectRatio: false,
+                                            plugins: {
+                                                title: {
+                                                    display: false
+                                                },
+                                                legend: {
+                                                    position: 'bottom'
+                                                }
+                                            },
+                                            scales: {
+                                                y: {
+                                                    beginAtZero: true,
+                                                    max: 100,
+                                                    ticks: {
+                                                        callback: function(value) {
+                                                            return value + '%';
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    });
+                                });
+                            </script>
                         </div>
                     </div>
                 </div>
@@ -153,6 +217,33 @@
                             <h5 class="section-title mb-3">Rating Distribution</h5>
                             <div style="height: 600px; width: 100%; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
                                 <canvas id="ratingDistributionChart"></canvas>
+                            </div>
+                            <script>
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    const ratingCtx = document.getElementById('ratingDistributionChart').getContext('2d');
+                                    new Chart(ratingCtx, {
+                                        type: 'doughnut',
+                                        data: {
+                                            labels: <?php echo json_encode($rating_distribution['labels']); ?>,
+                                            datasets: [{
+                                                data: <?php echo json_encode($rating_distribution['counts']); ?>,
+                                                backgroundColor: <?php echo json_encode($rating_distribution['colors']); ?>,
+                                                borderWidth: 0
+                                            }]
+                                        },
+                                        options: {
+                                            responsive: true,
+                                            maintainAspectRatio: false,
+                                            plugins: {
+                                                legend: {
+                                                    position: 'bottom'
+                                                }
+                                            },
+                                            cutout: '60%'
+                                        }
+                                    });
+                                });
+                            </script>
                             </div>
                         </div>
                     </div>
@@ -295,7 +386,7 @@
                                 <tr>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <img src="<?php echo PROFILE_IMG . (!empty($student['profile_picture']) ? $student['profile_picture'] : 'default.jpg'); ?>" 
+                                            <img src="<?php echo USER_IMG . (!empty($student['profile_picture']) ? $student['profile_picture'] : 'default.jpg'); ?>" 
                                                  alt="" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;">
                                             <div>
                                                 <h6 class="mb-0"><?php echo htmlspecialchars($student['name']); ?></h6>

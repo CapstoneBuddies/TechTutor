@@ -951,7 +951,7 @@ function getClassRecordingsCount($classId) {
 function getAvailableClassRecordings($classId) {
     require_once BACKEND.'meeting_management.php';
     $meetingManager = new MeetingManagement();
-    $recording = $recordings->getClassRecordings($classId);
+    $recording = $meetingManager->getClassRecordings($classId);
 
     // Check if the students has access to the recordings
     
@@ -1120,7 +1120,7 @@ function getClassFeedbacks($class_id) {
         $result = $stmt->get_result();
         return $result->fetch_all(MYSQLI_ASSOC);
     } catch (Exception $e) {
-        error_log("Error getting class feedbacks: " . $e->getMessage());
+        log_error("Error getting class feedbacks: " . $e->getMessage());
         return [];
     }
 }
@@ -1161,7 +1161,7 @@ function getAllTutorFeedbacks($tutor_id) {
         $result = $stmt->get_result();
         return $result->fetch_all(MYSQLI_ASSOC);
     } catch (Exception $e) {
-        error_log("Error getting tutor feedbacks: " . $e->getMessage());
+        log_error("Error getting tutor feedbacks: " . $e->getMessage());
         return [];
     }
 }
@@ -2526,7 +2526,8 @@ function getClassPerformanceData($tutor_id) {
             s.subject_name,
             c.start_date,
             COUNT(DISTINCT e.student_id) as student_count,
-            AVG(sf.rating) as rating,
+            -- Calculate average rating from session_feedback by tutor_id
+            (SELECT AVG(rating) FROM session_feedback sf WHERE sf.tutor_id = c.tutor_id AND sf.rating IS NOT NULL) as rating,
             (SELECT COUNT(*) FROM class_schedule cs 
              WHERE cs.class_id = c.class_id AND cs.status = 'completed') as completed_sessions,
             (SELECT COUNT(*) FROM class_schedule cs 
@@ -2536,7 +2537,6 @@ function getClassPerformanceData($tutor_id) {
         FROM class c
         LEFT JOIN subject s ON c.subject_id = s.subject_id
         LEFT JOIN enrollments e ON c.class_id = e.class_id AND e.status = 'active'
-        LEFT JOIN session_feedback sf ON c.class_id = sf.class_id
         WHERE c.tutor_id = ?
         GROUP BY c.class_id
         ORDER BY c.start_date DESC";
@@ -2558,7 +2558,7 @@ function getClassPerformanceData($tutor_id) {
         return $results;
         
     } catch (Exception $e) {
-        error_log("Error getting class performance data: " . $e->getMessage());
+        log_error("Error getting class performance data: " . $e->getMessage());
         return [];
     }
 }

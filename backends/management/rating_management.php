@@ -8,6 +8,114 @@ class RatingManagement {
     }
 
     /**
+     * Get tutor's teaching performance trends over time
+     * @param int $tutor_id The tutor's ID
+     * @return array Teaching performance data
+     */
+    public function getTeachingPerformanceTrends($tutor_id) {
+        $trends = [
+            'labels' => [],
+            'student_performance' => [],
+            'completion_rates' => [],
+            'attendance_rates' => [],
+            'has_data' => false
+        ];
+
+        try {
+            $sql = "SELECT 
+                    DATE_FORMAT(cs.session_date, '%Y-%m') as month,
+                    AVG(sp.performance_score) as avg_performance,
+                    COUNT(DISTINCT e.enrollment_id) as total_enrollments,
+                    COUNT(DISTINCT CASE WHEN e.status = 'completed' THEN e.enrollment_id END) as completed_enrollments,
+                    COUNT(DISTINCT CASE WHEN a.status = 'present' THEN a.attendance_id END) as present_count,
+                    COUNT(DISTINCT a.attendance_id) as total_attendance
+                FROM class c
+                JOIN class_schedule cs ON c.class_id = cs.class_id
+                LEFT JOIN enrollments e ON c.class_id = e.class_id
+                LEFT JOIN student_progress sp ON e.enrollment_id = sp.student_id AND c.class_id = sp.class_id
+                LEFT JOIN attendance a ON cs.schedule_id = a.schedule_id
+                WHERE c.tutor_id = ? AND cs.session_date <= CURRENT_DATE
+                GROUP BY DATE_FORMAT(cs.session_date, '%Y-%m')
+                ORDER BY month ASC
+                LIMIT 12";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->bind_param("i", $tutor_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+
+            if ($result->num_rows > 0) {
+                $trends['has_data'] = true;
+                while ($row = $result->fetch_assoc()) {
+                    $trends['labels'][] = date('M Y', strtotime($row['month']));
+                    $trends['student_performance'][] = round($row['avg_performance'] ?? 0, 2);
+                    $trends['completion_rates'][] = $row['total_enrollments'] > 0 ? 
+                        round(($row['completed_enrollments'] / $row['total_enrollments']) * 100, 2) : 0;
+                    $trends['attendance_rates'][] = $row['total_attendance'] > 0 ? 
+                        round(($row['present_count'] / $row['total_attendance']) * 100, 2) : 0;
+                }
+            }
+
+            return $trends;
+
+        } catch (Exception $e) {
+            log_error("Error in getTeachingPerformanceTrends: " . $e->getMessage(), 'database');
+            return $trends;
+        }
+    }
+
+    /**
+     * Get tutor's rating distribution
+     * @param int $tutor_id The tutor's ID
+     * @return array Rating distribution data
+     */
+    public function getRatingDistribution($tutor_id) {
+        $distribution = [
+            'labels' => ['5 Stars', '4 Stars', '3 Stars', '2 Stars', '1 Star'],
+            'counts' => [0, 0, 0, 0, 0],
+            'colors' => [
+                'rgba(25, 135, 84, 0.8)',   // Green (5 stars)
+                'rgba(13, 110, 253, 0.8)',   // Blue (4 stars)
+                'rgba(255, 193, 7, 0.8)',    // Yellow (3 stars)
+                'rgba(255, 136, 0, 0.8)',    // Orange (2 stars)
+                'rgba(220, 53, 69, 0.8)'     // Red (1 star)
+            ],
+            'has_data' => false
+        ];
+
+        try {
+            $sql = "SELECT 
+                    rating,
+                    COUNT(*) as count
+                FROM session_feedback
+                WHERE tutor_id = ? AND rating IS NOT NULL
+                GROUP BY rating
+                ORDER BY rating DESC";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->bind_param("i", $tutor_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+
+            if ($result->num_rows > 0) {
+                $distribution['has_data'] = true;
+                while ($row = $result->fetch_assoc()) {
+                    $rating_index = 5 - $row['rating'];
+                    if ($rating_index >= 0 && $rating_index < 5) {
+                        $distribution['counts'][$rating_index] = intval($row['count']);
+                    }
+                }
+            }
+
+            return $distribution;
+
+        } catch (Exception $e) {
+            log_error("Error in getRatingDistribution: " . $e->getMessage(), 'database');
+            return $distribution;
+        }
+    }
+
+    /**
      * Submit a rating for a class session
      */
     public function submitSessionRating($sessionId, $studentId, $rating, $feedback, $tutorId) {
@@ -642,7 +750,7 @@ class RatingManagement {
                         ' - ', 
                         DATE_FORMAT(cs.end_time, '%h:%i %p')
                     ) as activity_time,
-                    cs.updated_at as timestamp
+                    cs.status_changed_at as timestamp
                 FROM class_schedule cs
                 JOIN class c ON cs.class_id = c.class_id
                 LEFT JOIN attendance a ON cs.schedule_id = a.schedule_id AND a.status = 'present'

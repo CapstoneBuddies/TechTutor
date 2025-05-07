@@ -514,12 +514,15 @@ function getStudentSchedule($student_id, $include_completed = false) {
                 s.subject_name,
                 CONCAT(u.first_name,' ',u.last_name) AS tutor_name,
                 u.profile_picture AS tutor_avatar,
-                e.status as enrollment_status
+                e.status as enrollment_status,
+                m.meeting_id,
+                m.meeting_uid
             FROM enrollments e
             JOIN class c ON e.class_id = c.class_id
             JOIN class_schedule cs ON c.class_id = cs.class_id
             JOIN subject s ON c.subject_id = s.subject_id
             JOIN users u ON c.tutor_id = u.uid
+            LEFT JOIN meetings m ON cs.schedule_id = m.schedule_id
             WHERE e.student_id = ? 
             AND e.status 
             $condition
@@ -527,7 +530,33 @@ function getStudentSchedule($student_id, $include_completed = false) {
         ");
         $stmt->bind_param("i", $student_id);
         $stmt->execute();
-        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        
+        // Process each session to add session_status field
+        foreach ($result as &$session) {
+            $session_date = $session['session_date'];
+            $start_time = $session['start_time'];
+            $end_time = $session['end_time'];
+            $now = date('Y-m-d H:i:s');
+            $session_start = $session_date . ' ' . $start_time;
+            $session_end = $session_date . ' ' . $end_time;
+            
+            // Determine session status
+            if ($now >= $session_start && $now <= $session_end) {
+                $session['session_status'] = 'in_progress';
+            } elseif ($now < $session_start) {
+                $session['session_status'] = 'upcoming';
+            } else {
+                $session['session_status'] = 'completed';
+            }
+            
+            // Set default avatar if empty
+            if (empty($session['tutor_avatar'])) {
+                $session['tutor_avatar'] = 'default.jpg';
+            }
+        }
+        
+        return $result;
 
     } catch (Exception $e) {
         log_error("Error fetching student schedule: " . $e->getMessage(), 'database');
@@ -1384,7 +1413,7 @@ function getStudentLevel($class_id, $student_id) {
  */
 function getStudentProgressData($tutorId) {
     global $conn;
-    
+
     try {
         // Check if the student_progress table exists
         $tableCheck = $conn->query("SHOW TABLES LIKE 'student_progress'");
@@ -1393,25 +1422,65 @@ function getStudentProgressData($tutorId) {
             log_error("student_progress table does not exist - returning empty array");
             return [];
         }
-        
-        // If table exists, proceed with original query
-        $query = "SELECT 
-            sp.*,
-            c.class_name,
-            CONCAT(u.first_name, ' ', u.last_name) as student_name,
-            u.profile_picture
-        FROM student_progress sp
-        JOIN class c ON sp.class_id = c.class_id
-        JOIN users u ON sp.student_id = u.uid
-        WHERE c.tutor_id = ?
-        ORDER BY sp.assessment_date DESC";
-        
+
+        $query = "
+            SELECT 
+                u.uid AS student_id,
+                CONCAT(u.first_name, ' ', u.last_name) AS name,
+                u.email,
+                COALESCE(u.profile_picture, '') AS profile_picture,
+                COUNT(DISTINCT e.class_id) AS classes_enrolled,
+                ROUND(COALESCE(AVG(sp.performance_score), 0), 1) AS avg_performance,
+                COALESCE((
+                    SELECT 
+                        ROUND(
+                            (COUNT(CASE WHEN a.status = 'present' THEN 1 END) / COUNT(*)) * 100, 1
+                        )
+                    FROM enrollments e2
+                    JOIN class_schedule cs ON e2.class_id = cs.class_id
+                    LEFT JOIN attendance a ON cs.schedule_id = a.schedule_id AND a.student_id = e2.student_id
+                    WHERE e2.student_id = u.uid
+                    AND e2.status = 'active'
+                    AND cs.session_date <= CURDATE()
+                ), 0) AS attendance_rate,
+                COALESCE((
+                    SELECT GREATEST(
+                        MAX(sp.assessment_datetime),
+                        MAX(cs.session_date)
+                    )
+                    FROM student_progress sp
+                    LEFT JOIN enrollments e3 ON sp.student_id = e3.student_id AND sp.class_id = e3.class_id
+                    LEFT JOIN class_schedule cs ON e3.class_id = cs.class_id
+                    WHERE sp.student_id = u.uid
+                ), NULL) AS last_active
+            FROM users u
+            JOIN enrollments e ON u.uid = e.student_id
+            LEFT JOIN student_progress sp ON u.uid = sp.student_id
+            JOIN class c ON e.class_id = c.class_id
+            WHERE c.tutor_id = ?
+            AND e.status = 'active'
+            AND u.status = 1
+            GROUP BY u.uid, u.first_name, u.last_name, u.email, u.profile_picture
+            ORDER BY last_active DESC
+        ";
+
         $stmt = $conn->prepare($query);
-        $stmt->bind_param("i", $tutor_id);
+        $stmt->bind_param("i", $tutorId);
         $stmt->execute();
         $result = $stmt->get_result();
-        return $result->fetch_all(MYSQLI_ASSOC);
-        
+        $data = $result->fetch_all(MYSQLI_ASSOC);
+
+        // Format last_active date
+        foreach ($data as &$student) {
+            if (!empty($student['last_active'])) {
+                $student['last_active'] = date('M d, Y', strtotime($student['last_active']));
+            } else {
+                $student['last_active'] = 'N/A';
+            }
+        }
+
+        return $data;
+
     } catch (Exception $e) {
         log_error("Error getting student progress data: " . $e->getMessage());
         return [];
@@ -1500,11 +1569,11 @@ function getStudentRecentActivities($student_id) {
                 'primary' as type_color,
                 c.class_name as title,
                 CONCAT('Progress assessment: ', sp.performance_score, '%') as description,
-                sp.assessment_date as timestamp
+                sp.assessment_datetime as timestamp
             FROM student_progress sp
             JOIN class c ON sp.class_id = c.class_id
             WHERE sp.student_id = ?
-            ORDER BY sp.assessment_date DESC
+            ORDER BY sp.assessment_datetime DESC
             LIMIT 5)
             
             UNION ALL
