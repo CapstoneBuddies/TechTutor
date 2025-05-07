@@ -2562,7 +2562,7 @@ function getClassPerformanceData($tutor_id) {
         return [];
     }
 }
-function generateExamJSON($class_id, $examType) {
+function generateExamJSON($class_id, $examType = 'diagnostics', $item = 30) {
     global $conn;
 
     // Get Information
@@ -2577,12 +2577,13 @@ function generateExamJSON($class_id, $examType) {
     }
     $stmt->close();
 
-    $apiKey = GEMINI_KEY; // Replace with your actual Gemini API key
+    $apiKey = GEMINI_KEY;
 
     $prompt = <<<EOT
 Course: $course
 Subject: $subject
 Exam Type: $examType
+Number of Items: $item
 
 Create a proficiency exam based on the exam type pertaining to the above subject.
 This proficiency exam must be in JSON format and will check the proficiency level of the user.

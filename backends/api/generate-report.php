@@ -1,5 +1,5 @@
 <?php
-require_once '../backends/main.php';
+require_once '../main.php';
 require_once BACKEND.'student_management.php';
 require_once BACKEND.'class_management.php';
 require_once BACKEND.'rating_management.php';

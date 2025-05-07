@@ -146,7 +146,9 @@ RewriteRule ^dashboard/s/class/meeting$ pages/techkid/meeting.php [L,QSA]
 RewriteRule ^dashboard/s/class/recordings$ pages/techkid/class-recordings.php [L,QSA]
 RewriteRule ^dashboard/s/enrollments$ pages/techkid/enrollments.php [L]
 RewriteRule ^dashboard/s/enrollments/class$ pages/techkid/enroll-class.php [L,QSA]
-RewriteRule ^dashboard/s/enrollments/class/exams$ pages/techkid/exams.php [L,QSA]
+
+RewriteRule ^dashboard/s/class/details/exams$ pages/techkid/exams.php [L,QSA]
+
 RewriteRule ^dashboard/s/files$ pages/techkid/files.php [L,QSA]
 RewriteRule ^dashboard/s/schedule$ pages/techkid/schedule.php [L]
 RewriteRule ^dashboard/s/reports$ pages/techkid/reports.php [L]
@@ -260,5 +262,8 @@ RewriteRule ^api/search-students$ backends/api/search-students.php [L]
 RewriteRule ^api/invite-students$ backends/api/invite-students.php [L]
 RewriteRule ^api/send-message$ backends/api/send-message.php [L]
 RewriteRule ^api/class-completion$ backends/api/class-completion.php [L]
+RewriteRule ^api/generate-exam$ backends/api/generate-exam.php [L]
+RewriteRule ^api/generate-report$ backends/api/generate-report.php [L]
+
 #BBB
 RewriteRule ^api/meeting$ backends/handler/meeting_handlers.php [L,QSA]

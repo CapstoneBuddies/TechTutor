@@ -606,47 +606,92 @@ function getFileIconClass($fileType) {
                 <!-- Quick Actions -->
                 <div class="dashboard-card">
                     <h3 class="mb-4">Quick Actions</h3>
-                    <div class="d-grid gap-3">
-                        <?php if($status !== 'completed'): ?>
-                        <a href="details/schedules?id=<?php echo htmlspecialchars($class_id); ?>" 
-                           class="btn btn-primary quick-action">
-                            <i class="bi bi-calendar-check me-2"></i> Manage Schedule
-                        </a>
-                        <button class="btn btn-info quick-action" onclick="messageStudents()">
-                            <i class="bi bi-chat-dots me-2"></i> Message Students
-                        </button>
-                        <?php 
-                        // Show Complete Class button if:
-                        // 1. Class status is active, AND
-                        // 2. Class has been active for at least 10 days since start date
-                        // 3. All session/s are completed
-                        $tenDaysAfterStart = date('Y-m-d', strtotime($classDetails['start_date'] . ' + 10 days'));
-                        $today = date('Y-m-d');
+        <div class="d-grid gap-3">
+            <?php if($status !== 'completed'): ?>
+            <button class="btn btn-warning quick-action" onclick="showGenerateExamModal()">
+                <i class="bi bi-file-earmark-text me-2"></i> Generate Exam
+            </button>
+            <a href="details/schedules?id=<?php echo htmlspecialchars($class_id); ?>" 
+               class="btn btn-primary quick-action">
+                <i class="bi bi-calendar-check me-2"></i> Manage Schedule
+            </a>
+            <button class="btn btn-info quick-action" onclick="messageStudents()">
+                <i class="bi bi-chat-dots me-2"></i> Message Students
+            </button>
+            <?php 
+            // Show Complete Class button if:
+            // 1. Class status is active, AND
+            // 2. Class has been active for at least 10 days since start date
+            // 3. All session/s are completed
+            $tenDaysAfterStart = date('Y-m-d', strtotime($classDetails['start_date'] . ' + 10 days'));
+            $today = date('Y-m-d');
 
-                        if ( $status === 'active' || ($today >= $tenDaysAfterStart || $today >= $classDetails['end_date']) ): 
-                        ?>
-                        <button type="button" class="btn btn-dark quick-action w-100" onclick="completeClass(<?php echo $class_id; ?>)">
-                            <i class="bi bi-check-circle me-2"></i> Complete Class
-                        </button>
-                        <?php endif; ?>
-                        <button class="btn btn-outline-primary quick-action" onclick="showShareModal()">
-                            <i class="bi bi-share me-2"></i> Share & Invite
-                        </button>
+            if ( $status === 'active' || ($today >= $tenDaysAfterStart || $today >= $classDetails['end_date']) ): 
+            ?>
+            <button type="button" class="btn btn-dark quick-action w-100" onclick="completeClass(<?php echo $class_id; ?>)">
+                <i class="bi bi-check-circle me-2"></i> Complete Class
+            </button>
+            <?php endif; ?>
+            <button class="btn btn-outline-primary quick-action" onclick="showShareModal()">
+                <i class="bi bi-share me-2"></i> Share & Invite
+            </button>
 
-                        <?php endif; ?>
-                        
-                        <button class="btn btn-success quick-action" onclick="viewAnalytics()">
-                            <i class="bi bi-graph-up me-2"></i> View Analytics
-                        </button>
-                        <a href="details/recordings?id=<?php echo htmlspecialchars($class_id); ?>" 
-                           class="btn btn-warning quick-action">
-                            <i class="bi bi-camera-reels me-2"></i> View Recordings
-                        </a>
-                        <a href="details/feedbacks?id=<?php echo htmlspecialchars($class_id); ?>"
-                           class="btn btn-secondary quick-action">
-                            <i class="bi bi-star me-2"></i> View All Feedbacks
-                        </a>
+            <?php endif; ?>
+            
+            <button class="btn btn-success quick-action" onclick="viewAnalytics()">
+                <i class="bi bi-graph-up me-2"></i> View Analytics
+            </button>
+            <a href="details/recordings?id=<?php echo htmlspecialchars($class_id); ?>" 
+               class="btn btn-warning quick-action">
+                <i class="bi bi-camera-reels me-2"></i> View Recordings
+            </a>
+            <a href="details/feedbacks?id=<?php echo htmlspecialchars($class_id); ?>"
+               class="btn btn-secondary quick-action">
+                <i class="bi bi-star me-2"></i> View All Feedbacks
+            </a>
+        </div>
+
+        <!-- Generate Exam Modal -->
+        <div class="modal fade" id="generateExamModal" tabindex="-1" aria-labelledby="generateExamModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="generateExamModalLabel">Generate Exam</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
+                    <div class="modal-body">
+                        <form id="generateExamForm">
+                            <div class="mb-3">
+                                <label for="examType" class="form-label">Exam Type</label>
+                                <select class="form-select" id="examType" required>
+                                    <option value="">Select exam type</option>
+                                    <option value="midterm">Midterm</option>
+                                    <option value="final">Final</option>
+                                    <option value="quiz">Quiz</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="examItems" class="form-label">Number of Items</label>
+                                <input type="number" class="form-control" id="examItems" min="1" max="100" value="30" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="examStart" class="form-label">Exam Start Date & Time</label>
+                                <input type="datetime-local" class="form-control" id="examStart" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="examEnd" class="form-label">Exam End Date & Time</label>
+                                <input type="datetime-local" class="form-control" id="examEnd" required>
+                            </div>
+                        </form>
+                        <div id="generateExamError" class="text-danger d-none"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="submitGenerateExam()">Generate</button>
+                    </div>
+                </div>
+            </div>
+        </div>
                 </div>
             </div>
         </div>
@@ -1397,6 +1442,96 @@ function getFileIconClass($fileType) {
                 showLoading(false);
                 console.error('Error:', error);
                 showToast('error', 'An error occurred while processing your request.');
+            });
+        }
+    </script>
+
+    <script>
+        let generateExamModal;
+
+        function showGenerateExamModal() {
+            if (!generateExamModal) {
+                generateExamModal = new bootstrap.Modal(document.getElementById('generateExamModal'));
+            }
+            document.getElementById('generateExamError').classList.add('d-none');
+            document.getElementById('generateExamError').textContent = '';
+            document.getElementById('generateExamForm').reset();
+            generateExamModal.show();
+        }
+
+        function submitGenerateExam() {
+            const examType = document.getElementById('examType').value;
+            const examItems = parseInt(document.getElementById('examItems').value, 10);
+            const examStart = document.getElementById('examStart').value;
+            const examEnd = document.getElementById('examEnd').value;
+            const errorDiv = document.getElementById('generateExamError');
+
+            errorDiv.classList.add('d-none');
+            errorDiv.textContent = '';
+
+            if (!examType) {
+                errorDiv.textContent = 'Please select an exam type.';
+                errorDiv.classList.remove('d-none');
+                return;
+            }
+            if (!examItems || examItems < 1 || examItems > 100) {
+                errorDiv.textContent = 'Please enter a valid number of items (1-100).';
+                errorDiv.classList.remove('d-none');
+                return;
+            }
+            if (!examStart) {
+                errorDiv.textContent = 'Please select the exam start date and time.';
+                errorDiv.classList.remove('d-none');
+                return;
+            }
+            if (!examEnd) {
+                errorDiv.textContent = 'Please select the exam end date and time.';
+                errorDiv.classList.remove('d-none');
+                return;
+            }
+            if (examStart >= examEnd) {
+                errorDiv.textContent = 'Exam end date and time must be after the start date and time.';
+                errorDiv.classList.remove('d-none');
+                return;
+            }
+
+            // Disable the generate button to prevent multiple submissions
+            const generateButton = document.querySelector('#generateExamModal .btn-primary');
+            generateButton.disabled = true;
+            generateButton.textContent = 'Generating...';
+
+            fetch(BASE + 'api/generate-exam', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    class_id: <?php echo $class_id; ?>,
+                    exam_type: examType,
+                    exam_items: examItems,
+                    exam_start: examStart,
+                    exam_end: examEnd
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                generateButton.disabled = false;
+                generateButton.textContent = 'Generate';
+                if (data.success) {
+                    generateExamModal.hide();
+                    showToast('success', 'Exam generated successfully.');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    errorDiv.textContent = data.message || 'Failed to generate exam.';
+                    errorDiv.classList.remove('d-none');
+                }
+            })
+            .catch(error => {
+                generateButton.disabled = false;
+                generateButton.textContent = 'Generate';
+                errorDiv.textContent = 'An error occurred while generating the exam.';
+                errorDiv.classList.remove('d-none');
+                console.error('Error:', error);
             });
         }
     </script>

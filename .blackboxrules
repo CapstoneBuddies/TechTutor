@@ -1,2 +1,5 @@
+Always apply the rules
+Always follow my curent setup for file arrangement
 For database related actions, always refer to my @/sql/db.sql file for the database schema
 Do not attempt to update my @/sql/db.sql but instead save it to my @/sql/db_suggestion.sql
+Always check and verify first with my @/.htaccess , @/backends/config.php , and @/backends/main.php before making changes

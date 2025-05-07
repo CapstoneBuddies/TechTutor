@@ -1,6 +1,6 @@
 <?php
-require_once '../../backends/main.php';
-require_once BACKEND.'class_management.php';
+    require_once '../../backends/main.php';
+    require_once BACKEND.'class_management.php';
 
 if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'TECHKID') {
     header('Location: ' . BASE . 'login');
@@ -13,28 +13,82 @@ if (!$class_id) {
     exit();
 }
 
-// Fetch class diagnostics JSON
-$stmt = $conn->prepare("SELECT diagnostics FROM class WHERE class_id = ?");
-$stmt->bind_param("i", $class_id);
-$stmt->execute();
-$stmt->bind_result($diagnostics_json);
-$stmt->fetch();
-$stmt->close();
+$exam_id = isset($_GET['exam']) ? intval($_GET['exam']) : 0;
+$exam_data = null;
+$exam_json = null;
 
-if (!$diagnostics_json) {
-    // Generate diagnostics if not present
-    $diagnostics_json = generateExamJSON($class_id, 'diagnostic');
-    // Optionally, save to DB
-    $stmt = $conn->prepare("UPDATE class SET diagnostics = ? WHERE class_id = ?");
-    $stmt->bind_param("si", $diagnostics_json, $class_id);
+if ($exam_id) {
+    // Fetch exam from exams table
+    $stmt = $conn->prepare("SELECT exam_item, exam_type, duration FROM exams WHERE exam_id = ? AND class_id = ? AND exam_status = 'active'");
+    $stmt->bind_param("ii", $exam_id, $class_id);
     $stmt->execute();
+    $stmt->bind_result($exam_json, $exam_type, $duration);
+    $stmt->fetch();
     $stmt->close();
-log_error(print_r("TEST: ".$diagnostics_json,true));
+    
+    if ($exam_json) {
+        $exam_data = json_decode($exam_json, true);
+        $title = ucfirst($exam_type) . " Exam";
+    } else {
+        // Exam not found or not active
+        header('location: ./details?id=' . $class_id);
+        exit();
+    }
+} else {
+    // Fetch diagnostic exam from exams table
+    $stmt = $conn->prepare("SELECT exam_id, exam_item, duration FROM exams WHERE class_id = ? AND exam_type = 'diagnostic' AND exam_status = 'active' LIMIT 1");
+    $stmt->bind_param("i", $class_id);
+    $stmt->execute();
+    $stmt->bind_result($diag_exam_id, $diagnostics_json, $duration);
+    $stmt->fetch();
+    $stmt->close();
+
+    if (!$diagnostics_json) {
+        // Generate diagnostics if not present
+        $diagnostics_json = generateExamJSON($class_id);
+
+        if ($diagnostics_json) {
+            // Insert new exam record into exams table
+            $duration = 60; // default duration in minutes
+            $total_marks = 30; // default total marks, can be adjusted
+            $created_by = ($_SESSION['role'] === 'TECHGURU') ? $_SESSION['users'] : 1;
+
+            // Use current logged-in user id as created_by if available
+            $created_by = $_SESSION['user'] ?? 0;
+
+            log_error("check if EMPTY: ".($_SESSION['user']));
+
+            // Validate JSON string is not empty and valid
+            if (empty($diagnostics_json) || json_decode($diagnostics_json) === null) {
+                log_error("Failed to generate valid diagnostics JSON for class ID: $class_id");
+                header('Location: ./?id=' . $class_id);
+                exit();
+            }
+
+            $insert_stmt = $conn->prepare("INSERT INTO exams (class_id, exam_item, exam_status, duration, total_marks, exam_type, created_by) VALUES (?, ?, 'active', ?, ?, 'diagnostic', ?)");
+            $insert_stmt->bind_param("isiii", $class_id, $diagnostics_json, $duration, $total_marks, $created_by);
+            $insert_stmt->execute();
+            $insert_stmt->close();
+        } else {
+            // Failed to generate exam JSON
+            log_error("Failed to generate diagnostics JSON for class ID: $class_id");
+            header('Location: ./?id=' . $class_id);
+            exit();
+        }
+    }
+
+    $exam_data = json_decode($diagnostics_json, true);
+    $exam_type = "diagnostic";
+    $title = ucfirst($exam_type)." Exam";
+    $exam_id = $diag_exam_id ?? 0;
 }
 
-$diagnostics = json_decode($diagnostics_json, true);
-
-$title = "Diagnostic Exam";
+// If no exam data available, redirect back
+if (!$exam_data) {
+    log_error("No exam data found for class ID: $class_id and exam ID: $exam_id");
+    header('Location: ./?id=' . $class_id);
+    exit();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -58,10 +112,10 @@ $title = "Diagnostic Exam";
                         This diagnostic exam helps us understand your current knowledge level. Take your time and answer honestly.
                     </div>
 
-                    <form id="diagnosticExamForm" class="needs-validation" novalidate>
-                        <?php if (!empty($diagnostics['questions'])): ?>
+                    <form id="examForm" class="needs-validation" novalidate>
+                        <?php if (!empty($exam_data['questions'])): ?>
                             <div class="questions-container">
-                                <?php foreach ($diagnostics['questions'] as $qnum => $qdata): ?>
+                                <?php foreach ($exam_data['questions'] as $qnum => $qdata): ?>
                                     <?php foreach ($qdata as $question => $choices): ?>
                                         <div class="question-card mb-4 p-4 border rounded bg-white shadow-sm">
                                             <label class="h5 mb-3 d-block">
@@ -102,9 +156,11 @@ $title = "Diagnostic Exam";
                         <?php else: ?>
                             <div class="alert alert-warning">
                                 <i class="bi bi-exclamation-triangle me-2"></i>
-                                No diagnostic exam available for this class.
+                                No exam questions available for this class.
                             </div>
                         <?php endif; ?>
+                        <input type="hidden" name="exam_id" value="<?php echo $exam_id; ?>">
+                        <input type="hidden" name="exam_type" value="<?php echo $exam_type; ?>">
                     </form>
                 </div>
             </div>
@@ -162,9 +218,11 @@ $title = "Diagnostic Exam";
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('diagnosticExamForm');
+    const form = document.getElementById('examForm');
     const classId = <?php echo json_encode($class_id); ?>;
-    const storageKey = 'exam_answers_' + classId;
+    const examId = <?php echo json_encode($exam_id); ?>;
+    const examType = <?php echo json_encode($exam_type); ?>;
+    const storageKey = 'exam_answers_' + classId + '_' + examId;
 
     // Restore answers from localStorage
     const savedAnswers = JSON.parse(localStorage.getItem(storageKey) || '{}');
@@ -245,6 +303,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     class_id: classId,
+                    exam_id: examId,
+                    exam_type: examType,
                     answers: answers
                 })
             });

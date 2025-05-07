@@ -135,3 +135,37 @@ CREATE TABLE `student_progress` (
   CONSTRAINT `student_progress_ibfk_1` FOREIGN KEY (`class_id`) REFERENCES `class` (`class_id`) ON DELETE CASCADE,
   CONSTRAINT `student_progress_ibfk_2` FOREIGN KEY (`student_id`) REFERENCES `users` (`uid`) ON DELETE CASCADE
 );
+ALTER TABLE `student_progress` ADD COLUMN `performance_id` int NULL AFTER `student_id`;
+ALTER TABLE `student_progress` ADD CONSTRAINT `student_progress_ibfk_3` FOREIGN KEY (`performance_id`) REFERENCES `performances`(`id`);
+ALTER TABLE `student_progress` MODIFY COLUMN `assessment_type` ENUM('diagnostic','midterm','final','quiz') NOT NULL DEFAULT 'diagnostic';
+ALTER TABLE `class` DROP COLUMN `diagnostics`;
+
+CREATE TABLE `exams` (
+  `exam_id` INT NOT NULL AUTO_INCREMENT,
+  `class_id` INT NOT NULL,
+  `exam_item` JSON NOT NULL,
+  `exam_name` VARCHAR(100) NOT NULL,
+  `exam_description` TEXT DEFAULT NULL,
+  `exam_status` ENUM('active','completed','canceled') NOT NULL DEFAULT 'active',
+  `exam_start_datetime` datetime,
+  `exam_end_datetime` datetime,
+  `duration` INT NOT NULL,
+  `total_marks` INT NOT NULL,
+  `performance_id` int NULL,
+  `exam_type` enum('diagnostic', 'midterm','final', 'quiz') NOT NULL DEFAULT 'diagnostic',
+  `notes` TEXT DEFAULT NULL,
+  `created_by` INT NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`exam_id`),
+  KEY `idx_exam_class` (`class_id`),
+  KEY `idx_exam_start_datetime` (`exam_start_datetime`),
+  KEY `idx_exam_end_datetime` (`exam_end_datetime`),
+  KEY `idx_exam_status` (`exam_status`),
+  KEY `idx_exam_performance` (`performance_id`),
+  KEY `idx_exam_type` (`exam_type`),
+  KEY `idx_exam_created_by` (`created_by`),
+  CONSTRAINT `exams_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`uid`) ON DELETE CASCADE,
+  CONSTRAINT `exams_ibfk_3` FOREIGN KEY (`performance_id`) REFERENCES `performances`(`id`) ON DELETE CASCADE,
+  CONSTRAINT `exams_ibfk_1` FOREIGN KEY (`class_id`) REFERENCES `class` (`class_id`) ON DELETE CASCADE
+);

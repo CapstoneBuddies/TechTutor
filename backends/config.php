@@ -61,11 +61,19 @@
 	date_default_timezone_set('Asia/Manila');
 
 
-	//Setting Up error_log setup
-	ini_set('error_log', LOG_PATH.'error.log' );
+	// Setting up error_log path
+	ini_set('error_log', LOG_PATH . 'error.log');
 	ini_set('log_errors', 1);
-	ini_set('display_errors', 0);
 	error_reporting(E_ALL);
+
+	// Conditionally display errors on localhost
+	$localhost_ips = ['127.0.0.1', '::1', 'localhost'];
+	if (in_array($_SERVER['REMOTE_ADDR'] ?? '', $localhost_ips) || php_uname('n') === 'localhost') {
+	    ini_set('display_errors', 1);
+	} else {
+	    ini_set('display_errors', 0);
+	}
+
 
 	// Initializing PHPMailer
 	$mail = new PHPMailer(true);

@@ -991,7 +991,7 @@ function isWithin24Hours($scheduleId) {
         }
         return false;
     }
-    return null;
+    return false;
 }
 
 /**

@@ -24,6 +24,7 @@ try {
 
     // Parse and validate input
     $input = json_decode(file_get_contents('php://input'), true);
+    log_error(print_r($input, true));
     if (json_last_error() !== JSON_ERROR_NONE) {
         throw new Exception('Invalid JSON input: ' . json_last_error_msg());
     }
@@ -44,8 +45,8 @@ try {
         throw new Exception('Invalid class ID');
     }
 
-    // Get diagnostics exam data
-    $stmt = $conn->prepare("SELECT diagnostics FROM class WHERE class_id = ?");
+    // Get diagnostics exam data from exams table
+    $stmt = $conn->prepare("SELECT exam_item FROM exams WHERE class_id = ? AND exam_type = 'diagnostic' AND exam_status = 'active' LIMIT 1");
     if (!$stmt) {
         throw new Exception('Database error: ' . $conn->error);
     }
@@ -135,6 +136,15 @@ try {
         }
         
         $update_stmt->close();
+
+        // Insert into student_progress table
+        $insert_progress_stmt = $conn->prepare("INSERT INTO student_progress (class_id, student_id, exam_id, performance_id, performance_score, assessment_datetime, assessment_type, notes) VALUES (?, ?, ?, ?, ?, NOW(), 'diagnostic', '')");
+        if (!$insert_progress_stmt) {
+            throw new Exception('Database error: ' . $conn->error);
+        }
+        $insert_progress_stmt->bind_param("iiiid", $class_id, $student_id, $input['exam_id'], $performance_id, $score);
+        $insert_progress_stmt->execute();
+        $insert_progress_stmt->close();
 
         // Commit transaction
         $conn->commit();

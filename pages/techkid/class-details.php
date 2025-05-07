@@ -25,7 +25,9 @@
     $examTaken = hasTakenExam($class_id, $_SESSION['user']);
     
     if(!$examTaken) {
-        $_SESSION['exam'] = "You haven't taken the Diagnostic Exam yet, Please take the exam first";
+        // Redirect to diagnostic exam page
+        header("Location: details/exams?id={$class_id}&exam=diagnostic");
+        exit();
     }
 
     // Initialize MeetingManagement class
@@ -199,7 +201,7 @@
 
             <?php if(isset($_SESSION['exam']) && empty($_SESSION['exam'])): ?>
                 alert("<?php echo $_SESSION['exam']; ?>");
-                window.location.href = '../../enrollments/class/exams?id=<?php echo $class_id; ?>';
+                window.location.href = "details/exams?id=<?php echo $class_id; ?>&exam=diagnostics";
             <?php unset($_SESSION['exam']); endif; ?>
         </script>
         
@@ -520,6 +522,9 @@
                                         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#messageModal">
                                             <i class="bi bi-chat-left-text"></i> Message TechGuru
                                         </button>
+                                        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#availableQuizModal">
+                                            <i class="bi bi-journal-check"></i> Available Quiz
+                                        </button>
                                         <button type="button" class="btn btn-outline-danger" onclick="dropClass()">
                                             <i class="bi bi-box-arrow-right"></i> Drop Class
                                         </button>
@@ -691,6 +696,69 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         <button type="button" class="btn btn-primary" onclick="sendMessageToTechGuru()">Send Message</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Available Quiz Modal -->
+        <div class="modal fade" id="availableQuizModal" tabindex="-1" aria-labelledby="availableQuizModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="availableQuizModalLabel">Available Quizzes</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="quizList" class="list-group">
+                            <?php
+                            // Fetch available exams for this class
+                            $stmt = $conn->prepare("SELECT exam_id, exam_type, exam_start_datetime, exam_end_datetime, 
+                                                  duration, total_marks FROM exams 
+                                                  WHERE class_id = ? AND exam_status = 'active' 
+                                                  ORDER BY exam_type, exam_start_datetime DESC");
+                            $stmt->bind_param("i", $class_id);
+                            $stmt->execute();
+                            $result = $stmt->get_result();
+                            
+                            if ($result->num_rows > 0) {
+                                while ($exam = $result->fetch_assoc()) {
+                                    $exam_type_display = ucfirst($exam['exam_type']);
+                                    $start_date = new DateTime($exam['exam_start_datetime']);
+                                    $end_date = new DateTime($exam['exam_end_datetime']);
+                                    $now = new DateTime();
+                                    
+                                    // Check if exam is currently available
+                                    $is_available = ($now >= $start_date && $now <= $end_date);
+                                    $status_class = $is_available ? 'success' : 'secondary';
+                                    $status_text = $is_available ? 'Available' : ($now < $start_date ? 'Upcoming' : 'Expired');
+                                    $disabled = $is_available ? '' : 'disabled';
+                            ?>
+                                    <a href="<?php echo $is_available ? 'details/exams?id=' . $class_id . '&exam=' . $exam['exam_id'] : '#'; ?>" 
+                                       class="list-group-item list-group-item-action <?php echo $disabled; ?>">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h5 class="mb-1"><?php echo $exam_type_display; ?> Exam</h5>
+                                            <span class="badge bg-<?php echo $status_class; ?>"><?php echo $status_text; ?></span>
+                                        </div>
+                                        <p class="mb-1">Duration: <?php echo $exam['duration']; ?> minutes</p>
+                                        <small>Available: <?php echo $start_date->format('M d, Y g:i A'); ?> - <?php echo $end_date->format('M d, Y g:i A'); ?></small>
+                                    </a>
+                            <?php
+                                }
+                            } else {
+                            ?>
+                                <div class="alert alert-info mb-0">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    No quizzes are currently available for this class.
+                                </div>
+                            <?php
+                            }
+                            $stmt->close();
+                            ?>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     </div>
                 </div>
             </div>

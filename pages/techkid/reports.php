@@ -715,7 +715,7 @@
                 formData.append('skills_radar_image', skillsRadarImage);
                 
                 // Send request directly to the API endpoint
-                fetch('<?php echo BASE; ?>api/generate-report.php', {
+                fetch('<?php echo BASE; ?>api/generate-report', {
                     method: 'POST',
                     body: formData
                 })
