@@ -2562,7 +2562,7 @@ function getClassPerformanceData($tutor_id) {
         return [];
     }
 }
-function generateExamJSON($class_id, $examType = 'diagnostics', $item = 30) {
+function generateExamJSON($class_id, $examType = 'diagnostic', $item = 30) {
     global $conn;
 
     // Get Information
@@ -2650,7 +2650,6 @@ EOT;
     if (!$response) {
         return "Error contacting Gemini API.";
     }
-
     $data = json_decode($response, true);
     $content = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
 

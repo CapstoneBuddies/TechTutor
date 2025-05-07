@@ -12,6 +12,11 @@ if (!$class_id) {
     header('Location: ./');
     exit();
 }
+$examType = isset($_GET['exam']) ? $_GET['exam'] : 'diagnostic';
+if (!$examType) {
+    header('Location: ./?id='.$class_id);
+    exit();
+}
 
 $exam_id = isset($_GET['exam']) ? intval($_GET['exam']) : 0;
 $exam_data = null;
@@ -39,34 +44,34 @@ if ($exam_id) {
     $stmt = $conn->prepare("SELECT exam_id, exam_item, duration FROM exams WHERE class_id = ? AND exam_type = 'diagnostic' AND exam_status = 'active' LIMIT 1");
     $stmt->bind_param("i", $class_id);
     $stmt->execute();
-    $stmt->bind_result($diag_exam_id, $diagnostics_json, $duration);
+    $stmt->bind_result($diag_exam_id, $exam_json, $duration);
     $stmt->fetch();
     $stmt->close();
 
-    if (!$diagnostics_json) {
+    if (!$exam_json) {
         // Generate diagnostics if not present
-        $diagnostics_json = generateExamJSON($class_id);
+        $exam_json = generateExamJSON($class_id,$examType);
+        
+        log_error( "TEST: ".print_r($exam_json,true). " TAE" );
 
-        if ($diagnostics_json) {
+        if ($exam_json) {
             // Insert new exam record into exams table
             $duration = 60; // default duration in minutes
             $total_marks = 30; // default total marks, can be adjusted
             $created_by = ($_SESSION['role'] === 'TECHGURU') ? $_SESSION['users'] : 1;
 
             // Use current logged-in user id as created_by if available
-            $created_by = $_SESSION['user'] ?? 0;
-
-            log_error("check if EMPTY: ".($_SESSION['user']));
+            $created_by = $_SESSION['user'];
 
             // Validate JSON string is not empty and valid
-            if (empty($diagnostics_json) || json_decode($diagnostics_json) === null) {
+            if (empty($exam_json) || json_decode($exam_json) === null) {
                 log_error("Failed to generate valid diagnostics JSON for class ID: $class_id");
                 header('Location: ./?id=' . $class_id);
                 exit();
             }
 
-            $insert_stmt = $conn->prepare("INSERT INTO exams (class_id, exam_item, exam_status, duration, total_marks, exam_type, created_by) VALUES (?, ?, 'active', ?, ?, 'diagnostic', ?)");
-            $insert_stmt->bind_param("isiii", $class_id, $diagnostics_json, $duration, $total_marks, $created_by);
+            $insert_stmt = $conn->prepare("INSERT INTO exams (class_id, exam_item, exam_status, duration, total_marks, exam_type, created_by) VALUES (?, ?, 'active', ?, ?, ?, ?)");
+            $insert_stmt->bind_param("isiisi", $class_id, $exam_json, $duration, $total_marks, $examType, $created_by);
             $insert_stmt->execute();
             $insert_stmt->close();
         } else {
@@ -77,7 +82,7 @@ if ($exam_id) {
         }
     }
 
-    $exam_data = json_decode($diagnostics_json, true);
+    $exam_data = json_decode($exam_json, true);
     $exam_type = "diagnostic";
     $title = ucfirst($exam_type)." Exam";
     $exam_id = $diag_exam_id ?? 0;
