@@ -576,6 +576,23 @@ CREATE TABLE `transaction_refunds` (
   CONSTRAINT `transaction_refunds_ibfk_3` FOREIGN KEY (`admin_id`) REFERENCES `users` (`uid`) ON DELETE CASCADE
 );
 
+-- Views
+CREATE VIEW transaction_classes AS
+SELECT
+  transaction_id,
+  user_id,
+  amount,
+  status,
+  SUBSTRING(
+    SUBSTRING_INDEX(description, 'Class #', -1),
+    1,
+    LOCATE(')', SUBSTRING_INDEX(description, 'Class #', -1)) - 1
+  ) AS class_id,
+  created_at
+FROM transactions
+WHERE JSON_VALID(metadata) AND metadata LIKE '%class_id%';
+
+
 -- Triggers
 DELIMITER $$
 CREATE TRIGGER `after_session_feedback_delete` AFTER DELETE ON `session_feedback` FOR EACH ROW BEGIN

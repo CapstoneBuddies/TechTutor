@@ -82,6 +82,11 @@ class RatingManagement {
             ],
             'has_data' => false
         ];
+        
+        // Add a function to get the color based on rating count
+        $getColor = function($index, $count) use ($distribution) {
+            return $count > 0 ? $distribution['colors'][$index] : 'rgba(128, 128, 128, 0.8)'; // Gray for 0 ratings
+        };
 
         try {
             $sql = "SELECT 
@@ -105,6 +110,11 @@ class RatingManagement {
                         $distribution['counts'][$rating_index] = intval($row['count']);
                     }
                 }
+            }
+            
+            // Update colors based on counts
+            for ($i = 0; $i < 5; $i++) {
+                $distribution['colors'][$i] = $getColor($i, $distribution['counts'][$i]);
             }
 
             return $distribution;

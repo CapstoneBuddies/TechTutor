@@ -66,7 +66,12 @@ function getClassStats($tutor_id) {
             COUNT(DISTINCT CASE WHEN c.status = 'active' THEN c.class_id END) AS active_classes,
             COUNT(DISTINCT c.class_id) AS total_classes,
             COUNT(DISTINCT e.student_id) AS total_students,
-            COUNT(DISTINCT CASE WHEN c.status = 'completed' THEN c.class_id END) AS completed_classes
+            COUNT(DISTINCT CASE WHEN c.status = 'completed' THEN c.class_id END) AS completed_classes,
+            COUNT(DISTINCT CASE WHEN c.is_free = 0 THEN c.class_id END) AS paid_classes,
+            COUNT(DISTINCT CASE WHEN c.is_free = 0 AND e.status = 'active' THEN e.student_id END) AS paid_students,
+            SUM(CASE WHEN c.is_free = 0 THEN c.price ELSE 0 END) AS total_earnings,
+            SUM(CASE WHEN c.is_free = 0 AND MONTH(e.enrollment_date) = MONTH(CURRENT_DATE) 
+                AND YEAR(e.enrollment_date) = YEAR(CURRENT_DATE) THEN c.price ELSE 0 END) AS monthly_earnings
         FROM class c
         LEFT JOIN enrollments e ON c.class_id = e.class_id AND e.status = 'active'
         WHERE c.tutor_id = ?";
@@ -76,14 +81,26 @@ function getClassStats($tutor_id) {
         $stmt->bind_param("i", $tutor_id);
         $stmt->execute();
         $result = $stmt->get_result();
-        return $result->fetch_assoc();
+        $stats = $result->fetch_assoc();
+        
+        // Set default values for new fields if they are NULL
+        $stats['paid_classes'] = $stats['paid_classes'] ?? 0;
+        $stats['paid_students'] = $stats['paid_students'] ?? 0;
+        $stats['total_earnings'] = $stats['total_earnings'] ?? 0;
+        $stats['monthly_earnings'] = $stats['monthly_earnings'] ?? 0;
+        
+        return $stats;
     } catch (Exception $e) {
         error_log("Error getting class stats: " . $e->getMessage());
         return [
             'active_classes' => 0,
             'total_classes' => 0,
             'total_students' => 0,
-            'completed_classes' => 0
+            'completed_classes' => 0,
+            'paid_classes' => 0,
+            'paid_students' => 0,
+            'total_earnings' => 0,
+            'monthly_earnings' => 0
         ];
     }
 }
