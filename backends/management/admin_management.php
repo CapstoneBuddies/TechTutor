@@ -706,7 +706,17 @@ function getPlatformStats($period = 'all') {
  * 
  * @return array Data on course performance metrics
  */
-function getCoursePerformanceMetrics() {
+function getCoursePerformanceMetrics($period = 'all') {
+    // Date condition based on period
+    $dateCondition = "";
+    if ($period === 'weekly') {
+        $dateCondition = "AND DATE(created_on) >= DATE_SUB(CURRENT_DATE, INTERVAL 1 WEEK)";
+    } elseif ($period === 'monthly') {
+        $dateCondition = "AND DATE(created_on) >= DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH)";
+    } elseif ($period === 'yearly') {
+        $dateCondition = "AND DATE(created_on) >= DATE_SUB(CURRENT_DATE, INTERVAL 1 YEAR)";
+    }
+
     global $conn;
     $metrics = [
         'courses' => [],
@@ -782,7 +792,7 @@ function getCoursePerformanceMetrics() {
  * @param int $limit Number of months to retrieve
  * @return array Monthly activity data for the specified period
  */
-function getUserActivityTimeline($limit = 12) {
+function getUserActivityTimeline($period = 'all') {
     global $conn;
     $timeline = [
         'months' => [],
@@ -858,7 +868,7 @@ function getUserActivityTimeline($limit = 12) {
  * 
  * @return array Performance distribution data for tutors
  */
-function getTutorPerformanceDistribution() {
+function getTutorPerformanceDistribution($period = 'all') {
     global $conn;
     $distribution = [
         'rating_ranges' => ['4.5-5.0', '4.0-4.4', '3.5-3.9', '3.0-3.4', 'Below 3.0'],
@@ -924,7 +934,7 @@ function getTutorPerformanceDistribution() {
  * 
  * @return array Data on class performance metrics
  */
-function getClassPerformanceMetrics() {
+function getClassPerformanceMetrics($period = 'all') {
     global $conn;
     $metrics = [
         'performance_titles' => [],
@@ -967,9 +977,10 @@ function getClassPerformanceMetrics() {
 /**
  * Get attendance distribution counts for admin reports
  * 
+ * @param string $period Optional period filter (weekly, monthly, yearly, all)
  * @return array Attendance status counts
  */
-function getAttendanceDistribution() {
+function getAttendanceDistribution($period = 'all') {
     global $conn;
     $distribution = [
         'statuses' => ['present', 'absent', 'late', 'pending'],
@@ -978,10 +989,21 @@ function getAttendanceDistribution() {
     ];
 
     try {
+        // Date condition based on period
+        $dateCondition = "";
+        if ($period === 'weekly') {
+            $dateCondition = "WHERE a.created_at >= DATE_SUB(CURRENT_DATE, INTERVAL 1 WEEK)";
+        } elseif ($period === 'monthly') {
+            $dateCondition = "WHERE a.created_at >= DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH)";
+        } elseif ($period === 'yearly') {
+            $dateCondition = "WHERE a.created_at >= DATE_SUB(CURRENT_DATE, INTERVAL 1 YEAR)";
+        }
+
         $sql = "
-            SELECT status, COUNT(*) as count
-            FROM attendance
-            GROUP BY status
+            SELECT a.status, COUNT(*) as count
+            FROM attendance a
+            {$dateCondition}
+            GROUP BY a.status
         ";
 
         $result = $conn->query($sql);
@@ -1015,9 +1037,10 @@ function getAttendanceDistribution() {
  * Get earnings and transactions analytics for admin reports
  * 
  * @param int $months Number of months to include in timeline (default 12)
+ * @param string $period Optional period filter (weekly, monthly, yearly, all)
  * @return array Analytics data including monthly earnings, transaction counts, and status breakdown
  */
-function getTransactionAnalytics($months = 12) {
+function getTransactionAnalytics($months = 12, $period = 'all') {
     global $conn;
     $analytics = [
         'monthly_earnings' => [],
@@ -1025,30 +1048,50 @@ function getTransactionAnalytics($months = 12) {
         'status_counts' => [],
         'total_earnings' => 0,
         'total_transactions' => 0,
+        'monthly_growth' => 0,
         'has_data' => false
     ];
 
     try {
-        // Get monthly earnings and transaction counts for last $months months
+        // Date condition based on period
+        $dateCondition = "";
+        $currentInterval = "1 MONTH";
+        $previousInterval = "2 MONTH";
+        
+        if ($period === 'weekly') {
+            $dateCondition = "AND created_at >= DATE_SUB(CURRENT_DATE, INTERVAL 1 WEEK)";
+            $currentInterval = "1 WEEK";
+            $previousInterval = "2 WEEK";
+        } elseif ($period === 'monthly') {
+            $dateCondition = "AND created_at >= DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH)";
+            $currentInterval = "1 MONTH";
+            $previousInterval = "2 MONTH";
+        } elseif ($period === 'yearly') {
+            $dateCondition = "AND created_at >= DATE_SUB(CURRENT_DATE, INTERVAL 1 YEAR)";
+            $currentInterval = "6 MONTH";
+            $previousInterval = "12 MONTH";
+        } else {
+            // For 'all' or any other value, use the months parameter
+            $dateCondition = "AND created_at >= DATE_SUB(CURRENT_DATE, INTERVAL {$months} MONTH)";
+        }
+
+        // Get monthly earnings and transaction counts
         $sql = "
             SELECT 
                 DATE_FORMAT(created_at, '%Y-%m') as month,
                 SUM(amount) as total_amount,
                 COUNT(*) as transaction_count
             FROM transactions
-            WHERE status = 'succeeded' AND created_at >= DATE_SUB(CURRENT_DATE, INTERVAL ? MONTH)
+            WHERE status = 'succeeded' {$dateCondition}
             GROUP BY month
             ORDER BY month ASC
         ";
 
-        $stmt = $conn->prepare($sql);
-        if (!$stmt) {
-            log_error('Error preparing statement in getTransactionAnalytics: ' . $conn->error, 'database');
+        $result = $conn->query($sql);
+        if (!$result) {
+            log_error('Error in getTransactionAnalytics: ' . $conn->error, 'database');
             return $analytics;
         }
-        $stmt->bind_param('i', $months);
-        $stmt->execute();
-        $result = $stmt->get_result();
 
         $monthly_earnings = [];
         $monthly_transactions = [];
@@ -1058,26 +1101,30 @@ function getTransactionAnalytics($months = 12) {
         }
 
         // Fill missing months with zero values
-        $period = new DatePeriod(
-            new DateTime(date('Y-m-01', strtotime("-$months months"))),
+        $interval = ($period === 'weekly') ? 1 : (($period === 'monthly') ? 3 : (($period === 'yearly') ? 12 : $months));
+        $intervalType = ($period === 'weekly') ? 'week' : 'month';
+        
+        $period_obj = new DatePeriod(
+            new DateTime(date('Y-m-01', strtotime("-{$interval} {$intervalType}"))),
             new DateInterval('P1M'),
-            new DateTime(date('Y-m-01'))
+            new DateTime(date('Y-m-01', strtotime("+1 month")))
         );
 
         $months_labels = [];
         $earnings_data = [];
         $transactions_data = [];
-        foreach ($period as $dt) {
+        foreach ($period_obj as $dt) {
             $month_key = $dt->format('Y-m');
             $months_labels[] = $dt->format('M Y');
             $earnings_data[] = $monthly_earnings[$month_key] ?? 0;
             $transactions_data[] = $monthly_transactions[$month_key] ?? 0;
         }
 
-        // Get transaction counts by status
+        // Get transaction counts by status with period filter
         $status_sql = "
             SELECT status, COUNT(*) as count
             FROM transactions
+            WHERE 1=1 {$dateCondition}
             GROUP BY status
         ";
         $status_result = $conn->query($status_sql);
@@ -1088,13 +1135,13 @@ function getTransactionAnalytics($months = 12) {
             }
         }
 
-        // Get total earnings and total transactions
+        // Get total earnings and total transactions with period filter
         $total_sql = "
             SELECT 
                 COALESCE(SUM(amount), 0) as total_earnings,
                 COUNT(*) as total_transactions
             FROM transactions
-            WHERE status = 'succeeded'
+            WHERE status = 'succeeded' {$dateCondition}
         ";
         $total_result = $conn->query($total_sql);
         $total_earnings = 0;
@@ -1105,6 +1152,28 @@ function getTransactionAnalytics($months = 12) {
             $total_transactions = intval($total_row['total_transactions']);
         }
 
+        // Calculate monthly growth percentage based on the selected period
+        $growth_sql = "
+            SELECT 
+                COALESCE(SUM(amount), 0) as current_period_earnings,
+                (SELECT COALESCE(SUM(amount), 0) FROM transactions 
+                 WHERE status = 'succeeded' AND created_at BETWEEN DATE_SUB(CURRENT_DATE, INTERVAL {$previousInterval}) AND DATE_SUB(CURRENT_DATE, INTERVAL {$currentInterval})) as previous_period_earnings
+            FROM transactions 
+            WHERE status = 'succeeded' AND created_at >= DATE_SUB(CURRENT_DATE, INTERVAL {$currentInterval})
+        ";
+        $growth_result = $conn->query($growth_sql);
+        $monthly_growth = 0;
+        if ($growth_result) {
+            $growth_row = $growth_result->fetch_assoc();
+            $current_period = floatval($growth_row['current_period_earnings']);
+            $previous_period = floatval($growth_row['previous_period_earnings']);
+            if ($previous_period > 0) {
+                $monthly_growth = round((($current_period - $previous_period) / $previous_period) * 100, 1);
+            } elseif ($current_period > 0) {
+                $monthly_growth = 100; // If previous period was 0 but current period has earnings, set to 100%
+            }
+        }
+
         $analytics = [
             'months' => $months_labels,
             'monthly_earnings' => $earnings_data,
@@ -1112,6 +1181,7 @@ function getTransactionAnalytics($months = 12) {
             'status_counts' => $status_counts,
             'total_earnings' => $total_earnings,
             'total_transactions' => $total_transactions,
+            'monthly_growth' => $monthly_growth,
             'has_data' => true
         ];
 
@@ -1119,6 +1189,105 @@ function getTransactionAnalytics($months = 12) {
     } catch (Exception $e) {
         log_error('Exception in getTransactionAnalytics: ' . $e->getMessage(), 'database');
         return $analytics;
+    }
+}
+
+/**
+ * Get TechGuru earnings data grouped by course
+ * 
+ * @param string $period Optional period filter (weekly, monthly, yearly, all)
+ * @return array Array of TechGuru earnings data with profile picture, name, courses, student counts, and earnings
+ */
+function getTechGuruEarnings($period = 'all', $limit = 5) {
+    global $conn;
+    $earnings = [];
+    
+    try {
+        // Date condition based on period
+        $dateCondition = "";
+        if ($period === 'weekly') {
+            $dateCondition = "AND tc.created_at >= DATE_SUB(CURRENT_DATE, INTERVAL 1 WEEK)";
+        } elseif ($period === 'monthly') {
+            $dateCondition = "AND tc.created_at >= DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH)";
+        } elseif ($period === 'yearly') {
+            $dateCondition = "AND tc.created_at >= DATE_SUB(CURRENT_DATE, INTERVAL 1 YEAR)";
+        }
+        
+        // Get TechGuru earnings data with course breakdown
+        $sql = "
+            SELECT 
+                u.uid,
+                u.first_name,
+                u.last_name,
+                u.profile_picture,
+                s.course_id,
+                co.course_name,
+                COUNT(DISTINCT e.student_id) as student_count,
+                COALESCE(SUM(tc.amount), 0.00) as earnings
+            FROM users u
+            JOIN class c ON u.uid = c.tutor_id
+            JOIN subject s ON c.subject_id = s.subject_id
+            JOIN course co ON s.course_id = co.course_id
+            LEFT JOIN enrollments e ON c.class_id = e.class_id AND e.status IN ('active', 'completed')
+            LEFT JOIN transaction_classes tc ON tc.class_id = c.class_id AND tc.status = 'succeeded' {$dateCondition}
+            WHERE u.role = 'TECHGURU'
+            GROUP BY u.uid, u.first_name, u.last_name, u.profile_picture, s.course_id, co.course_name
+            ORDER BY earnings DESC, u.last_name, u.first_name
+        ";
+        
+        $result = $conn->query($sql);
+        if (!$result) {
+            log_error('Error in getTechGuruEarnings: ' . $conn->error, 'database');
+            return $earnings;
+        }
+        
+        // Process results and organize by TechGuru
+        $techguru_data = [];
+        while ($row = $result->fetch_assoc()) {
+            $uid = $row['uid'];
+            $course_id = $row['course_id'];
+            
+            // Initialize TechGuru entry if not exists
+            if (!isset($techguru_data[$uid])) {
+                $techguru_data[$uid] = [
+                    'uid' => $uid,
+                    'first_name' => $row['first_name'],
+                    'last_name' => $row['last_name'],
+                    'profile_picture' => $row['profile_picture'],
+                    'total_earnings' => 0,
+                    'total_students' => 0,
+                    'courses' => []
+                ];
+            }
+            
+            // Add course data
+            $techguru_data[$uid]['courses'][] = [
+                'course_id' => $course_id,
+                'course_name' => $row['course_name'],
+                'student_count' => intval($row['student_count']),
+                'earnings' => floatval($row['earnings'])
+            ];
+            
+            // Update totals
+            $techguru_data[$uid]['total_earnings'] += floatval($row['earnings']);
+            $techguru_data[$uid]['total_students'] += intval($row['student_count']);
+        }
+        
+        // Convert to indexed array and sort by total earnings
+        $earnings = array_values($techguru_data);
+        usort($earnings, function($a, $b) {
+            return $b['total_earnings'] <=> $a['total_earnings'];
+        });
+        
+        // Apply limit
+        if ($limit > 0) {
+            $earnings = array_slice($earnings, 0, $limit);
+        }
+        
+        return $earnings;
+    } catch (Exception $e) {
+        log_error('Exception in getTechGuruEarnings: ' . $e->getMessage(), 'database');
+        return $earnings;
     }
 }
 ?>

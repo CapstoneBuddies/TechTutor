@@ -16,12 +16,12 @@
 
     
     // Get enhanced data for new visualizations
-    $course_performance = getCoursePerformanceMetrics();
-    $user_activity = getUserActivityTimeline(12); // Get 12 months of data
-    $tutor_ratings = getTutorPerformanceDistribution();
-    $class_performance = getClassPerformanceMetrics();
-    $attendance_distribution = getAttendanceDistribution();
-    $transaction_analytics = getTransactionAnalytics(12);
+    $course_performance = getCoursePerformanceMetrics($period);
+    $user_activity = getUserActivityTimeline($period); // Get 12 months of data
+    $tutor_ratings = getTutorPerformanceDistribution($period);
+    $class_performance = getClassPerformanceMetrics($period);
+    $attendance_distribution = getAttendanceDistribution($period);
+    $transaction_analytics = getTransactionAnalytics(12,$period); // Pass the period filter to transaction analytics
     
     $title = "Platform Performance Report";
 ?>
@@ -139,6 +139,44 @@
     .warning-card .metric-icon {
         color: white;
         background: var(--warning-gradient);
+    }
+    
+    /* TechGuru Earnings Table Styles */
+    .table-responsive {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+    
+    .course-row {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    .course-row td {
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+        color: #666;
+    }
+    
+    tr.spacer td {
+        height: 10px;
+        background-color: #f8f9fa;
+    }
+    
+    .avatar {
+        width: 40px;
+        height: 40px;
+        overflow: hidden;
+        border-radius: 50%;
+        background-color: #e9ecef;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
     }
     
     /* Section titles */
@@ -278,9 +316,39 @@
             </div>
         </div>
 
+        <!-- Period Filter Buttons -->
+        <div class="d-flex justify-content-end mb-3">
+            <div class="btn-group">
+                <a href="?period=weekly" class="btn btn-sm <?php echo $period === 'weekly' ? 'btn-primary' : 'btn-outline-primary'; ?>">Weekly</a>
+                <a href="?period=monthly" class="btn btn-sm <?php echo $period === 'monthly' ? 'btn-primary' : 'btn-outline-primary'; ?>">Monthly</a>
+                <a href="?period=yearly" class="btn btn-sm <?php echo $period === 'yearly' ? 'btn-primary' : 'btn-outline-primary'; ?>">Yearly</a>
+                <a href="?period=all" class="btn btn-sm <?php echo $period === 'all' ? 'btn-primary' : 'btn-outline-primary'; ?>">All Time</a>
+            </div>
+        </div>
+        
         <!-- Key Metrics Summary -->
         <div class="content-section mb-4">
             <div class="row g-4">
+                <!-- Total Earnings -->
+                <div class="col-md-3 col-sm-6">
+                    <div class="metric-card warning-card">
+                        <div class="metric-icon">
+                            <i class="bi bi-piggy-bank-fill"></i>
+                        </div>
+                        <h3>$<?php echo number_format($transaction_analytics['total_earnings'], 2); ?></h3>
+                        <p class="text-muted mb-0">Total Earnings</p>
+                        <div class="mt-3">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <small class="text-muted">Monthly Growth</small>
+                                <small class="text-primary fw-bold"><?php echo ($transaction_analytics['monthly_growth'] >= 0 ? '+' : ''); ?><?php echo number_format($transaction_analytics['monthly_growth'], 1); ?>%</small>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-primary" style="width: <?php echo min(abs($transaction_analytics['monthly_growth']) * 2, 100); ?>%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Total Users -->
                 <div class="col-md-3 col-sm-6">
                     <div class="metric-card primary-card">
                         <div class="metric-icon">
@@ -299,6 +367,7 @@
                         </div>
                     </div>
                 </div>
+                <!-- Active Classes -->
                 <div class="col-md-3 col-sm-6">
                     <div class="metric-card success-card">
                         <div class="metric-icon">
@@ -321,28 +390,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3 col-sm-6">
-                    <div class="metric-card warning-card">
-                        <div class="metric-icon">
-                            <i class="bi bi-clock-fill"></i>
-                        </div>
-                        <h3><?php echo number_format($platform_stats['activity_stats']['total_teaching_hours']); ?></h3>
-                        <p class="text-muted mb-0">Teaching Hours</p>
-                        <div class="mt-3">
-                            <div class="d-flex align-items-center justify-content-between mb-1">
-                                <small class="text-muted">Avg. Session</small>
-                                <?php 
-                                    $avgSessionLength = $platform_stats['activity_stats']['total_sessions'] > 0 ? 
-                                        round(($platform_stats['activity_stats']['total_teaching_hours'] * 60) / $platform_stats['activity_stats']['total_sessions'], 0) : 0;
-                                ?>
-                                <small class="text-warning fw-bold"><?php echo $avgSessionLength; ?> min</small>
-                            </div>
-                            <div class="progress">
-                                <div class="progress-bar bg-warning" style="width: <?php echo min($avgSessionLength / 1.2, 100); ?>%"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <!-- Teaching Hours -->
                 <div class="col-md-3 col-sm-6">
                     <div class="metric-card info-card">
                         <div class="metric-icon">
@@ -396,6 +444,98 @@
                 </div>
             </div>
         </div> 
+        <!-- Techtutor Earnings Table -->
+        <div class="content-section mb-4">
+            <div class="content-card bg-snow">
+                <div class="card-body">
+                    <h5 class="section-title mb-3 text-center">
+                        <i class="bi bi-graph-up-arrow me-2 text-primary"></i>
+                        TechGuru Earnings
+                    </h5>
+                    <p class="text-muted text-center mb-4">TechGuru's Earnings this period(<?php echo htmlspecialchars( ($period !== 'all') ? $period : 'All Time' ); ?>)</p>
+                    
+                    <div class="d-flex justify-content-end mb-3">
+                        <div class="form-group">
+                            <label for="earnings-limit" class="me-2">Show:</label>
+                            <select id="earnings-limit" class="form-select form-select-sm d-inline-block w-auto" onchange="window.location.href='?period=<?php echo $period; ?>&limit='+this.value">
+                                <option value="5" <?php echo (isset($_GET['limit']) && $_GET['limit'] == 5) ? 'selected' : (!isset($_GET['limit']) ? 'selected' : ''); ?>>5 items</option>
+                                <option value="10" <?php echo (isset($_GET['limit']) && $_GET['limit'] == 10) ? 'selected' : ''; ?>>10 items</option>
+                                <option value="20" <?php echo (isset($_GET['limit']) && $_GET['limit'] == 20) ? 'selected' : ''; ?>>20 items</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <?php
+                    // Get limit from URL parameter or default to 5
+                    $limit = isset($_GET['limit']) ? intval($_GET['limit']) : 5;
+                    // Get TechGuru earnings data
+                    $techguru_earnings = getTechGuruEarnings($period, $limit);
+                    ?>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Course</th>
+                                    <th>No. of Students</th>
+                                    <th>Earnings</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($techguru_earnings)): ?>
+                                <tr>
+                                    <td colspan="4" class="text-center py-4">No earnings data available for this period</td>
+                                </tr>
+                                <?php else: ?>
+                                    <?php foreach ($techguru_earnings as $techguru): ?>
+                                        <?php 
+                                        // First row shows total earnings for this TechGuru
+                                        $avatar_path = !empty($techguru['profile_picture']) ? '/uploads/avatars/' . $techguru['profile_picture'] : '/assets/images/default-avatar.png';
+                                        ?>
+                                        <tr class="fw-bold">
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar me-3">
+                                                        <img src="<?php echo htmlspecialchars($avatar_path); ?>" alt="Profile" class="rounded-circle" width="40" height="40">
+                                                    </div>
+                                                    <div>
+                                                        <?php echo htmlspecialchars($techguru['first_name'] . ' ' . $techguru['last_name']); ?>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td><span class="badge bg-primary">All Courses</span></td>
+                                            <td><?php echo number_format($techguru['total_students']); ?></td>
+                                            <td>$<?php echo number_format($techguru['total_earnings'], 2); ?></td>
+                                        </tr>
+                                        
+                                        <?php 
+                                        // Course breakdown rows
+                                        foreach ($techguru['courses'] as $course): 
+                                            if ($course['earnings'] <= 0) continue; // Skip courses with no earnings
+                                        ?>
+                                        <tr class="course-row">
+                                            <td></td>
+                                            <td>
+                                                <span class="badge bg-light text-dark">
+                                                    <?php echo htmlspecialchars($course['course_name']); ?>
+                                                </span>
+                                            </td>
+                                            <td><?php echo number_format($course['student_count']); ?></td>
+                                            <td>$<?php echo number_format($course['earnings'], 2); ?></td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                        
+                                        <!-- Add a spacer row between TechGurus -->
+                                        <tr class="spacer"><td colspan="4" class="p-0"></td></tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- User Growth Chart -->
         <div class="content-section mb-4">

@@ -724,7 +724,14 @@
                             if ($result->num_rows > 0) {
                                 while ($exam = $result->fetch_assoc()) {
                                     $exam_type_display = ucfirst($exam['exam_type']);
-                                    $start_date = new DateTime($exam['exam_start_datetime']);
+                                    $start_date = null;
+                                    $end_date = null;
+                                    if (!empty($exam['exam_start_datetime'])) {
+                                        $start_date = new DateTime($exam['exam_start_datetime']);
+                                    }
+                                    if (!empty($exam['exam_end_datetime'])) {
+                                        $end_date = new DateTime($exam['exam_end_datetime']);
+                                    }
                                     $end_date = new DateTime($exam['exam_end_datetime']);
                                     $now = new DateTime();
                                     
@@ -741,7 +748,11 @@
                                             <span class="badge bg-<?php echo $status_class; ?>"><?php echo $status_text; ?></span>
                                         </div>
                                         <p class="mb-1">Duration: <?php echo $exam['duration']; ?> minutes</p>
+                                        <?php if(isset($start_date) || isset($end_date) ): ?>
                                         <small>Available: <?php echo $start_date->format('M d, Y g:i A'); ?> - <?php echo $end_date->format('M d, Y g:i A'); ?></small>
+                                        <?php else: ?>
+                                        <small>Available: Indefinite </small>
+                                        <?php endif; ?>
                                     </a>
                             <?php
                                 }

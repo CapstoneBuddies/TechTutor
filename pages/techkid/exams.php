@@ -12,22 +12,17 @@ if (!$class_id) {
     header('Location: ./');
     exit();
 }
-$examType = isset($_GET['exam']) ? $_GET['exam'] : 'diagnostic';
-if (!$examType) {
-    header('Location: ./?id='.$class_id);
-    exit();
-}
+$exam_type = isset($_GET['exam']) ? $_GET['exam'] : null;
 
-$exam_id = isset($_GET['exam']) ? intval($_GET['exam']) : 0;
 $exam_data = null;
 $exam_json = null;
 
-if ($exam_id) {
+if ($exam_type) {
     // Fetch exam from exams table
-    $stmt = $conn->prepare("SELECT exam_item, exam_type, duration FROM exams WHERE exam_id = ? AND class_id = ? AND exam_status = 'active'");
-    $stmt->bind_param("ii", $exam_id, $class_id);
+    $stmt = $conn->prepare("SELECT exam_item, duration FROM exams WHERE class_id = ? AND exam_type = ? AND exam_status = 'active' LIMIT 1");
+    $stmt->bind_param("is",  $class_id, $exam_type);
     $stmt->execute();
-    $stmt->bind_result($exam_json, $exam_type, $duration);
+    $stmt->bind_result($exam_json, $duration);
     $stmt->fetch();
     $stmt->close();
     
@@ -50,9 +45,7 @@ if ($exam_id) {
 
     if (!$exam_json) {
         // Generate diagnostics if not present
-        $exam_json = generateExamJSON($class_id,$examType);
-        
-        log_error( "TEST: ".print_r($exam_json,true). " TAE" );
+        $exam_json = generateExamJSON($class_id,$exam_type);
 
         if ($exam_json) {
             // Insert new exam record into exams table
